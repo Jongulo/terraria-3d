@@ -1,0 +1,922 @@
+class_name TestWorld
+extends Node3D
+## A flat sandbox for trying everything: chests holding every item, NPC
+## spawners in a walled arena, target dummies, a liquid lab (pool, waterfalls,
+## hammer springs, lava pit), a block gallery, an ore wall, a fall-test tower and
+## a dark room. Debug hotkeys: F1 help, F2 god mode, F3 fly, F4 day/night,
+## F5 kill enemies, F6 clear drops, F7 natural spawns, F8 heal.
+
+const SIZE := Vector3i(256, 128, 256)
+const GROUND := 64  # top grass block; you stand at GROUND + 1
+const SPAWNER_INTERVAL := 3.0
+const SPAWNER_MAX_ALIVE := 3
+const CATEGORIES := [
+	["Weapons", ["melee", "ranged", "magic", "thrown"]],
+	["Tools", ["tool", "bucket", "tool_use"]],
+	["Ammo", ["ammo"]],
+	["Potions & Summons", ["consumable", "summon"]],
+	["Accessories", ["accessory"]],
+	["Armor", ["armor"]],
+	["Blocks", ["block"]],
+	["Materials", ["material"]],
+	["Coins & Misc", []],
+]
+const HELP := [
+	"TEST WORLD",
+	"F1  this help",
+	"F2  god mode (no damage, endless air and mana)",
+	"F3  fly (Space up, Shift down)",
+	"F4  day / night",
+	"F5  kill all enemies      F6  clear dropped items",
+	"F7  natural enemy spawns on/off      F8  heal",
+	"Spawners: right-click spawns one, Shift+right-click toggles auto-spawn",
+	"North: every item in chests, crafting by spawn   East: enemy arena",
+	"West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower",
+	"North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson",
+	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
+	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon entrance",
+	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad and Demolitionist (right-click to talk)",
+]
+
+var game: Game
+var natural_spawns := false
+## "x,y,z" -> {pos: Vector3i, kind, auto, timer, alive: Array, sprite, label}
+var spawners := {}
+var _labels: Array = []  # [Vector3, text, font size]
+var _dummies: Array = []  # Vector3i stand positions
+var _blocks := PackedInt32Array()
+var _liquids := PackedInt32Array()
+var _shapes: Array = []  # [Vector3i, shape], applied once the blocks are in
+var _status: Label
+var _help: PanelContainer
+
+
+# ------------------------------------------------------------------ building
+
+func _id(name: String) -> int:
+	return Data.block_id(name) if name != "" else 0
+
+
+func _b(p: Vector3i, name: String) -> void:
+	_blocks.append_array([p.x, p.y, p.z, _id(name)])
+
+
+## A closed door (bottom cell `p`) facing Player.WALL_NORMALS[facing].
+func _door(p: Vector3i, name: String, facing: int) -> void:
+	_b(p, name)
+	_b(p + Vector3i.UP, "door_top")
+	game.block_rotations[Chests.key(p)] = facing
+
+
+func _box(a: Vector3i, b: Vector3i, name: String) -> void:
+	for x in range(mini(a.x, b.x), maxi(a.x, b.x) + 1):
+		for y in range(mini(a.y, b.y), maxi(a.y, b.y) + 1):
+			for z in range(mini(a.z, b.z), maxi(a.z, b.z) + 1):
+				_b(Vector3i(x, y, z), name)
+
+
+func _liquid_box(a: Vector3i, b: Vector3i, t: int) -> void:
+	for x in range(a.x, b.x + 1):
+		for y in range(a.y, b.y + 1):
+			for z in range(a.z, b.z + 1):
+				_liquids.append_array([x, y, z, t, 63])
+
+
+func _label(p: Vector3, text: String, size := 22) -> void:
+	_labels.append([p, text, size])
+
+
+## Builds the whole facility into a freshly generated flat world (before lighting
+## and before the renderer starts). Chests and spawners are registered with the game.
+func build() -> void:
+	var w := game.world
+	var c := Vector3i(SIZE.x / 2, GROUND + 1, SIZE.z / 2)
+	w.set_spawn(c)
+	var ground := GROUND
+
+	# Spawn plaza with crafting stations and torches.
+	_box(Vector3i(c.x - 5, ground, c.z - 5), Vector3i(c.x + 5, ground, c.z + 5), "gray_brick")
+	for corner in [Vector3i(-5, 0, -5), Vector3i(5, 0, -5), Vector3i(-5, 0, 5), Vector3i(5, 0, 5)]:
+		_b(c + corner, "torch")
+	_b(c + Vector3i(-2, 0, -4), "work_bench")
+	_b(c + Vector3i(0, 0, -4), "furnace")
+	_b(c + Vector3i(2, 0, -4), "iron_anvil")
+	_label(Vector3(c + Vector3i(0, 1, -4)) + Vector3(0.5, 0.6, 0.5), "Crafting stations")
+	_label(Vector3(c) + Vector3(0.5, 3.2, 0.5), "Test World - press F1 for help", 26)
+
+	_build_storage(c)
+	_build_arena(c)
+	_build_dummies(c)
+	_build_liquids(c)
+	_build_gallery(c)
+	_build_tower(c)
+	_build_dark_room(c)
+	_build_trees(c)
+	_build_garden(c)
+	_build_platforms(c)
+	_build_house(c)
+	_build_library(c)
+	_build_hammered(c)
+	_build_town(c)
+
+	w.set_blocks_raw(_blocks)
+	for sh in _shapes:
+		w.set_shape(sh[0], sh[1])
+	w.set_liquids_raw(_liquids)
+	_build_islands(c)
+	_build_evil(c)
+	_build_biomes(c)
+	_build_dungeon(c)
+	w.relight_all()
+	_blocks = PackedInt32Array()
+	_liquids = PackedInt32Array()
+
+
+## Floating islands (the world generator's) above the plaza: a house island
+## with a Skyware chest and a lake island, in the Space layer (harpies spawn
+## there with natural spawns on). Fly up with F3.
+const ISLAND_HOUSE := Vector3i(-14, 52, -16)
+const ISLAND_LAKE := Vector3i(16, 56, -26)
+
+
+func _build_islands(c: Vector3i) -> void:
+	game.world.generate_island(c + ISLAND_HOUSE + Vector3i(0, -1, 0), 15, 1, 11)
+	game.world.generate_island(c + ISLAND_LAKE + Vector3i(0, -1, 0), 10, 2, 12)
+	_label(Vector3(c) + Vector3(0.5, 4.2, 0.5), "Floating islands above - F3 to fly", 22)
+
+
+## A small Corruption and Crimson patch (the world generator's) south-west and
+## south-east: chasms to Shadow Orbs, tunnels to a cavern of Crimson Hearts.
+const CORRUPTION := Vector2i(-75, 70)
+const CRIMSON := Vector2i(75, 70)
+
+
+func _build_evil(c: Vector3i) -> void:
+	game.world.generate_evil_patch(Vector2i(c.x, c.z) + CORRUPTION, 24, 1, 21)
+	game.world.generate_evil_patch(Vector2i(c.x, c.z) + CRIMSON, 24, 2, 22)
+	_label(Vector3(c.x + CORRUPTION.x * 0.6, GROUND + 3, c.z + CORRUPTION.y * 0.6), "Corruption", 26)
+	_label(Vector3(c.x + CRIMSON.x * 0.6, GROUND + 3, c.z + CRIMSON.y * 0.6), "Crimson", 26)
+
+
+## Small Snow, Desert and Jungle patches (the world generator's) north-west,
+## north and north-east, with their blocks, trees, cacti and enemies.
+const SNOW := Vector2i(-75, -70)
+const DESERT := Vector2i(0, -90)
+const JUNGLE := Vector2i(75, -70)
+const BIOME_RADIUS := 22
+
+
+func _build_biomes(c: Vector3i) -> void:
+	for b in [[SNOW, 1, "Snow"], [DESERT, 2, "Desert"], [JUNGLE, 3, "Jungle"]]:
+		var at: Vector2i = b[0]
+		game.world.generate_biome_patch(Vector2i(c.x, c.z) + at, BIOME_RADIUS, b[1], 30 + b[1])
+		_label(Vector3(c.x + at.x * 0.6, GROUND + 3, c.z + at.y * 0.6), b[2], 26)
+
+
+func _build_storage(c: Vector3i) -> void:
+	var z := c.z - 9
+	_box(Vector3i(c.x - 16, GROUND, z - 2), Vector3i(c.x + 16, GROUND, z + 2), "gray_brick")
+	_label(Vector3(c.x + 0.5, GROUND + 4.2, z + 0.5), "Every item", 28)
+	var by_cat := {}
+	for name in Data.items:
+		var t: String = Data.item(name).get("type", "")
+		var cat := "Coins & Misc"
+		for cdef in CATEGORIES:
+			if t in cdef[1]:
+				cat = cdef[0]
+		by_cat.get_or_add(cat, []).append(name)
+	# Rows of eight chests (the arena starts east of them), going north.
+	var n := 0
+	for cdef in CATEGORIES:
+		var names: Array = by_cat.get(cdef[0], [])
+		names.sort()
+		var chunk := 0
+		while chunk * Chests.SIZE < names.size():
+			var pos := Vector3i(c.x - 15 + (n % 8) * 3, GROUND + 1, z - (n / 8) * 4)
+			if n % 8 == 0 and n > 0:
+				_box(Vector3i(c.x - 16, GROUND, pos.z - 1), Vector3i(c.x + 7, GROUND, pos.z + 1), "gray_brick")
+			_b(pos, "chest")
+			game.chests.register_new(pos)
+			var inv := game.chests.get_inventory(pos)
+			for name in names.slice(chunk * Chests.SIZE, (chunk + 1) * Chests.SIZE):
+				# (A full stack of coins would turn into the next coin up.)
+				inv.add(name, inv.max_stack(name) - (1 if name in Inventory.COINS else 0))
+			var count := ceili(names.size() / float(Chests.SIZE))
+			_label(Vector3(pos) + Vector3(0.5, 1.7, 0.5), cdef[0] + ("" if count == 1 else " %d/%d" % [chunk + 1, count]))
+			chunk += 1
+			n += 1
+
+
+## The arena's walls: higher than a zombie's best jump (Terraria's 8 px/tick,
+## 4.4 blocks).
+const ARENA_WALL := 5
+
+
+func _build_arena(c: Vector3i) -> void:
+	var x0 := c.x + 9
+	var x1 := c.x + 44
+	var z0 := c.z - 17
+	var z1 := c.z + 17
+	for x in range(x0, x1 + 1):
+		for z in range(z0, z1 + 1):
+			var edge := x == x0 or x == x1 or z == z0 or z == z1
+			if x == x0 and z == c.z:
+				# The gate: a wooden door, which walking enemies can't open.
+				_door(Vector3i(x, GROUND + 1, z), "wooden_door", 3)
+				_box(Vector3i(x, GROUND + 3, z), Vector3i(x, GROUND + ARENA_WALL, z), "gray_brick")
+			elif edge:
+				_box(Vector3i(x, GROUND + 1, z), Vector3i(x, GROUND + ARENA_WALL, z), "gray_brick")
+				if (x + z) % 6 == 0:
+					_b(Vector3i(x, GROUND + ARENA_WALL + 1, z), "torch")
+	_label(Vector3(x0 - 1, GROUND + ARENA_WALL + 2, c.z + 0.5), "Enemy arena", 28)
+	var kinds: Array = Data.npcs.keys().filter(func(k): return not Data.npcs[k].get("invulnerable", false) and Data.npcs[k].get("spawner", true))
+	kinds.sort_custom(func(a, b): return Data.npcs[a].get("boss", false) == false and Data.npcs[b].get("boss", false))
+	# Columns of spawners down the arena's west side, 3 blocks apart.
+	var per_column := (z1 - z0 - 2) / 3
+	for i in kinds.size():
+		var pos := Vector3i(x0 + 2 + (i / per_column) * 4, GROUND + 1, z0 + 2 + (i % per_column) * 3)
+		_b(pos, "npc_spawner")
+		spawners[_key(pos)] = {"pos": pos, "kind": kinds[i], "auto": false, "timer": 0.0, "alive": []}
+	_label(Vector3(x0 + 2.5, GROUND + ARENA_WALL + 1.6, z0 + 0.5), "Right-click: spawn   Shift+right-click: auto", 18)
+
+
+func _build_dummies(c: Vector3i) -> void:
+	_box(Vector3i(c.x + 4, GROUND, c.z + 6), Vector3i(c.x + 8, GROUND, c.z + 8), "gray_brick")
+	for dx in [5, 7]:
+		_dummies.append(Vector3i(c.x + dx, GROUND + 1, c.z + 7))
+	_label(Vector3(c.x + 6.5, GROUND + 3.6, c.z + 7.5), "Target dummies", 22)
+
+
+## Mid-depth in the water pool (see _build_liquids), where swimmers spawn.
+static func pool_spot() -> Vector3:
+	return Vector3(SIZE.x / 2 - 21 + 0.5, GROUND - 4, SIZE.z / 2 - 3 + 0.5)
+
+
+func _build_liquids(c: Vector3i) -> void:
+	# Water pool, 6 deep, with a brick rim.
+	var a := Vector3i(c.x - 26, GROUND - 5, c.z - 8)
+	var b := Vector3i(c.x - 16, GROUND, c.z + 2)
+	_box(Vector3i(a.x - 1, GROUND, a.z - 1), Vector3i(b.x + 1, GROUND, b.z + 1), "gray_brick")
+	_box(a, b, "")
+	_liquid_box(a, b, 1)
+	_label(Vector3(c.x - 21, GROUND + 2.5, c.z - 3), "Water pool (6 deep)", 22)
+	# Stone cliff in the pool with a natural spring pouring from it.
+	_box(Vector3i(c.x - 26, GROUND - 5, c.z - 7), Vector3i(c.x - 25, GROUND + 12, c.z - 5), "stone")
+	var mouth := Vector3i(c.x - 24, GROUND + 10, c.z - 6)
+	game.world.add_decoration("waterfall", mouth, 1 * 10 + 0)
+	_label(Vector3(mouth) + Vector3(0.5, 3.4, 0.5), "Natural waterfall", 20)
+	# Hammer springs: a water tank (already hammered) and a lava tank to try.
+	for i in 2:
+		var tank := Vector3i(c.x - 20 + i * 3, GROUND + 6, c.z + 4)
+		_box(tank - Vector3i(1, 1, 1), tank + Vector3i(1, 1, 1), "gray_brick")
+		_b(tank, "")
+		_liquids.append_array([tank.x, tank.y, tank.z, 1 if i == 0 else 2, 63])
+		if i == 0:
+			game.world.add_decoration("waterfall", tank + Vector3i(0, 0, -2), 1 * 10 + 3 + Waterfalls.NEEDS_LIQUID)
+	_label(Vector3(c.x - 17.5, GROUND + 9, c.z + 4.5), "Hammer springs: hit a tank's front face with a hammer", 18)
+	# Lava pit with a fence, and obsidian next to it.
+	var la := Vector3i(c.x - 26, GROUND - 2, c.z + 8)
+	var lb := Vector3i(c.x - 20, GROUND, c.z + 13)
+	_box(la, lb, "")
+	_liquid_box(la, lb, 2)
+	for x in range(la.x - 1, lb.x + 2):
+		for z in range(la.z - 1, lb.z + 2):
+			if x == la.x - 1 or x == lb.x + 1 or z == la.z - 1 or z == lb.z + 1:
+				_b(Vector3i(x, GROUND + 1, z), "gray_brick")
+	_box(Vector3i(lb.x + 3, GROUND + 1, la.z), Vector3i(lb.x + 4, GROUND + 2, la.z + 1), "obsidian")
+	_label(Vector3(c.x - 22.5, GROUND + 3, c.z + 10.5), "Lava pit", 22)
+
+
+## The block gallery: rows of GALLERY_ROW blocks, 2 apart, from GALLERY_Z
+## south of the centre (south of the tower), 3 between rows.
+const GALLERY_Z := 31
+const GALLERY_ROW := 20
+
+
+static func gallery_pos(c: Vector3i, i: int) -> Vector3i:
+	return Vector3i(c.x - GALLERY_ROW + (i % GALLERY_ROW) * 2, GROUND + 1, c.z + GALLERY_Z + (i / GALLERY_ROW) * 3)
+
+
+static func gallery_blocks() -> Array:
+	var names: Array = []
+	for id in range(1, Data.blocks.size()):
+		# (Not the Bast Statue: its buff would reach the whole test area.)
+		if not Data.blocks[id].get("hidden", false) and not Data.blocks[id].has("near_buff"):
+			names.append(Data.blocks[id].name)
+	return names
+
+
+func _build_gallery(c: Vector3i) -> void:
+	var names := gallery_blocks()
+	var rows := ceili(names.size() / float(GALLERY_ROW))
+	_box(Vector3i(c.x - GALLERY_ROW - 2, GROUND, c.z + GALLERY_Z - 1), Vector3i(c.x + GALLERY_ROW + 2, GROUND, c.z + GALLERY_Z + rows * 3 - 1), "gray_brick")
+	_label(Vector3(c.x + 0.5, GROUND + 3.5, c.z + GALLERY_Z - 1.5), "One of every block", 24)
+	for i in names.size():
+		var pos := gallery_pos(c, i)
+		if Doors.is_door(Data.block(Data.block_id(names[i]))):
+			_door(pos, names[i], 0)
+			_label(Vector3(pos) + Vector3(0.5, 2.5, 0.5), names[i].replace("_", " "), 14)
+			continue
+		_b(pos, names[i])
+		if Data.block(Data.block_id(names[i])).get("wall", false):
+			_b(pos + Vector3i(0, 0, -1), "stone")  # something to hang on (it faces +z)
+		if Data.block(Data.block_id(names[i])).get("interact") == "chest":
+			game.chests.register_new(pos)
+		if names[i] == "npc_spawner":
+			spawners[_key(pos)] = {"pos": pos, "kind": "BlueSlime", "auto": false, "timer": 0.0, "alive": []}
+		_label(Vector3(pos) + Vector3(0.5, 1.5, 0.5), names[i].replace("_", " "), 14)
+	# Ore wall: 3 wide, 4 high per ore, with the pickaxe power each needs.
+	var ores: Array = names.filter(func(n): return n.ends_with("_ore") or n in ["hellstone", "obsidian"])
+	var x := c.x - 34
+	for ore in ores:
+		_box(Vector3i(x, GROUND + 1, c.z + 19), Vector3i(x + 2, GROUND + 4, c.z + 20), ore)
+		var need := int(Data.block(Data.block_id(ore)).get("min_pick", 0))
+		_label(Vector3(x + 1.5, GROUND + 5.6, c.z + 18.5), ore.replace("_", " ") + ("\n%d%% pick" % need if need > 0 else ""), 14)
+		x += 4
+
+
+func _build_tower(c: Vector3i) -> void:
+	# A staircase up to a platform 25 blocks high, with a water landing pool on one side.
+	var x0 := c.x + 14
+	var z := c.z + 21
+	for i in 25:
+		_box(Vector3i(x0 + i, GROUND + 1, z), Vector3i(x0 + i, GROUND + 1 + i, z + 1), "gray_brick")
+	var top := GROUND + 25
+	_box(Vector3i(x0 + 25, top, z - 1), Vector3i(x0 + 28, top, z + 2), "gray_brick")
+	_box(Vector3i(x0 + 25, GROUND + 1, z - 1), Vector3i(x0 + 28, top - 1, z - 1), "gray_brick")
+	var pa := Vector3i(x0 + 25, GROUND - 4, z + 3)
+	var pb := Vector3i(x0 + 28, GROUND, z + 6)
+	_box(pa, pb, "")
+	_liquid_box(pa, pb, 1)
+	_label(Vector3(x0 + 27, top + 2.6, z + 1), "Fall test: water to the south, ground to the north", 18)
+
+
+func _build_dark_room(c: Vector3i) -> void:
+	var a := Vector3i(c.x - 26, GROUND + 1, c.z - 26)
+	var b := Vector3i(c.x - 18, GROUND + 6, c.z - 18)
+	_box(a, b, "stone")
+	_box(a + Vector3i(1, 0, 1), b - Vector3i(1, 1, 1), "")
+	# Bent entrance so no daylight reaches the inside.
+	_box(Vector3i(c.x - 22, GROUND + 1, b.z), Vector3i(c.x - 22, GROUND + 2, b.z), "")
+	_box(Vector3i(c.x - 24, GROUND + 1, b.z - 2), Vector3i(c.x - 20, GROUND + 4, b.z - 2), "stone")
+	_label(Vector3(c.x - 21.5, GROUND + 8.5, b.z + 0.5), "Dark room (torches & lighting)", 20)
+
+
+func _build_trees(c: Vector3i) -> void:
+	for i in 4:
+		var x := c.x - 8 + i * 4
+		var z := c.z - 20
+		_box(Vector3i(x, GROUND + 1, z), Vector3i(x, GROUND + 8, z), "tree_trunk")
+		game.world.add_decoration("tree_top", Vector3i(x, GROUND + 9, z), i % 3)
+	_label(Vector3(c.x - 1.5, GROUND + 3, c.z - 21), "Trees (axe)", 20)
+
+
+## North of the trees: the forest's plants and debris as the world generator
+## scatters them, a sunflower patch, a pond with lily pads and cattails, and a
+## grassy ledge with vines hanging under it.
+const GARDEN := Vector3i(0, 0, -36)
+
+
+func _build_garden(c: Vector3i) -> void:
+	var g := c + GARDEN
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var ground := ["tall_grass", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "small_rocks", "twigs",
+			"large_rocks", "fallen_log"]
+	# The meadow: every ground piece at least twice, then grass and flowers.
+	for x in range(-12, 13):
+		for z in range(-8, 0):
+			var i := (x + 12) + (z + 8) * 25
+			var name: String = ground[i % ground.size()] if i < ground.size() * 2 else \
+					["tall_grass", "tall_grass", "taller_grass", "flowers", "tall_flowers", ""][rng.randi() % 6]
+			if name != "" and (i < ground.size() * 2 or rng.randf() < 0.6):
+				_b(g + Vector3i(x, 0, z), name)
+	for x in range(-3, 4):
+		_b(g + Vector3i(x, 0, -10), "sunflower")
+	# The pond: 2 deep, lily pads on it, cattails up through it.
+	var pa := g + Vector3i(2, -2, 2)
+	var pb := g + Vector3i(9, -1, 7)
+	_box(pa, pb, "")
+	_liquid_box(pa, pb, 1)
+	for p in [Vector3i(3, 0, 3), Vector3i(6, 0, 5), Vector3i(8, 0, 3), Vector3i(4, 0, 6)]:
+		_b(g + p, "lily_pad")
+	for x in [2, 5, 9]:
+		var q := g + Vector3i(x, 0, 7 if x != 5 else 2)
+		_b(q + Vector3i(0, -2, 0), "cattail")
+		_b(q + Vector3i(0, -1, 0), "cattail_stem")
+		_b(q, "cattail_top")
+	# A grassy ledge on two dirt pillars, vines and flowering vines under it.
+	var la := g + Vector3i(-10, 3, 2)
+	_box(la, la + Vector3i(7, 0, 3), "grass")
+	_box(la + Vector3i(0, 1, 0), la + Vector3i(7, 1, 3), "grass")
+	for x in [0, 7]:
+		_box(la + Vector3i(x, -3, 0), la + Vector3i(x, -1, 0), "dirt")
+	for x in range(1, 7):
+		for z in range(0, 4):
+			if rng.randf() < 0.6:
+				var n := rng.randi_range(1, 3)
+				for k in n:
+					_b(la + Vector3i(x, -1 - k, z), "vine_flowers" if rng.randf() < 0.25 else "vines")
+	_label(Vector3(g) + Vector3(0.5, 3.0, -4.0), "Forest plants", 24)
+
+
+## South-west of spawn: a stair of wooden platforms up to a floating platform
+## floor (stand on it, jump up through it, Drop down to fall through).
+const PLATFORMS := Vector3i(-12, 0, 14)
+
+
+func _build_platforms(c: Vector3i) -> void:
+	var a := c + PLATFORMS
+	for i in 4:
+		_b(a + Vector3i(i, i, 0), "wood_platform")
+	for x in range(4, 10):
+		for z in range(-1, 2):
+			_b(a + Vector3i(x, 3, z), "wood_platform")
+	_label(Vector3(a) + Vector3(6.5, 5.6, 0.5), "Platforms (Shift: drop through)", 18)
+
+
+## East of the forest garden: a wooden house with a door, furnished like a
+## Terraria NPC house: table with a candle, chair, bed (right-click: spawn
+## point), grandfather clock (right-click: the time), barrel, a chandelier, and a
+## sawmill and loom. Cobwebs hang in the dark room's corners.
+const HOUSE := Vector3i(15, 0, -34)
+
+
+func _build_house(c: Vector3i) -> void:
+	var a := c + HOUSE  # north-west corner, at ground + 1
+	var size := Vector3i(9, 5, 7)
+	for x in size.x:
+		for z in size.z:
+			for y in size.y:
+				var wall := x == 0 or z == 0 or x == size.x - 1 or z == size.z - 1
+				if y == size.y - 1 or wall:
+					_b(a + Vector3i(x, y, z), "wood")
+	# Door in the south wall (facing spawn), with a lintel above it.
+	var door := a + Vector3i(4, 0, size.z - 1)
+	_b(door + Vector3i.UP * 2, "wood")
+	_door(door, "wooden_door", 0)
+	_b(a + Vector3i(2, 0, 1), "wooden_table")
+	_b(a + Vector3i(2, 1, 1), "candle")
+	_b(a + Vector3i(3, 0, 1), "wooden_chair")
+	_b(a + Vector3i(6, 0, 1), "bed")
+	_b(a + Vector3i(1, 0, 5), "grandfather_clock")
+	_b(a + Vector3i(7, 0, 5), "barrel")
+	game.chests.register_new(a + Vector3i(7, 0, 5))
+	_b(a + Vector3i(1, 0, 3), "sawmill")
+	_b(a + Vector3i(7, 0, 3), "loom")
+	_b(a + Vector3i(4, size.y - 2, 3), "copper_chandelier")
+	_label(Vector3(door) + Vector3(0.5, 4.8, 1.5), "House (furniture)", 20)
+	# Cobwebs in the dark room's top corners (see _build_dark_room).
+	var r0 := Vector3i(c.x - 25, GROUND + 5, c.z - 25)
+	for corner in [Vector3i(0, 0, 0), Vector3i(6, 0, 0), Vector3i(0, 0, 6), Vector3i(6, 0, 6)]:
+		for d in [Vector3i.ZERO, Vector3i(signi(3 - corner.x), 0, 0), Vector3i(0, 0, signi(3 - corner.z)), Vector3i(0, -1, 0)]:
+			_b(r0 + corner + d, "cobweb")
+
+
+## North of the house: a library - bookcases, piano, dresser with a
+## candelabra on it, trash can, silver chandelier - with a lamp post outside;
+## tiki torches and a sign (right-click to write, aim to read) by the house door.
+const LIBRARY := Vector3i(15, 0, -44)
+const HOUSE_SIGN := Vector3i(17, 0, -26)
+
+
+func _build_library(c: Vector3i) -> void:
+	var a := c + LIBRARY
+	var size := Vector3i(9, 5, 7)
+	for x in size.x:
+		for z in size.z:
+			for y in size.y:
+				if y == size.y - 1 or x == 0 or z == 0 or x == size.x - 1 or z == size.z - 1:
+					_b(a + Vector3i(x, y, z), "wood")
+	var door := a + Vector3i(4, 0, size.z - 1)
+	_b(door + Vector3i.UP * 2, "wood")
+	_door(door, "wooden_door", 0)
+	_b(a + Vector3i(2, 0, 1), "bookcase")
+	_b(a + Vector3i(6, 0, 1), "bookcase")
+	_b(a + Vector3i(4, 0, 1), "piano")
+	_b(a + Vector3i(1, 0, 4), "dresser")
+	_b(a + Vector3i(1, 1, 4), "candelabra")
+	game.chests.register_new(a + Vector3i(1, 0, 4))
+	_b(a + Vector3i(7, 0, 5), "trash_can")
+	game.chests.register_new(a + Vector3i(7, 0, 5))
+	_b(a + Vector3i(4, size.y - 2, 3), "silver_chandelier")
+	_b(door + Vector3i(2, 0, 1), "lamp_post")
+	_label(Vector3(door) + Vector3(0.5, 4.8, 1.5), "Library (furniture)", 20)
+	# By the house door: tiki torches, and a sign.
+	var house_door := c + HOUSE + Vector3i(4, 0, 6)
+	_b(house_door + Vector3i(-1, 0, 1), "tiki_torch")
+	_b(house_door + Vector3i(1, 0, 1), "tiki_torch")
+	_b(c + HOUSE_SIGN, "sign")
+	game.signs[Chests.key(c + HOUSE_SIGN)] = "Welcome! Right-click a sign to write on it."
+
+
+## Far west: the Dungeon's entrance (the world generator's), its door facing
+## spawn, the Old Man by it.
+const DUNGEON := Vector3i(-62, 0, 0)
+
+
+func _build_dungeon(c: Vector3i) -> void:
+	game.world.generate_dungeon_entrance(Vector3i(c.x + DUNGEON.x, GROUND, c.z + DUNGEON.z), 1, "blue_brick")
+	_label(Vector3(c.x + DUNGEON.x + 9.5, GROUND + 9, c.z + 0.5), "Dungeon entrance", 26)
+
+
+## East of the house: blocks reshaped with a hammer - half blocks, a ramp
+## staircase and an arch with upside-down ramps in its corners.
+const HAMMERED := Vector3i(26, 0, -32)
+
+
+func _build_hammered(c: Vector3i) -> void:
+	var h := c + HAMMERED
+	var shaped := func(p: Vector3i, shape: int) -> void:
+		_b(p, "stone")
+		_shapes.append([p, shape])
+	shaped.call(h, Game.SHAPE_HALF)
+	shaped.call(h + Vector3i(1, 0, 0), Game.SHAPE_HALF)
+	# A staircase of ramps rising east (direction 1), three blocks up.
+	for i in 3:
+		for y in i:
+			_b(h + Vector3i(3 + i, y, 0), "stone")
+		shaped.call(h + Vector3i(3 + i, i, 0), Game.SHAPE_RAMP + 1)
+	_box(h + Vector3i(6, 0, 0), h + Vector3i(6, 2, 0), "stone")
+	# An arch: two pillars, a beam, upside-down ramps against the pillars.
+	_box(h + Vector3i(8, 0, 0), h + Vector3i(8, 2, 0), "stone")
+	_box(h + Vector3i(12, 0, 0), h + Vector3i(12, 2, 0), "stone")
+	_box(h + Vector3i(8, 3, 0), h + Vector3i(12, 3, 0), "stone")
+	shaped.call(h + Vector3i(9, 2, 0), Game.SHAPE_CEILING + 3)
+	shaped.call(h + Vector3i(11, 2, 0), Game.SHAPE_CEILING + 1)
+	# Grass ramps: the green edge runs up the steps.
+	for i in 2:
+		var g := h + Vector3i(14 + i, 0, 0)
+		_b(g, "grass")
+		_shapes.append([g, Game.SHAPE_RAMP + 1])
+	_label(Vector3(h) + Vector3(6.5, 5.2, 0.5), "Hammered blocks (hit a block with a hammer)", 18)
+
+
+## East of the arena: a row of houses for the town NPCs, each a valid home
+## (door, light, table, chair), with a resident in each (see activate).
+const TOWN := Vector3i(52, 0, -24)
+const TOWN_HOUSES := 6
+
+
+## The north-west corner (at ground + 1) of town house `i`.
+static func town_house(c: Vector3i, i: int) -> Vector3i:
+	return c + TOWN + Vector3i(0, 0, i * 8)
+
+
+func _build_town(c: Vector3i) -> void:
+	var size := Vector3i(7, 5, 6)
+	for i in TOWN_HOUSES:
+		var a := town_house(c, i)
+		for x in size.x:
+			for z in size.z:
+				for y in size.y:
+					if y == size.y - 1 or x == 0 or z == 0 or x == size.x - 1 or z == size.z - 1:
+						_b(a + Vector3i(x, y, z), "wood")
+		# The door in the west wall (toward the arena), a lintel over it.
+		var door := a + Vector3i(0, 0, 2)
+		_b(door + Vector3i.UP * 2, "wood")
+		_door(door, "wooden_door", 3)
+		_b(a + Vector3i(4, 0, 1), "wooden_table")
+		_b(a + Vector3i(4, 1, 1), "candle")
+		_b(a + Vector3i(3, 0, 1), "wooden_chair")
+	_label(Vector3(town_house(c, 2)) + Vector3(-1.5, 5.5, 3.0), "Town (NPC houses; Tab > Housing)", 22)
+
+
+## Settles the town NPCs in the town's houses (a fresh test world).
+func _settle_town() -> void:
+	var c := Vector3i(SIZE.x / 2, GROUND + 1, SIZE.z / 2)
+	for i in Town.ROSTER.size():
+		var h := Housing.check(game.world, town_house(c, i) + Vector3i(3, 0, 3))
+		if not h.ok:
+			push_warning("test town house %d: %s" % [i, h.reason])
+			continue
+		var npc := game.town.move_in(Town.ROSTER[i], Vector3(h.spot) + Vector3(0.5, 0, 0.5))
+		npc.home_key = h.key
+		npc.home_spot = h.spot
+
+
+## The player's starting kit in a test world.
+func give_loadout(p: Player) -> void:
+	p.inventory.slots.fill(null)
+	var hotbar := ["PlatinumBroadsword", "PlatinumPickaxe", "PlatinumAxe", "PlatinumHammer", "DemonBow",
+			"FlintlockPistol", "AmethystStaff", "Torch", "WaterBucket", "LesserHealingPotion"]
+	for i in hotbar.size():
+		p.inventory.slots[i] = Inventory.stack(hotbar[i], p.inventory.max_stack(hotbar[i]))
+	for item in ["WoodenArrow", "UnholyArrow", "MusketBall", "EmptyBucket", "LavaBucket", "SuspiciousLookingEye", "DirtBlock", "StoneBlock", "Wood"]:
+		p.inventory.add(item, p.inventory.max_stack(item))
+	p.inventory.add_money(50 * 10000)  # 50 gold, for the town's shops
+	p.accessories.slots.fill(null)
+	for i in 3:
+		p.accessories.slots[i] = Inventory.stack(["HermesBoots", "CloudinaBottle", "BandofRegeneration"][i], 1)
+	for i in 3:
+		p.armor.slots[i] = Inventory.stack(["PlatinumHelmet", "PlatinumChainmail", "PlatinumGreaves"][i], 1)
+	p.life_max = Player.MAX_LIFE
+	p.life = p.life_max
+	p.mana_max = Player.MAX_MANA
+	p.mana = p.mana_max
+	p.inventory.changed.emit()
+
+
+# ------------------------------------------------------------------ runtime
+
+## Creates labels, spawner visuals, dummies and the overlay (new or loaded world).
+func activate() -> void:
+	for l in _labels:
+		var lab := Label3D.new()
+		lab.text = l[1]
+		lab.font = Assets.font("Mouse_Text")
+		lab.font_size = int(l[2])
+		lab.pixel_size = 0.02
+		lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		lab.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		lab.outline_size = 0
+		lab.modulate = Color(1, 1, 0.85)
+		add_child(lab)
+		lab.global_position = l[0]
+	for sp in spawners.values():
+		_make_spawner_visual(sp)
+	for d in _dummies:
+		game.spawn_npc("TargetDummy", Vector3(d) + Vector3(0.5, 0, 0.5))
+	if game.town.residents.is_empty():
+		_settle_town()
+	game.spawner.process_mode = Node.PROCESS_MODE_INHERIT if natural_spawns else Node.PROCESS_MODE_DISABLED
+	_build_overlay()
+
+
+func _make_spawner_visual(sp: Dictionary) -> void:
+	var def: Dictionary = Data.npcs[sp.kind]
+	var s := EntitySprite.new()
+	var tex := Assets.texture("Images/NPC_%d" % int(def.sprite))
+	var frame_h := float(tex.get_height()) / int(def.frames)
+	var h := 0.9
+	s.setup(tex, int(def.frames), Vector2(h * tex.get_width() / frame_h, h), true)
+	if def.has("tint"):
+		var t: Array = def.tint
+		s.set_tint(Color(t[0], t[1], t[2], t[3]))
+	if def.has("trim_bottom"):
+		s.set_trim_bottom(float(def.trim_bottom), frame_h)
+	add_child(s)
+	s.global_position = Vector3(sp.pos) + Vector3(0.5, 1.6, 0.5)
+	sp["sprite"] = s
+	var lab := Label3D.new()
+	lab.font = Assets.font("Mouse_Text")
+	lab.font_size = 16
+	lab.pixel_size = 0.02
+	lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	lab.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	add_child(lab)
+	lab.global_position = Vector3(sp.pos) + Vector3(0.5, 2.7, 0.5)
+	sp["label"] = lab
+	_update_spawner_label(sp)
+
+
+func _update_spawner_label(sp: Dictionary) -> void:
+	sp.label.text = Assets.npc_name(sp.kind) + ("\n[AUTO]" if sp.auto else "")
+	sp.label.modulate = Color(0.6, 1.0, 0.6) if sp.auto else Color(1, 1, 1)
+
+
+static func _key(p: Vector3i) -> String:
+	return "%d,%d,%d" % [p.x, p.y, p.z]
+
+
+func is_spawner(p: Vector3i) -> bool:
+	return spawners.has(_key(p))
+
+
+## Right-click: spawn one; with Shift: toggle auto-spawning.
+func use_spawner(p: Vector3i, toggle_auto: bool) -> void:
+	var sp: Dictionary = spawners.get(_key(p), {})
+	if sp.is_empty():
+		return
+	if toggle_auto:
+		sp.auto = not sp.auto
+		sp.timer = 0.0
+		_update_spawner_label(sp)
+		game.message("%s spawner: auto %s" % [Assets.npc_name(sp.kind), "on" if sp.auto else "off"], Color(0.7, 1.0, 0.7))
+		Audio.play("Mech_0", 0.6)
+	else:
+		_spawn_from(sp)
+
+
+func _spawn_from(sp: Dictionary) -> void:
+	var def: Dictionary = Data.npcs[sp.kind]
+	if def.get("boss", false):
+		if game.boss_alive():
+			game.message("A boss is already here", Color(0.8, 0.8, 0.8))
+			return
+		var npc := game.spawn_npc(sp.kind, Vector3(sp.pos) + Vector3(8.5, 10.0, 0.5))
+		sp.alive.append(npc)
+		Audio.play("Roar_0")
+		game.message("%s has awoken!" % Assets.npc_name(sp.kind), Color(0.69, 0.29, 1.0))
+		return
+	# Swimmers (sharks, jellyfish) go in the water pool.
+	var at := pool_spot() if def.ai == "swim" else spawn_spot(sp.pos, sp.kind)
+	var npc := game.spawn_npc(sp.kind, at)
+	sp.alive.append(npc)
+	Audio.play_at("Mech_0", Vector3(sp.pos), 0.5)
+
+
+## Where a spawner at `p` puts its enemy: the first spot east of it where the
+## enemy's whole body is in the open (fliers 3 up, walkers on the floor), so
+## it never lands inside the next spawner along or anything else.
+func spawn_spot(p: Vector3i, kind: String) -> Vector3:
+	var lk := NPC.look(kind)
+	var flying: bool = lk.flying
+	var size: Array = lk.hitbox
+	var half := Vector3(float(size[0]) * 0.5, float(size[1]), float(size[0]) * 0.5)
+	var lift := 3.0 if flying else 0.0
+	for k in range(4, 40):
+		var at := Vector3(p) + Vector3(0.5 + k * 0.5, lift, 0.5)
+		if _clear(at, half) and (flying or game.world.is_solid(Vector3i((at + Vector3(0, -0.5, 0)).floor()))):
+			return at
+	return Vector3(p) + Vector3(0.5, 2.0 + lift, 0.5)
+
+
+## No solid block in the box `half` (half width, full height) standing at `at`.
+func _clear(at: Vector3, half: Vector3) -> bool:
+	var lo := Vector3i((at - Vector3(half.x, 0, half.z)).floor())
+	var hi := Vector3i((at + Vector3(half.x, half.y, half.z) - Vector3.ONE * 0.001).floor())
+	for x in range(lo.x, hi.x + 1):
+		for y in range(lo.y, hi.y + 1):
+			for z in range(lo.z, hi.z + 1):
+				if game.world.is_solid(Vector3i(x, y, z)):
+					return false
+	return true
+
+
+func remove_spawner(p: Vector3i) -> void:
+	var sp: Dictionary = spawners.get(_key(p), {})
+	if sp.is_empty():
+		return
+	for n in ["sprite", "label"]:
+		if sp.has(n):
+			sp[n].queue_free()
+	spawners.erase(_key(p))
+
+
+func _physics_process(delta: float) -> void:
+	if game == null or game.state != Game.State.PLAYING:
+		return
+	for sp in spawners.values():
+		sp.alive = sp.alive.filter(func(n): return is_instance_valid(n) and n.is_inside_tree())
+		if sp.auto:
+			sp.timer -= delta
+			if sp.timer <= 0.0:
+				sp.timer = SPAWNER_INTERVAL
+				if sp.alive.size() < SPAWNER_MAX_ALIVE:
+					_spawn_from(sp)
+
+
+func _process(_delta: float) -> void:
+	if game == null or game.state != Game.State.PLAYING:
+		return
+	for sp in spawners.values():
+		if sp.has("sprite"):
+			sp.sprite.update_light(game.world, game.sky, sp.sprite.global_position)
+	if _status:
+		var p := game.player
+		var flags := []
+		if p.god_mode:
+			flags.append("GOD")
+		if p.flying:
+			flags.append("FLY")
+		if natural_spawns:
+			flags.append("SPAWNS ON")
+		_status.text = "TEST WORLD   F1 help" + ("   [" + "] [".join(flags) + "]" if not flags.is_empty() else "")
+
+
+# ------------------------------------------------------------------ hotkeys
+
+func _unhandled_input(event: InputEvent) -> void:
+	if game == null or game.state != Game.State.PLAYING or game.hud.paused:
+		return
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	var p := game.player
+	match event.keycode:
+		KEY_F1:
+			_help.visible = not _help.visible
+		KEY_F2:
+			p.god_mode = not p.god_mode
+			game.message("God mode " + ("on" if p.god_mode else "off"), Color(1, 0.9, 0.5))
+		KEY_F3:
+			p.flying = not p.flying
+			p.velocity = Vector3.ZERO
+			game.message("Flying " + ("on (Space up, Shift down)" if p.flying else "off"), Color(1, 0.9, 0.5))
+		KEY_F4:
+			set_night(game.sky.is_day)
+		KEY_F5:
+			var n := 0
+			for npc in game.npcs():
+				if not npc.def.get("invulnerable", false):
+					npc.queue_free()
+					n += 1
+			game.message("Removed %d enemies" % n, Color(1, 0.9, 0.5))
+		KEY_F6:
+			var n := 0
+			for e in game.entities.get_children():
+				if e is ItemDrop:
+					e.queue_free()
+					n += 1
+			game.message("Cleared %d dropped items" % n, Color(1, 0.9, 0.5))
+		KEY_F7:
+			natural_spawns = not natural_spawns
+			game.spawner.process_mode = Node.PROCESS_MODE_INHERIT if natural_spawns else Node.PROCESS_MODE_DISABLED
+			game.message("Natural enemy spawns " + ("on" if natural_spawns else "off"), Color(1, 0.9, 0.5))
+		KEY_F8:
+			p.heal(p.life_max)
+			p.mana = p.mana_max
+			p.breath = Player.BREATH_MAX
+			p.on_fire = 0.0
+			p.potion_sickness = 0.0
+			p.stats_changed.emit()
+		_:
+			return
+	get_viewport().set_input_as_handled()
+
+
+func set_night(night: bool) -> void:
+	game.sky.is_day = not night
+	game.sky.time = SkySystem.NIGHT_LENGTH * 0.25 if night else SkySystem.DAY_LENGTH * 0.45
+	game.message("It is now " + ("night" if night else "day"), Color(1, 0.9, 0.5))
+
+
+func _build_overlay() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 11
+	add_child(layer)
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var theme := Theme.new()
+	theme.default_font = Assets.font("Mouse_Text")
+	theme.default_font_size = 20
+	theme.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0.9))
+	theme.set_constant("shadow_offset_x", "Label", 2)
+	theme.set_constant("shadow_offset_y", "Label", 2)
+	root.theme = theme
+	layer.add_child(root)
+	Settings.track_ui_scale(root)
+	_status = Label.new()
+	# Bottom centre, clear of the hotbar and hearts at any UI scale.
+	_status.anchor_left = 0.5
+	_status.anchor_right = 0.5
+	_status.anchor_top = 1.0
+	_status.anchor_bottom = 1.0
+	_status.offset_left = -300
+	_status.offset_right = 300
+	_status.offset_top = -34
+	_status.offset_bottom = -8
+	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_status)
+	_help = PanelContainer.new()
+	_help.anchor_left = 0.5
+	_help.anchor_right = 0.5
+	_help.anchor_top = 0.5
+	_help.anchor_bottom = 0.5
+	_help.offset_left = -330
+	_help.offset_right = 330
+	_help.offset_top = -170
+	_help.offset_bottom = 170
+	_help.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.1, 0.2, 0.85)
+	sb.set_content_margin_all(14)
+	sb.set_corner_radius_all(8)
+	_help.add_theme_stylebox_override("panel", sb)
+	var t := Label.new()
+	t.text = "\n".join(HELP)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_help.add_child(t)
+	_help.visible = false
+	root.add_child(_help)
+
+
+# ------------------------------------------------------------------ saving
+
+func save_state() -> Dictionary:
+	var sps := []
+	for sp in spawners.values():
+		sps.append([[sp.pos.x, sp.pos.y, sp.pos.z], sp.kind, sp.auto])
+	var labels := []
+	for l in _labels:
+		labels.append([[l[0].x, l[0].y, l[0].z], l[1], l[2]])
+	var dummies := []
+	for d in _dummies:
+		dummies.append([d.x, d.y, d.z])
+	return {"spawners": sps, "labels": labels, "dummies": dummies, "natural_spawns": natural_spawns}
+
+
+func load_state(d: Dictionary) -> void:
+	spawners.clear()
+	for s in d.get("spawners", []):
+		var pos := Vector3i(int(s[0][0]), int(s[0][1]), int(s[0][2]))
+		spawners[_key(pos)] = {"pos": pos, "kind": s[1], "auto": bool(s[2]), "timer": 0.0, "alive": []}
+	_labels.clear()
+	for l in d.get("labels", []):
+		_labels.append([Vector3(l[0][0], l[0][1], l[0][2]), l[1], int(l[2])])
+	_dummies.clear()
+	for p in d.get("dummies", []):
+		_dummies.append(Vector3i(int(p[0]), int(p[1]), int(p[2])))
+	natural_spawns = bool(d.get("natural_spawns", false))

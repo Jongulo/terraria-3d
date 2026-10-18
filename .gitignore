@@ -1,0 +1,11 @@
+# Extracted from the user's own Terraria install — never commit.
+game/assets/terraria/
+# Tuned models whole (voxels coloured from Terraria's sprites): a local cache.
+# Their patches (data/tuned_patches/: the edits, no art) are what's committed.
+game/data/tuned/
+game/.godot/
+game/bin/
+target/
+*.import
+__pycache__/
+*.pyc

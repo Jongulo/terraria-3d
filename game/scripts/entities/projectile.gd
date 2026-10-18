@@ -1,0 +1,203 @@
+class_name Projectile
+extends Node3D
+## Arrows, bullets, bolts and thrown weapons. Friendly projectiles hit NPCs,
+## hostile ones hit the player; all of them stop at solid blocks. Explosives
+## (an item's "explosive") instead bounce, roll or stick until their fuse
+## runs out, then go off (Game.explode).
+
+var velocity := Vector3.ZERO
+var gravity := 0.0
+var damage := 0
+var knockback := 0.0
+var friendly := true
+## Chance (0..1) of a critical hit, from the shooter (Player.crit_chance).
+var crit := 0.04
+var life := 3.0
+var penetrate := 1
+var spin := 0.0
+var sprite := EntitySprite.new()
+var _hit := {}
+var _angle := 0.0
+## Bombs, dynamite, grenades: the item's "explosive" ({} for other projectiles).
+var explosive := {}
+var _stuck := false
+var _smoke := 0.0
+## Its ProjectileID name.
+var kind := ""
+## Defense its hits ignore (the Sharpening Station's, for melee).
+var armor_pen := 0
+## Each enemy pierced takes this share off its damage (Glacier Fang: 34%).
+var pierce_falloff := 0.0
+## How far from its centre it hits enemies.
+var radius := 0.3
+## Gravity starts this late (Terraria's thrown aiStyle 2: after 20 ticks,
+## slowing as it falls), and `drag` of its sideways speed is lost a second.
+var gravity_delay := 0.0
+var drag := 0.0
+## A sheet frame held, not animated (-1: animated).
+var frame := -1
+## Lit, unshaded (the Ice Bolt's white light).
+var glow := Color.BLACK
+var _age := 0.0
+var _zigzag := Vector2.ZERO
+var _zig_offset := Vector3.ZERO
+## How far from its centre the bomb touches blocks.
+const BOMB_RADIUS := 0.18
+
+
+## Projectiles whose sheet is an animation (frames stacked down it), drawn
+## pointing right instead of up.
+const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3}}
+## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
+## swing] across the way it's going (the Thunder Zapper's bolt), and how
+## long it lasts.
+const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0}}
+var _frames := 1
+var _frame_t := 0.0
+var _turn := PI
+
+
+## `proj` is a ProjectileID name; its sprite sheet is Projectile_<id>.
+func setup(proj: String, size := 0.5) -> void:
+	kind = proj
+	var id: int = Assets.ids.ProjectileID.get(proj, 1)
+	var tex := Assets.texture("Images/Projectile_%d" % id)
+	var sheet: Dictionary = SHEETS.get(proj, {})
+	_frames = int(sheet.get("frames", 1))
+	if sheet.get("right", false):
+		_turn = PI / 2.0
+	var aspect := float(tex.get_width()) / tex.get_height() * _frames
+	sprite.setup(tex, _frames, Vector2(size * aspect, size), true, true)
+	add_child(sprite)
+	var flight: Dictionary = FLIGHT.get(proj, {})
+	if flight.has("zigzag"):
+		_zigzag = Vector2(flight.zigzag[0], flight.zigzag[1])
+	life = float(flight.get("life", life))
+
+
+func _physics_process(delta: float) -> void:
+	var game := Game.current
+	if not explosive.is_empty():
+		_explosive_step(delta, game)
+		return
+	life -= delta
+	_age += delta
+	if _age >= gravity_delay:
+		velocity.y -= gravity * delta
+		if drag > 0.0:
+			var keep := pow(1.0 - drag, delta)
+			velocity.x *= keep
+			velocity.z *= keep
+	var step := velocity * delta
+	# The Thunder Zapper's bolt zigzags across its way (straight up or down
+	# it doesn't).
+	if _zigzag.x > 0.0:
+		var side := Vector3(-velocity.z, 0, velocity.x).normalized()
+		var phase := fmod(_age / _zigzag.y, 2.0)
+		var want := side * _zigzag.x * (1.0 - absf(phase - 1.0) * 2.0)
+		step += want - _zig_offset
+		_zig_offset = want
+	# Sub-step so fast bullets don't skip through blocks or enemies.
+	var n := int(ceil(step.length() / 0.4))
+	for i in maxi(n, 1):
+		global_position += step / maxi(n, 1)
+		# The player's projectiles cut grass, vines, cobwebs, pots...
+		if friendly and damage > 0:
+			game.cut_tiles_at(global_position, 0.25)
+		if game.world.is_solid(Vector3i(global_position.floor())):
+			Audio.play_at("Dig_*", global_position, 0.4)
+			queue_free()
+			return
+		if _check_hits(game):
+			queue_free()
+			return
+	if life <= 0:
+		queue_free()
+		return
+	var cam := game.player.camera
+	if spin != 0.0:
+		_angle += spin * delta
+		sprite.set_rotation_angle(_angle)
+	else:
+		# Terraria projectile sprites point up; turn them along the flight path.
+		sprite.set_rotation_angle(EntitySprite.facing_angle(cam, velocity) + _turn)
+	if frame >= 0:
+		sprite.set_frame(frame)
+	elif _frames > 1:
+		_frame_t += delta
+		sprite.set_frame(int(_frame_t * 20.0) % _frames)
+	if glow != Color.BLACK:
+		sprite.set_glow()
+	else:
+		sprite.update_light(game.world, game.sky, global_position)
+
+
+## A lit explosive: falls, bounces off blocks (losing speed, rolling to a
+## stop), or sticks to the first thing it touches; a grenade goes off on
+## hitting an enemy. Smoke trails from its fuse; when it burns down, boom.
+func _explosive_step(delta: float, game) -> void:
+	life -= delta
+	_smoke -= delta
+	if _smoke <= 0.0:
+		_smoke = 0.25
+		game.spawn_dust(global_position + Vector3(0, 0.25, 0), Color(0.55, 0.55, 0.55), 1)
+	if not _stuck:
+		velocity.y -= gravity * delta
+		var w: VoxelWorld = game.world
+		for axis in 3:
+			var move := velocity[axis] * delta
+			if move == 0.0:
+				continue
+			var to := global_position
+			to[axis] += move
+			var edge := to
+			edge[axis] += signf(move) * BOMB_RADIUS
+			if w.is_solid(Vector3i(edge.floor())):
+				if explosive.get("sticky", false):
+					_stuck = true
+					velocity = Vector3.ZERO
+					break
+				velocity[axis] *= -float(explosive.get("bounce", 0.3))
+				if axis == 1:
+					# On the ground: rolls to a stop.
+					velocity.x *= 0.7
+					velocity.z *= 0.7
+				if absf(velocity[axis]) > 1.5:
+					Audio.play_at("Dig_*", global_position, 0.25)
+			else:
+				global_position = to
+		# Rolling along the ground slows it down.
+		if w.is_solid(Vector3i((global_position - Vector3(0, BOMB_RADIUS + 0.05, 0)).floor())):
+			var keep := exp(-2.5 * delta)
+			velocity.x *= keep
+			velocity.z *= keep
+		if explosive.get("contact", false):
+			for npc in game.npcs():
+				if not npc.def.get("invulnerable", false) and npc.overlaps_point(global_position, 0.3):
+					life = 0.0
+	var speed := velocity.length()
+	if speed > 0.5:
+		_angle += spin * delta * minf(1.0, speed / 6.0)
+	sprite.set_rotation_angle(_angle)
+	sprite.update_light(game.world, game.sky, global_position)
+	if life <= 0.0:
+		game.explode(global_position, damage, knockback, explosive)
+		queue_free()
+
+
+func _check_hits(game) -> bool:
+	if friendly:
+		for npc in game.npcs():
+			if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
+				_hit[npc] = true
+				npc.hit(damage, knockback, velocity.normalized(), crit, armor_pen)
+				damage = maxi(1, int(round(damage * (1.0 - pierce_falloff))))
+				penetrate -= 1
+				if penetrate <= 0:
+					return true
+	else:
+		var p = game.player
+		if p.alive and p.overlaps_point(global_position, 0.2):
+			p.hurt(damage, global_position)
+			return true
+	return false

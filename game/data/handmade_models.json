@@ -1,0 +1,532 @@
+{
+	"_doc": [
+		"Hand-made voxel models (the placeable picker's 'Claude' method), by block name.",
+		"Built at the sprite's art resolution (Data art: one voxel per pixel of the original art), w x h pixels and w voxels deep; z runs 0 (back) to w - 1 (front).",
+		"parts: the first part whose rect [x0, y0, x1, y1] (art pixels, inclusive, y down) holds an opaque pixel gives that pixel's column of voxels: z ranges [[z0, z1], ...] (inclusive). default: the same for pixels in no part. Transparent pixels get no voxels. match [x, y]: the part only takes pixels of that art pixel's colour (the dark gaps between books, drawer knobs).",
+		"Seen from the front each column shows its front-most voxel, which always takes the sprite pixel's own colour, so the front view is the sprite. fill [x, y]: the art pixel whose colour the column's other voxels take (the top of a tabletop, the sides of a leg); without it they take their own pixel's colour (the sprite pushed back).",
+		"shift: [[dx, dy], ...] per animation frame (looping): where the part, its rect and its match/fill pixels have moved to in that frame (the Extractinator's bobbing hopper)."
+	],
+	"sawmill": {
+		"parts": [
+			{"name": "saw blade", "rect": [11, 4, 21, 9], "z": [[11, 12]]},
+			{"name": "plank stack", "rect": [0, 5, 10, 9], "z": [[6, 17]], "fill": [2, 8]},
+			{"name": "tabletop", "rect": [0, 10, 23, 12], "z": [[4, 19]], "fill": [5, 11]},
+			{"name": "left legs", "rect": [1, 13, 3, 23], "z": [[17, 19], [4, 6]], "fill": [2, 15]},
+			{"name": "right legs", "rect": [20, 13, 22, 23], "z": [[17, 19], [4, 6]], "fill": [21, 15]},
+			{"name": "shelf", "rect": [4, 18, 19, 19], "z": [[4, 19]], "fill": [6, 19]},
+			{"name": "shelf aprons", "rect": [4, 20, 19, 21], "z": [[17, 19], [4, 6]], "fill": [6, 20]},
+			{"name": "saw under the table", "rect": [11, 13, 19, 17], "z": [[11, 12]]},
+			{"name": "sawdust", "rect": [4, 17, 10, 17], "z": [[7, 16]]},
+			{"name": "sawdust", "rect": [4, 16, 9, 16], "z": [[8, 15]]},
+			{"name": "sawdust", "rect": [4, 14, 8, 15], "z": [[10, 13]]}
+		],
+		"default": {"z": [[8, 15]]}
+	},
+	"bench": {
+		"parts": [
+			{"name": "backrest rail", "rect": [2, 2, 20, 4], "z": [[6, 8]], "fill": [8, 3]},
+			{"name": "backrest slats", "rect": [2, 5, 20, 8], "z": [[6, 8]], "fill": [3, 6]},
+			{"name": "seat", "rect": [1, 9, 21, 11], "z": [[6, 17]], "fill": [5, 10]},
+			{"name": "left legs", "rect": [1, 12, 3, 15], "z": [[15, 17], [6, 8]], "fill": [2, 12]},
+			{"name": "right legs", "rect": [19, 12, 21, 15], "z": [[15, 17], [6, 8]], "fill": [20, 12]}
+		],
+		"default": {"z": [[6, 8]]}
+	},
+	"bookcase": {
+		"parts": [
+			{"name": "drawer knobs", "rect": [3, 24, 20, 30], "match": [4, 25], "z": [[6, 19]]},
+			{"name": "gaps between books", "rect": [3, 4, 20, 10], "match": [7, 4], "z": [[6, 9]]},
+			{"name": "gaps between books", "rect": [3, 14, 20, 20], "match": [7, 4], "z": [[6, 9]]},
+			{"name": "books (upper shelf)", "rect": [3, 4, 20, 10], "z": [[6, 15]]},
+			{"name": "books (lower shelf)", "rect": [3, 14, 20, 20], "z": [[6, 15]]},
+			{"name": "drawers", "rect": [3, 24, 10, 26], "z": [[6, 18]], "fill": [5, 24]},
+			{"name": "drawers", "rect": [13, 24, 20, 26], "z": [[6, 18]], "fill": [5, 24]},
+			{"name": "drawers", "rect": [3, 28, 10, 30], "z": [[6, 18]], "fill": [5, 28]},
+			{"name": "drawers", "rect": [13, 28, 20, 30], "z": [[6, 18]], "fill": [5, 28]},
+			{"name": "left side", "rect": [0, 0, 2, 31], "z": [[6, 17]], "fill": [1, 10]},
+			{"name": "right side", "rect": [21, 0, 23, 31], "z": [[6, 17]], "fill": [22, 10]},
+			{"name": "top", "rect": [3, 0, 20, 3], "z": [[6, 17]], "fill": [5, 1]},
+			{"name": "shelves", "rect": [3, 11, 20, 13], "z": [[6, 17]], "fill": [5, 12]},
+			{"name": "shelves", "rect": [3, 21, 20, 23], "z": [[6, 17]], "fill": [5, 22]}
+		],
+		"default": {"z": [[6, 17]]}
+	},
+	"piano": {
+		"parts": [
+			{"name": "pedals", "rect": [8, 14, 13, 14], "match": [9, 14], "z": [[6, 16]]},
+			{"name": "pedals", "rect": [8, 14, 13, 14], "match": [10, 14], "z": [[6, 16]]},
+			{"name": "sheet music", "rect": [8, 0, 14, 5], "z": [[6, 14]], "fill": [3, 4]},
+			{"name": "lid", "rect": [0, 0, 22, 2], "z": [[6, 13]], "fill": [4, 1]},
+			{"name": "upper cabinet", "rect": [1, 3, 21, 5], "z": [[6, 13]], "fill": [3, 4]},
+			{"name": "keys", "rect": [1, 6, 21, 6], "z": [[6, 18]]},
+			{"name": "key bed", "rect": [1, 7, 21, 9], "z": [[6, 18]], "fill": [3, 8]},
+			{"name": "front legs", "rect": [1, 10, 3, 15], "z": [[15, 18], [6, 13]], "fill": [2, 11]},
+			{"name": "front legs", "rect": [19, 10, 21, 15], "z": [[15, 18], [6, 13]], "fill": [20, 11]},
+			{"name": "lower cabinet", "rect": [4, 10, 18, 15], "z": [[6, 13]], "fill": [5, 11]}
+		],
+		"default": {"z": [[6, 13]]}
+	},
+	"wooden_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [5, 0, 9, 3], "z": [[3, 6]], "fill": [6, 1]},
+			{"name": "basin end", "rect": [0, 4, 1, 5], "z": [[2, 14]], "fill": [1, 5]},
+			{"name": "basin end", "rect": [14, 4, 15, 5], "z": [[2, 14]], "fill": [14, 5]},
+			{"name": "basin", "rect": [2, 4, 13, 5], "z": [[2, 3], [13, 14]], "fill": [3, 5]},
+			{"name": "counter", "rect": [0, 6, 15, 6], "z": [[2, 14]], "fill": [0, 6]},
+			{"name": "cabinet", "rect": [1, 7, 14, 15], "z": [[3, 13]], "fill": [6, 8]}
+		],
+		"default": {"z": [[3, 13]]}
+	},
+	"ebonwood_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [5, 0, 9, 3], "z": [[3, 6]], "fill": [6, 1]},
+			{"name": "basin end", "rect": [0, 4, 1, 5], "z": [[2, 14]], "fill": [1, 5]},
+			{"name": "basin end", "rect": [14, 4, 15, 5], "z": [[2, 14]], "fill": [14, 5]},
+			{"name": "basin", "rect": [2, 4, 13, 5], "z": [[2, 3], [13, 14]], "fill": [3, 5]},
+			{"name": "counter", "rect": [0, 6, 15, 6], "z": [[2, 14]], "fill": [0, 6]},
+			{"name": "cabinet", "rect": [0, 7, 15, 15], "z": [[3, 13]], "fill": [2, 7]}
+		],
+		"default": {"z": [[3, 13]]}
+	},
+	"rich_mahogany_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [5, 0, 9, 3], "z": [[3, 6]], "fill": [6, 1]},
+			{"name": "basin end", "rect": [0, 4, 1, 5], "z": [[2, 14]], "fill": [1, 5]},
+			{"name": "basin end", "rect": [14, 4, 15, 5], "z": [[2, 14]], "fill": [14, 5]},
+			{"name": "basin", "rect": [2, 4, 13, 5], "z": [[2, 3], [13, 14]], "fill": [3, 5]},
+			{"name": "counter", "rect": [0, 6, 15, 6], "z": [[2, 14]], "fill": [1, 6]},
+			{"name": "cabinet", "rect": [0, 7, 15, 15], "z": [[3, 13]], "fill": [0, 7]}
+		],
+		"default": {"z": [[3, 13]]}
+	},
+	"shadewood_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [5, 0, 9, 3], "z": [[3, 6]], "fill": [6, 1]},
+			{"name": "basin end", "rect": [0, 4, 1, 5], "z": [[2, 14]], "fill": [1, 5]},
+			{"name": "basin end", "rect": [14, 4, 15, 5], "z": [[2, 14]], "fill": [14, 5]},
+			{"name": "basin", "rect": [2, 4, 13, 5], "z": [[2, 3], [13, 14]], "fill": [3, 5]},
+			{"name": "counter", "rect": [0, 6, 15, 7], "z": [[2, 14]], "fill": [4, 7]},
+			{"name": "cabinet", "rect": [0, 8, 15, 15], "z": [[3, 13]], "fill": [3, 8]}
+		],
+		"default": {"z": [[3, 13]]}
+	},
+	"boreal_wood_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [5, 0, 9, 2], "z": [[3, 6]], "fill": [6, 1]},
+			{"name": "basin end", "rect": [0, 3, 1, 4], "z": [[2, 14]], "fill": [0, 3]},
+			{"name": "basin end", "rect": [14, 3, 15, 4], "z": [[2, 14]], "fill": [14, 3]},
+			{"name": "basin", "rect": [2, 3, 13, 4], "z": [[2, 3], [13, 14]], "fill": [2, 4]},
+			{"name": "counter", "rect": [0, 5, 15, 6], "z": [[2, 14]], "fill": [0, 5]},
+			{"name": "cabinet", "rect": [0, 7, 15, 15], "z": [[3, 13]], "fill": [1, 7]}
+		],
+		"default": {"z": [[3, 13]]}
+	},
+	"blue_dungeon_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [4, 0, 9, 4], "z": [[3, 6]], "fill": [5, 1]},
+			{"name": "basin end", "rect": [1, 5, 2, 5], "z": [[3, 12]], "fill": [1, 5]},
+			{"name": "basin end", "rect": [13, 5, 14, 5], "z": [[3, 12]], "fill": [13, 5]},
+			{"name": "basin", "rect": [3, 5, 12, 5], "z": [[3, 4], [11, 12]], "fill": [3, 5]},
+			{"name": "bowl", "rect": [1, 6, 14, 6], "z": [[3, 12]], "fill": [3, 6]},
+			{"name": "bowl", "rect": [1, 7, 14, 7], "z": [[4, 11]], "fill": [2, 7]},
+			{"name": "bowl", "rect": [1, 8, 14, 8], "z": [[5, 10]], "fill": [2, 8]},
+			{"name": "pedestal", "rect": [4, 9, 11, 13], "z": [[6, 9]], "fill": [7, 10]},
+			{"name": "foot", "rect": [3, 14, 12, 15], "z": [[5, 10]], "fill": [5, 14]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"green_dungeon_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [4, 0, 9, 4], "z": [[3, 6]], "fill": [5, 1]},
+			{"name": "basin end", "rect": [1, 5, 2, 5], "z": [[3, 12]], "fill": [1, 5]},
+			{"name": "basin end", "rect": [13, 5, 14, 5], "z": [[3, 12]], "fill": [13, 5]},
+			{"name": "basin", "rect": [3, 5, 12, 5], "z": [[3, 4], [11, 12]], "fill": [5, 5]},
+			{"name": "bowl", "rect": [1, 6, 14, 6], "z": [[3, 12]], "fill": [3, 6]},
+			{"name": "bowl", "rect": [1, 7, 14, 7], "z": [[4, 11]], "fill": [3, 7]},
+			{"name": "bowl", "rect": [1, 8, 14, 8], "z": [[5, 10]], "fill": [3, 8]},
+			{"name": "pedestal", "rect": [4, 9, 11, 13], "z": [[6, 9]], "fill": [6, 9]},
+			{"name": "foot", "rect": [3, 14, 12, 15], "z": [[5, 10]], "fill": [7, 14]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"pink_dungeon_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [4, 0, 9, 4], "z": [[3, 6]], "fill": [5, 1]},
+			{"name": "basin end", "rect": [1, 5, 2, 5], "z": [[3, 12]], "fill": [2, 5]},
+			{"name": "basin end", "rect": [13, 5, 14, 5], "z": [[3, 12]], "fill": [13, 5]},
+			{"name": "basin", "rect": [3, 5, 12, 5], "z": [[3, 4], [11, 12]], "fill": [3, 5]},
+			{"name": "bowl", "rect": [1, 6, 14, 6], "z": [[3, 12]], "fill": [4, 6]},
+			{"name": "bowl", "rect": [1, 7, 14, 7], "z": [[4, 11]], "fill": [2, 7]},
+			{"name": "bowl", "rect": [1, 8, 14, 8], "z": [[5, 10]], "fill": [3, 8]},
+			{"name": "pedestal", "rect": [4, 9, 11, 13], "z": [[6, 9]], "fill": [6, 9]},
+			{"name": "foot", "rect": [3, 14, 12, 15], "z": [[5, 10]], "fill": [6, 14]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"obsidian_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [4, 0, 9, 4], "z": [[3, 6]], "fill": [7, 1]},
+			{"name": "basin end", "rect": [1, 5, 2, 5], "z": [[3, 12]], "fill": [2, 5]},
+			{"name": "basin end", "rect": [13, 5, 14, 5], "z": [[3, 12]], "fill": [13, 5]},
+			{"name": "basin", "rect": [3, 5, 12, 5], "z": [[3, 4], [11, 12]], "fill": [5, 5]},
+			{"name": "bowl", "rect": [1, 6, 14, 6], "z": [[3, 12]], "fill": [3, 6]},
+			{"name": "bowl", "rect": [1, 7, 14, 7], "z": [[4, 11]], "fill": [3, 7]},
+			{"name": "bowl", "rect": [1, 8, 14, 8], "z": [[5, 10]], "fill": [2, 8]},
+			{"name": "pedestal", "rect": [5, 9, 10, 13], "z": [[6, 9]], "fill": [6, 9]},
+			{"name": "foot", "rect": [4, 14, 11, 15], "z": [[5, 10]], "fill": [6, 14]},
+			{"name": "posts", "rect": [0, 3, 3, 9], "z": [[6, 9]], "fill": [2, 4]},
+			{"name": "posts", "rect": [12, 3, 15, 9], "z": [[6, 9]], "fill": [13, 4]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"ash_wood_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [3, 0, 8, 3], "z": [[3, 6]], "fill": [6, 0]},
+			{"name": "basin end", "rect": [0, 4, 1, 4], "z": [[3, 12]], "fill": [0, 4]},
+			{"name": "basin end", "rect": [14, 4, 15, 4], "z": [[3, 12]], "fill": [14, 4]},
+			{"name": "basin", "rect": [2, 4, 13, 4], "z": [[3, 4], [11, 12]], "fill": [2, 4]},
+			{"name": "bowl", "rect": [0, 5, 15, 5], "z": [[3, 12]], "fill": [2, 5]},
+			{"name": "bowl", "rect": [0, 6, 15, 6], "z": [[4, 11]], "fill": [2, 6]},
+			{"name": "bowl", "rect": [0, 7, 15, 7], "z": [[5, 10]], "fill": [1, 7]},
+			{"name": "bowl", "rect": [0, 8, 15, 8], "z": [[6, 9]], "fill": [3, 8]},
+			{"name": "pedestal", "rect": [5, 9, 10, 10], "z": [[6, 9]], "fill": [6, 9]},
+			{"name": "foot", "rect": [1, 11, 15, 15], "z": [[5, 10]], "fill": [11, 11]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"cactus_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [4, 0, 9, 3], "z": [[3, 6]], "fill": [5, 1]},
+			{"name": "basin end", "rect": [0, 4, 1, 4], "z": [[3, 12]], "fill": [1, 4]},
+			{"name": "basin end", "rect": [13, 4, 14, 4], "z": [[3, 12]], "fill": [13, 4]},
+			{"name": "basin", "rect": [2, 4, 12, 4], "z": [[3, 4], [11, 12]], "fill": [2, 4]},
+			{"name": "bowl", "rect": [0, 5, 14, 5], "z": [[3, 12]], "fill": [3, 5]},
+			{"name": "bowl", "rect": [0, 6, 14, 6], "z": [[4, 11]], "fill": [3, 6]},
+			{"name": "bowl", "rect": [0, 7, 14, 7], "z": [[5, 10]], "fill": [3, 7]},
+			{"name": "bowl", "rect": [0, 8, 14, 8], "z": [[6, 9]], "fill": [1, 8]},
+			{"name": "pedestal", "rect": [2, 9, 12, 11], "z": [[6, 9]], "fill": [2, 9]},
+			{"name": "foot", "rect": [4, 12, 8, 15], "z": [[5, 10]], "fill": [6, 13]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"palm_wood_sink": {
+		"parts": [
+			{"name": "faucet", "rect": [4, 0, 9, 3], "z": [[3, 6]], "fill": [5, 1]},
+			{"name": "basin end", "rect": [0, 4, 1, 4], "z": [[3, 12]], "fill": [0, 4]},
+			{"name": "basin end", "rect": [14, 4, 15, 4], "z": [[3, 12]], "fill": [14, 4]},
+			{"name": "basin", "rect": [2, 4, 13, 4], "z": [[3, 4], [11, 12]], "fill": [6, 4]},
+			{"name": "bowl", "rect": [0, 5, 15, 5], "z": [[3, 12]], "fill": [0, 5]},
+			{"name": "bowl", "rect": [0, 6, 15, 6], "z": [[4, 11]], "fill": [1, 6]},
+			{"name": "bowl", "rect": [0, 7, 15, 7], "z": [[5, 10]], "fill": [2, 7]},
+			{"name": "bowl", "rect": [0, 8, 15, 8], "z": [[6, 9]], "fill": [3, 8]},
+			{"name": "bowl", "rect": [0, 9, 15, 9], "z": [[7, 8]], "fill": [2, 9]},
+			{"name": "pedestal", "rect": [5, 10, 12, 11], "z": [[6, 9]], "fill": [5, 10]},
+			{"name": "foot", "rect": [5, 12, 11, 15], "z": [[5, 10]], "fill": [7, 12]}
+		],
+		"default": {"z": [[5, 10]]}
+	},
+	"palm_wood_bathtub": {
+		"parts": [
+			{"name": "tap", "rect": [25, 2, 30, 4], "z": [[9, 12]], "fill": [26, 3]},
+			{"name": "end", "rect": [1, 5, 2, 5], "z": [[9, 22]], "fill": [1, 5]},
+			{"name": "end", "rect": [30, 5, 31, 5], "z": [[9, 22]], "fill": [30, 5]},
+			{"name": "wall", "rect": [3, 5, 29, 5], "z": [[9, 10], [21, 22]], "fill": [3, 5]},
+			{"name": "end", "rect": [1, 6, 2, 6], "z": [[9, 22]], "fill": [1, 6]},
+			{"name": "end", "rect": [30, 6, 31, 6], "z": [[9, 22]], "fill": [30, 6]},
+			{"name": "wall", "rect": [3, 6, 29, 6], "z": [[9, 10], [21, 22]], "fill": [4, 6]},
+			{"name": "end", "rect": [1, 7, 2, 7], "z": [[9, 22]], "fill": [1, 7]},
+			{"name": "end", "rect": [30, 7, 31, 7], "z": [[9, 22]], "fill": [30, 7]},
+			{"name": "wall", "rect": [3, 7, 29, 7], "z": [[9, 10], [21, 22]], "fill": [4, 7]},
+			{"name": "end", "rect": [1, 8, 2, 8], "z": [[9, 22]], "fill": [1, 8]},
+			{"name": "end", "rect": [30, 8, 31, 8], "z": [[9, 22]], "fill": [30, 8]},
+			{"name": "wall", "rect": [3, 8, 29, 8], "z": [[9, 10], [21, 22]], "fill": [4, 8]},
+			{"name": "end", "rect": [2, 9, 3, 9], "z": [[9, 22]], "fill": [2, 9]},
+			{"name": "end", "rect": [29, 9, 30, 9], "z": [[9, 22]], "fill": [29, 9]},
+			{"name": "wall", "rect": [4, 9, 28, 9], "z": [[9, 10], [21, 22]], "fill": [6, 9]},
+			{"name": "end", "rect": [2, 10, 3, 10], "z": [[9, 22]], "fill": [2, 10]},
+			{"name": "end", "rect": [29, 10, 30, 10], "z": [[9, 22]], "fill": [29, 10]},
+			{"name": "wall", "rect": [4, 10, 28, 10], "z": [[9, 10], [21, 22]], "fill": [4, 10]},
+			{"name": "end", "rect": [2, 11, 3, 11], "z": [[9, 22]], "fill": [2, 11]},
+			{"name": "end", "rect": [29, 11, 30, 11], "z": [[9, 22]], "fill": [29, 11]},
+			{"name": "wall", "rect": [4, 11, 28, 11], "z": [[9, 10], [21, 22]], "fill": [4, 11]},
+			{"name": "end", "rect": [3, 12, 4, 12], "z": [[9, 22]], "fill": [3, 12]},
+			{"name": "end", "rect": [28, 12, 29, 12], "z": [[9, 22]], "fill": [28, 12]},
+			{"name": "wall", "rect": [5, 12, 27, 12], "z": [[9, 10], [21, 22]], "fill": [7, 12]},
+			{"name": "end", "rect": [4, 13, 5, 13], "z": [[9, 22]], "fill": [4, 13]},
+			{"name": "end", "rect": [27, 13, 28, 13], "z": [[9, 22]], "fill": [27, 13]},
+			{"name": "wall", "rect": [6, 13, 26, 13], "z": [[9, 10], [21, 22]], "fill": [6, 13]},
+			{"name": "end", "rect": [4, 14, 5, 14], "z": [[9, 22]], "fill": [4, 14]},
+			{"name": "end", "rect": [27, 14, 28, 14], "z": [[9, 22]], "fill": [27, 14]},
+			{"name": "wall", "rect": [6, 14, 26, 14], "z": [[9, 10], [21, 22]], "fill": [6, 14]},
+			{"name": "floor", "rect": [1, 15, 31, 15], "z": [[9, 22]], "fill": [5, 15]}
+		],
+		"default": {"z": [[9, 10], [21, 22]]}
+	},
+	"boreal_wood_bathtub": {
+		"parts": [
+			{"name": "tap", "rect": [25, 1, 30, 4], "z": [[9, 12]], "fill": [26, 2]},
+			{"name": "end", "rect": [0, 5, 1, 5], "z": [[9, 22]], "fill": [0, 5]},
+			{"name": "end", "rect": [29, 5, 30, 5], "z": [[9, 22]], "fill": [29, 5]},
+			{"name": "wall", "rect": [2, 5, 28, 5], "z": [[9, 10], [21, 22]], "fill": [2, 5]},
+			{"name": "end", "rect": [0, 6, 1, 6], "z": [[9, 22]], "fill": [0, 6]},
+			{"name": "end", "rect": [29, 6, 30, 6], "z": [[9, 22]], "fill": [29, 6]},
+			{"name": "wall", "rect": [2, 6, 28, 6], "z": [[9, 10], [21, 22]], "fill": [2, 6]},
+			{"name": "end", "rect": [0, 7, 1, 7], "z": [[9, 22]], "fill": [0, 7]},
+			{"name": "end", "rect": [29, 7, 30, 7], "z": [[9, 22]], "fill": [29, 7]},
+			{"name": "wall", "rect": [2, 7, 28, 7], "z": [[9, 10], [21, 22]], "fill": [2, 7]},
+			{"name": "end", "rect": [0, 8, 1, 8], "z": [[9, 22]], "fill": [0, 8]},
+			{"name": "end", "rect": [29, 8, 30, 8], "z": [[9, 22]], "fill": [29, 8]},
+			{"name": "wall", "rect": [2, 8, 28, 8], "z": [[9, 10], [21, 22]], "fill": [2, 8]},
+			{"name": "end", "rect": [0, 9, 1, 9], "z": [[9, 22]], "fill": [0, 9]},
+			{"name": "end", "rect": [29, 9, 30, 9], "z": [[9, 22]], "fill": [29, 9]},
+			{"name": "wall", "rect": [2, 9, 28, 9], "z": [[9, 10], [21, 22]], "fill": [3, 9]},
+			{"name": "end", "rect": [0, 10, 1, 10], "z": [[9, 22]], "fill": [0, 10]},
+			{"name": "end", "rect": [29, 10, 30, 10], "z": [[9, 22]], "fill": [29, 10]},
+			{"name": "wall", "rect": [2, 10, 28, 10], "z": [[9, 10], [21, 22]], "fill": [2, 10]},
+			{"name": "end", "rect": [0, 11, 1, 11], "z": [[9, 22]], "fill": [0, 11]},
+			{"name": "end", "rect": [29, 11, 30, 11], "z": [[9, 22]], "fill": [29, 11]},
+			{"name": "wall", "rect": [2, 11, 28, 11], "z": [[9, 10], [21, 22]], "fill": [3, 11]},
+			{"name": "end", "rect": [0, 12, 1, 12], "z": [[9, 22]], "fill": [0, 12]},
+			{"name": "end", "rect": [29, 12, 30, 12], "z": [[9, 22]], "fill": [29, 12]},
+			{"name": "wall", "rect": [2, 12, 28, 12], "z": [[9, 10], [21, 22]], "fill": [2, 12]},
+			{"name": "end", "rect": [1, 13, 2, 13], "z": [[9, 22]], "fill": [1, 13]},
+			{"name": "end", "rect": [28, 13, 29, 13], "z": [[9, 22]], "fill": [28, 13]},
+			{"name": "wall", "rect": [3, 13, 27, 13], "z": [[9, 10], [21, 22]], "fill": [3, 13]},
+			{"name": "end", "rect": [1, 14, 2, 14], "z": [[9, 22]], "fill": [1, 14]},
+			{"name": "end", "rect": [28, 14, 29, 14], "z": [[9, 22]], "fill": [28, 14]},
+			{"name": "wall", "rect": [3, 14, 27, 14], "z": [[9, 10], [21, 22]], "fill": [3, 14]},
+			{"name": "floor", "rect": [0, 15, 30, 15], "z": [[9, 22]], "fill": [2, 15]}
+		],
+		"default": {"z": [[9, 10], [21, 22]]}
+	},
+	"cactus_bathtub": {
+		"parts": [
+			{"name": "tap", "rect": [24, 0, 31, 4], "z": [[9, 12]], "fill": [28, 1]},
+			{"name": "foot", "rect": [0, 15, 6, 15], "z": [[9, 11], [20, 22]], "fill": [0, 15]},
+			{"name": "foot", "rect": [25, 15, 31, 15], "z": [[9, 11], [20, 22]], "fill": [25, 15]},
+			{"name": "end", "rect": [5, 5, 6, 5], "z": [[9, 22]], "fill": [5, 5]},
+			{"name": "end", "rect": [29, 5, 30, 5], "z": [[9, 22]], "fill": [29, 5]},
+			{"name": "wall", "rect": [7, 5, 28, 5], "z": [[9, 10], [21, 22]], "fill": [7, 5]},
+			{"name": "end", "rect": [4, 6, 5, 6], "z": [[9, 22]], "fill": [4, 6]},
+			{"name": "end", "rect": [29, 6, 30, 6], "z": [[9, 22]], "fill": [29, 6]},
+			{"name": "wall", "rect": [6, 6, 28, 6], "z": [[9, 10], [21, 22]], "fill": [6, 6]},
+			{"name": "end", "rect": [4, 7, 5, 7], "z": [[9, 22]], "fill": [4, 7]},
+			{"name": "end", "rect": [29, 7, 30, 7], "z": [[9, 22]], "fill": [29, 7]},
+			{"name": "wall", "rect": [6, 7, 28, 7], "z": [[9, 10], [21, 22]], "fill": [7, 7]},
+			{"name": "end", "rect": [4, 8, 5, 8], "z": [[9, 22]], "fill": [4, 8]},
+			{"name": "end", "rect": [29, 8, 30, 8], "z": [[9, 22]], "fill": [29, 8]},
+			{"name": "wall", "rect": [6, 8, 28, 8], "z": [[9, 10], [21, 22]], "fill": [6, 8]},
+			{"name": "end", "rect": [3, 9, 4, 9], "z": [[9, 22]], "fill": [3, 9]},
+			{"name": "end", "rect": [29, 9, 30, 9], "z": [[9, 22]], "fill": [29, 9]},
+			{"name": "wall", "rect": [5, 9, 28, 9], "z": [[9, 10], [21, 22]], "fill": [5, 9]},
+			{"name": "end", "rect": [2, 10, 3, 10], "z": [[9, 22]], "fill": [2, 10]},
+			{"name": "end", "rect": [29, 10, 30, 10], "z": [[9, 22]], "fill": [29, 10]},
+			{"name": "wall", "rect": [4, 10, 28, 10], "z": [[9, 10], [21, 22]], "fill": [4, 10]},
+			{"name": "end", "rect": [1, 11, 2, 11], "z": [[9, 22]], "fill": [1, 11]},
+			{"name": "end", "rect": [29, 11, 30, 11], "z": [[9, 22]], "fill": [29, 11]},
+			{"name": "wall", "rect": [3, 11, 28, 11], "z": [[9, 10], [21, 22]], "fill": [3, 11]},
+			{"name": "end", "rect": [0, 12, 1, 12], "z": [[9, 22]], "fill": [0, 12]},
+			{"name": "end", "rect": [30, 12, 31, 12], "z": [[9, 22]], "fill": [30, 12]},
+			{"name": "wall", "rect": [2, 12, 29, 12], "z": [[9, 10], [21, 22]], "fill": [2, 12]},
+			{"name": "end", "rect": [0, 13, 1, 13], "z": [[9, 22]], "fill": [0, 13]},
+			{"name": "end", "rect": [30, 13, 31, 13], "z": [[9, 22]], "fill": [30, 13]},
+			{"name": "wall", "rect": [2, 13, 29, 13], "z": [[9, 10], [21, 22]], "fill": [3, 13]},
+			{"name": "floor", "rect": [0, 14, 31, 14], "z": [[9, 22]], "fill": [0, 14]}
+		],
+		"default": {"z": [[9, 10], [21, 22]]}
+	},
+	"ebonwood_bathtub": {
+		"parts": [
+			{"name": "tap", "rect": [26, 9, 27, 12], "z": [[9, 12]], "fill": [26, 9]},
+			{"name": "foot", "rect": [8, 15, 8, 15], "z": [[9, 11], [20, 22]], "fill": [8, 15]},
+			{"name": "foot", "rect": [24, 15, 24, 15], "z": [[9, 11], [20, 22]], "fill": [24, 15]},
+			{"name": "end", "rect": [10, 0, 11, 0], "z": [[9, 22]], "fill": [11, 0]},
+			{"name": "end", "rect": [21, 0, 22, 0], "z": [[9, 22]], "fill": [21, 0]},
+			{"name": "wall", "rect": [12, 0, 20, 0], "z": [[9, 10], [21, 22]], "fill": [12, 0]},
+			{"name": "end", "rect": [8, 1, 9, 1], "z": [[9, 22]], "fill": [8, 1]},
+			{"name": "end", "rect": [23, 1, 24, 1], "z": [[9, 22]], "fill": [23, 1]},
+			{"name": "wall", "rect": [10, 1, 22, 1], "z": [[9, 10], [21, 22]], "fill": [13, 1]},
+			{"name": "end", "rect": [7, 2, 8, 2], "z": [[9, 22]], "fill": [8, 2]},
+			{"name": "end", "rect": [24, 2, 25, 2], "z": [[9, 22]], "fill": [24, 2]},
+			{"name": "wall", "rect": [9, 2, 23, 2], "z": [[9, 10], [21, 22]], "fill": [10, 2]},
+			{"name": "end", "rect": [6, 3, 7, 3], "z": [[9, 22]], "fill": [7, 3]},
+			{"name": "end", "rect": [25, 3, 26, 3], "z": [[9, 22]], "fill": [25, 3]},
+			{"name": "wall", "rect": [8, 3, 24, 3], "z": [[9, 10], [21, 22]], "fill": [9, 3]},
+			{"name": "end", "rect": [6, 4, 7, 4], "z": [[9, 22]], "fill": [7, 4]},
+			{"name": "end", "rect": [25, 4, 26, 4], "z": [[9, 22]], "fill": [25, 4]},
+			{"name": "wall", "rect": [8, 4, 24, 4], "z": [[9, 10], [21, 22]], "fill": [8, 4]},
+			{"name": "end", "rect": [6, 5, 7, 5], "z": [[9, 22]], "fill": [7, 5]},
+			{"name": "end", "rect": [25, 5, 26, 5], "z": [[9, 22]], "fill": [25, 5]},
+			{"name": "wall", "rect": [8, 5, 24, 5], "z": [[9, 10], [21, 22]], "fill": [10, 5]},
+			{"name": "end", "rect": [6, 6, 7, 6], "z": [[9, 22]], "fill": [7, 6]},
+			{"name": "end", "rect": [25, 6, 26, 6], "z": [[9, 22]], "fill": [25, 6]},
+			{"name": "wall", "rect": [8, 6, 24, 6], "z": [[9, 10], [21, 22]], "fill": [8, 6]},
+			{"name": "end", "rect": [6, 7, 7, 7], "z": [[9, 22]], "fill": [7, 7]},
+			{"name": "end", "rect": [25, 7, 26, 7], "z": [[9, 22]], "fill": [25, 7]},
+			{"name": "wall", "rect": [8, 7, 24, 7], "z": [[9, 10], [21, 22]], "fill": [8, 7]},
+			{"name": "end", "rect": [6, 8, 7, 8], "z": [[9, 22]], "fill": [7, 8]},
+			{"name": "end", "rect": [25, 8, 26, 8], "z": [[9, 22]], "fill": [25, 8]},
+			{"name": "wall", "rect": [8, 8, 24, 8], "z": [[9, 10], [21, 22]], "fill": [13, 8]},
+			{"name": "end", "rect": [6, 9, 7, 9], "z": [[9, 22]], "fill": [7, 9]},
+			{"name": "end", "rect": [24, 9, 25, 9], "z": [[9, 22]], "fill": [24, 9]},
+			{"name": "wall", "rect": [8, 9, 23, 9], "z": [[9, 10], [21, 22]], "fill": [16, 9]},
+			{"name": "end", "rect": [6, 10, 7, 10], "z": [[9, 22]], "fill": [7, 10]},
+			{"name": "end", "rect": [24, 10, 25, 10], "z": [[9, 22]], "fill": [24, 10]},
+			{"name": "wall", "rect": [8, 10, 23, 10], "z": [[9, 10], [21, 22]], "fill": [10, 10]},
+			{"name": "end", "rect": [6, 11, 7, 11], "z": [[9, 22]], "fill": [7, 11]},
+			{"name": "end", "rect": [24, 11, 25, 11], "z": [[9, 22]], "fill": [24, 11]},
+			{"name": "wall", "rect": [8, 11, 23, 11], "z": [[9, 10], [21, 22]], "fill": [10, 11]},
+			{"name": "end", "rect": [6, 12, 7, 12], "z": [[9, 22]], "fill": [7, 12]},
+			{"name": "end", "rect": [24, 12, 25, 12], "z": [[9, 22]], "fill": [24, 12]},
+			{"name": "wall", "rect": [8, 12, 23, 12], "z": [[9, 10], [21, 22]], "fill": [9, 12]},
+			{"name": "end", "rect": [7, 13, 8, 13], "z": [[9, 22]], "fill": [8, 13]},
+			{"name": "end", "rect": [24, 13, 25, 13], "z": [[9, 22]], "fill": [24, 13]},
+			{"name": "wall", "rect": [9, 13, 23, 13], "z": [[9, 10], [21, 22]], "fill": [9, 13]},
+			{"name": "floor", "rect": [6, 14, 27, 14], "z": [[9, 22]], "fill": [10, 14]}
+		],
+		"default": {"z": [[9, 10], [21, 22]]}
+	},
+	"rich_mahogany_bathtub": {
+		"parts": [
+			{"name": "end", "rect": [1, 3, 2, 3], "z": [[7, 24]], "fill": [1, 3]},
+			{"name": "end", "rect": [29, 3, 30, 3], "z": [[7, 24]], "fill": [29, 3]},
+			{"name": "wall", "rect": [3, 3, 28, 3], "z": [[7, 8], [23, 24]], "fill": [3, 3]},
+			{"name": "end", "rect": [0, 4, 1, 4], "z": [[8, 23]], "fill": [1, 4]},
+			{"name": "end", "rect": [30, 4, 31, 4], "z": [[8, 23]], "fill": [30, 4]},
+			{"name": "wall", "rect": [2, 4, 29, 4], "z": [[8, 9], [22, 23]], "fill": [2, 4]},
+			{"name": "end", "rect": [0, 5, 1, 5], "z": [[8, 23]], "fill": [1, 5]},
+			{"name": "end", "rect": [30, 5, 31, 5], "z": [[8, 23]], "fill": [30, 5]},
+			{"name": "wall", "rect": [2, 5, 29, 5], "z": [[8, 9], [22, 23]], "fill": [2, 5]},
+			{"name": "end", "rect": [0, 6, 1, 6], "z": [[7, 24]], "fill": [0, 6]},
+			{"name": "end", "rect": [30, 6, 31, 6], "z": [[7, 24]], "fill": [30, 6]},
+			{"name": "wall", "rect": [2, 6, 29, 6], "z": [[7, 8], [23, 24]], "fill": [12, 6]},
+			{"name": "end", "rect": [0, 7, 1, 7], "z": [[7, 24]], "fill": [0, 7]},
+			{"name": "end", "rect": [30, 7, 31, 7], "z": [[7, 24]], "fill": [30, 7]},
+			{"name": "wall", "rect": [2, 7, 29, 7], "z": [[7, 8], [23, 24]], "fill": [5, 7]},
+			{"name": "end", "rect": [0, 8, 1, 8], "z": [[8, 23]], "fill": [1, 8]},
+			{"name": "end", "rect": [30, 8, 31, 8], "z": [[8, 23]], "fill": [30, 8]},
+			{"name": "wall", "rect": [2, 8, 29, 8], "z": [[8, 9], [22, 23]], "fill": [3, 8]},
+			{"name": "end", "rect": [1, 9, 2, 9], "z": [[8, 23]], "fill": [2, 9]},
+			{"name": "end", "rect": [29, 9, 30, 9], "z": [[8, 23]], "fill": [29, 9]},
+			{"name": "wall", "rect": [3, 9, 28, 9], "z": [[8, 9], [22, 23]], "fill": [4, 9]},
+			{"name": "end", "rect": [1, 10, 2, 10], "z": [[8, 23]], "fill": [2, 10]},
+			{"name": "end", "rect": [29, 10, 30, 10], "z": [[8, 23]], "fill": [29, 10]},
+			{"name": "wall", "rect": [3, 10, 28, 10], "z": [[8, 9], [22, 23]], "fill": [3, 10]},
+			{"name": "end", "rect": [1, 11, 2, 11], "z": [[7, 24]], "fill": [1, 11]},
+			{"name": "end", "rect": [29, 11, 30, 11], "z": [[7, 24]], "fill": [29, 11]},
+			{"name": "wall", "rect": [3, 11, 28, 11], "z": [[7, 8], [23, 24]], "fill": [4, 11]},
+			{"name": "end", "rect": [2, 12, 3, 12], "z": [[7, 24]], "fill": [2, 12]},
+			{"name": "end", "rect": [28, 12, 29, 12], "z": [[7, 24]], "fill": [28, 12]},
+			{"name": "wall", "rect": [4, 12, 27, 12], "z": [[7, 8], [23, 24]], "fill": [9, 12]},
+			{"name": "end", "rect": [2, 13, 3, 13], "z": [[8, 23]], "fill": [3, 13]},
+			{"name": "end", "rect": [28, 13, 29, 13], "z": [[8, 23]], "fill": [28, 13]},
+			{"name": "wall", "rect": [4, 13, 27, 13], "z": [[8, 9], [22, 23]], "fill": [5, 13]},
+			{"name": "end", "rect": [3, 14, 4, 14], "z": [[8, 23]], "fill": [4, 14]},
+			{"name": "end", "rect": [27, 14, 28, 14], "z": [[8, 23]], "fill": [27, 14]},
+			{"name": "wall", "rect": [5, 14, 26, 14], "z": [[8, 9], [22, 23]], "fill": [6, 14]},
+			{"name": "floor", "rect": [0, 15, 31, 15], "z": [[8, 23]], "fill": [3, 15]}
+		],
+		"default": {"z": [[8, 9], [22, 23]]}
+	},
+	"shadewood_bathtub": {
+		"parts": [
+			{"name": "foot", "rect": [4, 14, 8, 15], "z": [[9, 11], [20, 22]], "fill": [6, 14]},
+			{"name": "foot", "rect": [23, 14, 27, 15], "z": [[9, 11], [20, 22]], "fill": [24, 14]},
+			{"name": "end", "rect": [3, 5, 4, 5], "z": [[7, 24]], "fill": [3, 5]},
+			{"name": "end", "rect": [28, 5, 29, 5], "z": [[7, 24]], "fill": [28, 5]},
+			{"name": "wall", "rect": [5, 5, 27, 5], "z": [[7, 8], [23, 24]], "fill": [5, 5]},
+			{"name": "end", "rect": [2, 6, 3, 6], "z": [[8, 23]], "fill": [3, 6]},
+			{"name": "end", "rect": [29, 6, 30, 6], "z": [[8, 23]], "fill": [29, 6]},
+			{"name": "wall", "rect": [4, 6, 28, 6], "z": [[8, 9], [22, 23]], "fill": [5, 6]},
+			{"name": "end", "rect": [2, 7, 3, 7], "z": [[8, 23]], "fill": [3, 7]},
+			{"name": "end", "rect": [29, 7, 30, 7], "z": [[8, 23]], "fill": [29, 7]},
+			{"name": "wall", "rect": [4, 7, 28, 7], "z": [[8, 9], [22, 23]], "fill": [13, 7]},
+			{"name": "end", "rect": [2, 8, 3, 8], "z": [[8, 23]], "fill": [3, 8]},
+			{"name": "end", "rect": [29, 8, 30, 8], "z": [[8, 23]], "fill": [29, 8]},
+			{"name": "wall", "rect": [4, 8, 28, 8], "z": [[8, 9], [22, 23]], "fill": [4, 8]},
+			{"name": "end", "rect": [2, 9, 3, 9], "z": [[8, 23]], "fill": [3, 9]},
+			{"name": "end", "rect": [29, 9, 30, 9], "z": [[8, 23]], "fill": [29, 9]},
+			{"name": "wall", "rect": [4, 9, 28, 9], "z": [[8, 9], [22, 23]], "fill": [5, 9]},
+			{"name": "end", "rect": [2, 10, 3, 10], "z": [[8, 23]], "fill": [3, 10]},
+			{"name": "end", "rect": [29, 10, 30, 10], "z": [[8, 23]], "fill": [29, 10]},
+			{"name": "wall", "rect": [4, 10, 28, 10], "z": [[8, 9], [22, 23]], "fill": [5, 10]},
+			{"name": "end", "rect": [3, 11, 4, 11], "z": [[8, 23]], "fill": [4, 11]},
+			{"name": "end", "rect": [28, 11, 29, 11], "z": [[8, 23]], "fill": [28, 11]},
+			{"name": "wall", "rect": [5, 11, 27, 11], "z": [[8, 9], [22, 23]], "fill": [5, 11]},
+			{"name": "end", "rect": [3, 12, 4, 12], "z": [[8, 23]], "fill": [4, 12]},
+			{"name": "end", "rect": [28, 12, 29, 12], "z": [[8, 23]], "fill": [28, 12]},
+			{"name": "wall", "rect": [5, 12, 27, 12], "z": [[8, 9], [22, 23]], "fill": [5, 12]},
+			{"name": "floor", "rect": [2, 13, 30, 13], "z": [[8, 23]], "fill": [5, 13]}
+		],
+		"default": {"z": [[8, 9], [22, 23]]}
+	},
+	"ash_wood_bathtub": {
+		"parts": [
+			{"name": "tap", "rect": [26, 3, 30, 5], "z": [[9, 12]], "fill": [28, 4]},
+			{"name": "rim bits", "rect": [0, 3, 31, 3], "z": [[9, 10], [21, 22]], "fill": [5, 3]},
+			{"name": "rim bits", "rect": [0, 4, 31, 4], "z": [[9, 10], [21, 22]], "fill": [5, 4]},
+			{"name": "end", "rect": [1, 5, 2, 5], "z": [[9, 22]], "fill": [1, 5]},
+			{"name": "end", "rect": [30, 5, 31, 5], "z": [[9, 22]], "fill": [30, 5]},
+			{"name": "wall", "rect": [3, 5, 29, 5], "z": [[9, 10], [21, 22]], "fill": [7, 5]},
+			{"name": "end", "rect": [1, 6, 2, 6], "z": [[9, 22]], "fill": [2, 6]},
+			{"name": "end", "rect": [30, 6, 31, 6], "z": [[9, 22]], "fill": [30, 6]},
+			{"name": "wall", "rect": [3, 6, 29, 6], "z": [[9, 10], [21, 22]], "fill": [7, 6]},
+			{"name": "end", "rect": [1, 7, 2, 7], "z": [[9, 22]], "fill": [1, 7]},
+			{"name": "end", "rect": [30, 7, 31, 7], "z": [[9, 22]], "fill": [30, 7]},
+			{"name": "wall", "rect": [3, 7, 29, 7], "z": [[9, 10], [21, 22]], "fill": [4, 7]},
+			{"name": "end", "rect": [2, 8, 3, 8], "z": [[9, 22]], "fill": [2, 8]},
+			{"name": "end", "rect": [30, 8, 31, 8], "z": [[9, 22]], "fill": [30, 8]},
+			{"name": "wall", "rect": [4, 8, 29, 8], "z": [[9, 10], [21, 22]], "fill": [6, 8]},
+			{"name": "end", "rect": [2, 9, 3, 9], "z": [[9, 22]], "fill": [2, 9]},
+			{"name": "end", "rect": [29, 9, 30, 9], "z": [[9, 22]], "fill": [29, 9]},
+			{"name": "wall", "rect": [4, 9, 28, 9], "z": [[9, 10], [21, 22]], "fill": [7, 9]},
+			{"name": "end", "rect": [2, 10, 3, 10], "z": [[9, 22]], "fill": [2, 10]},
+			{"name": "end", "rect": [29, 10, 30, 10], "z": [[9, 22]], "fill": [29, 10]},
+			{"name": "wall", "rect": [4, 10, 28, 10], "z": [[9, 10], [21, 22]], "fill": [7, 10]},
+			{"name": "end", "rect": [3, 11, 4, 11], "z": [[9, 22]], "fill": [4, 11]},
+			{"name": "end", "rect": [28, 11, 29, 11], "z": [[9, 22]], "fill": [28, 11]},
+			{"name": "wall", "rect": [5, 11, 27, 11], "z": [[9, 10], [21, 22]], "fill": [11, 11]},
+			{"name": "end", "rect": [3, 12, 4, 12], "z": [[9, 22]], "fill": [3, 12]},
+			{"name": "end", "rect": [28, 12, 29, 12], "z": [[9, 22]], "fill": [29, 12]},
+			{"name": "wall", "rect": [5, 12, 27, 12], "z": [[9, 10], [21, 22]], "fill": [5, 12]},
+			{"name": "end", "rect": [4, 13, 5, 13], "z": [[9, 22]], "fill": [4, 13]},
+			{"name": "end", "rect": [27, 13, 28, 13], "z": [[9, 22]], "fill": [27, 13]},
+			{"name": "wall", "rect": [6, 13, 26, 13], "z": [[9, 10], [21, 22]], "fill": [7, 13]},
+			{"name": "end", "rect": [5, 14, 6, 14], "z": [[9, 22]], "fill": [5, 14]},
+			{"name": "end", "rect": [25, 14, 26, 14], "z": [[9, 22]], "fill": [25, 14]},
+			{"name": "wall", "rect": [7, 14, 24, 14], "z": [[9, 10], [21, 22]], "fill": [7, 14]},
+			{"name": "floor", "rect": [1, 15, 31, 15], "z": [[9, 22]], "fill": [7, 15]}
+		],
+		"default": {"z": [[9, 10], [21, 22]]}
+	},
+	"extractinator": {
+		"parts": [
+			{"name": "hopper rim", "rect": [2, 1, 11, 2], "z": [[7, 16]], "fill": [6, 2], "shift": [[0, 0], [0, 0], [0, 2], [0, 2], [0, 4], [0, 4], [0, 4], [0, 2], [0, 2], [0, 0]]},
+			{"name": "hopper", "rect": [2, 3, 11, 11], "z": [[8, 15]], "fill": [4, 5], "shift": [[0, 0], [0, 0], [0, 2], [0, 2], [0, 4], [0, 4], [0, 4], [0, 2], [0, 2], [0, 0]]},
+			{"name": "exhaust stack", "rect": [19, 7, 22, 11], "z": [[9, 14]], "fill": [20, 8]},
+			{"name": "feed pipe", "rect": [11, 6, 18, 10], "z": [[9, 14]], "fill": [20, 8]},
+			{"name": "vents", "rect": [13, 12, 17, 13], "match": [13, 12], "z": [[5, 17]], "fill": [16, 17]},
+			{"name": "window glass", "rect": [16, 19, 19, 20], "z": [[5, 17]], "fill": [16, 17]},
+			{"name": "right housing", "rect": [13, 11, 21, 23], "z": [[5, 18]], "fill": [16, 17]},
+			{"name": "left housing top", "rect": [0, 12, 12, 15], "z": [[4, 19]], "fill": [5, 13]},
+			{"name": "left base", "rect": [0, 16, 12, 23], "z": [[3, 20]], "fill": [4, 16]}
+		],
+		"default": {"z": [[6, 17]]}
+	},
+	"sharpening_station": {
+		"parts": [
+			{"name": "blade", "rect": [2, 8, 9, 9], "z": [[11, 12]]},
+			{"name": "axle", "rect": [11, 5, 14, 8], "match": [12, 6], "z": [[8, 15]], "fill": [10, 1]},
+			{"name": "grindstone", "rect": [7, 0, 19, 11], "match": [11, 0], "z": [[10, 13]]},
+			{"name": "grindstone", "rect": [7, 0, 19, 11], "match": [10, 1], "z": [[10, 13]]},
+			{"name": "grindstone", "rect": [7, 0, 19, 11], "match": [11, 1], "z": [[10, 13]]},
+			{"name": "grindstone", "rect": [7, 0, 19, 11], "match": [13, 1], "z": [[10, 13]]},
+			{"name": "grindstone", "rect": [7, 0, 19, 11], "match": [11, 2], "z": [[10, 13]]},
+			{"name": "handle", "rect": [0, 5, 2, 11], "z": [[10, 13]]},
+			{"name": "left legs", "rect": [3, 0, 5, 15], "z": [[17, 19], [4, 6]], "fill": [4, 2]},
+			{"name": "right legs", "rect": [20, 8, 23, 15], "z": [[17, 19], [4, 6]], "fill": [21, 13]},
+			{"name": "base board", "rect": [6, 12, 19, 14], "z": [[4, 19]], "fill": [10, 13]}
+		],
+		"default": {"z": [[16, 18], [5, 7]]}
+	}
+}

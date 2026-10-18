@@ -1,0 +1,22 @@
+{
+	"cactus": {
+		"noise": "palette",
+		"noise_strength": 0.4,
+		"warp": 0.3,
+		"warp_size": 1.0
+	},
+	"tree_canopy": {
+		"fade": 7.5,
+		"noise": "palette",
+		"noise_strength": 0.65,
+		"upscale": "scale2x",
+		"warp": 0.45,
+		"warp_size": 0.75
+	},
+	"tree_trunk": {
+		"noise": "palette",
+		"noise_strength": 0.75,
+		"upscale": "epb",
+		"warp_size": 1.75
+	}
+}

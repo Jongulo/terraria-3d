@@ -1,0 +1,92 @@
+{
+	"_doc": [
+		"Hand-made NPC models (the NPC picker's 'Claude' method), by NPC kind; built by NPCSculpt for every frame of the sprite.",
+		"Voxels are art pixels (one per pixel of the original art): x right, y down, z 0 (back) to w - 1 (front), kept inside the sprite's w x h x w box.",
+		"r: the ball's radius in art pixels; its centre is fitted to each frame (the middle of the sprite, at its widest rows). Colours are '#rrggbb' or a list (a mottle: each voxel picks one).",
+		"glass: how opaque the model is (below 1: see-through, so billboards inside it show: King Slime's ninja).",
+		"outline: 'ignore' (the default): the sprite's dark outline pixels take the colour just inside them first, so the model has no black voxels; 'keep' keeps them.",
+		"ops, in order:",
+		"  ball {color, inner}: a shell two voxels thick; 'inner' is its inside, seen only through gaps.",
+		"  revolve {depth, color}: instead of a ball, a solid body spun from the sprite's silhouette (a slime): each row's span an ellipse depth times as deep as wide; project then colours its surface.",
+		"  project {side_band}: the sprite projected through the ball along z, so the front view is the sprite and the back its mirror; see-through pixels cut gaps right through. A band side_band degrees wide round each side takes the sprite's columns folded (seamless) instead of its thin edge; in caps bottom_cap and top_cap degrees round the bottom and top, the faces looking down or up take its middle column row by row (round from below or above, the front unchanged).",
+		"  mouth {aspect, count, ring, lip, color, teeth, lip_color, skin}: fills the inside of the ball on rows where the sprite has gaps in it, behind its opaque pixels (front and back unchanged), leaving an oval cavity as wide as the gap and aspect times as long front to back: seen from below, the mouth is that oval, ringed by count teeth ring voxels deep (flesh 'color' between), a lip, then skin.",
+		"  outside {drift, rise, wave}: the sprite's pixels outside the ball (tendrils), where they are seen from the front, drifting up to drift voxels in depth by rise pixels above the ball, along a wave across the sprite."
+	],
+	"EyeofCthulhu": {
+		"r": 27.2,
+		"ops": [
+			{
+				"op": "ball",
+				"color": [
+					"#f5f5f5",
+					"#e6e6e6",
+					"#e6e6e6",
+					"#d7d7d7"
+				],
+				"inner": [
+					"#360909",
+					"#360909",
+					"#651d1d"
+				]
+			},
+			{
+				"op": "project",
+				"side_band": 35,
+				"bottom_cap": 48,
+				"top_cap": 30
+			},
+			{
+				"op": "mouth",
+				"aspect": 1.4,
+				"count": 14,
+				"ring": 3,
+				"lip": 1.5,
+				"color": [
+					"#360909",
+					"#360909",
+					"#651d1d"
+				],
+				"teeth": [
+					"#86724a",
+					"#b9a57f",
+					"#b9a57f",
+					"#5a4c32"
+				],
+				"lip_color": [
+					"#651d1d",
+					"#7d2323",
+					"#360909"
+				],
+				"skin": [
+					"#f5f5f5",
+					"#e6e6e6",
+					"#e6e6e6",
+					"#d7d7d7"
+				]
+			},
+			{
+				"op": "outside",
+				"drift": 16,
+				"rise": 20,
+				"wave": 0.1
+			}
+		]
+	},
+	"KingSlime": {
+		"glass": 0.8,
+		"ops": [
+			{
+				"op": "revolve",
+				"depth": 0.9,
+				"color": [
+					"#4e88ff"
+				]
+			},
+			{
+				"op": "project",
+				"side_band": 35,
+				"top_cap": 40
+			}
+		]
+	}
+}

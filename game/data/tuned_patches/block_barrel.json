@@ -1,0 +1,1 @@
+{"base":{"fingerprint":"4ba87e2c","method":"extruded","options":{"bevel":"chamfer","bevel_sides":["left","right","front","back"],"bevel_size":3,"depth":10,"noise":"speckle","one_color":false,"seed":0,"strength":0.5}},"edits":[0],"frames":[""],"looks":[],"offset":[-6.0,0.0,-5.0],"patch":"block:barrel","size":[13,14,10],"version":1}

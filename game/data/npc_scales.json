@@ -1,0 +1,155 @@
+{
+	"_doc": "NPC display sizes from ./npc_scale_editor.sh: scale multiplies the size in npcs.json; hitbox false scales only the sprite.",
+	"Antlion": {
+		"scale": 1.36,
+		"hitbox": true
+	},
+	"ArmsDealer": {
+		"scale": 0.96,
+		"hitbox": true
+	},
+	"BlueSlime": {
+		"scale": 1.11,
+		"hitbox": true
+	},
+	"CaveBat": {
+		"scale": 1.74,
+		"hitbox": true
+	},
+	"Crab": {
+		"scale": 1.45,
+		"hitbox": true
+	},
+	"Crimera": {
+		"scale": 2.37,
+		"hitbox": true
+	},
+	"Demolitionist": {
+		"scale": 0.83,
+		"hitbox": true
+	},
+	"DemonEye": {
+		"scale": 0.87,
+		"hitbox": true
+	},
+	"Dryad": {
+		"scale": 0.96,
+		"hitbox": true
+	},
+	"EaterofSouls": {
+		"scale": 2.37,
+		"hitbox": true
+	},
+	"EyeofCthulhu": {
+		"scale": 1.93,
+		"hitbox": true
+	},
+	"FaceMonster": {
+		"scale": 1.25,
+		"hitbox": true
+	},
+	"GreenSlime": {
+		"scale": 1.11,
+		"hitbox": true
+	},
+	"Guide": {
+		"scale": 0.96,
+		"hitbox": true
+	},
+	"Harpy": {
+		"scale": 2.16,
+		"hitbox": true
+	},
+	"Hornet": {
+		"scale": 1.45,
+		"hitbox": true
+	},
+	"IceBat": {
+		"scale": 2.61,
+		"hitbox": true
+	},
+	"IceSlime": {
+		"scale": 1.11,
+		"hitbox": true
+	},
+	"JungleBat": {
+		"scale": 1.74,
+		"hitbox": true
+	},
+	"JungleSlime": {
+		"scale": 1.04,
+		"hitbox": true
+	},
+	"ManEater": {
+		"scale": 1.07,
+		"hitbox": true
+	},
+	"Merchant": {
+		"scale": 0.92,
+		"hitbox": true
+	},
+	"Nurse": {
+		"scale": 0.96,
+		"hitbox": true
+	},
+	"OldMan": {
+		"scale": 0.87,
+		"hitbox": true
+	},
+	"PinkJellyfish": {
+		"scale": 1.74,
+		"hitbox": true
+	},
+	"Piranha": {
+		"scale": 1.36,
+		"hitbox": true
+	},
+	"RedSlime": {
+		"scale": 1.11,
+		"hitbox": true
+	},
+	"ServantofCthulhu": {
+		"scale": 1.49,
+		"hitbox": true
+	},
+	"Shark": {
+		"scale": 1.82,
+		"hitbox": true
+	},
+	"Skeleton": {
+		"scale": 1.06,
+		"hitbox": true
+	},
+	"Snatcher": {
+		"scale": 1.17,
+		"hitbox": true
+	},
+	"SpikedIceSlime": {
+		"scale": 1.21,
+		"hitbox": true
+	},
+	"TargetDummy": {
+		"scale": 0.86,
+		"hitbox": true
+	},
+	"Vulture": {
+		"scale": 1.78,
+		"hitbox": true
+	},
+	"WalkingAntlion": {
+		"scale": 1.21,
+		"hitbox": true
+	},
+	"YellowSlime": {
+		"scale": 0.98,
+		"hitbox": true
+	},
+	"Zombie": {
+		"scale": 0.91,
+		"hitbox": true
+	},
+	"ZombieEskimo": {
+		"scale": 0.91,
+		"hitbox": true
+	}
+}

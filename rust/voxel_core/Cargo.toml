@@ -1,0 +1,19 @@
+[package]
+name = "voxel_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+fastnoise-lite = "1.1.1"
+godot = { version = "0.5.5", features = ["api-4-7"] }
+lz4_flex = "0.14.0"
+rayon = "1.12.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

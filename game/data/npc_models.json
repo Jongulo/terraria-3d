@@ -1,0 +1,135 @@
+{
+	"claude": {
+		"EyeofCthulhu": {
+			"noise": "none",
+			"one_color": true
+		}
+	},
+	"extruded": {
+		"Antlion": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 4.0
+		},
+		"ArmsDealer": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 4.0,
+			"depth": 7.0,
+			"strength": 0.55
+		},
+		"BlueSlime": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 16.0
+		},
+		"CaveBat": {
+			"bevel": "chamfer",
+			"depth": 5.0
+		},
+		"Crab": {
+			"bevel": "chamfer",
+			"bevel_size": 2.0,
+			"depth": 5.0
+		},
+		"Crimera": {
+			"depth": 5.0
+		},
+		"DemonEye": {
+			"bevel": "chamfer",
+			"bevel_size": 6.0,
+			"depth": 19.0
+		},
+		"Dryad": {
+			"depth": 20.0
+		},
+		"EaterofSouls": {
+			"depth": 21.0
+		},
+		"EaterofWorldsBody": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 17.0,
+			"noise": "speckle",
+			"strength": 1.0
+		},
+		"EaterofWorldsHead": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 17.0,
+			"noise": "speckle",
+			"strength": 1.0
+		},
+		"EaterofWorldsTail": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 17.0,
+			"noise": "speckle",
+			"strength": 1.0
+		},
+		"EyeofCthulhu": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 55.0,
+			"one_color": true
+		},
+		"KingSlime": {
+			"depth": 87.0
+		},
+		"ServantofCthulhu": {
+			"depth": 10.0
+		},
+		"Shark": {
+			"bevel": "chamfer",
+			"bevel_size": 4.0,
+			"depth": 10.0
+		},
+		"Snatcher": {
+			"bevel": "chamfer",
+			"bevel_size": 5.0,
+			"noise": "grain",
+			"strength": 1.0
+		},
+		"TargetDummy": {
+			"depth": 16.0
+		},
+		"WalkingAntlion": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"noise": "speckle",
+			"strength": 1.0
+		},
+		"YellowSlime": {
+			"depth": 16.0
+		}
+	},
+	"hull": {
+		"KingSlime": {
+			"noise": "none"
+		}
+	},
+	"hull_top": {},
+	"lathe": {},
+	"methods": {
+		"EaterofWorldsBody": "tuned",
+		"EaterofWorldsHead": "tuned",
+		"EaterofWorldsTail": "tuned",
+		"EyeofCthulhu": "tuned",
+		"KingSlime": "claude",
+		"Snatcher": "extruded"
+	},
+	"tuned": {}
+}
