@@ -20,6 +20,23 @@ PNG textures (LZX and DXT decoding, alpha un-premultiplied), WAV sound effects, 
 `ids.json` with item/NPC/tile/projectile IDs and English names read from `Terraria.exe`'s
 .NET metadata and embedded localization.
 
+### Keep Terraria's assets out of git
+
+Two folders hold Terraria-derived files and must never be committed: `game/assets/terraria/`
+(the extracted assets) and `game/data/tuned/` (tuned models cached whole, coloured from the
+sprites; their patches in `game/data/tuned_patches/` are what's committed). `.gitignore` covers
+both. Check it before committing, after extracting, and whenever `.gitignore` changes:
+
+```sh
+for p in game/assets/terraria game/data/tuned; do
+  git check-ignore -q "$p/x" && echo "ignored: $p" || echo "NOT IGNORED: $p (fix .gitignore before committing)"
+done
+git ls-files game/assets/terraria game/data/tuned | grep . && echo "TRACKED: untrack these (git rm -r --cached)" || echo "nothing from them is tracked"
+```
+
+Both should print `ignored:`, then `nothing from them is tracked`. (`.gitignore` doesn't stop git
+tracking files it already tracks, hence the second check.)
+
 ## Controls
 
 Defaults below; every action except Escape can be rebound under **Settings → Controls**
