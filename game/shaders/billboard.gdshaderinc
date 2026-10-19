@@ -16,6 +16,14 @@ uniform float flash = 0.0;
 uniform bool spherical = false;
 // Rotation in the view plane (radians); quads that rotate are centred on their origin.
 uniform float rotation = 0.0;
+// A world direction (zero: none): the quad's up lies along it, turned round it
+// to face the camera, so it points that way in 3D (arrows along their flight,
+// foreshortened end-on); `rotation` then turns the sprite within the quad.
+uniform vec3 axis = vec3(0.0);
+// Never seen quite end-on: at least this share of its length shows, pointing
+// where its way goes on the screen (your own arrow, flying off toward the
+// crosshair, stays in sight).
+uniform float axis_min_side = 0.4;
 // How much of it is still there (1: all): fading sprites (gore) drop out in a
 // screen-door pattern, so they need no transparency sorting.
 uniform float fade = 1.0;
@@ -43,6 +51,19 @@ void vertex() {
 	vec3 up = spherical ? INV_VIEW_MATRIX[1].xyz : vec3(0.0, 1.0, 0.0);
 	vec3 right = normalize(cross(up, fwd));
 	up = cross(fwd, right);
+	if (dot(axis, axis) > 1e-8) {
+		vec3 a = normalize(axis);
+		vec3 v = normalize(to_cam);
+		float along = dot(a, v);
+		vec3 side = a - v * along;
+		float s = length(side);
+		if (s < axis_min_side) {
+			vec3 dir = s > 1e-5 ? side / s : INV_VIEW_MATRIX[1].xyz;
+			a = dir * axis_min_side + v * sign(along) * sqrt(1.0 - axis_min_side * axis_min_side);
+		}
+		up = a;
+		right = normalize(cross(up, v));
+	}
 	vec3 scale = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), 1.0);
 	vec2 v = VERTEX.xy * scale.xy;
 #ifdef DEPTH_PUSH

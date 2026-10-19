@@ -406,6 +406,8 @@ func _run() -> void:
 
 	await _prop_batch_checks(c)
 	await _platform_checks(c)
+	await _rope_checks(c)
+	await _hook_checks(c)
 	await _furniture_checks(c)
 	await _hammer_checks(c)
 	await _furniture2_checks(c)
@@ -1260,6 +1262,11 @@ func _dust_checks(c: Vector3i) -> void:
 	check(Data.tile_dust.tall_grass.dust[0][0] == 3 and Data.tile_dust.stone.dust[0][0] == 1 and Data.tile_dust.wood.dust[0][0] == 7 \
 			and Data.tile_dust.pot.dust[0][0] == 22 and Data.tile_dust.blue_torch.dust[0][0] == 59,
 			"each block's own dust: grass 3, stone 1, wood 7, pots 22, a blue torch 59")
+	var undusted := []
+	for i in range(1, Data.blocks.size()):
+		if Data.blocks[i].has("tile_id") and not Data.tile_dust.has(Data.blocks[i].name):
+			undusted.append(Data.blocks[i].name)
+	check(undusted.is_empty(), "every block drawn from a Terraria tile has its dust (missing: rerun tools/terraria_dust.py after adding blocks) %s" % [undusted.slice(0, 10)])
 	var base := c + Vector3i(-40, 0, 100)
 	var types := func() -> Array:
 		var out := []
@@ -1475,6 +1482,261 @@ func _prop_batch_checks(c: Vector3i) -> void:
 	check(bm.model_at(pot).is_empty() and lit, "breaking a prop leaves the props around it lit")
 	game.world.set_block(pot, Data.block_id("pot"))
 	await frames(5)
+
+
+## Grappling hooks, at the arena's south wall (from inside): where they come from, latching
+## on and pulling you over, hanging, jumping off, single hooks letting go of
+## the last, the Ivy Whip's three (a fourth drops the oldest), coming back
+## when nothing's in reach, and the Grapple key.
+func _hook_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	check(Data.recipes.any(func(r): return r.result == "GrapplingHook" and r.ingredients.get("Hook") == 1 and r.ingredients.get("Chain") == 3)
+			and Data.recipes.any(func(r): return r.result == "DiamondHook" and r.ingredients.get("Diamond") == 15)
+			and Data.recipes.any(func(r): return r.result == "IvyWhip" and r.ingredients.get("JungleSpores") == 12 and r.ingredients.get("Vine") == 3),
+			"recipes: a Hook and 3 Chain make a Grappling Hook, 15 gems a gem hook, 12 Jungle Spores and 3 Vines an Ivy Whip")
+	check(Data.npcs.Skeleton.drops.any(func(d): return d[0] == "Hook" and is_equal_approx(d[3], 0.04)) and Data.npcs.KingSlime.drops.any(func(d): return d[0] == "SlimeHook")
+			and Data.npcs.SkeletronHead.drops_chain.any(func(d): return d[0] == "SkeletronHand") and not Data.item("SkeletronHand").is_empty(),
+			"Skeletons drop Hooks (1 in 25), King Slime the Slime Hook, Skeletron his Hand")
+	var god := p.god_mode
+	p.god_mode = true
+	var held := p.selected
+	var wall_z := c.z + 17
+	var x := c.x + 37
+	var fire := func(item: String, yaw: float, pitch: float) -> void:
+		p.inventory.slots[p.selected] = Inventory.stack(item, 1)
+		p.look_at_yaw_pitch(yaw, pitch)
+		p.fire_hook(Data.item(item))
+	var mine := func() -> Array: return p.hooks()
+	p.global_position = Vector3(x + 0.5, TestWorld.GROUND + 1, c.z + 11.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	fire.call("GrapplingHook", PI, 0.3)
+	await frames(15)
+	check(mine.call().size() == 1 and mine.call()[0].latched() and mine.call()[0].cell.z == wall_z, "the Grappling Hook flies to the wall and latches on")
+	await frames(45)
+	check(p.global_position.z > wall_z - 1.0 and p.global_position.y > TestWorld.GROUND + 2.5 and not p.on_floor,
+			"it pulls you over to it, off the ground (feet %.1f up, %.2f from the wall)" % [p.global_position.y - TestWorld.GROUND - 1, wall_z - p.global_position.z])
+	await frames(30)
+	var y0 := p.global_position.y
+	check(absf(p.global_position.y - y0) < 0.01 and p.velocity.length() < Player.GRAPPLE_STILL, "and you hang there")
+	# Single hooks: throwing again lets go of the first.
+	var first: GrappleHook = mine.call()[0]
+	fire.call("GrapplingHook", PI + 0.5, 0.2)
+	await frames(2)
+	check(not is_instance_valid(first) or first.is_queued_for_deletion(), "throwing a single hook again lets go of the last one")
+	await frames(30)
+	Input.action_press("jump")
+	await frames(2)
+	Input.action_release("jump")
+	check(mine.call().is_empty() and p.velocity.y > 5.0, "jump lets go, with a jump")
+	await frames(60)
+
+	# The Ivy Whip: three latched at once; a fourth drops the oldest.
+	p.global_position = Vector3(x + 0.5, TestWorld.GROUND + 1, c.z + 11.5)
+	p.velocity = Vector3.ZERO
+	await frames(5)
+	for yaw in [PI - 0.15, PI, PI + 0.15]:
+		fire.call("IvyWhip", yaw, 0.35)
+		await frames(3)
+	await frames(20)
+	check(mine.call().size() == 3 and mine.call().all(func(h): return h.latched()), "the Ivy Whip holds on with three hooks (%d)" % mine.call().size())
+	var oldest: GrappleHook = mine.call()[0]
+	for h in mine.call():
+		if h.born < oldest.born:
+			oldest = h
+	p.look_at_yaw_pitch(PI, 0.6)
+	p.fire_hook(Data.item("IvyWhip"))
+	await frames(20)
+	check(mine.call().size() == 3 and (not is_instance_valid(oldest) or oldest.is_queued_for_deletion()), "a fourth latching lets go of the oldest")
+	for h in mine.call():
+		h.queue_free()
+	await frames(30)
+	p.global_position = Vector3(x + 0.5, TestWorld.GROUND + 1, c.z + 6.5)
+	p.velocity = Vector3.ZERO
+	await frames(30)
+
+	# Out of reach (straight up into the sky), it comes back and goes.
+	fire.call("AmethystHook", 0.0, 1.5)
+	await frames(10)
+	var h: GrappleHook = mine.call()[0] if not mine.call().is_empty() else null
+	check(h != null and h.state == GrappleHook.FLYING, "a hook flies up")
+	await frames(30)
+	check(h != null and (not is_instance_valid(h) or h.state == GrappleHook.RETRACTING), "past its reach (12.5 blocks) it comes back")
+	await frames(90)
+	check(mine.call().is_empty(), "and goes once it's back")
+	# The Grapple key, no hook slot: the first hook in the inventory, whatever you hold.
+	p.inventory.slots[p.selected] = Inventory.stack("PlatinumBroadsword", 1)
+	p.inventory.slots[25] = Inventory.stack("SkeletronHand", 1)
+	p.look_at_yaw_pitch(PI, 0.3)
+	p.global_position = Vector3(x + 0.5, TestWorld.GROUND + 1, c.z + 11.5)
+	await key(KEY_E)
+	check(mine.call().size() == 1 and mine.call()[0].def.projectile == 256, "the Grapple key (E) throws the first hook in the inventory")
+	await frames(20)
+	Input.action_press("jump")
+	await frames(2)
+	Input.action_release("jump")
+	await frames(60)
+	# The hook slot: right-click puts a hook there; it takes only hooks, the
+	# Grapple key throws it before any in the inventory, and it's saved.
+	var hud := game.hud
+	hud._open_inventory()
+	await frames(2)
+	check(hud._hook_slot.visible and hud._hook_slot.inventory == p.hook_slot, "the inventory shows the hook slot")
+	p.inventory.slots[26] = Inventory.stack("RubyHook", 1)
+	hud.slot_clicked(hud._slots[26], MOUSE_BUTTON_RIGHT)
+	check(p.hook_slot.slots[0] != null and p.hook_slot.slots[0].item == "RubyHook" and p.inventory.slots[26] == null, "right-clicking a hook puts it in the hook slot")
+	check(Hud.slot_accepts("hook", "IvyWhip") and not Hud.slot_accepts("hook", "HermesBoots") and not Hud.slot_accepts("accessory", "IvyWhip"), "the hook slot takes only hooks")
+	hud.close_inventory()
+	await key(KEY_E)
+	check(mine.call().size() == 1 and mine.call()[0].def.projectile == 234, "the Grapple key throws the hook in the hook slot first (the Ruby Hook, not the Skeletron Hand)")
+	for k in mine.call():
+		k.queue_free()
+	var saved: Dictionary = p.save_state()
+	p.hook_slot.slots[0] = null
+	p.load_state(saved)
+	check(p.hook_slot.slots[0] != null and p.hook_slot.slots[0].item == "RubyHook", "the hook slot is saved with you")
+	p.hook_slot.slots[0] = null
+	await frames(30)
+	p.inventory.slots[25] = null
+	p.select(held)
+	p.god_mode = god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+
+
+## Ropes and chains (the tower's north wall): where they come from, climbing
+## up, hanging on, sliding down, letting go, leaping off at the top,
+## placing more on a rope and throwing Rope Coils.
+func _rope_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var has_recipe := func(result: String, count: int, ingredient: String) -> bool:
+		return Data.recipes.any(func(r): return r.result == result and r.count == count and r.ingredients.keys().any(func(k): return ingredient in k.split("|")))
+	check(has_recipe.call("RopeCoil", 1, "Rope") and has_recipe.call("WebRope", 3, "Cobweb") and has_recipe.call("SilkRope", 30, "Silk") and has_recipe.call("Chain", 15, "IronBar"),
+			"recipes: 10 Rope make a Rope Coil, a Cobweb 3 Web Rope, a Silk 30 Silk Rope, an Iron Bar 15 Chain")
+	check("Rope" in Data.npcs.Merchant.town.shop and Data.item("Rope").value == 10, "the Merchant sells Rope for 10 copper")
+	check(Data.loot.pot.pick_one.any(func(e): return e[0] == "Rope") and Data.loot.chest.extras.any(func(e): return e[0] == "Rope" and e[1] == 50 and e[2] == 100),
+			"pots give 20-40 Rope, chests 50-100")
+	var x0 := c.x + 14
+	var col := Vector3i(x0 + 26, 0, c.z + 19)  # the rope (the chain is 2 east)
+	var top := TestWorld.GROUND + 25
+	check(Data.block(w.get_block(Vector3i(col.x, top, col.z))).get("rope", false) and Data.block(w.get_block(Vector3i(col.x + 2, top - 10, col.z))).get("name") == "chain",
+			"a rope and a chain hang down the tower")
+	var god := p.god_mode
+	p.god_mode = true
+	p.look_at_yaw_pitch(PI, 0.0)  # facing south, at the wall
+	p.global_position = Vector3(col.x + 0.5, TestWorld.GROUND + 1, col.z + 0.2)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	Input.action_press("jump")
+	await frames(30)
+	check(p.on_rope and p.global_position.y > TestWorld.GROUND + 2.0 and p.velocity.y > 5.0, "jump grabs the rope and climbs it (%.1f up, %.1f blocks/s)" % [p.global_position.y - TestWorld.GROUND - 1, p.velocity.y])
+	await frames(240)
+	# The hand stops a tile under the top of the rope: feet 1.47 under its top cell.
+	check(p.on_rope and absf(p.global_position.y - (top - 1.47)) < 0.1 and p.velocity.y == 0.0, "up to the top of it, no further (feet %.2f, top %d)" % [p.global_position.y, top])
+	check(absf(Vector2(p.global_position.x - col.x - 0.5, p.global_position.z - col.z - 0.5).length() - Player.ROPE_HANG) < 0.05, "hanging just beside it")
+	Input.action_release("jump")
+	await frames(20)
+	var y0 := p.global_position.y
+	check(p.on_rope and p.velocity.y == 0.0, "let go of jump: you hang on")
+	Input.action_press("drop_down")
+	await frames(30)
+	Input.action_release("drop_down")
+	check(p.on_rope and p.global_position.y < y0 - 2.0, "Drop down slides down it (%.1f down)" % (y0 - p.global_position.y))
+	await frames(20)
+	# Leaping off at the top onto the tower's platform: hold jump, move south.
+	Input.action_press("jump")
+	await frames(120)
+	Input.action_press("move_forward")
+	await frames(2)
+	check(not p.on_rope and p.velocity.y > 5.0, "moving while you climb leaps off")
+	for i in 90:
+		await frames(1)
+		if p.on_floor:
+			break
+	Input.action_release("move_forward")
+	Input.action_release("jump")
+	await frames(30)
+	check(p.on_floor and absf(p.global_position.y - (top + 1)) < 0.05, "onto the platform at the top (y %.2f)" % p.global_position.y)
+	# Tapping sideways lets go.
+	p.global_position = Vector3(col.x + 0.5, TestWorld.GROUND + 8, col.z + 0.2)
+	p.velocity = Vector3.ZERO
+	Input.action_press("drop_down")
+	await frames(3)
+	Input.action_release("drop_down")
+	await frames(5)
+	check(p.on_rope, "Drop down grabs it too")
+	Input.action_press("move_left")
+	await frames(2)
+	Input.action_release("move_left")
+	await frames(20)
+	check(not p.on_rope and p.global_position.y < TestWorld.GROUND + 7.5, "a tap sideways lets go (y %.1f)" % p.global_position.y)
+	await frames(60)
+
+	# Placing: on a wall in mid-air, then more on it go under its bottom.
+	var wall := Vector3i(x0 + 27, TestWorld.GROUND + 12, c.z + 20)
+	var hang := wall + Vector3i(0, 0, -1)
+	p.global_position = Vector3(hang.x + 0.5, TestWorld.GROUND + 1, hang.z - 2.5)
+	p.inventory.slots[p.selected] = Inventory.stack("Rope", 10)
+	p.target = {"block": wall, "normal": Vector3i(0, 0, -1), "id": w.get_block(wall), "distance": 3.0}
+	check(p._place(Data.item("Rope")) and Data.block(w.get_block(hang)).get("name") == "rope", "Rope goes on the side of a block")
+	for i in 3:
+		p.target = {"block": hang, "normal": Vector3i(0, 0, -1), "id": w.get_block(hang), "distance": 3.0}
+		p._place(Data.item("Rope"))
+	var line := range(4).all(func(k): return Data.block(w.get_block(hang - Vector3i(0, k, 0))).get("name") == "rope")
+	check(line and p.inventory.slots[p.selected].count == 6, "placing on it adds to the bottom (4 down, 6 left)")
+	for k in 4:
+		w.set_block(hang - Vector3i(0, k, 0), 0)
+
+	# Rope Coils: thrown up under the tower's platform, each lays 10 down from
+	# where it hit (past rope already there); the last one runs out of room.
+	var under := Vector3i(x0 + 26, 0, c.z + 21)
+	var coil_at := func(y: float) -> void:
+		var rc := RopeCoil.new()
+		rc.setup("RopeCoil", Data.item("RopeCoil").rope_coil)
+		rc.velocity = Vector3(0, RopeCoil.SPEED, 0)
+		game.entities.add_child(rc)
+		rc.global_position = Vector3(under.x + 0.5, y, under.z + 0.5)
+	var ropes_under := func() -> int:
+		var n := 0
+		for y in range(TestWorld.GROUND + 1, top):
+			if Data.block(w.get_block(Vector3i(under.x, y, under.z))).get("name") == "rope":
+				n += 1
+		return n
+	coil_at.call(TestWorld.GROUND + 15.5)
+	await frames(30)
+	check(ropes_under.call() == 10 and Data.block(w.get_block(Vector3i(under.x, top - 1, under.z))).get("rope", false), "a Rope Coil hits the ceiling and lays 10 rope down from it")
+	coil_at.call(TestWorld.GROUND + 10.5)
+	await frames(90)
+	check(ropes_under.call() == 20, "the next goes on below the first (%d)" % ropes_under.call())
+	coil_at.call(TestWorld.GROUND + 10.5)
+	await frames(90)
+	var drops := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "Rope")
+	check(ropes_under.call() == 24 and drops.size() == 1 and drops[0].count == 6, "the third has room for 4: the other 6 drop as Rope (%d, %s)" % [ropes_under.call(), drops.map(func(d): return d.count)])
+	coil_at.call(TestWorld.GROUND + 10.5)
+	await frames(90)
+	check(game.entities.get_children().any(func(e): return e is ItemDrop and e.item == "RopeCoil"), "with no room at all it drops back as a coil")
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	for y in range(TestWorld.GROUND + 1, top):
+		w.set_block(Vector3i(under.x, y, under.z), 0)
+	# Throwing one.
+	p.inventory.slots[p.selected] = Inventory.stack("RopeCoil", 2)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(game.entities.get_children().any(func(e): return e is RopeCoil) and p.inventory.slots[p.selected].count == 1, "using a Rope Coil throws it")
+	for e in game.entities.get_children():
+		if e is RopeCoil:
+			e.queue_free()
+	p.inventory.slots[p.selected] = null
+	p.god_mode = god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
 
 
 ## Platforms: stand on them, drop through with Drop down, climb a platform

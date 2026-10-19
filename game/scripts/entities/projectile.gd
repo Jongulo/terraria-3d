@@ -47,9 +47,10 @@ const BOMB_RADIUS := 0.18
 
 ## Projectiles whose sheet is an animation (frames stacked down it), drawn
 ## pointing right instead of up, or up and right (the Enchanted Beam: AI 27
-## turns it its velocity's angle + 0.785).
+## turns it its velocity's angle + 0.785); "styles": the frames are looks, one
+## picked at random and held (the Book of Skulls' three skulls).
 const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3},
-		"EnchantedBeam": {"diagonal": true}}
+		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
@@ -76,6 +77,9 @@ var _flight := {}
 var _frames := 1
 var _frame_t := 0.0
 var _turn := PI
+## A long, thin sprite (arrows, bullets, bolts): laid along its flight in 3D
+## (EntitySprite.set_axis) rather than turned on the screen.
+var _axial := false
 var _trail: Array = []
 var _trail_ticks := 0.0
 
@@ -87,6 +91,8 @@ func setup(proj: String, size := 0.5) -> void:
 	var tex := Assets.texture("Images/Projectile_%d" % id)
 	var sheet: Dictionary = SHEETS.get(proj, {})
 	_frames = int(sheet.get("frames", 1))
+	if sheet.get("styles", false):
+		frame = randi() % _frames
 	if sheet.get("right", false):
 		_turn = PI / 2.0
 	elif sheet.get("diagonal", false):
@@ -94,6 +100,12 @@ func setup(proj: String, size := 0.5) -> void:
 	var aspect := float(tex.get_width()) / tex.get_height() * _frames
 	sprite.setup(tex, _frames, Vector2(size * aspect, size), true, true)
 	add_child(sprite)
+	# Long along the way it points: up the sheet, or across it for the ones
+	# drawn pointing right.
+	_axial = (aspect >= 2.0) if _turn == PI / 2.0 else (aspect <= 0.5 and _turn == PI)
+	if _axial:
+		# Its point along the axis: the sprite turned from pointing up (or right).
+		sprite.set_rotation_angle(PI - _turn)
 	var flight: Dictionary = FLIGHT.get(proj, {})
 	_flight = flight
 	bounces = int(flight.get("bounce", 0))
@@ -201,6 +213,8 @@ func _physics_process(delta: float) -> void:
 	if spin != 0.0:
 		_angle += spin * delta
 		sprite.set_rotation_angle(_angle)
+	elif _axial:
+		sprite.set_axis(velocity)
 	else:
 		# Terraria projectile sprites point up; turn them along the flight path.
 		sprite.set_rotation_angle(EntitySprite.facing_angle(cam, velocity) + _turn)

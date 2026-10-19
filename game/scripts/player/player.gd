@@ -55,6 +55,8 @@ var inventory := Inventory.new(50)
 var accessories := Inventory.new(5)
 ## Head, body and legs (Data.ARMOR_SLOTS order).
 var armor := Inventory.new(3)
+## Terraria's hook equipment slot (miscEquips[4]): the hook the Grapple key throws.
+var hook_slot := Inventory.new(1)
 ## The yoyo you have out (Yoyo), or null; hold_use keeps it out without the
 ## mouse (tests).
 var yoyo: Yoyo = null
@@ -133,6 +135,12 @@ var charging := {}
 var _conch_timer := -1.0
 ## Holding on to a rope snake (Snake Charmer's Flute).
 var climbing: Node3D = null
+## Holding on to a rope or chain (_rope_climb).
+var on_rope := false
+var _rope_cooldown := 0.0
+var _rope_dir_held := false
+## Jumped off a rope: no grabbing one again until jump is let go.
+var _rope_need_release := false
 var _mine_pos := Vector3i(-1, -1, -1)
 var _mine_damage := 0.0
 var _since_hurt := 0.0
@@ -348,6 +356,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		quick_heal()
 	elif event.is_action_pressed("throw_item"):
 		throw_held()
+	elif event.is_action_pressed("grapple"):
+		grapple()
 	elif event.is_action_pressed("pick_block") and creative:
 		pick_block()
 	else:
@@ -473,7 +483,11 @@ func _move(delta: float, game) -> void:
 	if flying:
 		_fly(delta, game, dir)
 		return
+	if _grapple(delta, game):
+		return
 	if _climb(delta, game, dir):
+		return
+	if _rope_climb(delta, game, dir):
 		return
 	var ground := Data.block(game.world.get_block(Vector3i((global_position + Vector3(0, -0.1, 0)).floor()))) if on_floor else {}
 	# Terraria's run: its speed, the boots' speed, acceleration and slowdown,
@@ -708,6 +722,243 @@ func _climb(delta: float, game, dir: Vector3) -> bool:
 	_fall_start = global_position.y
 	_extra_jumps = extra_jumps()
 	_jump_held = jump
+	return true
+
+
+## Grappling: pulled at up to 11 px a tick; under 2 px a tick you hang still
+## (and can jump off).
+const GRAPPLE_PULL := 11.0 * 2.5
+const GRAPPLE_STILL := 2.0 * 2.5
+
+## Where you hold a rope: Terraria's hand, half a tile (1/3 block) over your
+## head (Player.FindPulley: position.Y - 8 px). You can climb on while there
+## is rope a tile above that (position.Y - 16 px).
+const ROPE_HAND := 1.8 + 1.0 / 3.0
+const ROPE_REACH := 1.8 + 2.0 / 3.0
+## Climbing (Player.Update's pulley movement, in px a tick x2.5): up to 3 px
+## a tick quickly (0.2 a tick each tick), then slowly (0.02) on up to 8; down
+## the same to 3, then (0.1) on to the fall speed. Let go of both, it slows
+## to a stop (x0.7 a tick).
+const ROPE_FAST := 7.5
+const ROPE_ACCEL := 30.0
+const ROPE_UP_ACCEL := 3.0
+const ROPE_UP_MAX := 20.0
+const ROPE_DOWN_ACCEL := 15.0
+## You hang this far beside the rope (Terraria: 6 px to its side, a quarter
+## block; farther here, so in first person it isn't right in your face).
+const ROPE_HANG := 0.45
+## Dropping or walking off a rope, it can't be grabbed again for 10 ticks
+## (Terraria's ropeCount).
+const ROPE_REGRAB := 10.0 / 60.0
+
+
+## Ropes and chains, like Terraria's (Up and Down are jump and Drop down):
+## either grabs the rope at your hand; jump climbs, Drop down slides down, a
+## tap sideways moves you to the rope beside you or lets go, and jumping
+## while you move leaps off. True while on one.
+func _rope_climb(delta: float, game, dir: Vector3) -> bool:
+	var w: VoxelWorld = game.world
+	var up := input_enabled and Input.is_action_pressed("jump")
+	var down := input_enabled and Input.is_action_pressed("drop_down")
+	var tapped := dir != Vector3.ZERO and not _rope_dir_held
+	_rope_dir_held = dir != Vector3.ZERO
+	_rope_cooldown = maxf(0.0, _rope_cooldown - delta)
+	if not up:
+		_rope_need_release = false
+	var hand := Vector3i((global_position + Vector3(0, ROPE_HAND, 0)).floor())
+	var grabbed := false
+	if not on_rope:
+		if _rope_cooldown > 0.0 or not (down or up and not _rope_need_release) or not Ropes.is_rope(w, hand):
+			return false
+		on_rope = true
+		grabbed = true
+	if not Ropes.is_rope(w, hand):
+		on_rope = false  # off the end of it
+		return false
+	if up and dir != Vector3.ZERO and not grabbed and (tapped or not _jump_held):
+		# Leaping off: a full jump (Terraria's jump off a rope).
+		on_rope = false
+		_rope_need_release = true
+		velocity = Vector3(dir.x * 2.5, JUMP_SPEED, dir.z * 2.5)
+		_jump_ticks = JUMP_TICKS
+		_jump_held = true
+		return false
+	var shift := Vector3.ZERO
+	if tapped and not up:
+		var side := Vector3i(signi(roundi(dir.x)), 0, 0) if absf(dir.x) > absf(dir.z) else Vector3i(0, 0, signi(roundi(dir.z)))
+		if Ropes.is_rope(w, hand + side):
+			shift = Vector3(side)  # along to the next rope
+		else:
+			# Let go, with a little push (1 px a tick).
+			on_rope = false
+			_rope_cooldown = ROPE_REGRAB
+			velocity = Vector3(dir.x * 2.5, 0.0, dir.z * 2.5)
+			return false
+	var vertical := Ropes.is_rope(w, hand + Vector3i.UP) or Ropes.is_rope(w, hand + Vector3i.DOWN)
+	var can_up := Ropes.is_rope(w, Vector3i((global_position + Vector3(0, ROPE_REACH, 0)).floor()))
+	var slow := pow(0.7, delta * 60.0)
+	if not vertical:
+		# A rope across: you hang still; Drop down drops you.
+		if down:
+			on_rope = false
+			_rope_cooldown = ROPE_REGRAB
+			velocity = Vector3(0, -2.5, 0)
+			return false
+		velocity.y = 0.0
+	elif up and can_up:
+		if velocity.y < 0.0:
+			velocity.y *= slow
+		velocity.y = minf(ROPE_UP_MAX, velocity.y + (ROPE_ACCEL if velocity.y < ROPE_FAST else ROPE_UP_ACCEL) * delta)
+	elif down:
+		if velocity.y > 0.0:
+			velocity.y *= slow
+		velocity.y = maxf(-MAX_FALL, velocity.y - (ROPE_ACCEL if velocity.y > -ROPE_FAST else ROPE_DOWN_ACCEL) * delta)
+	else:
+		velocity.y *= slow
+		if absf(velocity.y) < 0.25:
+			velocity.y = 0.0
+	if not can_up and velocity.y > 0.0:
+		velocity.y = 0.0
+	# Hang beside the rope, on the side you came from.
+	var axis := Vector3(hand.x + 0.5, 0, hand.z + 0.5) + shift
+	var off := Vector3(global_position.x - axis.x, 0, global_position.z - axis.z)
+	if off.length() < 0.05:
+		off = -forward() * Vector3(1, 0, 1)
+	var hang := axis + off.normalized() * ROPE_HANG - Vector3(global_position.x, 0, global_position.z)
+	var step := Vector3(hang.x, 0, hang.z) * (1.0 if shift != Vector3.ZERO else minf(1.0, 15.0 * delta))
+	step.y = velocity.y * delta
+	if step.y > 0.0:
+		# Not past where the hand is a tile under the rope's top.
+		var top := hand
+		while Ropes.is_rope(w, top + Vector3i.UP):
+			top += Vector3i.UP
+		step.y = minf(step.y, maxf(0.0, top.y + 1.0 - ROPE_REACH - global_position.y))
+	var r: Dictionary = w.move_aabb(global_position, half, step, 0.0, true)
+	global_position = r.position
+	on_floor = r.on_floor
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if r.blocked.y:
+		velocity.y = 0.0
+	_fall_start = global_position.y
+	_extra_jumps = extra_jumps()
+	_jump_ticks = 0
+	_jump_held = up
+	return true
+
+
+## Your grappling hooks out (GrappleHook).
+func hooks() -> Array:
+	return get_tree().get_nodes_in_group("grapple_hooks").filter(func(h): return h.player == self and not h.is_queued_for_deletion())
+
+
+## Where your hooks' chains start: low and to the right of your view, so you
+## see the chain go out.
+func hook_hand() -> Vector3:
+	var b := camera.global_transform.basis
+	return camera.global_position + b.x * 0.3 - b.y * 0.35 - b.z * 0.8
+
+
+## The Grapple key (Terraria's QuickGrapple_GetItemToUse): the hook in your
+## hook slot, else the first one in your inventory.
+func grapple() -> bool:
+	if not alive:
+		return false
+	var def := grapple_hook()
+	return not def.is_empty() and fire_hook(def)
+
+
+## The hook the Grapple key throws ({} if you have none).
+func grapple_hook() -> Dictionary:
+	for s in hook_slot.slots + inventory.slots:
+		if s != null and Data.item(s.item).get("type") == "hook":
+			return Data.item(s.item)
+	return {}
+
+
+## Throws a hook where you look, if it may go (Terraria's QuickGrapple): `fly`
+## out at once, less those latched (at least one); with `out` already out the
+## oldest lets go (single hooks: throwing again lets go of the last).
+func fire_hook(def: Dictionary) -> bool:
+	var h: Dictionary = def.hook
+	var mine := hooks()
+	var latched := mine.filter(func(k): return k.latched()).size()
+	var flying_out := mine.size() - latched
+	if flying_out >= maxi(1, int(h.get("fly", 3)) - latched):
+		return false
+	if not mine.is_empty() and mine.size() >= int(h.get("out", 999)):
+		var oldest: GrappleHook = mine[0]
+		for k in mine:
+			if k.born < oldest.born:
+				oldest = k
+		oldest.queue_free()
+	var hook := GrappleHook.new()
+	hook.setup(self, h, forward())
+	Game.current.entities.add_child(hook)
+	hook.global_position = center()
+	Audio.play(def.get("sound", "Item_1"), 0.6)
+	return true
+
+
+## A hook just latched on: like Terraria, the fall restarts and your jumps
+## come back.
+func on_hook_latched() -> void:
+	on_rope = false
+	climbing = null
+	_fall_start = global_position.y
+	_extra_jumps = extra_jumps()
+
+
+## Pulled by your latched hooks (Player.GrappleMovement): toward the middle of
+## them at up to 11 px a tick, no gravity, no falls. Jump lets go of them all,
+## with a jump if you hang still (moving under 2 px a tick; not holding Drop
+## down). True while you're held.
+func _grapple(delta: float, game) -> bool:
+	var held_by := hooks().filter(func(h): return h.latched())
+	if held_by.is_empty():
+		return false
+	var jump := input_enabled and Input.is_action_pressed("jump")
+	if jump and not _jump_held:
+		var still := velocity.length() < GRAPPLE_STILL and not (input_enabled and Input.is_action_pressed("drop_down"))
+		for h in hooks():
+			h.queue_free()
+		_extra_jumps = extra_jumps()
+		_jump_held = true
+		if still:
+			velocity.y = JUMP_SPEED
+			_jump_ticks = JUMP_TICKS
+		return false
+	_jump_held = jump
+	var to := Vector3.ZERO
+	for h in held_by:
+		to += h.global_position
+	to = to / held_by.size() - center()
+	var want := to / delta
+	if want.length() > GRAPPLE_PULL:
+		want = want.normalized() * GRAPPLE_PULL
+	var start := global_position
+	var r: Dictionary = game.world.move_aabb(global_position, half, want * delta, 0.0, want.y < 0.0)
+	global_position = r.position
+	on_floor = r.on_floor
+	# What you really moved (blocks stop you): how still you hang.
+	velocity = (global_position - start) / delta
+	_fall_start = global_position.y
+	_extra_jumps = extra_jumps()
+	_jump_ticks = 0
+	return true
+
+
+## A Rope Coil thrown where you look (shootSpeed 10).
+func _throw_rope_coil(def: Dictionary) -> bool:
+	var game := Game.current
+	var c := RopeCoil.new()
+	c.setup(def.internal, def.rope_coil)
+	c.velocity = forward() * RopeCoil.SPEED
+	game.entities.add_child(c)
+	var start := camera.global_position + forward() * 0.5
+	c.global_position = start if not game.world.is_solid(Vector3i(start.floor())) else camera.global_position
+	_use_up(selected)
+	Audio.play(def.get("sound", "Item_1"), 0.6)
 	return true
 
 
@@ -1069,10 +1320,14 @@ func use_item() -> void:
 		"tool_use":
 			if def.has("rope_snake"):
 				used = _summon_rope_snake(def)
+			elif def.has("rope_coil"):
+				used = _throw_rope_coil(def)
 			elif def.has("ocean_teleport"):
 				_conch_timer = float(def.ocean_teleport)
 				Audio.play(def.get("sound", "Item_6"), 0.7)
 				used = true
+		"hook":
+			used = fire_hook(def)
 		_:
 			duration = 0.25
 	if used:
@@ -1478,6 +1733,8 @@ func _place(def: Dictionary) -> bool:
 		_use_up(selected)
 		Audio.play("Dig_*", 0.6)
 		return true
+	if bdef.get("rope", false):
+		return _place_rope(id, pos, normal)
 	if Doors.is_door(bdef):
 		if Data.block(target.id).get("render", "cube") != "cross":
 			pos += normal
@@ -1523,6 +1780,26 @@ func _place(def: Dictionary) -> bool:
 		game.chests.register_new(pos)
 	# Sand placed over a gap falls.
 	game.settle_falling(pos)
+	return true
+
+
+## Ropes (Player.PlaceThing_Tiles): placed on a rope, it goes on under the
+## bottom of it, however far down that is; anywhere else, beside anything
+## (or in place of a plant).
+func _place_rope(id: int, pos: Vector3i, normal: Vector3i) -> bool:
+	var game := Game.current
+	var w: VoxelWorld = game.world
+	var at := Vector3i(-1, -1, -1)
+	if Ropes.is_rope(w, pos):
+		at = Ropes.extend_at(w, pos)
+	else:
+		var p := pos if Data.block(target.id).get("cut", false) else pos + normal
+		if Ropes.is_free(w, p) and Ropes.can_hang(w, p):
+			at = p
+	if at.y < 0 or not Ropes.put(game, at, id):
+		return false
+	_use_up(selected)
+	Audio.play("Dig_*", 0.6)
 	return true
 
 
@@ -1806,6 +2083,9 @@ func _die() -> void:
 	sharpened = false
 	charging = {}
 	climbing = null
+	on_rope = false
+	for h in hooks():
+		h.queue_free()
 	_jump_ticks = 0
 	life = 0
 	respawn_timer = 5.0
@@ -1865,6 +2145,7 @@ func save_state() -> Dictionary:
 		"inventory": inventory.to_data(),
 		"accessories": accessories.to_data(),
 		"armor": armor.to_data(),
+		"hook": hook_slot.to_data(),
 		"life": life, "life_max": life_max, "mana": mana, "mana_max": mana_max,
 		"pos": [global_position.x, global_position.y, global_position.z],
 		"yaw": _yaw, "pitch": _pitch, "selected": selected,
@@ -1876,6 +2157,7 @@ func load_state(d: Dictionary) -> void:
 	inventory.from_data(d.get("inventory", []))
 	accessories.from_data(d.get("accessories", []))
 	armor.from_data(d.get("armor", []))
+	hook_slot.from_data(d.get("hook", []))
 	life_max = int(d.get("life_max", 100))
 	life = int(d.get("life", life_max))
 	mana_max = int(d.get("mana_max", 20))

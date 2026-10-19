@@ -22,6 +22,8 @@ var _root := Control.new()
 var _slots: Array[ItemSlot] = []
 var _accessory_slots: Array[ItemSlot] = []
 var _armor_slots: Array[ItemSlot] = []
+## Terraria's hook equipment slot, under the defense shield.
+var _hook_slot: ItemSlot
 var _defense := DefenseIcon.new()
 var _doll := PaperDoll.new()
 ## Talking to a town NPC: who (null when not), the chat box, and their shop.
@@ -81,7 +83,7 @@ var _stations := {}
 const CREATIVE_TABS := {
 	"All": [],
 	"Blocks": ["block"],
-	"Tools": ["tool", "bucket", "tool_use"],
+	"Tools": ["tool", "bucket", "tool_use", "hook"],
 	"Weapons": ["melee", "ranged", "magic", "thrown", "ammo"],
 	"Accessories": ["accessory"],
 	"Armor": ["armor"],
@@ -130,6 +132,7 @@ func bind(p: Player) -> void:
 		_accessory_slots[i].inventory = p.accessories
 	for i in 3:
 		_armor_slots[i].inventory = p.armor
+	_hook_slot.inventory = p.hook_slot
 	_defense.player = p
 	_doll.player = p
 	p.stats_changed.connect(_refresh)
@@ -297,6 +300,15 @@ func _build_inventory() -> void:
 		s.empty_icon = i * 2  # rows of Extra_54's first column: head, body, legs
 		s.visible = false
 		_armor_slots.append(s)
+	# The hook slot under the defense shield, beside the last accessory, with
+	# Terraria's hook silhouette.
+	_hook_slot = _slot(_root, 0, Vector2.ZERO, "Inventory_Back3")
+	_pin_top_right(_hook_slot, Vector2(-90 - (SLOT + GAP), 170 + 4 * (SLOT + GAP)))
+	_hook_slot.accept = "hook"
+	_hook_slot.empty_icon = 1
+	_hook_slot.empty_icon_column = 1
+	_hook_slot.tooltip_empty = "Hook"
+	_hook_slot.visible = false
 	_defense.hud = self
 	_defense.size = Vector2(SLOT, SLOT)
 	_defense.visible = false
@@ -662,7 +674,7 @@ func _refresh() -> void:
 	for s in _slots:
 		s.selected = s.index == player.selected
 		s.queue_redraw()
-	for s in _accessory_slots + _armor_slots:
+	for s in _equipment_slots():
 		s.queue_redraw()
 	_defense.queue_redraw()
 	_doll.queue_redraw()
@@ -834,7 +846,7 @@ func _open_inventory() -> void:
 	inventory_open = true
 	for s in _slots:
 		s.visible = true
-	for s in _accessory_slots + _armor_slots:
+	for s in _equipment_slots():
 		s.visible = true
 	_defense.visible = true
 	_doll.visible = true
@@ -852,7 +864,7 @@ func close_inventory() -> void:
 	inventory_open = false
 	for s in _slots:
 		s.visible = s.index < 10
-	for s in _accessory_slots + _armor_slots:
+	for s in _equipment_slots():
 		s.visible = false
 	_defense.visible = false
 	_doll.visible = false
@@ -938,9 +950,9 @@ func slot_clicked(slot: ItemSlot, button: int) -> void:
 	if Input.is_key_pressed(KEY_SHIFT) and button == MOUSE_BUTTON_LEFT and s != null:
 		_quick_move(slot)
 		return
-	# Right-clicking armor or an accessory puts it on, like Terraria.
+	# Right-clicking armor, an accessory or a hook puts it on, like Terraria.
 	if button == MOUSE_BUTTON_RIGHT and s != null and _cursor_stack == null and slot.accept == "" \
-			and Data.item(s.item).get("type") in ["armor", "accessory"]:
+			and Data.item(s.item).get("type") in ["armor", "accessory", "hook"]:
 		equip(inv, slot.index)
 		return
 	if button == MOUSE_BUTTON_RIGHT:
@@ -985,9 +997,9 @@ func _quick_move(slot: ItemSlot) -> void:
 		return
 	if _chest != null:
 		to = player.inventory if from == _chest else _chest
-	elif from == player.accessories or from == player.armor:
+	elif from == player.accessories or from == player.armor or from == player.hook_slot:
 		to = player.inventory
-	elif Data.item(s.item).get("type") in ["armor", "accessory"]:
+	elif Data.item(s.item).get("type") in ["armor", "accessory", "hook"]:
 		equip(from, slot.index)
 		return
 	else:
@@ -999,20 +1011,29 @@ func _quick_move(slot: ItemSlot) -> void:
 	_refresh()
 
 
-## Whether an equipment slot ("accessory", "head", "body", "legs"; "" for
-## any other slot) takes this item.
+## The accessory, armor and hook slots.
+func _equipment_slots() -> Array[ItemSlot]:
+	var all: Array[ItemSlot] = _accessory_slots + _armor_slots
+	all.append(_hook_slot)
+	return all
+
+
+## Whether an equipment slot ("accessory", "head", "body", "legs", "hook"; ""
+## for any other slot) takes this item.
 static func slot_accepts(accept: String, item: String) -> bool:
 	var def := Data.item(item)
 	if accept == "accessory":
 		return def.get("type") == "accessory"
+	if accept == "hook":
+		return def.get("type") == "hook"
 	if accept != "":
 		return def.get("type") == "armor" and def.get("slot") == accept
 	return true
 
 
-## Puts on the armor piece or accessory in `inv`'s slot `index`: armor goes
-## to its slot, an accessory to the first free one (else the first); what
-## was there takes its place.
+## Puts on the armor piece, accessory or hook in `inv`'s slot `index`: armor
+## goes to its slot, an accessory to the first free one (else the first), a
+## hook to the hook slot; what was there takes its place.
 func equip(inv: Inventory, index: int) -> void:
 	var s = inv.slots[index]
 	if s == null:
@@ -1026,6 +1047,8 @@ func equip(inv: Inventory, index: int) -> void:
 	elif def.get("type") == "accessory":
 		to = player.accessories
 		i = maxi(0, to.slots.find(null))
+	elif def.get("type") == "hook":
+		to = player.hook_slot
 	if to == null or i < 0:
 		return
 	inv.slots[index] = to.slots[i]
@@ -1046,6 +1069,10 @@ func _update_cursor() -> void:
 
 
 func show_tooltip(stack, slot: ItemSlot = null) -> void:
+	if stack == null and slot != null and slot.tooltip_empty != "" and inventory_open:
+		_tooltip_label.text = slot.tooltip_empty
+		_tooltip.visible = true
+		return
 	if stack == null or not inventory_open:
 		_tooltip.visible = false
 		return
@@ -1193,11 +1220,14 @@ class ItemSlot extends Control:
 	var background: Texture2D
 	var hotbar_number := -1
 	var selected := false
-	## What it takes: "" anything, else "accessory", "head", "body" or "legs".
+	## What it takes: "" anything, else "accessory", "head", "body", "legs" or "hook".
 	var accept := ""
-	## Row of Extra_54's first column drawn faded while empty (-1 none):
-	## Terraria's silhouettes for the armor slots.
+	## Row of Extra_54 (in column empty_icon_column) drawn faded while empty
+	## (-1 none): Terraria's silhouettes for the armor and hook slots.
 	var empty_icon := -1
+	var empty_icon_column := 0
+	## Named in a tooltip while empty ("": none).
+	var tooltip_empty := ""
 
 	func _ready() -> void:
 		mouse_entered.connect(func(): hud.show_tooltip(_stack(), self))
@@ -1225,7 +1255,7 @@ class ItemSlot extends Control:
 			if s.count > 1:
 				draw_string(Assets.font("Item_Stack"), Vector2(8, size.y - 6), str(s.count), HORIZONTAL_ALIGNMENT_LEFT, -1, 18)
 		elif empty_icon >= 0:
-			var icon := Rect2(0, empty_icon * 34, 32, 32)
+			var icon := Rect2(empty_icon_column * 34, empty_icon * 34, 32, 32)
 			draw_texture_rect_region(Assets.texture("Images/Extra_54"), Rect2((size - icon.size) * 0.5, icon.size), icon, Color(1, 1, 1, 0.55))
 		if hotbar_number >= 0:
 			draw_string(Assets.font("Item_Stack"), Vector2(5, 15), str(hotbar_number), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.8))

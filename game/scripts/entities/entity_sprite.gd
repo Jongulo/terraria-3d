@@ -63,6 +63,12 @@ func set_rotation_angle(a: float) -> void:
 	_mat.set_shader_parameter("rotation", a)
 
 
+## Lays the sprite's up along world direction `dir` (turned round it to face
+## the camera), so it points that way in 3D; Vector3.ZERO: a plain billboard.
+func set_axis(dir: Vector3) -> void:
+	_mat.set_shader_parameter("axis", dir.normalized() if dir.length_squared() > 1e-8 else Vector3.ZERO)
+
+
 func update_light(world: VoxelWorld, sky: SkySystem, at: Vector3) -> void:
 	_mat.set_shader_parameter("light", world.get_light(at))
 	_mat.set_shader_parameter("sky_light", sky.sky_light)

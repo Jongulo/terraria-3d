@@ -78,7 +78,7 @@
 		"EaterofSouls": {
 			"bevel": "chamfer",
 			"bevel_size": 4.0,
-			"depth": 21,
+			"depth": 21.0,
 			"one_color": true
 		},
 		"EaterofWorldsBody": {
@@ -124,7 +124,7 @@
 		"ManEater": {
 			"bevel": "chamfer",
 			"bevel_size": 2.0,
-			"depth": 26,
+			"depth": 26.0,
 			"no_outline": true,
 			"one_color": true
 		},
@@ -223,7 +223,6 @@
 		"EaterofWorldsHead": "rendered",
 		"EaterofWorldsTail": "rendered",
 		"EyeofCthulhu": "rendered",
-		"KingSlime": "rendered",
 		"ManEater": "rendered",
 		"ServantofCthulhu": "rendered",
 		"SkeletronArm": "rendered",

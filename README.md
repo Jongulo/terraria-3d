@@ -74,11 +74,13 @@ draw calls), while seeing four times as far.
 | Mouse / LMB | Look / use held item (mine, chop, attack, shoot, place, drink). Like Terraria, tools, buckets and blocks keep going while held; weapons and potions take a click each (Settings: Autofire makes everything keep going) |
 | RMB | Talk to town NPCs; open chests, barrels, dressers and trash cans; open and close doors; set your spawn at a bed; check a clock; write on a sign |
 | 1-0, mouse wheel | Select hotbar slot |
-| Tab | Inventory and crafting (click to move stacks, right-click takes one, shift-click quick-moves; right-click armor or an accessory to put it on) |
+| Tab | Inventory and crafting (click to move stacks, right-click takes one, shift-click quick-moves; right-click armor, an accessory or a hook to put it on) |
 | H | Quick heal |
 | T | Throw held item |
+| E | Grapple: throw the hook in your hook slot, else the first one in your inventory |
 | F12 | Screenshot without the HUD (saved to `~/.local/share/godot/app_userdata/Terraria 3D/screenshots/`) |
 | Shift (hold) | Drop through platforms |
+| Space / Shift on a rope | Grab it and climb up / slide down (Terraria's Up and Down); move to let go, jump while moving to leap off |
 | Esc | Pause menu (resume, game mode, settings, save, save & exit) |
 | Space twice (creative) | Start / stop flying (Space up, Shift down) |
 | MMB (creative) | Pick block: the targeted block into the hotbar |
@@ -151,7 +153,8 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
   small Dungeon under it (a quarter of the generator's layout steps).
 - **South-west of spawn:** a staircase of wooden platforms up to a floating platform floor.
 - **South:** one of every block, an ore wall labelled with required pickaxe power, a 25-block
-  staircase tower with a water landing pool for fall tests, and a sealed dark room.
+  staircase tower with a water landing pool for fall tests and a rope and a chain down its north
+  wall, and a sealed dark room.
 
 You start with top-tier gear, max life and mana. Hotkeys: **F1** help, **F2** god mode, **F3** fly
 (Space up, Shift down), **F4** day/night, **F5** remove enemies, **F6** clear dropped items,
@@ -242,6 +245,10 @@ Block dust, as in Terraria.
   `WorldGen.KillTile_MakeTileDust` (for walls, `KillWall_MakeWallDust`).
   - `tools/terraria_dust.py` runs those methods in an IL interpreter for every block, frame
     by frame, and writes `assets/terraria/tile_dust.json`. `extract_assets.sh` runs it.
+  - **After adding blocks to `blocks.json`, run it again** (or all of `extract_assets.sh`), or
+    the new blocks throw plain specks of their colour instead of Terraria's dust:
+    `python3 -I tools/terraria_dust.py <Terraria>/Terraria.exe game/data/blocks.json game/assets/terraria/tile_dust.json`.
+    The test world test fails while any block drawn from a Terraria tile has no dust.
   - Like Terraria, tables, chairs, doors, beds, pianos, dressers, bookcases, bathtubs,
     candles, chandeliers, lamps, banners and the Extractinator make no dust.
 - **How it moves:** the specks come from `Images/Dust` and move by Terraria's rules
@@ -760,6 +767,13 @@ arrows, bullets, bolts, shurikens, boomerangs, yoyos and spears cut what they pa
 not plants in a clay pot, and not sunflowers, rocks or life crystals); Slimes, Zombies, Demon Eyes, Cave Bats, Skeletons; the Eye of Cthulhu with both
 phases and Servants; the Eater of Worlds; King Slime; context music and SFX; save/load with autosave.
 
+Long, thin projectiles (arrows, bullets, the Blood Rain Bow's drops, Glacier Fang icicles) point
+along their flight in 3D: the sprite's length lies along the way they fly, turned round it to face
+you, so one flying across your view shows side-on and one coming at you is foreshortened. Never
+quite end-on, though: at least 40% of its length always shows, pointing where it's going on the
+screen, so your own arrow stays in sight as it flies off toward the crosshair. Round shots (orbs,
+skulls) and spinning ones (shurikens, knives, bombs) stay flat sprites facing you.
+
 King Slime: Terraria's (AI_015_KingSlime), summoned any time with a Slime Crown (20 Gel and a Gold
 or Platinum Crown at a Demon Altar; the crowns are 5 bars and a Ruby at an anvil).
 - **Body:** 2000 life, 40 damage, 10 defense; knockback doesn't move it. Its crown and the ninja
@@ -1230,6 +1244,35 @@ Cabin loot (Frozen and Sandstone Chests), with Terraria's stats:
 - **Snake Charmer's Flute:** a rope snake rises from a basket where you aim (or at your feet), up
   to 67 blocks (Terraria's 100 tiles) or until a block stops it, and stays 30 seconds. Jump into it
   to grab it: jump climbs, Drop down lets you down, walking away lets go.
+- **Ropes:** Rope, Vine Rope, Silk Rope, Web Rope and Chain, all climbable. Rope comes from
+  chests (50-100, a third of the time), pots (20-40) and the Merchant (10 copper); Web Rope is
+  3 from a Cobweb, Silk Rope 30 from a Silk at a Loom, Chain 15 from an Iron Bar at an anvil. A rope
+  goes beside any block, and placing rope on a rope adds it under the rope's bottom, however far
+  down that is (cutting plants and cobwebs in the way). Grab one with Space or Shift where your
+  hand reaches it (half a tile over your head, like Terraria's): Space climbs, Shift slides down,
+  with Terraria's speeds (quickly up to 7.5 blocks/s, then slowly on to 20 up, or the fall speed
+  down), and letting go of both stops you. You climb until your hand is a tile under the top of
+  the rope, so at the top jump off: jump while moving leaps off with a full jump. A tap sideways
+  moves you to the rope beside you, or lets go. No fall damage from a rope.
+- **Grappling hooks:** Terraria's pre-Hardmode hooks that can be had here, with its numbers
+  (`AI_007_GrapplingHooks`, `QuickGrapple`, `GrappleMovement`): the Grappling Hook (a Hook, which
+  Skeletons drop 1 in 25 and Piranhas 1 in 30, and 3 Chain at an anvil), the Amethyst, Topaz,
+  Sapphire, Emerald, Ruby and Diamond Hooks (15 of the gem; each reaches farther and flies and comes
+  back faster), the Amber Hook (15 Amber), the Ivy Whip (12 Jungle Spores and 3 Vines), the Slime
+  Hook (King Slime, 1 in 3) and Skeletron Hand (Skeletron). Press E (or use the hook you hold) and
+  it flies where you look; touching a block or platform it latches on, and you're pulled to it at
+  27.5 blocks/s with no gravity and no fall damage, then hang there. If nothing is in reach (12.5
+  blocks for the Grappling Hook, up to 18.75 for the Diamond Hook) it comes back. Single hooks let
+  go of the last one when thrown again; the Ivy Whip and Slime Hook hold on with up to three (a
+  fourth latching lets go of the oldest), Skeletron Hand with two. Jump lets go of them all, with a
+  full jump if you were hanging still. Each draws its own Terraria head and chain sprites from your
+  hand out to the hook. The hook slot (under the defense shield, with Terraria's hook silhouette;
+  right-click a hook to put it there) holds the hook E throws, like Terraria's; with it empty, E
+  throws the first hook in your inventory. It's saved with you.
+- **Rope Coils:** 10 of a rope make its coil; thrown, it flies straight for half a second, then
+  drops, and where it hits a block it lays 10 of its rope downward from there (on down from the
+  bottom of a rope it hits), cutting plants. What it can't lay drops as rope, or as the coil if
+  it laid none.
 - **Magic Conch:** after 0.75 s, takes you to the ocean furthest from you. The sea is all round
   the island here, so it's the beach across the world (through its middle), on the sand by the
   water.

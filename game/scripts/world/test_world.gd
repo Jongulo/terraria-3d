@@ -12,7 +12,7 @@ const SPAWNER_INTERVAL := 3.0
 const SPAWNER_MAX_ALIVE := 3
 const CATEGORIES := [
 	["Weapons", ["melee", "ranged", "magic", "thrown"]],
-	["Tools", ["tool", "bucket", "tool_use"]],
+	["Tools", ["tool", "bucket", "tool_use", "hook"]],
 	["Ammo", ["ammo"]],
 	["Potions & Summons", ["consumable", "summon"]],
 	["Accessories", ["accessory"]],
@@ -31,7 +31,7 @@ const HELP := [
 	"F7  natural enemy spawns on/off      F8  heal",
 	"Spawners: right-click spawns one, Shift+right-click toggles auto-spawn",
 	"North: every item in chests, crafting by spawn   East: enemy arena",
-	"West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower",
+	"West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower (rope and chain)",
 	"North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson",
 	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
 	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon",
@@ -339,7 +339,8 @@ func _build_gallery(c: Vector3i) -> void:
 
 
 func _build_tower(c: Vector3i) -> void:
-	# A staircase up to a platform 25 blocks high, with a water landing pool on one side.
+	# A staircase up to a platform 25 blocks high, with a water landing pool on
+	# one side and a rope and a chain up the other.
 	var x0 := c.x + 14
 	var z := c.z + 21
 	for i in 25:
@@ -352,6 +353,11 @@ func _build_tower(c: Vector3i) -> void:
 	_box(pa, pb, "")
 	_liquid_box(pa, pb, 1)
 	_label(Vector3(x0 + 27, top + 2.6, z + 1), "Fall test: water to the south, ground to the north", 18)
+	# A rope and a chain down its north wall, from the top to the ground.
+	for y in range(GROUND + 1, top + 1):
+		_b(Vector3i(x0 + 26, y, z - 2), "rope")
+		_b(Vector3i(x0 + 28, y, z - 2), "chain")
+	_label(Vector3(x0 + 27.5, GROUND + 4.6, z - 1.5), "Rope and chain: Space climbs, Shift slides down,\nmove to let go, jump while moving leaps off", 16)
 
 
 func _build_dark_room(c: Vector3i) -> void:

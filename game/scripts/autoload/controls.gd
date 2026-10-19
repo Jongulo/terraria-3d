@@ -15,6 +15,7 @@ const ACTIONS := [
 	["inventory", "Inventory", {"key": KEY_TAB}],
 	["quick_heal", "Quick heal", {"key": KEY_H}],
 	["throw_item", "Throw item", {"key": KEY_T}],
+	["grapple", "Grapple", {"key": KEY_E}],
 	["screenshot", "Screenshot", {"key": KEY_F12}],
 	["pick_block", "Pick block (creative)", {"mouse": MOUSE_BUTTON_MIDDLE}],
 	["hotbar_1", "Hotbar 1", {"key": KEY_1}],

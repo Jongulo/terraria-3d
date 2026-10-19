@@ -2,12 +2,12 @@
 	"_doc": "Loot tables: [item, min, max, chance]. 'pick_one' rolls a single primary item; 'instead': tried in order, the first that rolls replaces it; 'extras' each roll independently; 'sets': [[items], chance] gives all of those items together that often.",
 	"chest": {
 		"pick_one": [["HermesBoots", 1, 1], ["CloudinaBottle", 1, 1], ["BandofRegeneration", 1, 1], ["FlintlockPistol", 1, 1], ["AmethystStaff", 1, 1], ["Shuriken", 30, 60], ["Rally", 1, 1], ["Code1", 1, 1], ["Spear", 1, 1], ["WoodenBoomerang", 1, 1], ["Mace", 1, 1]],
-		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
 	},
 	"mushroom_chest": {
 		"_doc": "Terraria's Mushroom Chest (a mushroom cabin's, AddBuriedChest chest style 32): a cabin chest's loot, and 1 in 2 a Mushroom Hat, Vest and Pants (Terraria's other half is a Shroom Minecart; minecarts aren't in the game).",
 		"pick_one": [["HermesBoots", 1, 1], ["CloudinaBottle", 1, 1], ["BandofRegeneration", 1, 1], ["FlintlockPistol", 1, 1], ["AmethystStaff", 1, 1], ["Shuriken", 30, 60], ["Rally", 1, 1], ["Code1", 1, 1], ["Spear", 1, 1], ["WoodenBoomerang", 1, 1], ["Mace", 1, 1]],
-		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]],
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]],
 		"sets": [[["MushroomHat", "MushroomVest", "MushroomPants"], 0.5]]
 	},
 	"sky_chest": {
@@ -23,25 +23,25 @@
 		"extras": [["MusketBall", 100, 100, 0.33]]
 	},
 	"pot": {
-		"pick_one": [["CopperCoin", 20, 90], ["Torch", 4, 12], ["LesserHealingPotion", 1, 2], ["WoodenArrow", 10, 20], ["Shuriken", 10, 20], ["MusketBall", 15, 30], ["SilverCoin", 1, 2], ["Gel", 1, 3], ["Bomb", 1, 2], ["ThrowingKnife", 10, 20]],
+		"pick_one": [["CopperCoin", 20, 90], ["Torch", 4, 12], ["Rope", 20, 40], ["LesserHealingPotion", 1, 2], ["WoodenArrow", 10, 20], ["Shuriken", 10, 20], ["MusketBall", 15, 30], ["SilverCoin", 1, 2], ["Gel", 1, 3], ["Bomb", 1, 2], ["ThrowingKnife", 10, 20]],
 		"extras": [["LesserManaPotion", 1, 1, 0.1], ["Mushroom", 1, 2, 0.15]]
 	},
 	"ivy_chest": {
 		"_doc": "Terraria's Ivy Chest (Living Mahogany trees; GetNextJungleChestItem): one of Feral Claws, Anklet of the Wind, Staff of Regrowth, Boomstick; 1 in 15 a Fiberglass Fishing Pole instead, else 1 in 20 Flower Boots. Extras as any cavern chest.",
 		"pick_one": [["FeralClaws", 1, 1], ["AnkletoftheWind", 1, 1], ["StaffofRegrowth", 1, 1], ["Boomstick", 1, 1]],
 		"instead": [["FiberglassFishingPole", 1, 1, 0.0667], ["FlowerBoots", 1, 1, 0.05]],
-		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
 	},
 	"frozen_chest": {
 		"_doc": "Terraria's Frozen Chest (AddBuriedChest, an ice cabin's chest or any underground on snow and ice): one of Ice Boomerang, Ice Blade, Ice Skates, Snowball Cannon, Blizzard in a Bottle, Flurry Boots, Glacier Fang; 1 in 20 an Extractinator instead. Extras as any cavern chest.",
 		"pick_one": [["IceBoomerang", 1, 1], ["IceBlade", 1, 1], ["IceSkates", 1, 1], ["SnowballCannon", 1, 1], ["BlizzardinaBottle", 1, 1], ["FlurryBoots", 1, 1], ["GlacierFang", 1, 1]],
 		"instead": [["Extractinator", 1, 1, 0.05]],
-		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
 	},
 	"sandstone_chest": {
 		"_doc": "Terraria's Sandstone Chest in the upper part of the underground desert (AddBuriedChest): one of Ancient Chisel, Dunerider Boots, Snake Charmer's Flute, Magic Conch.",
 		"pick_one": [["AncientChisel", 1, 1], ["SandBoots", 1, 1], ["MysticCoilSnake", 1, 1], ["MagicConch", 1, 1]],
-		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
 	},
 	"sandstone_chest_deep": {
 		"_doc": "Terraria's Sandstone Chest in the lower 3/7 of the underground desert: one of Storm Spear, Thunder Zapper, Bast Statue.",

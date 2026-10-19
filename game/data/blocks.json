@@ -1,6 +1,7 @@
 {
 	"_doc": [
 		"Block ids are assigned in order starting at 1 (0 is air).",
+		"After adding blocks, rerun tools/terraria_dust.py (or extract_assets.sh) so they get Terraria's dust (assets/terraria/tile_dust.json); the test world test checks.",
 		"tex: per-face crops (all/top/side/bottom). A crop is {sheet, frames: [[x,y],...], tile: [w,h], tiles: [tw,th], stride}.",
 		"Sprite blocks are drawn at their real Terraria size: 32 sprite pixels (2 tiles) per block; pixels_per_block overrides it (tree trunks: 16, one tile per block, like the canopies).",
 		"wall: hangs on the side of a block, leaning out (wall_torch: placed when a torch is put on a wall). hidden: not listed in the picker or the test world gallery. settings: draw with that block's placeable method and settings.",
@@ -31,6 +32,7 @@
 		"rare_drop: [item, n]: 1 time in n it drops that item instead of its drop (the sword in stone of an Enchanted Sword Shrine, Terraria's LargePiles2 style 17: the Terragrim 1 in 30, else the Enchanted Sword).",
 		"drop_chance: it drops its drop only this often (Terraria's glowing mushrooms: half the time). top_drops false: felling its tree drops no extra from the top (a giant mushroom's cap). branches false: a trunk that grows no branches (a giant mushroom's stem).",
 		"scatter: a plant sits off its cell's middle by up to this much (blocks) and turned any way, the same every time for its cell (the glowing mushrooms, so they don't stand in a grid).",
+		"rope: Terraria's ropes and chains (Main.tileRope): climbed (Player rope climbing), extended downward by placing more on them, thrown out by a Rope Coil (Ropes).",
 		"variant_of: one of that block's styles (Terraria's frames of one tile: grass, flowers, vines, rocks, pots...), each its own block so each has its own model; a new world's plants each take a random style of their kind (worldgen's scatter_styles), and everything else treats them as that block (Data.kind_of).",
 		"gem: a gem tree's trunk (Terraria's SetGemTreeDrops): each cell drops that gem 1 time in 10, else its drop (Stone Block).",
 		"Tree trunks: Terraria's plain trunk frames (GrowTree's default three twice as likely as each other set), the 16 px trunk inside each 20 px frame. Not its branch-joint frames, whose outline is open (TreeBranches' stems cover the outline instead), nor the two sets whose knots bulge past 16 px (cropped, they'd leave gaps).",
@@ -863,6 +865,11 @@
 		{"name": "book_2", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "drop": "Book", "default_method": "extruded", "tex": {"all": {"sheet": "Tiles_50", "tile": [16, 16], "frames": [[18, 0]]}}, "variant_of": "book"},
 		{"name": "book_3", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "drop": "Book", "default_method": "extruded", "tex": {"all": {"sheet": "Tiles_50", "tile": [16, 16], "frames": [[36, 0]]}}, "variant_of": "book"},
 		{"name": "book_4", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "drop": "Book", "default_method": "extruded", "tex": {"all": {"sheet": "Tiles_50", "tile": [16, 16], "frames": [[54, 0]]}}, "variant_of": "book"},
-		{"name": "book_5", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "drop": "Book", "default_method": "extruded", "tex": {"all": {"sheet": "Tiles_50", "tile": [16, 16], "frames": [[72, 0]]}}, "variant_of": "book"}
+		{"name": "book_5", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "drop": "Book", "default_method": "extruded", "tex": {"all": {"sheet": "Tiles_50", "tile": [16, 16], "frames": [[72, 0]]}}, "variant_of": "book"},
+		{"name": "rope", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "drop": "Rope", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_213", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}},
+		{"name": "vine_rope", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "drop": "VineRope", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_353", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}},
+		{"name": "silk_rope", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "drop": "SilkRope", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_365", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}},
+		{"name": "web_rope", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "drop": "WebRope", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_366", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}},
+		{"name": "chain", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "tink", "drop": "Chain", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_214", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}}
 	]
 }
