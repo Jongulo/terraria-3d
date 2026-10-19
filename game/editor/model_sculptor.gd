@@ -133,7 +133,7 @@ func _ready() -> void:
 		if not d.has("sprite"):
 			continue
 		_sources.append({"type": "block", "name": name, "key": TunedModels.block_key(d.get("settings", name)),
-				"label": name.replace("_", " ").capitalize()})
+				"label": Data.placeable_label(name)})
 	_sources.sort_custom(func(a, b): return a.label.naturalnocasecmp_to(b.label) < 0)
 	_build_scene()
 	_build_ui()

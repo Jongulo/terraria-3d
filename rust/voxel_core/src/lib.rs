@@ -7,6 +7,8 @@ pub mod lod;
 pub mod mesher;
 pub mod physics;
 pub mod save;
+pub mod shrines;
+pub mod shrink;
 pub mod world;
 pub mod worldgen;
 
@@ -40,7 +42,7 @@ struct MeshResult {
 /// A far-terrain tile: (level, tile x, tile z) and its mesh.
 struct LodResult {
     tile: (i32, i32, i32),
-    mesh: mesher::Surface,
+    mesh: lod::LodMesh,
 }
 
 /// Work for the mesh workers: a chunk, or a far-terrain tile (level, x, z).
@@ -762,7 +764,7 @@ impl VoxelWorld {
     }
 
     /// Up to `max` finished far-terrain tiles as [tile: Vector3i (x, level, z),
-    /// surface arrays or null].
+    /// terrain surface arrays or null, water surface arrays or null].
     #[func]
     fn poll_lod_meshes(&mut self, max: i32) -> VarArray {
         let mut out = VarArray::new();
@@ -770,10 +772,19 @@ impl VoxelWorld {
             let Ok(r) = self.lod_rx.try_recv() else { break };
             let mut item = VarArray::new();
             item.push(&Vector3i::new(r.tile.1, r.tile.0, r.tile.2).to_variant());
-            item.push(&surface_arrays(&r.mesh));
+            item.push(&surface_arrays(&r.mesh.terrain));
+            item.push(&surface_arrays(&r.mesh.water));
             out.push(&item.to_variant());
         }
         out
+    }
+
+    /// Shrinks an RGBA8 render (`w` x `h`) by `factor` without blur: each
+    /// pixel the colour covering most of its block, opaque only if half of it
+    /// is (shrink.rs; the NPC picker's rendered sprites).
+    #[func]
+    fn shrink_majority(data: PackedByteArray, w: i32, h: i32, factor: i32) -> PackedByteArray {
+        PackedByteArray::from(shrink::shrink_majority(data.as_slice(), w as usize, h as usize, factor as usize))
     }
 
     /// Far terrain leaves out dark faces only below this height (caves).

@@ -46,15 +46,22 @@ const BOMB_RADIUS := 0.18
 
 
 ## Projectiles whose sheet is an animation (frames stacked down it), drawn
-## pointing right instead of up.
-const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3}}
+## pointing right instead of up, or up and right (the Enchanted Beam: AI 27
+## turns it its velocity's angle + 0.785).
+const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3},
+		"EnchantedBeam": {"diagonal": true}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
-## long it lasts.
-const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0}}
+## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
+## tick] once it has flown "dust_after" ticks (the Enchanted Beam, AI 27: at
+## its tail, a tenth of its speed).
+const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
+		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7}}
 var _frames := 1
 var _frame_t := 0.0
 var _turn := PI
+var _trail: Array = []
+var _trail_ticks := 0.0
 
 
 ## `proj` is a ProjectileID name; its sprite sheet is Projectile_<id>.
@@ -66,6 +73,8 @@ func setup(proj: String, size := 0.5) -> void:
 	_frames = int(sheet.get("frames", 1))
 	if sheet.get("right", false):
 		_turn = PI / 2.0
+	elif sheet.get("diagonal", false):
+		_turn = PI * 0.75
 	var aspect := float(tex.get_width()) / tex.get_height() * _frames
 	sprite.setup(tex, _frames, Vector2(size * aspect, size), true, true)
 	add_child(sprite)
@@ -73,6 +82,8 @@ func setup(proj: String, size := 0.5) -> void:
 	if flight.has("zigzag"):
 		_zigzag = Vector2(flight.zigzag[0], flight.zigzag[1])
 	life = float(flight.get("life", life))
+	_trail = flight.get("dust", [])
+	_trail_ticks = -float(flight.get("dust_after", 0))
 
 
 func _physics_process(delta: float) -> void:
@@ -82,6 +93,12 @@ func _physics_process(delta: float) -> void:
 		return
 	life -= delta
 	_age += delta
+	if not _trail.is_empty():
+		_trail_ticks += delta * 60.0
+		while _trail_ticks >= 1.0:
+			_trail_ticks -= 1.0
+			# 4 ticks of its flight behind it, a tenth of its speed (px a tick).
+			game.dust.spawn(int(_trail.pick_random()), global_position - velocity * 4.0 / 60.0, velocity * 0.1 * 16.0 / 60.0, 1.25)
 	if _age >= gravity_delay:
 		velocity.y -= gravity * delta
 		if drag > 0.0:

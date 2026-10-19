@@ -21,6 +21,8 @@ class_name BlockModelMesh
 ##             its front view is the sprite. Blocks without one show the hull.
 ##   tuned     a voxel model sculpted in the model sculptor (TunedModels,
 ##             data/tuned/); blocks without one show the hull.
+##   rendered  shots of a model from every angle (PlaceableRenders; BlockModels
+##             draws them): here, the model they're of.
 ## Every voxel method has a "one colour per voxel" setting (one_color): each
 ## voxel's faces all take one colour (TunedModels.one_color_mesh).
 
@@ -54,6 +56,8 @@ static func build(block_id: int, method: String, frame := 0) -> Dictionary:
 	# (the hidden tree canopy styles).
 	var settings: String = d.get("settings", d.name)
 	frame = clampi(frame, 0, Data.anim_frames(d) - 1)
+	if method == "rendered":
+		return build(block_id, PlaceableRenders.source(block_id), frame)
 	var key := "%d:%s:%d" % [block_id, method, frame]
 	if method in Data.NOISE_METHODS:
 		key += JSON.stringify(Data.method_options(settings, method))

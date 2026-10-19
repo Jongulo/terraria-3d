@@ -132,24 +132,45 @@ func _run() -> void:
 	check(furnace.oversize and furnace.render_id == 5, "oversize furnace is drawn as a block model")
 	var chest_m: ArrayMesh = BlockModelMesh.build(Data.block_id("chest"), "extruded").mesh
 	check(absf(chest_m.get_aabb().size.y - 1.0) < 0.01, "chest is 2x2 tiles = 1 block")
-	# Tree canopy: a picker entry (style 0) that is not a world block; the other
-	# styles follow its method and settings.
-	check("tree_canopy" in names and not "tree_canopy@1" in names, "tree canopy is listed once in the picker")
+	# Tree canopies: every style a picker entry of its own (not a world block),
+	# with its own method and settings, named for its art.
+	var canopy_names: Array = CanopyArt.STYLE_IDS.map(func(st): return CanopyArt.block_name(st))
+	check(canopy_names.size() == 81 and canopy_names.all(func(n): return n in names), "all 81 canopies are listed in the picker")
+	check(Data.placeable_label("tree_canopy@11") == "Canopy: Corruption (Tree_Tops_1) 2", "named for their art (%s)" % Data.placeable_label("tree_canopy@11"))
 	check(Data.blocks.all(func(b): return not b.name.begins_with("tree_canopy")), "tree canopy is not a world block")
 	var canopy_d := Data.block(Data.block_id("tree_canopy"))
 	check(canopy_d.method == "cross", "tree canopy defaults to cross")
 	var cm: ArrayMesh = BlockModelMesh.build(Data.block_id("tree_canopy"), "cross").mesh
 	check(absf(cm.get_aabb().size.y - CanopyArt.SIZE * (160 + 4) / 160.0) < 0.01, "canopy is %s blocks tall (%s)" % [CanopyArt.SIZE, cm.get_aabb().size])
+	var c2_method: String = Data.block(Data.block_id("tree_canopy@2")).method
 	Data.set_block_method("tree_canopy", "lathe")
-	check(Data.block(Data.block_id("tree_canopy@2")).method == "lathe" and Data.placeable_methods.get("tree_canopy") == "lathe",
-			"canopy styles share the chosen method")
+	check(Data.block(Data.block_id("tree_canopy@2")).method == c2_method and Data.placeable_methods.get("tree_canopy") == "lathe",
+			"each canopy's method is its own")
+	var l2_plain: ArrayMesh = BlockModelMesh.build(Data.block_id("tree_canopy@2"), "lathe").mesh
 	Data.set_method_option("tree_canopy", "lathe", "noise", "speckle")
 	var l2: ArrayMesh = BlockModelMesh.build(Data.block_id("tree_canopy@2"), "lathe").mesh
 	Data.reset_method_options("tree_canopy", "lathe")
-	var l2_plain: ArrayMesh = BlockModelMesh.build(Data.block_id("tree_canopy@2"), "lathe").mesh
-	check(l2 != l2_plain, "canopy styles share their settings")
+	check(l2 == l2_plain, "and so are its settings")
 	Data.set_block_method("tree_canopy", "cross")
 	check(not Data.placeable_methods.has("tree_canopy"), "default canopy method isn't saved")
+	# An older file's one set of canopy choices is copied to every canopy, once.
+	var old_file := "user://_old_canopies.json"
+	var old_f := FileAccess.open(old_file, FileAccess.WRITE)
+	old_f.store_string(JSON.stringify({"units": "art", "methods": {"tree_canopy": "hull"}, "hull": {"tree_canopy": {"noise": "grain"}},
+			"transform": {"tree_canopy": {"scale": 1.5}}}))
+	old_f.close()
+	Data.load_placeables(old_file)
+	check(Data.placeable_methods.get("tree_canopy@41") == "hull" and Data.method_options("tree_canopy@41", "hull").noise == "grain"
+			and is_equal_approx(Data.transform_options("tree_canopy@41").scale, 1.5), "an older file's canopy choices go to every canopy")
+	Data.save_placeables(old_file)
+	Data.set_block_method("tree_canopy@41", "cross")
+	Data.placeable_methods.erase("tree_canopy@41")
+	Data.save_placeables(old_file)
+	Data.load_placeables(old_file)
+	check(not Data.placeable_methods.has("tree_canopy@41") and Data.placeable_methods.get("tree_canopy") == "hull",
+			"once saved, a canopy set back to its default stays apart")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(old_file))
+	Data.reset_placeables()  # back to the defaults the rest of the test starts from
 	# Tree trunk: a sprite block, one Terraria tile (16 px) per block, solid.
 	var trunk := Data.block(Data.block_id("tree_trunk"))
 	check("tree_trunk" in names and trunk.method == "panels" and trunk.get("solid", true), "tree trunk is a solid sprite block (panels)")
@@ -224,6 +245,7 @@ func _run() -> void:
 	var pf_seen := {}
 	var meshes_seen := {}
 	var sprites_seen := {}
+	var rendered_seen := {}
 	var pt0 := Time.get_ticks_msec()
 	while Time.get_ticks_msec() - pt0 < 500:
 		await frames(1)
@@ -232,11 +254,14 @@ func _run() -> void:
 			var m: Node3D = picker._models[i]
 			if m is EntitySprite:
 				sprites_seen[m.material_override.get_shader_parameter("sprite")] = true
+			elif m is RenderedPlaceable:
+				# Headless: its stand-in billboard.
+				rendered_seen[m.get_child(0).material_override.get_shader_parameter("sprite")] = true
 			else:
 				meshes_seen["%d:%d" % [i, m.mesh.get_instance_id()]] = true
 	check(not pf_seen.has(-1) and pf_seen.size() >= 4, "the picker animates the campfire (%d frames seen)" % pf_seen.size())
-	check(meshes_seen.size() >= (picker._models.size() - 1) * 3 and sprites_seen.size() >= 3,
-			"every method's preview changes with it (%d meshes, %d billboard frames)" % [meshes_seen.size(), sprites_seen.size()])
+	check(meshes_seen.size() >= (picker._models.size() - 2) * 3 and sprites_seen.size() >= 3 and rendered_seen.size() >= 3,
+			"every method's preview changes with it (%d meshes, %d billboard frames, %d rendered)" % [meshes_seen.size(), sprites_seen.size(), rendered_seen.size()])
 	picker._select_block("chest")
 	check(picker.anim_frame() == -1, "a chest doesn't animate")
 
@@ -410,9 +435,34 @@ func _run() -> void:
 	await key(KEY_9)
 	check(Data.block(Data.block_id("pot")).method == pot_method and "Not made yet" in picker._labels[Data.PLACEABLE_METHODS.find("claude")].text,
 			"blocks without a hand-made model can't pick it")
+	# Rendered: shots of its model from every angle ("-" picks it). Headless
+	# nothing renders, so it stands in as its billboard.
+	picker._select_block("chest")
+	var chest_id := Data.block_id("chest")
+	await key(KEY_MINUS)
+	var ren_i := Data.PLACEABLE_METHODS.find("rendered")
+	var ren_model: Node3D = picker._models[ren_i]
+	check(Data.block(chest_id).method == "rendered" and picker._labels[ren_i].text.begins_with("-  Rendered"),
+			"- picks Rendered, the 11th method")
+	check(ren_model is RenderedPlaceable and not ren_model.showing_shots() and ren_model.get_child_count() == 1,
+			"headless (no shots can be made) it's the billboard")
+	check(PlaceableRenders.YAWS == 16 and PlaceableRenders.PITCHES == [0.0] and NPCRenders.YAWS == 32,
+			"placeables are shot from 16 directions straight on (NPCs keep every height)")
+	var chest_src := PlaceableRenders.source(chest_id)
+	check(chest_src in ["hull", "claude", "tuned"] and BlockModels.model_mesh(chest_id, "rendered").mesh == BlockModels.model_mesh(chest_id, chest_src).mesh,
+			"its shots are of its tuned, Claude's or hull model (%s)" % chest_src)
+	picker._render_model.select(1)
+	picker._render_model.item_selected.emit(1)
+	await frames(2)
+	check(Data.method_options("chest", "rendered").model == "extruded" and PlaceableRenders.source(chest_id) == "extruded"
+			and picker._models[ren_i] != ren_model, "\"Shots taken of: Extruded model\" shoots the Extruded model, and the slot is made again")
+	check(NPCRenders._version_of("block-wooden_door_%x_0.png" % -77, "block-wooden_door") and not NPCRenders._version_of("block-wooden_door_open_ab_0.png", "block-wooden_door"),
+			"a block's cached shots aren't mistaken for another block's whose name starts the same")
 	await key(KEY_S, true)
 	check(not picker.dirty and FileAccess.file_exists(SAVE), "Ctrl+S saves")
 	var all_saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
+	check(all_saved.methods.get("chest") == "rendered" and all_saved.get("rendered", {}).get("chest", {}).get("model") == "extruded",
+			"the rendered choice and its setting are saved")
 	check(all_saved.get("hull", {}).get(vb, {}).get("noise") == "speckle" and all_saved.get("lathe", {}).get(vb, {}).get("noise") == "palette", "hull and lathe noise saved")
 	check(all_saved.get("claude", {}).get("sawmill", {}).get("noise") == "palette", "the hand-made model's noise is saved")
 	var saved_bevel: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SAVE)).get("extruded", {}).get(ex_name, {})

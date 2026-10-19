@@ -19,13 +19,18 @@ func setup(tex: Texture2D, frame_count: int, size: Vector2, centred := false, sp
 	scale = Vector3(size.x, size.y, 1.0)
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_mat = ShaderMaterial.new()
-	_mat.shader = preload("res://shaders/billboard.gdshader")
+	_mat.shader = _shader()
 	_mat.set_shader_parameter("sprite", tex)
 	_mat.set_shader_parameter("frames", frame_count)
 	_mat.set_shader_parameter("spherical", spherical)
 	material_override = _mat
 	# Billboarding happens in the vertex shader; keep the culling box generous.
 	extra_cull_margin = maxf(size.x, size.y)
+
+
+## The shader it's drawn with (RenderedSprite's pushes its depth).
+func _shader() -> Shader:
+	return preload("res://shaders/billboard.gdshader")
 
 
 ## Cuts `px` pixels off the bottom of every frame (of `frame_height` pixels).

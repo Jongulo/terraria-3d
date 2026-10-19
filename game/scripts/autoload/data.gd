@@ -14,7 +14,7 @@ const RENDER := {"none": 0, "cube": 1, "cutout": 2, "cross": 3, "model": 5}
 ## How placeable sprite blocks are turned into 3D (picked per block with the
 ## placeable picker, saved in data/placeables.json). "panels" and "cross" are
 ## drawn by the chunk mesher; the rest are block models (BlockModels).
-const PLACEABLE_METHODS := ["panels", "cross", "billboard", "flat", "extruded", "hull", "hull_top", "lathe", "claude", "tuned"]
+const PLACEABLE_METHODS := ["panels", "cross", "billboard", "flat", "extruded", "hull", "hull_top", "lathe", "claude", "tuned", "rendered"]
 ## Hand-made voxel models for the "claude" method, by block name (data/handmade_models.json).
 var handmade_models := {}
 const PLACEABLES_PATH := "res://data/placeables.json"
@@ -52,6 +52,9 @@ var extrude_settings := {}
 ## Method ("hull", "lathe", "claude", "tuned") -> block name -> settings that differ
 ## from the defaults ({noise, strength, seed, one_color}).
 var noise_settings := {"hull": {}, "hull_top": {}, "lathe": {}, "claude": {}, "tuned": {}}
+## Block name -> the "rendered" method's settings that differ from the
+## defaults ({model: what's shot, NPCModels.RENDER_MODELS}).
+var rendered_settings := {}
 ## Block name -> model transform keys that differ from the defaults
 ## ({offset: [x, y, z] art pixels, rotation: [x, y, z] degrees, scale}).
 var transform_settings := {}
@@ -312,8 +315,9 @@ func rebuild_sprite_fx() -> void:
 	BlockModelMesh.clear_cache()
 
 
-## Tree canopies as placeables: "tree_canopy" (style 0) is the one listed in the
-## picker; the other styles are hidden twins that share its method and settings.
+## Tree canopies as placeables: every style (each of Terraria's Tree_Tops
+## sheets has 3 trees) is listed in the picker and the model sculptor with its
+## own method, settings and model: "tree_canopy" (style 0), "tree_canopy@<style>".
 ## Default method: cross, as Terraria-style canopies have always been drawn.
 func _add_decoration_blocks() -> void:
 	decoration_blocks = []
@@ -332,10 +336,9 @@ func _add_decoration_blocks() -> void:
 		d["art_scale"] = k
 		d["art_px"] = d.sprite_px * k
 		d["color"] = _average_color(img)
-		if style > 0:
-			d["hidden"] = true
-			d["settings"] = "tree_canopy"
-		d["method"] = placeable_methods.get("tree_canopy", default_method(d))
+		d["canopy_style"] = style
+		d["label"] = "Canopy: %s %d" % [CanopyArt.sheet_label(style / 10), style % 10 + 1]
+		d["method"] = placeable_methods.get(name, default_method(d))
 		d["render_id"] = render_for(d)
 		block_ids[name] = DECORATION_BASE + decoration_blocks.size()
 		decoration_blocks.append(d)
@@ -675,6 +678,7 @@ func load_placeables(path := PLACEABLES_PATH) -> void:
 	placeable_methods = {}
 	extrude_settings = {}
 	noise_settings = {"hull": {}, "hull_top": {}, "lathe": {}, "claude": {}, "tuned": {}}
+	rendered_settings = {}
 	transform_settings = {}
 	_placeables_units = "art"
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -696,11 +700,39 @@ func load_placeables(path := PLACEABLES_PATH) -> void:
 					for k in section:
 						if section[k] is Dictionary:
 							noise_settings[m][k] = section[k]
+			var rs = parsed.get("rendered", {})
+			if rs is Dictionary:
+				for k in rs:
+					if rs[k] is Dictionary:
+						rendered_settings[k] = rs[k]
 			var tr = parsed.get("transform", {})
 			if tr is Dictionary:
 				for k in tr:
 					if tr[k] is Dictionary:
 						transform_settings[k] = tr[k]
+			if not parsed.get("canopies_split", false):
+				_split_canopies()
+
+
+## Files from before every canopy had its own choices kept one set for all of
+## them ("tree_canopy"'s): each canopy starts with a copy of it, so nothing
+## changes until it's chosen apart (saving marks the file "canopies_split").
+func _split_canopies() -> void:
+	var stores: Array = [placeable_methods, extrude_settings, rendered_settings, transform_settings] + noise_settings.values()
+	for style in CanopyArt.STYLE_IDS:
+		var name := CanopyArt.block_name(style)
+		if name == "tree_canopy":
+			continue
+		for store in stores:
+			if store.has("tree_canopy") and not store.has(name):
+				var v = store.tree_canopy
+				store[name] = v.duplicate(true) if v is Dictionary else v
+
+
+## How a placeable is named in the pickers: its label (canopies: which art),
+## else its name.
+func placeable_label(name: String) -> String:
+	return block(block_id(name)).get("label", name.replace("_", " ").capitalize())
 
 
 ## How big each NPC appears (the NPC scale editor, ./npc_scale_editor.sh):
@@ -749,8 +781,10 @@ func save_placeables(path := PLACEABLES_PATH) -> bool:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return false
-	var out := {"units": "art", "methods": placeable_methods, "extruded": extrude_settings,
+	var out := {"units": "art", "canopies_split": true, "methods": placeable_methods, "extruded": extrude_settings,
 			"hull": noise_settings.hull, "hull_top": noise_settings.hull_top, "lathe": noise_settings.lathe, "claude": noise_settings.claude, "tuned": noise_settings.tuned}
+	if not rendered_settings.is_empty():
+		out["rendered"] = rendered_settings
 	if not transform_settings.is_empty():
 		out["transform"] = transform_settings
 	f.store_string(JSON.stringify(out, "\t", true))
@@ -815,6 +849,9 @@ func set_extrude_option(name: String, key: String, value) -> void:
 func method_options(name: String, method: String) -> Dictionary:
 	if method == "extruded":
 		return extrude_options(name)
+	if method == "rendered":
+		var model = rendered_settings.get(name, {}).get("model", "auto")
+		return {"model": model if model in NPCModels.RENDER_MODELS else "auto"}
 	var o := {"noise": "none", "strength": 0.5, "seed": 0, "one_color": false}
 	o.merge(noise_settings.get(method, {}).get(name, {}), true)
 	o.seed = int(o.seed)
@@ -829,14 +866,17 @@ func set_method_option(name: String, method: String, key: String, value) -> void
 	if method == "extruded":
 		set_extrude_option(name, key, value)
 		return
-	var o: Dictionary = noise_settings[method].get(name, {}).duplicate()
+	var store: Dictionary = rendered_settings if method == "rendered" else noise_settings[method]
+	var o: Dictionary = store.get(name, {}).duplicate()
 	o[key] = value
-	noise_settings[method][name] = o
+	store[name] = o
 
 
 func reset_method_options(name: String, method: String) -> void:
 	if method == "extruded":
 		extrude_settings.erase(name)
+	elif method == "rendered":
+		rendered_settings.erase(name)
 	else:
 		noise_settings[method].erase(name)
 
@@ -916,6 +956,7 @@ func _refresh_render(name: String) -> void:
 func reset_placeables() -> void:
 	extrude_settings = {}
 	noise_settings = {"hull": {}, "hull_top": {}, "lathe": {}, "claude": {}, "tuned": {}}
+	rendered_settings = {}
 	transform_settings = {}
 	for name in placeable_blocks():
 		set_block_method(name, default_method(block(block_id(name))))

@@ -12,7 +12,8 @@ extends Node3D
 ## Hull Top, Lathe, Claude and Tuned ("Settings for" picks which; it follows the chosen
 ## method), plus depth, bevel and which sides are bevelled for Extruded.
 ## [ / ] depth -/+1 voxel, N next noise mode, Shift+N new seed, B / Shift+B
-## next / previous bevel.
+## next / previous bevel. "Rendered" (at the bottom) picks the model the
+## rendered method shoots: Auto (tuned, Claude's or the hull) or Extruded.
 
 const SPACING := 2.0
 ## Models bigger than this (blocks) are shrunk to fit their slot.
@@ -65,6 +66,7 @@ var _ex_depth_label := Label.new()
 var _ex_noise := OptionButton.new()
 ## Every voxel one colour (all voxel methods).
 var _one_color := CheckBox.new()
+var _render_model := OptionButton.new()
 var _ex_strength := HSlider.new()
 var _ex_strength_label := Label.new()
 var _ex_seed := SpinBox.new()
@@ -353,11 +355,25 @@ func _build_settings_panel(parent: Control) -> void:
 		dirty = true
 		_sync_settings_ui()
 		_rebuild_methods[_settings_method] = true
+		if _settings_method == NPCRenders.source(current):
+			NPCRenders.forget(current)
+			_rebuild_methods["rendered"] = true
 		get_viewport().gui_release_focus())
 	box.add_child(reset)
 	var hint := _small("[ ] depth   N noise   Shift+N seed   B bevel   O one colour", 14)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
+
+	var rendered_title := _small("Rendered", 20)
+	box.add_child(rendered_title)
+	box.add_child(_small("Shots taken of"))
+	_render_model.add_item("Auto (tuned, Claude or hull)")
+	_render_model.add_item("Extruded model")
+	_render_model.add_theme_font_size_override("font_size", 16)
+	_render_model.item_selected.connect(func(i):
+		_set_option("model", NPCModels.RENDER_MODELS[i], "rendered")
+		get_viewport().gui_release_focus())
+	box.add_child(_render_model)
 
 
 func _fit_ui() -> void:
@@ -551,6 +567,7 @@ func _sync_settings_ui() -> void:
 	_ex_strength_label.text = "Noise strength: %d%%" % roundi(o.strength * 100.0)
 	_ex_seed.set_value_no_signal(o.seed)
 	_one_color.set_pressed_no_signal(o.one_color)
+	_render_model.select(NPCModels.RENDER_MODELS.find(NPCModels.options(current, "rendered").model))
 	_ex_bevel.select(Data.EXTRUDE_BEVELS.find(ex.bevel))
 	_ex_bevel_size.set_value_no_signal(ex.bevel_size)
 	_ex_bevel_label.text = "Bevel size: %d voxels" % ex.bevel_size
@@ -581,6 +598,10 @@ func _set_option(key: String, value, m := "") -> void:
 	dirty = true
 	_sync_settings_ui()
 	_rebuild_methods[m] = true
+	# The rendered sprite is shot again when the model it shoots changes.
+	if m == "rendered" or m == NPCRenders.source(current):
+		NPCRenders.forget(current)
+		_rebuild_methods["rendered"] = true
 
 
 func _save() -> void:

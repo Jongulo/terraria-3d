@@ -1,8 +1,10 @@
 class_name Decorations
 extends Node3D
 ## Tree canopies: CanopyArt's upscaled, warped Tree_Tops art, one MultiMesh per
-## style, drawn with the method chosen for "tree_canopy" in the placeable picker
-## (cross by default; billboards turn to the camera in the shader). Each is lit
+## style, drawn with the method chosen for its style in the placeable picker
+## (cross by default; billboards turn to the camera in the shader; rendered
+## ones show their style's shots, PlaceableRenders, as BlockModels draws
+## rendered blocks, and their billboard until those are made). Each is lit
 ## by the world's light where it stands (sunlit on the surface; a gem tree's in
 ## a cave as dark as the cave, or lit by your torch), updated when its chunk
 ## is rebuilt (relight).
@@ -26,6 +28,10 @@ var focus := Vector3(INF, INF, INF)
 var far_reach := INF
 var _materials: Array[ShaderMaterial] = []
 var _instances := {}  # style -> MultiMeshInstance3D (full detail)
+## Styles whose full-detail batch shows rendered shots (their transform is in
+## the shots), and those drawn as billboards until their shots are made.
+var _rendered := {}
+var _waiting := {}
 var _far_instances := {}  # style -> MultiMeshInstance3D (sprites)
 ## Every canopy, by style: {pos (drawn at), turn, light_at, light, near (its
 ## index in the full-detail batch, or -1)}; its index here is its sprite's.
@@ -51,23 +57,38 @@ func _instance(style: int, far := false) -> MultiMeshInstance3D:
 		var id := Data.block_id(CanopyArt.block_name(style))
 		var d := Data.block(id)
 		var method: String = "billboard" if far else d.get("method", "cross")
-		var built := BlockModelMesh.build(id, method)
-		var mat := ShaderMaterial.new()
-		mat.shader = preload("res://shaders/block_model_batched.gdshader")
-		mat.set_shader_parameter("sprite", ImageTexture.create_from_image(d.sprite))
-		mat.set_shader_parameter("textured", built.textured)
-		mat.set_shader_parameter("billboard", method == "billboard")
-		# In front of the billboard trunk, whose top it overlaps (no z-fighting).
-		mat.set_shader_parameter("billboard_offset", CANOPY_FRONT)
+		if method == "rendered":
+			if PlaceableRenders.renders(id).is_empty():
+				_waiting[style] = id
+				method = "billboard"  # until its shots are made
+			else:
+				_rendered[style] = true
+		var mesh: Mesh
+		var mat: ShaderMaterial
+		if method == "rendered":
+			mesh = BlockModels.rendered_quad()
+			mat = BlockModels.rendered_material(id)
+		else:
+			var built := BlockModelMesh.build(id, method)
+			mesh = built.mesh
+			mat = ShaderMaterial.new()
+			mat.shader = preload("res://shaders/block_model_batched.gdshader")
+			mat.set_shader_parameter("sprite", ImageTexture.create_from_image(d.sprite))
+			mat.set_shader_parameter("textured", built.textured)
+			mat.set_shader_parameter("billboard", method == "billboard")
+			# In front of the billboard trunk, whose top it overlaps (no z-fighting).
+			mat.set_shader_parameter("billboard_offset", CANOPY_FRONT)
 		_materials.append(mat)
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_custom_data = true  # each canopy's light
-		mm.mesh = built.mesh
+		mm.mesh = mesh
 		var mi := MultiMeshInstance3D.new()
 		mi.multimesh = mm
 		mi.material_override = mat
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if method == "rendered":
+			mi.extra_cull_margin = 4.0  # the quad is moved and grown in the shader
 		add_child(mi)
 		store[style] = mi
 		if _sky_light >= 0.0:
@@ -174,6 +195,13 @@ func _transform(style: int) -> Transform3D:
 	return Data.block_transform(Data.block(Data.block_id(CanopyArt.block_name(style))))
 
 
+## A full-detail canopy's instance transform: its tree's turn, the canopy's
+## own transform under it; rendered shots already hold that, so only the turn.
+func near_transform(style: int, e: Dictionary) -> Transform3D:
+	var t := Transform3D() if _rendered.has(style) else _transform(style)
+	return Transform3D(e.turn * t.basis, e.pos + t.origin)
+
+
 ## The canopies near you, in full detail (every one without a focus); the
 ## sprite batches hide those.
 func _partition() -> void:
@@ -205,16 +233,33 @@ func _partition() -> void:
 	for style in per_style:
 		var list: Array = per_style[style]
 		var mm: MultiMesh = _instance(style).multimesh
-		var t := _transform(style)
 		mm.instance_count = list.size()
 		for i in list.size():
-			mm.set_instance_transform(i, Transform3D(list[i].turn * t.basis, list[i].pos + t.origin))
+			mm.set_instance_transform(i, near_transform(style, list[i]))
 			mm.set_instance_custom_data(i, list[i].light)
 	for mi in _far_instances.values():
 		var m: ShaderMaterial = mi.material_override
 		m.set_shader_parameter("lod_center", Vector2(focus.x, focus.z))
 		m.set_shader_parameter("lod_near", DETAIL_DISTANCE if focus.x != INF else -1.0)
 		m.set_shader_parameter("lod_far", far_reach)
+
+
+## Styles waiting for their rendered shots: once made, their batch is made
+## again with them.
+func _process(_delta: float) -> void:
+	if _waiting.is_empty():
+		return
+	var ready: Array = _waiting.keys().filter(func(style): return not PlaceableRenders.renders(_waiting[style]).is_empty())
+	if ready.is_empty():
+		return
+	for style in ready:
+		_waiting.erase(style)
+		var mi: MultiMeshInstance3D = _instances.get(style)
+		if mi != null:
+			_materials.erase(mi.material_override)
+			mi.queue_free()
+			_instances.erase(style)
+	_partition()
 
 
 ## How many canopies are drawn in full detail and as sprites (tests): the

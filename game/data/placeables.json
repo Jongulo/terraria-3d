@@ -1,4 +1,5 @@
 {
+	"canopies_split": true,
 	"claude": {
 		"ash_wood_bathtub": {
 			"noise": "speckle",
@@ -218,6 +219,18 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"candelabra": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0
+		},
 		"candle": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -232,10 +245,13 @@
 			"one_color": true
 		},
 		"cattail": {
-			"depth": 16.0
+			"bevel": "chamfer",
+			"bevel_size": 3,
+			"depth": 7
 		},
 		"chain_lantern": {
-			"depth": 16.0
+			"depth": 16.0,
+			"one_color": false
 		},
 		"chest": {
 			"bevel": "chamfer",
@@ -247,6 +263,11 @@
 		},
 		"cloud_platform": {
 			"noise": "speckle"
+		},
+		"copper_chandelier": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0
 		},
 		"crimson_altar": {
 			"bevel": "chamfer",
@@ -268,6 +289,24 @@
 			"bevel_size": 3.0,
 			"depth": 8.0,
 			"one_color": true
+		},
+		"crimson_plants": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 2.0,
+			"one_color": true
+		},
+		"daybloom": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front"
+			],
+			"bevel_size": 1,
+			"depth": 2
 		},
 		"demon_altar": {
 			"bevel": "chamfer",
@@ -315,8 +354,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 10,
+			"bevel_size": 1.0,
+			"depth": 10.0,
 			"noise": "grain"
 		},
 		"fallen_log": {
@@ -339,6 +378,12 @@
 			"one_color": true,
 			"strength": 0.9
 		},
+		"flowers": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
 		"frozen_platform": {
 			"noise": "grain",
 			"strength": 0.35
@@ -354,6 +399,11 @@
 		"glass_platform": {
 			"noise": "speckle",
 			"strength": 0.3
+		},
+		"gold_chandelier": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0
 		},
 		"gold_chest": {
 			"one_color": true
@@ -372,6 +422,13 @@
 		},
 		"iron_anvil": {
 			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
 			"bevel_size": 1.0,
 			"depth": 6.0,
 			"noise": "grain",
@@ -464,6 +521,9 @@
 			],
 			"bevel_size": 6.0
 		},
+		"palm_wood_lamp": {
+			"one_color": false
+		},
 		"picnic_table": {
 			"depth": 16.0,
 			"noise": "grain",
@@ -488,6 +548,9 @@
 			"noise": "grain",
 			"strength": 0.6
 		},
+		"sandstone_platform": {
+			"noise": "grain"
+		},
 		"sawmill": {
 			"bevel": "round",
 			"bevel_sides": [
@@ -509,6 +572,23 @@
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 1.0
+		},
+		"sign": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0
+		},
+		"silver_chandelier": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0
 		},
 		"skull_lantern": {
 			"bevel": "chamfer",
@@ -555,13 +635,38 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 12,
+			"bevel_size": 6.0,
+			"depth": 12.0,
 			"one_color": true
 		},
 		"stone_platform": {
 			"noise": "speckle",
 			"strength": 0.85
+		},
+		"sunflower": {
+			"bevel": "chamfer",
+			"depth": 5
+		},
+		"sword_in_stone": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 14.0
+		},
+		"tall_flowers": {
+			"bevel": "chamfer",
+			"depth": 5.0
+		},
+		"taller_grass": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 1.0
 		},
 		"torch": {
 			"bevel": "round",
@@ -583,8 +688,588 @@
 		"tree_canopy": {
 			"bevel": "round",
 			"bevel_size": 6.0,
-			"depth": 21.0,
+			"depth": 12.0,
+			"one_color": false,
 			"strength": 0.55
+		},
+		"tree_canopy@1": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@10": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@100": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@101": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@102": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@11": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@110": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@111": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@112": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@12": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@120": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@121": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@122": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@130": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@131": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@132": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@140": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@141": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@142": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@150": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@151": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@152": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@160": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@161": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@162": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@170": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@171": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@172": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@180": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@181": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@182": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@190": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@191": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@192": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@2": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@20": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@200": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@201": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@202": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@21": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@210": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@211": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@212": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@22": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@220": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@221": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@222": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@230": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@231": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@232": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@240": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@241": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@242": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@250": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@251": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@252": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@260": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@261": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@262": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 18.0,
+			"one_color": false,
+			"strength": 0.45
+		},
+		"tree_canopy@30": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@31": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@32": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@40": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@41": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@42": {
+			"bevel": "chamfer",
+			"bevel_size": 6.0,
+			"depth": 42.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@50": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 41.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@51": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 20.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@52": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 21.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@60": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 22.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@61": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@62": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@70": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@71": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@72": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@80": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@81": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@82": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@90": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@91": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_canopy@92": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"one_color": false,
+			"strength": 0.55
+		},
+		"tree_trunk": {
+			"bevel": "round",
+			"bevel_sides": [
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 4.0,
+			"depth": 8.0,
+			"noise": "speckle"
 		},
 		"twigs": {
 			"bevel": "chamfer",
@@ -645,6 +1330,9 @@
 		},
 		"ash_wood_sink": {
 			"one_color": false
+		},
+		"barrel": {
+			"noise": "speckle"
 		},
 		"blue_torch": {
 			"one_color": true
@@ -770,6 +1458,9 @@
 		"shadewood_lamp": {
 			"one_color": true
 		},
+		"skyware_lantern": {
+			"one_color": true
+		},
 		"small_rocks": {
 			"one_color": false
 		},
@@ -803,7 +1494,9 @@
 			"one_color": true
 		},
 		"wooden_table": {
-			"one_color": true
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.5
 		},
 		"work_bench": {
 			"noise": "speckle",
@@ -819,42 +1512,41 @@
 	"lathe": {},
 	"methods": {
 		"ash_wood_lamp": "hull",
-		"ash_wood_sink": "claude",
 		"barrel": "extruded",
-		"blue_dungeon_sink": "claude",
+		"blue_dungeon_sink": "rendered",
 		"blue_torch": "hull",
-		"boreal_wood_sink": "claude",
 		"bottle": "hull",
 		"bowl": "hull",
 		"cactus": "extruded",
 		"cactus_lamp": "hull",
-		"cactus_sink": "claude",
-		"candelabra": "billboard",
-		"cattail": "cross",
+		"cattail": "flat",
 		"chain_lantern": "hull",
 		"chest": "extruded",
 		"chimney": "hull",
 		"clay_pot": "hull",
 		"copper_chandelier": "billboard",
-		"corrupt_plants": "billboard",
+		"corrupt_plants": "hull",
 		"crimson_altar": "extruded",
 		"crimson_heart": "extruded",
-		"crimson_plants": "billboard",
+		"crimson_plants": "extruded",
+		"daybloom": "extruded",
 		"demon_altar": "extruded",
 		"demon_torch": "hull",
 		"ebonwood_lamp": "hull",
-		"ebonwood_sink": "claude",
 		"extractinator": "extruded",
+		"flowers": "extruded",
+		"frozen_chest": "extruded",
 		"furnace": "extruded",
 		"glass_bowl": "hull",
 		"gold_chandelier": "billboard",
+		"gold_chest": "extruded",
 		"grandfather_clock": "hull",
-		"green_dungeon_sink": "claude",
 		"green_torch": "hull",
 		"ice_torch": "hull",
 		"icicle": "hull",
 		"iron_anvil": "extruded",
-		"jungle_plants": "billboard",
+		"ivy_chest": "rendered",
+		"jungle_plants": "hull",
 		"jungle_spores": "extruded",
 		"jungle_vines": "hull",
 		"keg": "extruded",
@@ -862,40 +1554,121 @@
 		"large_rocks": "extruded",
 		"lead_anvil": "extruded",
 		"life_crystal": "extruded",
-		"lily_pad": "hull",
+		"lily_pad": "extruded",
 		"mug": "extruded",
-		"obsidian_sink": "claude",
 		"orange_torch": "hull",
-		"palm_wood_bathtub": "claude",
 		"palm_wood_lamp": "hull",
-		"palm_wood_sink": "claude",
 		"picnic_table": "hull",
 		"picnic_table_with_cloth": "hull",
-		"pink_dungeon_sink": "claude",
 		"pink_vase": "hull",
+		"platinum_chandelier": "billboard",
 		"pot": "hull",
 		"purple_torch": "hull",
 		"red_torch": "hull",
-		"rich_mahogany_bathtub": "claude",
+		"rich_mahogany_chest": "extruded",
 		"rich_mahogany_lamp": "hull",
-		"rich_mahogany_sink": "claude",
+		"sandstone_chest": "extruded",
 		"sandstone_stalactite": "hull",
-		"shadewood_bathtub": "claude",
 		"shadewood_lamp": "hull",
-		"shadewood_sink": "claude",
 		"shadow_orb": "extruded",
-		"sign": "flat",
 		"silver_chandelier": "billboard",
 		"skull_lantern": "billboard",
-		"skyware_lantern": "extruded",
+		"skyware_chest": "rendered",
+		"skyware_lantern": "hull",
 		"small_rocks": "extruded",
 		"solidifier": "extruded",
-		"tall_grass": "billboard",
+		"sunflower": "extruded",
+		"sword_in_stone": "extruded",
+		"tall_flowers": "extruded",
+		"tall_grass": "hull",
+		"taller_grass": "extruded",
 		"tiki_torch": "hull",
-		"torch": "extruded",
-		"trash_can": "hull",
+		"tin_chandelier": "billboard",
+		"torch": "hull",
+		"trash_can": "extruded",
 		"tree_canopy": "billboard",
+		"tree_canopy@1": "billboard",
+		"tree_canopy@10": "billboard",
+		"tree_canopy@100": "billboard",
+		"tree_canopy@101": "billboard",
+		"tree_canopy@102": "billboard",
+		"tree_canopy@11": "billboard",
+		"tree_canopy@110": "billboard",
+		"tree_canopy@111": "billboard",
+		"tree_canopy@112": "billboard",
+		"tree_canopy@12": "billboard",
+		"tree_canopy@120": "billboard",
+		"tree_canopy@121": "billboard",
+		"tree_canopy@122": "billboard",
+		"tree_canopy@130": "billboard",
+		"tree_canopy@131": "billboard",
+		"tree_canopy@132": "billboard",
+		"tree_canopy@140": "billboard",
+		"tree_canopy@141": "billboard",
+		"tree_canopy@142": "billboard",
+		"tree_canopy@150": "billboard",
+		"tree_canopy@151": "billboard",
+		"tree_canopy@152": "billboard",
+		"tree_canopy@160": "billboard",
+		"tree_canopy@161": "billboard",
+		"tree_canopy@162": "billboard",
+		"tree_canopy@170": "billboard",
+		"tree_canopy@171": "billboard",
+		"tree_canopy@172": "billboard",
+		"tree_canopy@180": "billboard",
+		"tree_canopy@181": "billboard",
+		"tree_canopy@182": "billboard",
+		"tree_canopy@190": "billboard",
+		"tree_canopy@191": "billboard",
+		"tree_canopy@192": "billboard",
+		"tree_canopy@2": "billboard",
+		"tree_canopy@20": "billboard",
+		"tree_canopy@200": "billboard",
+		"tree_canopy@201": "billboard",
+		"tree_canopy@202": "billboard",
+		"tree_canopy@21": "billboard",
+		"tree_canopy@210": "billboard",
+		"tree_canopy@211": "billboard",
+		"tree_canopy@212": "billboard",
+		"tree_canopy@22": "billboard",
+		"tree_canopy@220": "billboard",
+		"tree_canopy@221": "rendered",
+		"tree_canopy@222": "billboard",
+		"tree_canopy@230": "billboard",
+		"tree_canopy@231": "billboard",
+		"tree_canopy@232": "billboard",
+		"tree_canopy@240": "billboard",
+		"tree_canopy@241": "billboard",
+		"tree_canopy@242": "billboard",
+		"tree_canopy@250": "billboard",
+		"tree_canopy@251": "billboard",
+		"tree_canopy@252": "billboard",
+		"tree_canopy@260": "billboard",
+		"tree_canopy@261": "billboard",
+		"tree_canopy@262": "billboard",
+		"tree_canopy@30": "billboard",
+		"tree_canopy@31": "billboard",
+		"tree_canopy@32": "billboard",
+		"tree_canopy@40": "billboard",
+		"tree_canopy@41": "billboard",
+		"tree_canopy@42": "billboard",
+		"tree_canopy@50": "billboard",
+		"tree_canopy@51": "billboard",
+		"tree_canopy@52": "billboard",
+		"tree_canopy@60": "billboard",
+		"tree_canopy@61": "billboard",
+		"tree_canopy@62": "billboard",
+		"tree_canopy@70": "billboard",
+		"tree_canopy@71": "billboard",
+		"tree_canopy@72": "billboard",
+		"tree_canopy@80": "billboard",
+		"tree_canopy@81": "billboard",
+		"tree_canopy@82": "billboard",
+		"tree_canopy@90": "billboard",
+		"tree_canopy@91": "billboard",
+		"tree_canopy@92": "billboard",
 		"tree_trunk": "billboard",
+		"tungsten_chandelier": "billboard",
 		"vicious_mushroom": "hull",
 		"vile_mushroom": "hull",
 		"vine_flowers": "extruded",
@@ -903,9 +1676,169 @@
 		"wall_torch": "extruded",
 		"white_torch": "hull",
 		"wine_glass": "hull",
-		"wooden_sink": "claude",
 		"work_bench": "hull",
 		"yellow_torch": "hull"
+	},
+	"rendered": {
+		"barrel": {
+			"model": "extruded"
+		},
+		"bast_statue": {
+			"model": "extruded"
+		},
+		"bed": {
+			"model": "extruded"
+		},
+		"campfire": {
+			"model": "extruded"
+		},
+		"candelabra": {
+			"model": "extruded"
+		},
+		"candle": {
+			"model": "extruded"
+		},
+		"chest": {
+			"model": "extruded"
+		},
+		"copper_chandelier": {
+			"model": "extruded"
+		},
+		"crimson_altar": {
+			"model": "extruded"
+		},
+		"crimson_heart": {
+			"model": "extruded"
+		},
+		"crimson_plants": {
+			"model": "extruded"
+		},
+		"demon_altar": {
+			"model": "extruded"
+		},
+		"dresser": {
+			"model": "extruded"
+		},
+		"extractinator": {
+			"model": "extruded"
+		},
+		"fallen_log": {
+			"model": "extruded"
+		},
+		"fireplace": {
+			"model": "extruded"
+		},
+		"flowers": {
+			"model": "extruded"
+		},
+		"furnace": {
+			"model": "extruded"
+		},
+		"gold_chandelier": {
+			"model": "extruded"
+		},
+		"grandfather_clock": {
+			"model": "auto"
+		},
+		"iron_anvil": {
+			"model": "extruded"
+		},
+		"ivy_chest": {
+			"model": "extruded"
+		},
+		"jungle_spores": {
+			"model": "extruded"
+		},
+		"keg": {
+			"model": "extruded"
+		},
+		"large_rocks": {
+			"model": "extruded"
+		},
+		"lead_anvil": {
+			"model": "extruded"
+		},
+		"life_crystal": {
+			"model": "extruded"
+		},
+		"loom": {
+			"model": "extruded"
+		},
+		"mug": {
+			"model": "extruded"
+		},
+		"mushroom": {
+			"model": "auto"
+		},
+		"platinum_chandelier": {
+			"model": "auto"
+		},
+		"shadow_orb": {
+			"model": "extruded"
+		},
+		"sign": {
+			"model": "extruded"
+		},
+		"silver_chandelier": {
+			"model": "extruded"
+		},
+		"skyware_chest": {
+			"model": "extruded"
+		},
+		"small_rocks": {
+			"model": "extruded"
+		},
+		"solidifier": {
+			"model": "extruded"
+		},
+		"sword_in_stone": {
+			"model": "extruded"
+		},
+		"tall_flowers": {
+			"model": "extruded"
+		},
+		"taller_grass": {
+			"model": "extruded"
+		},
+		"trash_can": {
+			"model": "auto"
+		},
+		"tree_canopy@250": {
+			"model": "extruded"
+		},
+		"tree_canopy@251": {
+			"model": "extruded"
+		},
+		"tree_canopy@252": {
+			"model": "extruded"
+		},
+		"tree_canopy@260": {
+			"model": "extruded"
+		},
+		"tree_canopy@261": {
+			"model": "extruded"
+		},
+		"tree_canopy@262": {
+			"model": "extruded"
+		},
+		"tree_canopy@42": {
+			"model": "auto"
+		},
+		"tree_trunk": {
+			"model": "extruded"
+		},
+		"twigs": {
+			"model": "extruded"
+		},
+		"vine_flowers": {
+			"model": "auto"
+		},
+		"vines": {
+			"model": "auto"
+		},
+		"wooden_chair": {
+			"model": "extruded"
+		}
 	},
 	"transform": {
 		"blue_torch": {
@@ -989,6 +1922,250 @@
 			]
 		}
 	},
-	"tuned": {},
+	"tuned": {
+		"tree_canopy": {
+			"one_color": false
+		},
+		"tree_canopy@1": {
+			"one_color": false
+		},
+		"tree_canopy@10": {
+			"one_color": false
+		},
+		"tree_canopy@100": {
+			"one_color": false
+		},
+		"tree_canopy@101": {
+			"one_color": false
+		},
+		"tree_canopy@102": {
+			"one_color": false
+		},
+		"tree_canopy@11": {
+			"one_color": false
+		},
+		"tree_canopy@110": {
+			"one_color": false
+		},
+		"tree_canopy@111": {
+			"one_color": false
+		},
+		"tree_canopy@112": {
+			"one_color": false
+		},
+		"tree_canopy@12": {
+			"one_color": false
+		},
+		"tree_canopy@120": {
+			"one_color": false
+		},
+		"tree_canopy@121": {
+			"one_color": false
+		},
+		"tree_canopy@122": {
+			"one_color": false
+		},
+		"tree_canopy@130": {
+			"one_color": false
+		},
+		"tree_canopy@131": {
+			"one_color": false
+		},
+		"tree_canopy@132": {
+			"one_color": false
+		},
+		"tree_canopy@140": {
+			"one_color": false
+		},
+		"tree_canopy@141": {
+			"one_color": false
+		},
+		"tree_canopy@142": {
+			"one_color": false
+		},
+		"tree_canopy@150": {
+			"one_color": false
+		},
+		"tree_canopy@151": {
+			"one_color": false
+		},
+		"tree_canopy@152": {
+			"one_color": false
+		},
+		"tree_canopy@160": {
+			"one_color": false
+		},
+		"tree_canopy@161": {
+			"one_color": false
+		},
+		"tree_canopy@162": {
+			"one_color": false
+		},
+		"tree_canopy@170": {
+			"one_color": false
+		},
+		"tree_canopy@171": {
+			"one_color": false
+		},
+		"tree_canopy@172": {
+			"one_color": false
+		},
+		"tree_canopy@180": {
+			"one_color": false
+		},
+		"tree_canopy@181": {
+			"one_color": false
+		},
+		"tree_canopy@182": {
+			"one_color": false
+		},
+		"tree_canopy@190": {
+			"one_color": false
+		},
+		"tree_canopy@191": {
+			"one_color": false
+		},
+		"tree_canopy@192": {
+			"one_color": false
+		},
+		"tree_canopy@2": {
+			"one_color": false
+		},
+		"tree_canopy@20": {
+			"one_color": false
+		},
+		"tree_canopy@200": {
+			"one_color": false
+		},
+		"tree_canopy@201": {
+			"one_color": false
+		},
+		"tree_canopy@202": {
+			"one_color": false
+		},
+		"tree_canopy@21": {
+			"one_color": false
+		},
+		"tree_canopy@210": {
+			"one_color": false
+		},
+		"tree_canopy@211": {
+			"one_color": false
+		},
+		"tree_canopy@212": {
+			"one_color": false
+		},
+		"tree_canopy@22": {
+			"one_color": false
+		},
+		"tree_canopy@220": {
+			"one_color": false
+		},
+		"tree_canopy@221": {
+			"one_color": false
+		},
+		"tree_canopy@222": {
+			"one_color": false
+		},
+		"tree_canopy@230": {
+			"one_color": false
+		},
+		"tree_canopy@231": {
+			"one_color": false
+		},
+		"tree_canopy@232": {
+			"one_color": false
+		},
+		"tree_canopy@240": {
+			"one_color": false
+		},
+		"tree_canopy@241": {
+			"one_color": false
+		},
+		"tree_canopy@242": {
+			"one_color": false
+		},
+		"tree_canopy@250": {
+			"one_color": false
+		},
+		"tree_canopy@251": {
+			"one_color": false
+		},
+		"tree_canopy@252": {
+			"one_color": false
+		},
+		"tree_canopy@260": {
+			"one_color": false
+		},
+		"tree_canopy@261": {
+			"one_color": false
+		},
+		"tree_canopy@262": {
+			"one_color": false
+		},
+		"tree_canopy@30": {
+			"one_color": false
+		},
+		"tree_canopy@31": {
+			"one_color": false
+		},
+		"tree_canopy@32": {
+			"one_color": false
+		},
+		"tree_canopy@40": {
+			"one_color": false
+		},
+		"tree_canopy@41": {
+			"one_color": false
+		},
+		"tree_canopy@42": {
+			"one_color": false
+		},
+		"tree_canopy@50": {
+			"one_color": false
+		},
+		"tree_canopy@51": {
+			"one_color": false
+		},
+		"tree_canopy@52": {
+			"one_color": false
+		},
+		"tree_canopy@60": {
+			"one_color": false
+		},
+		"tree_canopy@61": {
+			"one_color": false
+		},
+		"tree_canopy@62": {
+			"one_color": false
+		},
+		"tree_canopy@70": {
+			"one_color": false
+		},
+		"tree_canopy@71": {
+			"one_color": false
+		},
+		"tree_canopy@72": {
+			"one_color": false
+		},
+		"tree_canopy@80": {
+			"one_color": false
+		},
+		"tree_canopy@81": {
+			"one_color": false
+		},
+		"tree_canopy@82": {
+			"one_color": false
+		},
+		"tree_canopy@90": {
+			"one_color": false
+		},
+		"tree_canopy@91": {
+			"one_color": false
+		},
+		"tree_canopy@92": {
+			"one_color": false
+		}
+	},
 	"units": "art"
 }

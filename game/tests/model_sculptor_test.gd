@@ -364,6 +364,25 @@ func _run() -> void:
 	ed._on_delete_pressed()
 	check(not TunedModels.has(TunedModels.block_key("sawmill")) and not FileAccess.file_exists(TunedModels.path(TunedModels.block_key("sawmill"))),
 			"Delete (pressed twice) removes the tuned model and its file")
+	# Every tree canopy can be sculpted, each with a model of its own.
+	var canopies: Array = ed._sources.filter(func(s): return s.type == "block" and s.name.begins_with("tree_canopy"))
+	var canopy_keys := {}
+	for cs in canopies:
+		canopy_keys[cs.key] = true
+	check(canopies.size() == 81 and canopy_keys.size() == 81 and canopies.all(func(cs): return cs.label.begins_with("Canopy: ")),
+			"all 81 tree canopies are listed, each its own model (%d)" % canopies.size())
+	var csrc: Dictionary = canopies.filter(func(cs): return cs.name == "tree_canopy@11")[0]
+	var cid := Data.block_id("tree_canopy@11")
+	ed.select(csrc)
+	ed.seed_from("hull")
+	ed.save_all()
+	BlockModelMesh.clear_cache()
+	check(TunedModels.has(TunedModels.block_key("tree_canopy@11")) and not BlockModelMesh.build(cid, "tuned").textured
+			and BlockModelMesh.build(cid, "tuned").mesh.get_aabb().is_equal_approx(BlockModelMesh.build(cid, "hull").mesh.get_aabb()),
+			"a canopy (Corruption 2) tunes from its hull, and the Tuned method shows it")
+	ed._on_delete_pressed()
+	ed._on_delete_pressed()
+	check(not TunedModels.has(TunedModels.block_key("tree_canopy@11")), "and its model can be deleted")
 	ed.queue_free()
 	await frames(2)
 

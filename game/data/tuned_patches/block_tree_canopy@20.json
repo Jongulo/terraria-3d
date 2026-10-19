@@ -1,0 +1,1 @@
+{"base":{"fingerprint":"3d814cc7","method":"extruded","options":{"bevel":"round","bevel_sides":["top","bottom","left","right","front","back"],"bevel_size":6,"depth":12,"noise":"none","one_color":false,"seed":0,"strength":0.55}},"edits":[0],"frames":[""],"looks":[],"offset":[-19.5,0.0,-6.0],"patch":"block:tree_canopy@20","size":[40,39,12],"version":1}

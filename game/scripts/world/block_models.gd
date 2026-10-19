@@ -14,7 +14,11 @@ extends Node3D
 ## instance uniform at all, block_model_batched.gdshader.) Doors stay nodes:
 ## they swing. Animated blocks (Terraria's animated tiles: furnaces,
 ## campfires...) have a mesh and material per frame; their batches are listed
-## in _animated and swapped to the frame Data.anim_frame_now gives.
+## in _animated and swapped to the frame Data.anim_frame_now gives. Rendered
+## placeables (PlaceableRenders' shots) batch per block: a camera-facing quad
+## each that shows the shot for the view (rendered_batched.gdshader); until a
+## block's shots are made it's drawn as its billboard, then its chunks are
+## built again.
 
 var world: VoxelWorld
 var game: Game
@@ -41,6 +45,8 @@ var _rebuild_queue: Array[Vector3i] = []
 ## Animated batches per chunk: Vector3i -> Array of {node, id, method,
 ## rotation, textured, billboard (variant, or -1), frame, blocks}.
 var _animated := {}
+## Blocks drawn as billboards while their rendered shots are being made.
+var _waiting_renders := {}
 
 
 func setup(voxel_world: VoxelWorld, g: Game) -> void:
@@ -95,6 +101,7 @@ func chunk_updated(c: Vector3i) -> void:
 	var detailed := full_detail(c)
 	_detail[c] = detailed
 	var billboards := {}  # Vector2i(block id, variant) -> Array[Vector3i]
+	var rendered := {}  # block id -> Array of [Vector3i, rotation]
 	var batches := {}  # mesh key -> {id, mesh, textured, items: [[Transform3D, Vector3i]]}
 	var keys: Array = []
 	var cacti := []
@@ -136,6 +143,14 @@ func chunk_updated(c: Vector3i) -> void:
 					_doors_by_chunk[c].append(Chests.key(pos))
 			continue
 		var method: String = k.method
+		if method == "rendered" and not k.wall:
+			if not PlaceableRenders.renders(id).is_empty():
+				if not rendered.has(id):
+					rendered[id] = []
+				rendered[id].append([pos, game.block_rotation(pos)])
+				continue
+			_waiting_renders[id] = true
+			method = "billboard"  # until its shots are made
 		if method == "billboard" and not k.wall:
 			var key := Vector2i(id, variant_at(pos, k.variants))
 			if not billboards.has(key):
@@ -150,7 +165,7 @@ func chunk_updated(c: Vector3i) -> void:
 			# WALL_NORMALS[shape - 2] (the art rises toward +x).
 			id = Data.block_id(Data.block(id).name + "_stair")
 			method = Data.block(id).get("method", "extruded")
-			if method == "billboard":
+			if method in ["billboard", "rendered"]:
 				method = "extruded"
 			rotation = (shape - Game.SHAPE_RAMP + 3) % 4
 		if not detailed and method in HEAVY_METHODS:
@@ -180,6 +195,14 @@ func chunk_updated(c: Vector3i) -> void:
 		if Data.anim_frames(Data.block(key.x)) > 1:
 			animated.append({"node": node, "id": key.x, "method": "billboard", "rotation": 0,
 					"textured": true, "billboard": key.y, "frame": frame, "blocks": billboards[key]})
+	for id in rendered:
+		var frame := Data.anim_frame_now(Data.block(id))
+		var node := _rendered_batch(id, rendered[id], keys, frame)
+		add_child(node)
+		nodes.append(node)
+		if Data.anim_frames(Data.block(id)) > 1:
+			animated.append({"node": node, "id": id, "method": "rendered", "rotation": 0,
+					"textured": false, "billboard": -1, "frame": frame, "blocks": rendered[id].map(func(it): return it[0])})
 	if not animated.is_empty():
 		_animated[c] = animated
 	for node in _branch_batches(trunks):
@@ -233,6 +256,7 @@ func _update_detail() -> void:
 ## Moves animated batches on to the frame their block is on now.
 func _process(_delta: float) -> void:
 	_update_detail()
+	_check_renders()
 	for list in _animated.values():
 		for a in list:
 			var frame := Data.anim_frame_now(Data.block(a.id))
@@ -244,12 +268,27 @@ func _process(_delta: float) -> void:
 			if a.billboard >= 0:
 				mi.multimesh.mesh = BlockModelMesh.build(a.id, "billboard", frame).mesh
 				m = billboard_material(a.id, a.billboard, frame)
+			elif a.method == "rendered":
+				m = rendered_material(a.id, frame)
 			else:
 				mi.multimesh.mesh = model_mesh(a.id, a.method, a.rotation, frame).mesh
 				m = batched_material(a.id, a.textured, frame)
 			m.set_shader_parameter("sky_light", _sky_light)
 			m.set_shader_parameter("sky_color", _sky_color)
 			mi.material_override = m
+
+
+## Once blocks waiting for their rendered shots have them, their chunks are
+## built again with the shots.
+func _check_renders() -> void:
+	if _waiting_renders.is_empty():
+		return
+	var ready := _waiting_renders.keys().filter(func(id): return not PlaceableRenders.renders(id).is_empty())
+	if ready.is_empty():
+		return
+	for id in ready:
+		_waiting_renders.erase(id)
+	refresh_all()
 
 
 ## The frame an animated block is drawn on now (tests): -1 if it isn't drawn
@@ -314,6 +353,63 @@ func _billboard_batch(block_id: int, variant: int, positions: Array, keys: Array
 	mi.material_override = billboard_material(block_id, variant, frame)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
+
+
+## Rendered placeables of one block: `items` [block position, rotation], each a
+## quad turned to the camera in the shader, the instance turned the way the
+## block was placed (the shots turn with it).
+func _rendered_batch(block_id: int, items: Array, keys: Array, frame := 0) -> MultiMeshInstance3D:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = rendered_quad()
+	mm.instance_count = items.size()
+	for i in items.size():
+		var pos: Vector3i = items[i][0]
+		var t := Transform3D(Basis(Vector3.UP, int(items[i][1]) * PI * 0.5), Vector3(pos) + Vector3(0.5, 0.0, 0.5))
+		var light := world.get_light(Vector3(pos) + Vector3(0.5, 0.5, 0.5))
+		mm.set_instance_transform(i, t)
+		mm.set_instance_custom_data(i, light)
+		_models[Chests.key(pos)] = {"mesh": mm.mesh, "transform": t, "light": light}
+		keys.append(Chests.key(pos))
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	mi.material_override = rendered_material(block_id, frame)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# The quad is moved to the model's middle and grown in the shader.
+	mi.extra_cull_margin = 4.0
+	return mi
+
+
+static var _rendered_quad: QuadMesh
+
+
+## The unit quad rendered placeables are drawn on.
+static func rendered_quad() -> QuadMesh:
+	if _rendered_quad == null:
+		_rendered_quad = QuadMesh.new()
+		_rendered_quad.size = Vector2.ONE
+	return _rendered_quad
+
+
+## Shared material for a block's rendered shots (an animated block's frame).
+## Made again when its shots are (PlaceableRenders.forget).
+static func rendered_material(block_id: int, frame := 0) -> ShaderMaterial:
+	var r := PlaceableRenders.renders(block_id)
+	var key := "%d:rendered:%d" % [block_id, frame]
+	var m: ShaderMaterial = _shared_materials.get(key)
+	if m == null:
+		m = ShaderMaterial.new()
+		m.shader = preload("res://shaders/rendered_batched.gdshader")
+		_shared_materials[key] = m
+	if not r.is_empty():
+		m.set_shader_parameter("yaws", r.yaws)
+		m.set_shader_parameter("rows", r.pitches.size())
+		m.set_shader_parameter("atlas", r.atlases[clampi(frame, 0, r.atlases.size() - 1)])
+		m.set_shader_parameter("center", r.center)
+		m.set_shader_parameter("size", r.n * r.px)
+		m.set_shader_parameter("radius", r.radius)
+	return m
 
 
 ## The branches on these trunk cells (TreeBranches): fixed cards, one batch
@@ -487,6 +583,10 @@ static func make_model(block_id: int, method: String, rotation_index := 0, mater
 	var d := Data.block(block_id)
 	if d.get("wall", false):
 		return _wall_model(block_id, method, rotation_index, materials, frame)
+	if method == "rendered":
+		var r := RenderedPlaceable.new()
+		r.setup(block_id, rotation_index, frame)
+		return r
 	if method == "billboard":
 		var s := EntitySprite.new()
 		var img: Image = d.sprite
@@ -509,6 +609,9 @@ static func make_model(block_id: int, method: String, rotation_index := 0, mater
 static func set_model_frame(node: Node3D, block_id: int, method: String, frame: int, rotation_index := 0, materials := {}) -> void:
 	if node is EntitySprite:
 		node.material_override.set_shader_parameter("sprite", frame_texture(block_id, frame))
+		return
+	if node is RenderedPlaceable:
+		node.set_frame(frame)
 		return
 	var mi := node as MeshInstance3D
 	var model := model_mesh(block_id, method, rotation_index, frame)
@@ -542,11 +645,13 @@ static func model_mesh(block_id: int, method: String, rotation_index := 0, frame
 			# against the wall: one plane out from it instead.
 			if method in ["billboard", "cross", "panels"]:
 				method = "flat"
-		elif method == "billboard":
+		elif method in ["billboard", "rendered"]:
 			method = "cross"
 		var wall_built := BlockModelMesh.build(block_id, method, frame)
 		return {"mesh": _transformed_mesh(block_id, "%s:wall%d" % [method, rotation_index], wall_built.mesh,
 				wall_transform(rotation_index, d) * Data.block_transform(d)), "textured": wall_built.textured, "turn": 0}
+	if method == "rendered":
+		method = PlaceableRenders.source(block_id)  # the model its shots are of
 	var built := BlockModelMesh.build(block_id, method, frame)
 	return {"mesh": _transformed_mesh(block_id, method, built.mesh, Data.block_transform(d)), "textured": built.textured,
 			"turn": rotation_index}

@@ -8,13 +8,17 @@ class_name NPCModels
 ## (claude: NPCSculpt, data/handmade_npc_models.json; others show the hull), or
 ## tuned in the model sculptor (tuned: TunedModels, data/tuned/; others show
 ## the hull), or drawn as a sprite again from shots of its voxel model from
-## every angle (rendered: NPCRenders, RenderedSprite; Fallout 1's way). Every
-## voxel method can keep one colour per voxel (one_color).
+## every angle (rendered: NPCRenders, RenderedSprite; Fallout 1's way; its
+## "model" setting picks what's shot: auto, its tuned, Claude or hull model, or
+## extruded, the Extruded model with its own settings). Every voxel method can
+## keep one colour per voxel (one_color).
 ## Meshes are built at the sprite's art resolution, in blocks, bottom centre at
 ## the origin with the art's face toward +z and its left toward -x; each frame
 ## is built when first shown and kept.
 
 const PATH := "res://data/npc_models.json"
+## What the rendered method shoots (NPCRenders.source).
+const RENDER_MODELS := ["auto", "extruded"]
 const METHODS := ["billboard", "cross", "flat", "extruded", "hull", "hull_top", "lathe", "claude", "tuned", "rendered"]
 const NOISE_METHODS := ["extruded", "hull", "hull_top", "lathe", "claude", "tuned"]
 const DESCRIPTIONS := {
@@ -32,6 +36,8 @@ const DESCRIPTIONS := {
 
 static var methods := {}
 static var extruded := {}
+## kind -> the rendered method's settings ({model}).
+static var rendered := {}
 static var noise := {"hull": {}, "hull_top": {}, "lathe": {}, "claude": {}, "tuned": {}}
 static var _loaded := false
 static var _frames := {}
@@ -52,6 +58,7 @@ static func load_file(path := PATH) -> void:
 	_loaded = true
 	methods = {}
 	extruded = {}
+	rendered = {}
 	noise = {"hull": {}, "hull_top": {}, "lathe": {}, "claude": {}, "tuned": {}}
 	clear_cache()
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -65,6 +72,8 @@ static func load_file(path := PATH) -> void:
 			methods[k] = d.methods[k]
 	if d.get("extruded") is Dictionary:
 		extruded = d.extruded
+	if d.get("rendered") is Dictionary:
+		rendered = d.rendered
 	for m in ["hull", "hull_top", "lathe", "claude", "tuned"]:
 		if d.get(m) is Dictionary:
 			noise[m] = d[m]
@@ -74,7 +83,7 @@ static func save(path := PATH) -> bool:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return false
-	f.store_string(JSON.stringify({"methods": methods, "extruded": extruded, "hull": noise.hull, "hull_top": noise.hull_top, "lathe": noise.lathe, "claude": noise.claude, "tuned": noise.tuned}, "\t", true))
+	f.store_string(JSON.stringify({"methods": methods, "extruded": extruded, "rendered": rendered, "hull": noise.hull, "hull_top": noise.hull_top, "lathe": noise.lathe, "claude": noise.claude, "tuned": noise.tuned}, "\t", true))
 	return true
 
 
@@ -98,9 +107,12 @@ static func max_depth(kind: String) -> int:
 
 ## A method's settings with defaults filled in: extruded {depth, noise,
 ## strength, seed, bevel, bevel_size, bevel_sides}; hull and lathe {noise,
-## strength, seed}. The default depth is half the art's width.
+## strength, seed}; rendered {model}. The default depth is half the art's width.
 static func options(kind: String, m: String) -> Dictionary:
 	ensure_loaded()
+	if m == "rendered":
+		var model = rendered.get(kind, {}).get("model", "auto")
+		return {"model": model if model in RENDER_MODELS else "auto"}
 	var o := {"noise": "none", "strength": 0.5, "seed": 0, "one_color": false}
 	if m == "extruded":
 		var mx := max_depth(kind)
@@ -124,7 +136,7 @@ static func options(kind: String, m: String) -> Dictionary:
 
 static func set_option(kind: String, m: String, key: String, value) -> void:
 	ensure_loaded()
-	var store: Dictionary = extruded if m == "extruded" else noise[m]
+	var store: Dictionary = _store(m)
 	var o: Dictionary = store.get(kind, {}).duplicate()
 	o[key] = value
 	store[kind] = o
@@ -133,8 +145,15 @@ static func set_option(kind: String, m: String, key: String, value) -> void:
 
 static func reset_options(kind: String, m: String) -> void:
 	ensure_loaded()
-	(extruded if m == "extruded" else noise[m]).erase(kind)
+	_store(m).erase(kind)
 	_forget(kind)
+
+
+## Where a method's settings are kept.
+static func _store(m: String) -> Dictionary:
+	if m == "extruded":
+		return extruded
+	return rendered if m == "rendered" else noise[m]
 
 
 static func clear_cache() -> void:

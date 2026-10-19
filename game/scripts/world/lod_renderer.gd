@@ -10,7 +10,8 @@ extends Node3D
 ## leaving holes. A tile that's no longer wanted stays until what replaces it
 ## is drawn (its children, its parent, or the full-detail chunks), so nothing
 ## blinks out as you move. Far terrain is drawn in block colours with canopy
-## blobs over the trees (lod.gdshader), lit like the near blocks.
+## blobs over the trees (lod.gdshader), lit like the near blocks; its water
+## with the near water's material, see-through over the far sea floor.
 
 const CHUNK := 32
 ## Coarsest level: tiles of 8 chunks (256 blocks), 8-block cells.
@@ -101,7 +102,7 @@ func _process(_delta: float) -> void:
 		var t: Vector3i = got[0][0]
 		_pending.erase(t)
 		if _wanted.has(t):
-			_apply(t, got[0][1])
+			_apply(t, got[0][1], got[0][2])
 	while _pending.size() < MAX_IN_FLIGHT and not _queue.is_empty():
 		var t: Vector3i = _queue.pop_front()
 		if _wanted.has(t) and not _tiles.has(t) and not _pending.has(t):
@@ -141,13 +142,17 @@ func _want(level: int, tx: int, tz: int) -> void:
 	_wanted[Vector3i(tx, level, tz)] = true
 
 
-func _apply(t: Vector3i, arrays) -> void:
-	if arrays == null:
+## A finished tile: its terrain (lod.gdshader) and its water's surface, drawn
+## with the near water's material so the far sea looks like the near one.
+func _apply(t: Vector3i, arrays, water) -> void:
+	if arrays == null and water == null:
 		_tiles[t] = null
 		return
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mesh.surface_set_material(0, material)
+	for a in [[arrays, material], [water, renderer.water_material]]:
+		if a[0] != null:
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a[0])
+			mesh.surface_set_material(mesh.get_surface_count() - 1, a[1])
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

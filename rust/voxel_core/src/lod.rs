@@ -6,7 +6,10 @@
 //!   of them for 2-block cells, 8 spread through bigger ones); its colour is
 //!   the topmost block in its middle column (top faces take that block's top
 //!   colour, the sides its side colour).
-//! - Water that's mostly in a cell shows as its top surface.
+//! - Water that's mostly in a cell shows as its top surface, at the water's
+//!   real height (not the cell's top: far cells are many blocks tall), in a
+//!   surface of its own drawn with the near water's material (see-through
+//!   over the far sea floor, so the far sea looks like the near one).
 //! - Trees aren't here: they're block models (trunks) and decorations
 //!   (canopies), which the game draws far off as sprites (FarTrees).
 //! - Only faces something could see are made: a face below the ground's
@@ -14,25 +17,30 @@
 //!   dark cave) is skipped. Above it they're all kept: a floating island's
 //!   underside is in the dark, but you see it from below.
 //!
-//! Vertex layout consumed by `shaders/lod.gdshader`:
+//! Terrain vertex layout consumed by `shaders/lod.gdshader`:
 //! - COLOR = (albedo red, green, blue (face shade baked in), sun light 0..1)
 //! - UV    = (block light 0..1, 0)
+//!
+//! Water vertices are laid out like the near water's tops (mesher.rs,
+//! `shaders/liquid_water.gdshader`): COLOR = (block light rgb, sun),
+//! UV2 = (0: a top, 1).
 
 use crate::mesher::Surface;
 use std::sync::RwLock;
-use crate::world::{unpack_light, World, CS, LIQ_WATER};
+use crate::world::{unpack_light, World, CS, LIQ_MAX, LIQ_WATER};
 
 /// How bright each face direction is (+x, -x, +y, -y, +z, -z).
 const SHADE: [f32; 6] = [0.8, 0.8, 1.0, 0.55, 0.7, 0.7];
 const DIRS: [[i32; 3]; 6] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
-const WATER_COLOR: [f32; 3] = [0.16, 0.36, 0.78];
 
 #[derive(Clone, Copy, PartialEq)]
 enum Cell {
     Air,
     /// Solid ground: top colour, side colour.
     Solid([f32; 3], [f32; 3]),
-    Water,
+    /// Water from the cell's bottom up: its surface's height above the
+    /// cell's bottom, in blocks.
+    Water(f32),
 }
 
 fn rgb(c: [u8; 3]) -> [f32; 3] {
@@ -47,19 +55,13 @@ fn sample_cell(w: &World, s: i32, (cx, cy, cz): (i32, i32, i32)) -> Cell {
     }
     // Sample points within the cell.
     let offs: Vec<i32> = if s <= 2 { (0..s).collect() } else { vec![s / 4, 3 * s / 4] };
-    let (mut opaque, mut water, mut total) = (0, 0, 0);
+    let (mut opaque, mut total) = (0, 0);
     for &dy in &offs {
         for &dz in &offs {
             for &dx in &offs {
-                let (x, y, z) = (bx + dx, by + dy, bz + dz);
                 total += 1;
-                if w.is_opaque(x, y, z) {
+                if w.is_opaque(bx + dx, by + dy, bz + dz) {
                     opaque += 1;
-                } else {
-                    let (t, amount) = w.liquid_at(x, y, z);
-                    if t == LIQ_WATER && amount > 0 {
-                        water += 1;
-                    }
                 }
             }
         }
@@ -92,8 +94,34 @@ fn sample_cell(w: &World, s: i32, (cx, cy, cz): (i32, i32, i32)) -> Cell {
         let side = if d.better_grass { d.color_top } else { d.color_side };
         return Cell::Solid(rgb(d.color_top), rgb(side));
     }
-    if water * 2 >= total && water > 0 {
-        return Cell::Water;
+    // Water: in at least half the sample columns it fills the cell from its
+    // bottom; the surface is their top water's average height (as the near
+    // water draws it: 0.94 of a full block).
+    let wet = |x: i32, y: i32, z: i32| {
+        let (t, amount) = w.liquid_at(x, y, z);
+        t == LIQ_WATER && amount > 0
+    };
+    let (mut wet_columns, mut height) = (0, 0.0f32);
+    for &dz in &offs {
+        for &dx in &offs {
+            let (x, z) = (bx + dx, bz + dz);
+            if !wet(x, by, z) {
+                continue;
+            }
+            let mut y = by;
+            while y + 1 < by + s && wet(x, y + 1, z) {
+                y += 1;
+            }
+            wet_columns += 1;
+            height += if y + 1 == by + s && wet(x, y + 1, z) {
+                s as f32
+            } else {
+                (y - by) as f32 + (w.liquid_at(x, y, z).1 as f32 / LIQ_MAX as f32).max(0.08) * 0.94
+            };
+        }
+    }
+    if wet_columns > 0 && wet_columns * 2 >= offs.len() * offs.len() {
+        return Cell::Water(height / wet_columns as f32);
     }
     Cell::Air
 }
@@ -133,10 +161,17 @@ fn face_light(w: &World, s: i32, (cx, cy, cz): (i32, i32, i32), d: [i32; 3]) -> 
     best
 }
 
+/// A far tile's meshes: its terrain and its water's surface.
+#[derive(Default)]
+pub struct LodMesh {
+    pub terrain: Surface,
+    pub water: Surface,
+}
+
 /// Mesh of LOD tile (tx, tz) at `level` (cells of 2^level blocks), with
 /// vertices relative to the tile's corner (tx, 0, tz) * CS * 2^level. The
 /// world is read-locked one layer of cells at a time.
-pub fn mesh_lod(world: &RwLock<World>, level: u32, tx: i32, tz: i32) -> Surface {
+pub fn mesh_lod(world: &RwLock<World>, level: u32, tx: i32, tz: i32) -> LodMesh {
     let s = 1i32 << level;
     let n = CS;
     let ny = (world.read().unwrap().sy + s - 1) / s;
@@ -154,6 +189,7 @@ pub fn mesh_lod(world: &RwLock<World>, level: u32, tx: i32, tz: i32) -> Surface 
         }
     }
     let mut out = Surface::default();
+    let mut water = Surface::default();
     let sf = s as f32;
     for y in 0..ny {
         let w = world.read().unwrap();
@@ -178,17 +214,31 @@ pub fn mesh_lod(world: &RwLock<World>, level: u32, tx: i32, tz: i32) -> Surface 
                             add_face(&mut out, [x as f32 * sf, y as f32 * sf, z as f32 * sf], sf, *d, c, l);
                         }
                     }
-                    Cell::Water => {
+                    Cell::Water(h) => {
                         if cells[idx(x, y + 1, z)] == Cell::Air {
                             let l = face_light(w, s, global, [0, 1, 0]);
-                            add_face(&mut out, [x as f32 * sf, (y as f32 + 0.85) * sf, z as f32 * sf], sf, [0, 1, 0], WATER_COLOR, l);
+                            add_water_top(&mut water, [x as f32 * sf, y as f32 * sf + h, z as f32 * sf], sf, l);
                         }
                     }
                 }
             }
         }
     }
-    out
+    LodMesh { terrain: out, water }
+}
+
+/// A water surface `size` across with its corner at `p`, lit `l`.
+fn add_water_top(s: &mut Surface, p: [f32; 3], size: f32, l: [f32; 4]) {
+    let base = s.verts.len() as i32;
+    for (a, b) in [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)] {
+        s.verts.push([p[0] + a * size, p[1], p[2] + b * size]);
+        s.normals.push([0.0, 1.0, 0.0]);
+        s.colors.push(l);
+        s.uvs.push([p[0] + a * size, p[2] + b * size]);
+        s.uv2s.push([0.0, 1.0]);
+    }
+    // Counter-clockwise seen from above, as the near water's tops.
+    s.indices.extend_from_slice(&[base, base + 2, base + 1, base, base + 3, base + 2]);
 }
 
 /// One face of a cube `size` across at corner `p`, facing `d`.
@@ -231,7 +281,7 @@ mod tests {
     fn far_terrain_meshes_the_ground_coarsely() {
         let w = RwLock::new(test_world());
         for level in 1..=3 {
-            let m = mesh_lod(&w, level, 0, 0);
+            let m = mesh_lod(&w, level, 0, 0).terrain;
             assert!(!m.is_empty(), "level {level} has faces");
             let s = (1 << level) as f32;
             // Every vertex is on the level's cell grid, and the ground's top
@@ -261,9 +311,34 @@ mod tests {
         w.lod_cave_level = 20;
         let w = RwLock::new(w);
         for level in 1..=3 {
-            let m = mesh_lod(&w, level, 0, 0);
+            let m = mesh_lod(&w, level, 0, 0).terrain;
             let dark = m.colors.iter().zip(&m.verts).filter(|(c, v)| v[1] >= 32.0 && c[3] <= 0.0).count();
             assert_eq!(dark, 0, "level {level}: {dark} vertices of the hill are dark");
+        }
+    }
+
+    #[test]
+    fn far_water_lies_at_the_seas_real_height() {
+        // A sea over the ground whose surface (the top of y 36, 0.94 up it)
+        // isn't on any level's cell boundary: the far water must lie there,
+        // not at the top of its cell.
+        let mut w = test_world();
+        for x in 0..64 {
+            for z in 0..64 {
+                for y in 32..=36 {
+                    w.set_liquid(x, y, z, LIQ_WATER, LIQ_MAX);
+                }
+            }
+        }
+        let w = RwLock::new(w);
+        for level in 1..=4 {
+            let m = mesh_lod(&w, level, 0, 0);
+            let tops: Vec<f32> = m.water.verts.iter().map(|v| v[1]).collect();
+            assert!(!tops.is_empty(), "level {level}: the sea is drawn");
+            assert!(m.water.uv2s.iter().all(|u| u[0] == 0.0) && m.water.colors.iter().all(|c| c[3] > 0.9),
+                "level {level}: as the near water's sunlit tops");
+            assert!(!m.terrain.verts.iter().any(|v| v[1] > 32.5), "level {level}: no water in the terrain");
+            assert!(tops.iter().all(|&y| (y - 36.94).abs() < 0.01), "level {level}: the sea at 36.94 ({:?})", &tops[..tops.len().min(4)]);
         }
     }
 }

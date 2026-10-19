@@ -199,8 +199,11 @@ func _run() -> void:
 	for row in NPCRenders.PITCHES.size():
 		for col in (1 if absf(NPCRenders.PITCHES[row]) > 89.0 else NPCRenders.YAWS):
 			round_trip = round_trip and NPCRenders.pick(NPCRenders.view_dir(col, row)) == Vector2i(col, row)
-	check(round_trip and NPCRenders.pick(Vector3(0, 0, 1)) == Vector2i(0, 3) and NPCRenders.pick(Vector3(1, 0.1, 0)) == Vector2i(4, 3)
+	var level := NPCRenders.PITCHES.find(0.0)
+	check(round_trip and NPCRenders.pick(Vector3(0, 0, 1)) == Vector2i(0, level) and NPCRenders.pick(Vector3(1, 0.1, 0)) == Vector2i(NPCRenders.YAWS / 4, level)
 			and NPCRenders.pick(Vector3(0.1, -1, 0)) == Vector2i(0, 0), "every shot is the one picked looking from its direction (front, right, below)")
+	check(NPCRenders.YAWS == 32 and NPCRenders.PITCHES.size() == 13 and NPCRenders.PITCHES[1] - NPCRenders.PITCHES[0] == 15.0,
+			"shots every 11.25 degrees round and 15 degrees up and down")
 	check(is_zero_approx(NPCRenders.roll(Vector3.UP, Basis.IDENTITY)) and is_equal_approx(NPCRenders.roll(Vector3.RIGHT, Basis.IDENTITY), -PI * 0.5),
 			"a shot turns in the screen plane to keep its up along the model's")
 	# (What's tuned is up to whoever sculpted: data/tuned/.)
@@ -209,6 +212,11 @@ func _run() -> void:
 	check(NPCRenders.source("EyeofCthulhu") == eye_src and NPCRenders.source("Zombie") == zombie_src,
 			"shots are made of the tuned model, else Claude's, else the hull (the Eye: %s)" % eye_src)
 	check(NPCModels.mesh("EyeofCthulhu", "rendered", 0).mesh == NPCModels.mesh("EyeofCthulhu", eye_src, 0).mesh, "the Rendered method's model is the one it shoots")
+	NPCModels.set_option("Zombie", "rendered", "model", "extruded")
+	check(NPCRenders.source("Zombie") == "extruded" and NPCModels.mesh("Zombie", "rendered", 0).mesh == NPCModels.mesh("Zombie", "extruded", 0).mesh,
+			"set to shoot the Extruded model, the Rendered method shoots that")
+	NPCModels.reset_options("Zombie", "rendered")
+	check(NPCRenders.source("Zombie") == zombie_src and NPCModels.options("Zombie", "rendered").model == "auto", "reset, it's back to its own model")
 
 	# 2. In the game: an NPC whose kind has a method is drawn as that model.
 	NPCModels.set_method("Zombie", "hull")
@@ -300,6 +308,18 @@ func _run() -> void:
 	await key(KEY_BRACKETLEFT)
 	await frames(1)
 	check(NPCModels.options("Zombie", "extruded").depth == ex.depth - 1 and ed.model_for("extruded") != old, "[ thins the Extruded model and rebuilds it")
+	# The Rendered setting: shots of the Extruded model, shot again when it changes.
+	var shot_before: Node3D = ed.model_for("rendered")
+	ed._render_model.select(1)
+	ed._render_model.item_selected.emit(1)
+	await frames(1)
+	check(NPCModels.options("Zombie", "rendered").model == "extruded" and NPCRenders.source("Zombie") == "extruded"
+			and ed.model_for("rendered") != shot_before, "Rendered: choosing \"Extruded model\" shoots the Extruded model")
+	shot_before = ed.model_for("rendered")
+	await key(KEY_BRACKETRIGHT)
+	await frames(1)
+	check(ed.model_for("rendered") != shot_before, "changing the Extruded model makes the rendered sprite again")
+	await key(KEY_BRACKETLEFT)
 	ed.select("EyeofCthulhu")
 	check(ed._fit < 1.0 and ed._player.pixel_size < PaperDoll.player_pixel_size(), "a boss is shrunk to fit its slot, the player with it (%d%%)" % roundi(ed._fit * 100))
 	ed._pick_at(ed._cam.unproject_position(ed._slots[NPCModels.METHODS.find("lathe")].global_position + Vector3(0, 0.6, 0)))
@@ -311,7 +331,8 @@ func _run() -> void:
 	await key(KEY_S, true)
 	check(not ed.dirty and FileAccess.file_exists(SAVE), "Ctrl+S saves")
 	NPCModels.load_file(SAVE)
-	check(NPCModels.methods == {"Zombie": "extruded", "EyeofCthulhu": "lathe"} and int(NPCModels.extruded.Zombie.depth) == ex.depth - 1,
+	check(NPCModels.methods == {"Zombie": "extruded", "EyeofCthulhu": "lathe"} and int(NPCModels.extruded.Zombie.depth) == ex.depth - 1
+			and NPCModels.options("Zombie", "rendered").model == "extruded",
 			"saved: what was picked (%s)" % [NPCModels.methods])
 	ed.queue_free()
 	await frames(2)

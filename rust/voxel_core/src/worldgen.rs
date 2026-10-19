@@ -85,7 +85,7 @@ impl Coast {
     }
 }
 
-fn noise(seed: i32, freq: f32, octaves: i32) -> FastNoiseLite {
+pub fn noise(seed: i32, freq: f32, octaves: i32) -> FastNoiseLite {
     let mut n = FastNoiseLite::with_seed(seed);
     n.set_noise_type(Some(NoiseType::OpenSimplex2));
     n.set_frequency(Some(freq));
@@ -2039,6 +2039,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // that many go in each 640 x 640 blocks of the map (about 95 in 1024 x 1024).
     let cabin_count = (rng.range(35, 41) as f32 * area / (640.0 * 640.0)).round() as usize;
     let cabins = crate::cabins::underground_cabins(w, &mut rng, &l, cabin_count);
+    // Pass 8: Enchanted Sword Shrines (Terraria's Micro Biomes pass, after its
+    // Buried Chests), kept out of the cabins and chests.
+    crate::shrines::sword_shrines(w, &mut rng, &l);
     // Springs that were in the rock a cabin now stands in.
     w.decorations.retain(|d| {
         d.kind != "waterfall" || !cabins.iter().flatten().any(|r| {
@@ -3375,12 +3378,81 @@ mod tests {
         gen_world_sized(seed, evil, (256, 256, 256))
     }
 
+    /// Enchanted Sword Shrines (EnchantedSwordBiome): a grass-lined cave with
+    /// a dirt mound, the sword in stone on it, water round it, vines from its
+    /// ceiling, and a shaft open to the sky, deep under the outer map.
+    #[test]
+    fn sword_shrines_are_built_like_terrarias() {
+        let mut w = gen_world_sized(7, 0, (384, 384, 384));
+        let l = layers(w.sy);
+        let mut rng = Rng::new(99);
+        let mut tries = 0;
+        while !w.decorations.iter().any(|d| d.kind == "sword_shrine") && tries < 40 {
+            crate::shrines::sword_shrines(&mut w, &mut rng, &l);
+            tries += 1;
+        }
+        let shrines: Vec<(i32, i32, i32)> = w.decorations.iter().filter(|d| d.kind == "sword_shrine").map(|d| d.pos).collect();
+        assert!(!shrines.is_empty(), "no shrine placed in {tries} passes");
+        let id = |n: &str| w.id_of(n);
+        for &(x, y, z) in &shrines {
+            assert_eq!(w.get(x, y, z), id("sword_in_stone"), "the sword in stone at {:?}", (x, y, z));
+            assert_eq!(w.get(x, y - 1, z), id("grass"), "it stands on the grass over the mound");
+            assert_eq!(w.get(x, y - 2, z), id("dirt"), "the mound is dirt");
+            // 50 to 99 below the surface line (its room's top), in the outer map.
+            let top = y + 15;
+            assert!(top <= l.surface_base - 50 && top >= l.surface_base - 99, "depth: room top {top}, surface line {}", l.surface_base);
+            let (cx, cz) = (w.sx as f32 / 2.0, w.sz as f32 / 2.0);
+            assert!(((x as f32 - cx).abs() / cx).max((z as f32 - cz).abs() / cz) >= 0.4, "in the outer map");
+            // The room round the mound: open, grass-lined, with water low down and vines.
+            let (mut water, mut vines, mut grass) = (0, 0, 0);
+            for dx in -24..=24 {
+                for dz in -24..=24 {
+                    for dy in -16..=15 {
+                        let (px, py, pz) = (x + dx, y + dy, z + dz);
+                        let b = w.get(px, py, pz);
+                        if w.liquid_at(px, py, pz).1 > 0 {
+                            water += 1;
+                        }
+                        if b == id("vine_flowers") {
+                            vines += 1;
+                        }
+                        if b == id("grass") {
+                            grass += 1;
+                        }
+                    }
+                }
+            }
+            assert!(water > 500 && vines > 20 && grass > 1000, "pools ({water}), vines ({vines}), a grass lining ({grass})");
+            // The shaft: open from the room's top up through the surface (to
+            // Space, above the highest mountain; a floating island may hang
+            // over it).
+            let blocked: Vec<i32> = (top..l.space_top).filter(|&q| w.is_solid(x, q, z)).collect();
+            assert!(blocked.is_empty(), "the shaft above {:?} is open to the sky (solid at {:?})", (x, y, z), blocked);
+            // Its mouth: wide, with wall torches on its sides leaning in over it.
+            let torches: Vec<&Decoration> = w
+                .decorations
+                .iter()
+                .filter(|d| d.kind == "rotation" && w.get(d.pos.0, d.pos.1, d.pos.2) == id("wall_torch"))
+                .filter(|d| (d.pos.0 - x).abs() <= 2 && (d.pos.2 - z).abs() <= 2 && d.pos.1 > top)
+                .collect();
+            assert!(torches.len() >= 3, "wall torches round the mouth ({})", torches.len());
+            for t in &torches {
+                let (fx, fz) = FACING[t.style as usize];
+                assert_eq!((t.pos.0 + fx * 2, t.pos.2 + fz * 2), (x, z), "a torch leans in over the shaft");
+                assert!(w.is_solid(t.pos.0 - fx, t.pos.1, t.pos.2 - fz), "on the wall");
+                for (dx, dz) in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1)] {
+                    assert!(!w.is_solid(x + dx, t.pos.1, z + dz), "the mouth is 5 across at the torches");
+                }
+            }
+        }
+    }
+
     fn gen_world_sized(seed: i32, evil: i32, size: (i32, i32, i32)) -> World {
         let mut w = World::new();
         for (i, name) in ["dirt", "stone", "grass", "copper_ore", "iron_ore", "tree_trunk", "cloud", "sunplate", "skyware_chest", "sunplate_trim", "disc_wall", "ebonstone", "corrupt_grass", "crimstone", "crimson_grass", "sand", "mud", "clay", "tall_grass", "snow_block", "ice_block", "hardened_sand", "sandstone", "cactus", "jungle_grass", "jungle_plants", "jungle_spores", "boreal_trunk", "mahogany_trunk", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "sunflower", "small_rocks", "twigs", "large_rocks", "fallen_log", "vines", "vine_flowers", "lily_pad", "cattail", "cattail_stem", "cattail_top", "cobweb", "blue_brick", "green_brick", "pink_brick", "chain_lantern", "sign", "wall_torch",
             "marching_bones_banner", "necromantic_sign", "ragged_brotherhood_sigil", "palm_trunk",
             "topaz_tree_trunk", "amethyst_tree_trunk", "sapphire_tree_trunk", "emerald_tree_trunk", "ruby_tree_trunk", "diamond_tree_trunk", "amber_tree_trunk",
-            "ash", "ash_grass", "sakura_trunk", "willow_trunk", "ash_trunk", "living_wood", "leaf_block", "chest", "jungle_cave_trunk", "living_mahogany", "mahogany_leaves", "ivy_chest"].iter().enumerate() {
+            "ash", "ash_grass", "sakura_trunk", "willow_trunk", "ash_trunk", "living_wood", "leaf_block", "chest", "jungle_cave_trunk", "living_mahogany", "mahogany_leaves", "ivy_chest", "sword_in_stone"].iter().enumerate() {
             // The forest's plants and debris (and the dungeon's furnishings)
             // are sprites you walk through.
             let plant = (i >= 29 || ["jungle_plants", "jungle_spores"].contains(name)) && !name.ends_with("_brick") && !name.ends_with("_trunk");

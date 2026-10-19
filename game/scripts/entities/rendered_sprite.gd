@@ -17,6 +17,10 @@ var _art_forward := Vector3.LEFT
 var _tilts := false
 
 
+func _shader() -> Shader:
+	return preload("res://shaders/billboard_rendered.gdshader")
+
+
 func setup_rendered(kind_name: String) -> void:
 	kind = kind_name
 	_look = NPC.look(kind)
@@ -92,6 +96,9 @@ func _poll() -> void:
 	_mat.set_shader_parameter("flip", false)
 	_mat.set_shader_parameter("spherical", true)
 	_mat.set_shader_parameter("unpremultiply", true)
+	# To the front of the model (its radius, in the quad's half widths), so
+	# the ground under it doesn't cut it seen from above.
+	_mat.set_shader_parameter("push", r.radius / (size * 0.5))
 	# Centred on the model's middle: where a centred sprite is, or (grounded)
 	# the middle's height above the feet.
 	position.y = _look.sprite_y if _look.centred else float(r.center.y)

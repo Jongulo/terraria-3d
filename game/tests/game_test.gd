@@ -397,6 +397,38 @@ func _run() -> void:
 	var tiers: Vector2i = game.decorations.tier_counts()
 	check(tiers.x > 0 and tiers.y > 0, "canopies near you in full detail (%d), farther ones as sprites (%d)" % [tiers.x, tiers.y])
 	check(game.far_trees.count() > 0, "trees past the full-detail chunks have trunk sprites (%d)" % game.far_trees.count())
+	# Rendered canopies: billboards until their style's shots are made (never,
+	# headless), then the shots, with each tree's turn only (the canopy's
+	# transform is in the shots).
+	var canopy_methods := {}
+	for st in CanopyArt.STYLE_IDS:
+		var cn := CanopyArt.block_name(st)
+		canopy_methods[cn] = Data.block(Data.block_id(cn)).method
+		Data.set_block_method(cn, "rendered")
+	var deco := Decorations.new()
+	game.add_child(deco)
+	deco.setup(game.world)
+	var style: int = deco._instances.keys()[0] if not deco._instances.is_empty() else -1
+	var style_id := Data.block_id(CanopyArt.block_name(style)) if style >= 0 else 0
+	check(style >= 0 and deco._waiting.has(style) and deco._rendered.is_empty()
+			and deco._instances[style].multimesh.mesh == BlockModelMesh.build(style_id, "billboard").mesh,
+			"rendered canopies are billboards while their shots are being made")
+	var fake := {"n": 8, "px": 0.1, "center": Vector3(0, 0.4, 0), "radius": 0.5, "yaws": 16, "pitches": [0.0],
+			"atlases": [ImageTexture.create_from_image(Image.create(128, 8, false, Image.FORMAT_RGBA8))]}
+	for st in deco._waiting:
+		PlaceableRenders._done[deco._waiting[st]] = fake
+	await frames(2)
+	var first: Dictionary = deco._all[style][0]
+	var shown: Transform3D = deco.near_transform(style, first)
+	check(deco._waiting.is_empty() and deco._rendered.has(style) and deco._instances[style].multimesh.mesh == BlockModels.rendered_quad()
+			and (shown.basis.x - first.turn.x).length() < 0.001 and (shown.basis.z - first.turn.z).length() < 0.001
+			and shown.origin.distance_to(first.pos) < 0.001,
+			"once made they show the shots, turned each tree's way (the canopy's transform is in the shots)")
+	for st in deco._rendered:
+		PlaceableRenders._done.erase(Data.block_id(CanopyArt.block_name(st)))
+	deco.queue_free()
+	for cn in canopy_methods:
+		Data.set_block_method(cn, canopy_methods[cn])
 	var crystal := Data.recipes.filter(func(r): return r.result == "ManaCrystal")
 	check(not crystal.is_empty() and crystal[0].ingredients.get("FallenStar") == 5, "a Mana Crystal takes 5 Fallen Stars")
 

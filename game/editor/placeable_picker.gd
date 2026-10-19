@@ -1,10 +1,10 @@
 extends Node3D
 ## Placeable picker: choose how each placeable block (chest, work bench, pots,
 ## torches...) is turned into 3D. Shows the selected block in every method side
-## by side; pick one by clicking it or pressing 1-9 and 0. Saves data/placeables.json,
+## by side; pick one by clicking it or pressing 1-9, 0 and - (Rendered). Saves data/placeables.json,
 ## which the game reads. Run with ./placeable_picker.sh.
 ##
-## Controls: click / 1-9, 0 choose a method · PageUp/PageDown (or Up/Down) change
+## Controls: click / 1-9, 0, - choose a method · PageUp/PageDown (or Up/Down) change
 ## block · Space turntable · Q/E turn models · MMB orbit, Shift+MMB pan,
 ## wheel zoom · Ctrl+S save · F1 help
 ## Settings panel (right): pixel noise, strength and seed for Extruded, Hull,
@@ -14,7 +14,10 @@ extends Node3D
 ## faces front / back) for Extruded. Transform panel (below it): the block's model
 ## offset (art pixels), rotation (degrees) and scale, for every method
 ## (billboards take offset and scale only: they always face you). [ / ] depth -/+1 voxel, N next noise mode,
-## Shift+N new seed, B / Shift+B next / previous bevel profile.
+## Shift+N new seed, B / Shift+B next / previous bevel profile. "Rendered" (in
+## the settings panel) picks the model the rendered method shoots: Auto (tuned,
+## Claude's or the hull) or Extruded; its shots are taken again when that model
+## or the block's transform changes.
 
 const SPACING := 1.8
 ## The ground texture's repeat, in blocks.
@@ -30,7 +33,10 @@ const DESCRIPTIONS := {
 	"lathe": "Outline spun around",
 	"claude": "Hand-made voxels",
 	"tuned": "Sculpted by you",
+	"rendered": "Model shot from every angle",
 }
+## The key that chooses each method, in Data.PLACEABLE_METHODS' order.
+const METHOD_KEYS := "1234567890-"
 
 ## Overridable before entering the tree (tests write elsewhere).
 var save_path := Data.PLACEABLES_PATH
@@ -71,6 +77,7 @@ var _ex_strength_label := Label.new()
 var _ex_seed := SpinBox.new()
 ## Every voxel one colour (all voxel methods).
 var _one_color := CheckBox.new()
+var _render_model := OptionButton.new()
 var _ex_bevel := OptionButton.new()
 var _ex_bevel_size := HSlider.new()
 var _ex_bevel_label := Label.new()
@@ -99,7 +106,7 @@ func _ready() -> void:
 	for n in _names:
 		var d := Data.block(Data.block_id(n))
 		var icon := ImageTexture.create_from_image(d.sprite)
-		_list.add_item(n.replace("_", " ").capitalize(), icon)
+		_list.add_item(Data.placeable_label(n), icon)
 	if not _names.is_empty():
 		_select_block(_names[0])
 		_list.select(0)
@@ -232,7 +239,7 @@ func _build_ui() -> void:
 	_help.add_theme_stylebox_override("panel", hsb)
 	var ht := Label.new()
 	ht.add_theme_font_size_override("font_size", 15)
-	ht.text = "Click a model or press 1-9, 0 to choose its method   ·   PageUp/PageDown: block\nSpace: turntable   Q/E: turn   MMB: orbit   Shift+MMB: pan   Wheel: zoom\nNoise: N mode   Shift+N seed   O one colour per voxel   ·   Extruded: [ ] depth   B bevel   ·   Ctrl+S: save"
+	ht.text = "Click a model or press 1-9, 0, - to choose its method   ·   PageUp/PageDown: block\nSpace: turntable   Q/E: turn   MMB: orbit   Shift+MMB: pan   Wheel: zoom\nNoise: N mode   Shift+N seed   O one colour per voxel   ·   Extruded: [ ] depth   B bevel   ·   Ctrl+S: save"
 	_help.add_child(ht)
 	_ui.add_child(_help)
 
@@ -357,6 +364,7 @@ func _build_extrude_panel(parent: Control) -> void:
 		dirty = true
 		_sync_extrude_ui()
 		_rebuild_methods[_settings_method] = true
+		_reshoot_if(_settings_method)
 		get_viewport().gui_release_focus())
 	box.add_child(reset)
 	var hint := Label.new()
@@ -364,6 +372,21 @@ func _build_extrude_panel(parent: Control) -> void:
 	hint.add_theme_font_size_override("font_size", 14)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
+	var rendered_title := Label.new()
+	rendered_title.text = "Rendered"
+	rendered_title.add_theme_font_size_override("font_size", 20)
+	box.add_child(rendered_title)
+	var shots_label := Label.new()
+	shots_label.text = "Shots taken of"
+	shots_label.add_theme_font_size_override("font_size", 16)
+	box.add_child(shots_label)
+	_render_model.add_item("Auto (tuned, Claude or hull)")
+	_render_model.add_item("Extruded model")
+	_render_model.add_theme_font_size_override("font_size", 16)
+	_render_model.item_selected.connect(func(i):
+		_set_option("model", NPCModels.RENDER_MODELS[i], "rendered")
+		get_viewport().gui_release_focus())
+	box.add_child(_render_model)
 
 
 ## Transform panel: offset, rotation (X / Y / Z) and scale of the block's model.
@@ -443,13 +466,14 @@ func _transform_changed() -> void:
 	dirty = true
 	_sync_transform_ui()
 	_rebuild_all = true
+	PlaceableRenders.forget(Data.block_id(current))  # the transform is in its shots
 
 
 func _sync_transform_ui() -> void:
 	if current == "":
 		return
 	var o := Data.transform_options(current)
-	_tr_title.text = "Transform: %s" % current.replace("_", " ").capitalize()
+	_tr_title.text = "Transform: %s" % Data.placeable_label(current)
 	for key in _tr_spins:
 		for axis in 3:
 			_tr_spins[key][axis].set_value_no_signal(o[key][axis])
@@ -462,7 +486,7 @@ func _sync_extrude_ui() -> void:
 	var o := Data.method_options(current, _settings_method)  # noise, strength, seed
 	var ex := Data.extrude_options(current)  # depth and bevel (Extruded only)
 	var mx := Data.extrude_max_depth(current)
-	_ex_title.text = "%s: %s" % [_settings_method.capitalize(), current.replace("_", " ").capitalize()]
+	_ex_title.text = "%s: %s" % [_settings_method.capitalize(), Data.placeable_label(current)]
 	_ex_for.select(Data.NOISE_METHODS.find(_settings_method))
 	for c in _extruded_only:
 		c.visible = _settings_method == "extruded"
@@ -474,6 +498,7 @@ func _sync_extrude_ui() -> void:
 	_ex_strength_label.text = "Noise strength: %d%%" % roundi(o.strength * 100.0)
 	_ex_seed.set_value_no_signal(o.seed)
 	_one_color.set_pressed_no_signal(o.one_color)
+	_render_model.select(NPCModels.RENDER_MODELS.find(Data.method_options(current, "rendered").model))
 	_ex_bevel.select(Data.EXTRUDE_BEVELS.find(ex.bevel))
 	_ex_bevel_size.set_value_no_signal(ex.bevel_size)
 	_ex_bevel_label.text = "Bevel size: %d voxels" % ex.bevel_size
@@ -510,6 +535,16 @@ func _set_option(key: String, value, method := "") -> void:
 	dirty = true
 	_sync_extrude_ui()
 	_rebuild_methods[method] = true
+	_reshoot_if(method)
+
+
+## The rendered model is shot again when `method` is the model it shoots (or
+## its own setting changed).
+func _reshoot_if(method: String) -> void:
+	var id := Data.block_id(current)
+	if method == "rendered" or method == PlaceableRenders.source(id):
+		PlaceableRenders.forget(id)
+		_rebuild_methods["rendered"] = true
 
 
 ## Replaces just one method's model (its mesh depends on the settings).
@@ -589,11 +624,12 @@ func _select_block(name: String) -> void:
 			back.scale = Vector3.ONE * fit
 			_backings.append(back)
 		var lab := Label3D.new()
-		lab.text = "%d  %s\n%s" % [i + 1, method.capitalize(), DESCRIPTIONS[method]]
+		var key_name := METHOD_KEYS[i] if i < METHOD_KEYS.length() else ""
+		lab.text = "%s  %s\n%s" % [key_name, method.capitalize(), DESCRIPTIONS[method]]
 		if method == "claude" and not has_handmade(current):
-			lab.text = "%d  Claude\nNot made yet (shows Hull)" % (i + 1)
+			lab.text = "%s  Claude\nNot made yet (shows Hull)" % key_name
 		elif method == "tuned" and not TunedModels.has(TunedModels.block_key(_settings_name(current))):
-			lab.text = "%d  Tuned\nNot tuned yet (shows Hull)" % (i + 1)
+			lab.text = "%s  Tuned\nNot tuned yet (shows Hull)" % key_name
 		lab.font = Assets.font("Mouse_Text")
 		lab.font_size = 18
 		lab.pixel_size = 0.012
@@ -661,7 +697,7 @@ func choose(method: String) -> void:
 		_flash("No hand-made model for %s yet" % current.replace("_", " "))
 		return
 	if method == "tuned" and not TunedModels.has(TunedModels.block_key(_settings_name(current))):
-		_flash("%s isn't tuned yet: sculpt it in ./model_sculptor.sh" % current.replace("_", " ").capitalize())
+		_flash("%s isn't tuned yet: sculpt it in ./model_sculptor.sh" % Data.placeable_label(current))
 		return
 	if method in Data.NOISE_METHODS:
 		_settings_method = method
@@ -736,6 +772,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			choose(Data.PLACEABLE_METHODS[k - KEY_1])
 		elif k == KEY_0 and Data.PLACEABLE_METHODS.size() >= 10:
 			choose(Data.PLACEABLE_METHODS[9])
+		elif k == KEY_MINUS and Data.PLACEABLE_METHODS.size() >= 11:
+			choose(Data.PLACEABLE_METHODS[10])
 		elif k == KEY_O:
 			_set_option("one_color", not Data.method_options(current, _settings_method).one_color)
 		elif k in [KEY_PAGEDOWN, KEY_DOWN]:
@@ -813,8 +851,8 @@ func _process(delta: float) -> void:
 			m.rotation.y = lerp_angle(m.rotation.y, _turn, minf(1.0, delta * 10.0))
 	_message_time -= delta
 	if _message_time <= 0.0:
-		_status.text = "Click a model or press 1-9, 0 to choose"
-	_header.text = "%s  ·  %s%s" % [current.replace("_", " ").capitalize(), _method_of(current), "   ●  unsaved" if dirty else ""]
+		_status.text = "Click a model or press 1-9, 0, - to choose"
+	_header.text = "%s  ·  %s%s" % [Data.placeable_label(current), _method_of(current), "   ●  unsaved" if dirty else ""]
 
 
 ## An animated block's models step through its frames, like in the world.

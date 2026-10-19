@@ -45,8 +45,6 @@ const FRAME := 80  # the usual frame width, which SIZE is measured against
 const SIZE := 5.0
 
 
-## The placeable block for a style: "tree_canopy" (listed in the picker) and
-## its hidden twins "tree_canopy@<style>".
 ## "Forest (Tree_Tops_6)" for a sheet.
 static func sheet_label(k: int) -> String:
 	return "%s (%s)" % [SHEET_NAMES[k], SHEETS[k]]
@@ -60,6 +58,8 @@ static func _style_ids() -> Array[int]:
 	return out
 
 
+## The placeable block for a style (each listed in the picker with its own
+## choices): "tree_canopy" for style 0, "tree_canopy@<style>" for the rest.
 static func block_name(style: int) -> String:
 	return "tree_canopy" if style == 0 else "tree_canopy@%d" % style
 

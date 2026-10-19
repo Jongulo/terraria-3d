@@ -28,6 +28,7 @@
 		"falls: falls when nothing holds it up (Terraria's falling tiles: sand, ebonsand, crimsand, silt, slush): when the block under it goes, or it is placed over a gap, it drops as a falling block (10 damage to whatever it lands on) and settles where it lands.",
 		"near_buff: standing near one gives you that buff (Terraria's BuffID: the Bast Statue's CatBast). interact buff: right-click it for its buff (the Sharpening Station's Sharpened); interact extractinator: use an extractable item on it.",
 		"anim: an animated placeable, like Terraria's animated tiles (Main.AnimateTiles): {frames, stride: sheet pixels down to the next frame, ticks: 1/60 s each frame shows}. All of a kind animate together.",
+		"rare_drop: [item, n]: 1 time in n it drops that item instead of its drop (the sword in stone of an Enchanted Sword Shrine, Terraria's LargePiles2 style 17: the Terragrim 1 in 30, else the Enchanted Sword).",
 		"gem: a gem tree's trunk (Terraria's SetGemTreeDrops): each cell drops that gem 1 time in 10, else its drop (Stone Block).",
 		"Tree trunks: Terraria's plain trunk frames (GrowTree's default three twice as likely as each other set), the 16 px trunk inside each 20 px frame. Not its branch-joint frames, whose outline is open (TreeBranches' stems cover the outline instead), nor the two sets whose knots bulge past 16 px (cropped, they'd leave gaps).",
 		"cut (set from the art): its sheet is one of Terraria's Main.tileCut tiles (grass, flowers, plants, vines, cobwebs, herbs, pots...), which a swung weapon or tool and the player's projectiles break (Data.TILE_CUT, Game.cut_tile). tile_id: that sheet's Terraria tile id.",
@@ -485,6 +486,7 @@
 		{"name": "extractinator", "anim": {"frames": 10, "stride": 54, "ticks": 5}, "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "tink", "drop": "Extractinator", "interact": "extractinator", "default_method": "claude", "tex": {"all": {"sheet": "Tiles_219", "tiles": [3, 3], "frames": [[0, 0]]}}},
 		{"name": "sharpening_station", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "tink", "drop": "SharpeningStation", "interact": "buff", "buff": "Sharpened", "default_method": "claude", "tex": {"all": {"sheet": "Tiles_377", "tiles": [3, 2], "frames": [[0, 0]]}}},
 		{"name": "silt", "falls": true, "tex": {"all": {"sheet": "Tiles_123", "frames": [[18, 18], [36, 18], [54, 18]]}}, "hardness": 2.0, "drop": "SiltBlock", "sound": "dig"},
-		{"name": "slush", "falls": true, "tex": {"all": {"sheet": "Tiles_224", "frames": [[18, 18], [36, 18], [54, 18]]}}, "hardness": 2.0, "drop": "SlushBlock", "sound": "dig"}
+		{"name": "slush", "falls": true, "tex": {"all": {"sheet": "Tiles_224", "frames": [[18, 18], [36, 18], [54, 18]]}}, "hardness": 2.0, "drop": "SlushBlock", "sound": "dig"},
+		{"name": "sword_in_stone", "render": "cutout", "solid": false, "opaque": false, "tool": "pickaxe", "sound": "tink", "default_method": "hull", "drop": "EnchantedSword", "rare_drop": ["Terragrim", 30], "tex": {"all": {"sheet": "Tiles_187", "tiles": [3, 2], "frames": [[918, 0]]}}}
 	]
 }

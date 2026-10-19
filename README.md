@@ -297,11 +297,14 @@ slides down walls, lands or floats, and fades after ten seconds.
 ```
 
 Chooses how each placeable sprite block (chest, work bench, furnace, anvil, torch, pots, life
-crystal, tall grass) and the tree canopy is turned into 3D. The canopy is not a block: its
-choice and settings apply to every canopy style, and models bigger than a block are shown
-scaled down to fit the row. A Terraria player stands at the row's left end for scale (shrunk
-along with a scaled-down model), on the game's grass. The selected block is shown in all nine
-methods side by side; click one or press 1-9, then Ctrl+S (saves `game/data/placeables.json`,
+crystal, tall grass) and every tree canopy is turned into 3D. Canopies are not blocks: all 81
+are listed (each of Terraria's 27 Tree_Tops sheets has 3 trees), named for their art ("Canopy:
+Corruption (Tree_Tops_1) 2"), each with its own method, settings, transform and sculpted model,
+so the gem trees, palms or snowy pines can each be drawn their own way. (Files saved before this
+kept one set of choices for every canopy: each canopy starts with a copy of it.) Models bigger
+than a block are shown scaled down to fit the row. A Terraria player stands at the row's left end for scale (shrunk
+along with a scaled-down model), on the game's grass. The selected block is shown in all eleven
+methods side by side; click one or press 1-9, 0 or -, then Ctrl+S (saves `game/data/placeables.json`,
 read by the game):
 
 | # | Method | What it does |
@@ -316,6 +319,19 @@ read by the game):
 | 8 | Lathe | The right half of the outline spun around the vertical axis |
 | 9 | Claude | A voxel model made by hand for the block (Sawmill, Bench, Bookcase, Piano, sinks, bathtubs, Extractinator, Sharpening Station) |
 | 0 | Tuned | A voxel model you sculpted in the [model sculptor](#model-sculptor); blocks not tuned yet can't pick it |
+| - | Rendered | Its model shot from every angle and drawn as a sprite again (see below) |
+
+**Rendered** works as it does for NPCs (see the [NPC picker](#npc-picker)), but straight on only, the
+way Doom's sprites are: the block's model is shot from 16 directions round it at eye level, every
+frame of an animated block too, and each shot is shrunk to the art's pixels. In the world each
+rendered block is an upright sprite that turns round its vertical to face you, showing the shot
+for the direction you see it from, turned the way the block was placed (a chest put down facing
+east shows its east side), and lit like the other block models (seen from above it's still the side
+view, foreshortened); until its shots are made (and in headless runs) it's drawn as its
+billboard. "Shots taken of" in the settings panel picks the model: **Auto** (its tuned model, else
+Claude's, else its hull) or **Extruded** (the Extruded model with its own settings). The block's
+offset, rotation and scale are in the shots, and changing the model or the transform takes them
+again. Shots are cached in `user://rendered_npcs/` as `block-<name>_...`.
 
 **One colour per voxel:** every voxel method (Extruded, Hull, Hull Top, Lathe, Claude, Tuned) has
 this setting in the settings panel (or press O). Each voxel then shows one colour on all its faces:
@@ -504,12 +520,16 @@ The ninth method, **Tuned**, shows a model you sculpted in the [model sculptor](
 (NPCs not tuned yet show their hull).
 
 The tenth, **Rendered** (key 0), draws the NPC as a sprite again, the way Fallout 1 did: its voxel
-model (tuned, else Claude's, else the hull) is shot from every angle (16 round it at each of 7
-heights, from straight below to straight above) for every frame, and each shot is shrunk to the
-sprite's own pixel size. In the game it shows the shot that matches how you see it, turned in the
-screen plane to line up, and lit like any sprite. The shots are made off screen the first time the
-NPC appears (about two seconds for the Eye), kept in `user://rendered_npcs/`, and made again when
-its model changes. Every voxel method has the **one colour per voxel** setting
+model is shot from every angle (32 round it, every 11.25 degrees, at each of 13 heights, every 15
+degrees from straight below to straight above) for every frame, and each shot is shrunk to the sprite's own pixel size. The shrinking keeps
+it crisp pixel art: each shot is lined up so the model's voxels land on whole pixels (straight on,
+its pixels are the art's), and each pixel takes the colour covering most of it, opaque only if
+mostly covered, so colours never blur together. "Shots taken of" (the Rendered section at the
+bottom of the settings panel) picks the model: **Auto** (tuned, else Claude's, else the hull) or
+**Extruded** (the Extruded model with its own depth, bevel and noise). In the game it shows the shot
+that matches how you see it, turned in the screen plane to line up, and lit like any sprite. The
+shots are made off screen the first time the NPC appears (about five seconds for the Eye), kept in
+`user://rendered_npcs/`, and made again when its model changes. Every voxel method has the **one colour per voxel** setting
 (O), as in the placeable picker.
 
 ## Model sculptor
@@ -681,7 +701,20 @@ Sandstone Chest (Ancient Chisel, Dunerider Boots, Snake Charmer's Flute or Magic
 deeper desert the Storm Spear, Thunder Zapper or Bast Statue). The first desert cabins also get
 an Extractinator and a Bast Statue (3 in the world at most), the first jungle cabins a Sharpening
 Station. Terraria's Mushroom, Granite and Marble cabins wait for their biomes, and cabins have
-none of Terraria's paintings, statues or rubble piles yet; pots, life crystals, loot chests); colored torch
+none of Terraria's paintings, statues or rubble piles yet; Enchanted Sword Shrines, Terraria's
+EnchantedSwordBiome with its 2D shapes spun round into 3D (1-2 tries per small world for each 640 x
+640 blocks, each half the time, as in Terraria), 50 to 99 blocks under the surface in the outer
+part of the map, in ground that's mostly dirt and stone with no sand above: a slime-shaped cave
+(Terraria's radius 20, 0.8 to 1.3 as wide, its lower half squashed) lined with grass, a dirt mound
+14 high in it with grass plants and the sword in stone on top, pools of water round the mound,
+flower vines hanging from the ceiling (Terraria hangs one 3-5 long from every ceiling tile, a single
+row seen side on; spread over a 3D ceiling that's a grid of them, so here they grow in clumps, 1 to
+7 long, with bare ceiling between), and a shaft from the cave up through the surface. Terraria
+digs that shaft only 1 time in 3 and stops it 10 tiles under the surface; here every shrine has
+one, open to the sky, so you can find it: its top 8 blocks widen to a round mouth 5 across, with a
+wall torch on each side just under the ground (they glow from afar at night). Mine the sword in stone with a pickaxe for
+the Enchanted Sword, or 1 time in 30 the Terragrim. Terraria's Flower Walls aren't drawn (there
+are no background walls); pots, life crystals, loot chests); colored torch
 lighting (sunlight reaches open ground fully, but ground you dig out keeps Terraria's
 "background wall": sunlight only seeps in from the opening and fades a level per block, so a
 shaft goes dark about a dozen blocks down; chasms and pits the world was made with stay lit);
@@ -1043,6 +1076,22 @@ Terraria's stats and its flail AI (AI_015_Flails), in its pixels (16 a block) an
 - **Looks:** each has Terraria's head sprite and chain links (the Flaming Mace's first links glow) and
   its dust (Corruption motes, blood, blue sparkles, fire). They're drawn to the player's pixels, so
   the Sunfury's head is two thirds your height; links near your eye are drawn thinner.
+
+The Enchanted Sword, from the sword in stone of an Enchanted Sword Shrine, with Terraria's stats
+(23 melee damage, 4.25 knockback, a 21-tick swing): with a swing it shoots an Enchanted Beam, at
+most every 45 ticks (Terraria's use time). The beam flies point first at 9.5 px a tick, glows,
+trails Terraria's blue and gold dust, and stops at the first enemy or block.
+
+The Terragrim (1 time in 30 from the sword in stone instead of the Enchanted Sword), with Terraria's
+stats (17 melee damage, 3 knockback) and its held slash (projectile AI 75, Projectile 735):
+- **Slashing:** hold the button and it slashes on toward your aim until you let go, with a swing
+  sound every 12 ticks, its green dust and its light (you shine while you slash). Terraria's 28-frame
+  flurry glows on a sheet centred on you, as big as its hitbox, lying flat round you at shoulder
+  height: the slashes arc round you, sweeping out the way you aim (and tilting as you look up or
+  down).
+- **Hits:** its hitbox (68 x 64 px) is centred on you, so it reaches about two blocks round you,
+  even a little behind, hitting what you can see. Each enemy is hit at most every 5 ticks: 12 hits a
+  second at the item's damage (melee speed doesn't change it, as in Terraria). It cuts grass round you.
 
 The world's first Shadow Orb always gives the Musket, as in Terraria (then one of the Musket,
 Vilethorn, Ball O' Hurt and Band of Starpower).

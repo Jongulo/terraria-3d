@@ -427,6 +427,8 @@ func _run() -> void:
 	await _cactus_checks(c)
 	await _yoyo_checks(c)
 	await _flail_checks(c)
+	await _terragrim_checks(c)
+	_sword_shrine_checks(c)
 	await _swim_checks(c)
 	await _screenshot_checks()
 	await _eater_checks(c)
@@ -812,6 +814,18 @@ func _cabin_loot_checks(c: Vector3i) -> void:
 	p._use_timer = 0.0
 	p.use_item()
 	check(shots.call("IceBolt").size() == 1, "the Ice Blade shoots an icy bolt, at most every 55 ticks")
+	# The Enchanted Sword: an Enchanted Beam with a swing (useTime 45 over a
+	# 21-tick swing), 9.5 px a tick, glowing, trailing dust.
+	p.inventory.slots[9] = Inventory.stack("EnchantedSword", 1)
+	p._swing_shot_cd = 0.0
+	p._use_timer = 0.0
+	p.use_item()
+	p._use_timer = 0.0
+	p.use_item()
+	var beams: Array = shots.call("EnchantedBeam")
+	check(beams.size() == 1 and absf(beams[0].velocity.length() - 9.5 * 60.0 / 16.0) < 0.01 and beams[0].glow != Color.BLACK
+			and not beams[0]._trail.is_empty() and Assets.ids.ItemID.get("EnchantedSword") == 989,
+			"the Enchanted Sword (item 989) shoots one glowing Enchanted Beam a swing, at most every 45 ticks")
 	# The Snowball Cannon: snowballs, lobbed.
 	p.inventory.slots[9] = Inventory.stack("SnowballCannon", 1)
 	p.inventory.slots[8] = Inventory.stack("Snowball", 20)
@@ -2446,6 +2460,85 @@ func _flail_checks(c: Vector3i) -> void:
 		f.free()
 	check(lit > 8 and lit < 32 and is_equal_approx(Data.item("Sunfury").on_fire[1] / 60.0, 5.0), "the Sunfury sets enemies on fire half the time, for 5 s (%d of 40)" % lit)
 	zombie.queue_free()
+	p.inventory.slots[9] = null
+	p.select(held)
+	p.god_mode = false
+	await frames(2)
+
+
+## The Terragrim (Slash, projectile AI 75): held, it slashes on toward your
+## aim; its hitbox is centred on you (68 x 64 Terraria px), so it reaches a
+## little behind you; each enemy is hit at most every 5 ticks (12 a second).
+## An Enchanted Sword Shrine's sword in stone (LargePiles2 style 17): mined
+## with a pickaxe, it gives the Enchanted Sword, or 1 time in 30 the Terragrim.
+func _sword_shrine_checks(c: Vector3i) -> void:
+	var id := Data.block_id("sword_in_stone")
+	var b := Data.block(id)
+	check(id != 0 and b.get("tool") == "pickaxe" and b.tex.all.sheet == "Tiles_187" and int(b.tex.all.frames[0][0]) == 918,
+			"the sword in stone: Terraria's LargePiles2 style 17, mined with a pickaxe")
+	var q := c + Vector3i(0, 1, -8)
+	game.world.set_block(q, id)
+	game._collected_drops = {}
+	game.break_block(q, true, true)
+	var got: Dictionary = game._collected_drops
+	game._collected_drops = null
+	check(game.world.get_block(q) == 0 and got.size() == 1 and (got.has("EnchantedSword") or got.has("Terragrim")),
+			"breaking it drops the sword (%s)" % str(got))
+	var rare := 0
+	for i in 6000:
+		if game.block_drop(b) == "Terragrim":
+			rare += 1
+	check(rare > 140 and rare < 260, "the Terragrim 1 time in 30, else the Enchanted Sword (%d in 6000)" % rare)
+
+
+func _terragrim_checks(c: Vector3i) -> void:
+	var p := game.player
+	var d := Data.item("Terragrim")
+	var tex := Assets.texture("Images/Projectile_%d" % int(Assets.ids.ProjectileID.get("Terragrim", 0)))
+	check(d.get("slash") is Dictionary and tex != null and tex.get_height() == 64 * int(d.slash.frames) and Assets.ids.ItemID.get("Terragrim") == 4144,
+			"the Terragrim (item 4144): its 28-frame slash sheet, Terraria's numbers (%d damage, %s knockback)" % [d.damage, d.knockback])
+	var held := p.selected
+	p.inventory.slots[9] = Inventory.stack("Terragrim", 1)
+	p.select(9)
+	p.god_mode = true
+	var dummies: Array = game.npcs().filter(func(n): return n.kind == "TargetDummy")
+	var dummy: NPC = dummies.reduce(func(a, b): return a if absf(a.global_position.x - (c.x + 6.0)) < absf(b.global_position.x - (c.x + 6.0)) else b)
+	p.global_position = dummy.global_position + Vector3(1.5, 0, 0)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(PI * 0.5, 0.0)  # facing the dummy (-x)
+	p.hold_use = false
+	await get_tree().physics_frame
+	dummy._hits.clear()
+	p.hold_use = true
+	p._use_timer = 0.0
+	p.use_item()
+	check(p.slash_out(), "using the Terragrim starts slashing")
+	await frames(3)
+	check(not p.viewmodel.item_node().visible and p.carried_light().r >= 0.8, "it's out of your hand and shines while you slash")
+	dummy._hits.clear()
+	for i in 60:
+		await get_tree().physics_frame
+	var base := p.weapon_damage(d)
+	var hits: Array = dummy._hits.duplicate()
+	var dmg_ok := hits.all(func(h): return h[1] >= floor(base * 0.85) and h[1] <= ceil(base * 1.15) * 2)
+	check(hits.size() >= 11 and hits.size() <= 13 and dmg_ok, "held beside a dummy it hits 12 times a second at the item's damage (%d hits)" % hits.size())
+	# Facing away: the hitbox is centred on you, so it still reaches.
+	p.look_at_yaw_pitch(-PI * 0.5, 0.0)
+	dummy._hits.clear()
+	for i in 30:
+		await get_tree().physics_frame
+	check(dummy._hits.size() >= 5, "it reaches a little behind you, as in Terraria (%d hits)" % dummy._hits.size())
+	# Out of its reach (68 px across: 2 blocks or so to each side).
+	p.global_position = dummy.global_position + Vector3(4.0, 0, 0)
+	p.look_at_yaw_pitch(PI * 0.5, 0.0)
+	await get_tree().physics_frame
+	dummy._hits.clear()
+	for i in 30:
+		await get_tree().physics_frame
+	check(dummy._hits.is_empty(), "4 blocks away it doesn't reach")
+	p.hold_use = false
+	await frames(2)
+	check(not p.slash_out() and p.carried_light() == Color.BLACK, "let go, and it stops")
 	p.inventory.slots[9] = null
 	p.select(held)
 	p.god_mode = false

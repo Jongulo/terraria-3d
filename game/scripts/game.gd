@@ -1079,10 +1079,13 @@ func _orb_smashed(c: Vector3, b: Dictionary) -> void:
 
 
 ## What breaking a block drops: its "drop", or for a gem tree's trunk its gem
-## 1 time in 10 (Terraria's SetGemTreeDrops; else Stone Block).
+## 1 time in 10 (Terraria's SetGemTreeDrops; else Stone Block), or its
+## "rare_drop" [item, n] 1 time in n (the sword in stone's Terragrim, 1 in 30).
 func block_drop(b: Dictionary) -> String:
 	if b.has("gem") and randf() < 0.1:
 		return b.gem
+	if b.has("rare_drop") and randi() % int(b.rare_drop[1]) == 0:
+		return b.rare_drop[0]
 	return b.get("drop", "")
 
 

@@ -114,6 +114,12 @@
 		},
 		"YellowSlime": {
 			"depth": 16.0
+		},
+		"Zombie": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 11,
+			"one_color": true
 		}
 	},
 	"hull": {
@@ -124,12 +130,17 @@
 	"hull_top": {},
 	"lathe": {},
 	"methods": {
-		"EaterofWorldsBody": "tuned",
-		"EaterofWorldsHead": "tuned",
-		"EaterofWorldsTail": "tuned",
-		"EyeofCthulhu": "tuned",
+		"EaterofWorldsBody": "rendered",
+		"EaterofWorldsHead": "rendered",
+		"EaterofWorldsTail": "rendered",
+		"EyeofCthulhu": "rendered",
 		"KingSlime": "claude",
 		"Snatcher": "extruded"
+	},
+	"rendered": {
+		"Zombie": {
+			"model": "extruded"
+		}
 	},
 	"tuned": {}
 }

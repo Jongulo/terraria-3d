@@ -64,6 +64,8 @@ var boomerangs: Array = []
 var spear: Spear = null
 ## The flail you're spinning or have thrown (Flail), or null.
 var flail: Flail = null
+## The slashes you're holding out (Slash: the Terragrim), or null.
+var slash: Slash = null
 var hold_use := false
 ## The use button was up last frame (Terraria's releaseUseItem): items that
 ## don't reuse by themselves (weapons, potions, yoyos...) take a fresh click.
@@ -301,6 +303,9 @@ func carried_light() -> Color:
 	for s in armor.slots:
 		if s != null:
 			lights.append(Data.item(s.item).get("light"))
+	# Slashing, the Terragrim shines (Terraria's AddLight at its tip).
+	if slash_out():
+		lights.append(slash.def.slash.get("light"))
 	for l in lights:
 		if l is Array and alive:
 			c = Color(maxf(c.r, l[0]), maxf(c.g, l[1]), maxf(c.b, l[2]))
@@ -968,7 +973,7 @@ func _regen(delta: float) -> void:
 # ------------------------------------------------------------------ items
 
 func use_item() -> void:
-	if _use_timer > 0.0:
+	if _use_timer > 0.0 or slash_out():
 		return
 	# Like Terraria: without autoReuse (or the Autofire setting) holding the
 	# button doesn't use it again; it takes a fresh click.
@@ -1003,6 +1008,8 @@ func use_item() -> void:
 				used = _throw_yoyo(def)
 			elif def.has("flail"):
 				used = _spin_flail(def)
+			elif def.has("slash"):
+				used = _start_slash(def)
 			elif def.has("spear"):
 				used = _thrust_spear(def, duration)
 			elif def.has("boomerang"):
@@ -1327,6 +1334,20 @@ func _spin_flail(def: Dictionary) -> bool:
 
 func flail_out() -> bool:
 	return flail != null and is_instance_valid(flail) and not flail.is_queued_for_deletion()
+
+
+## Starts slashing (Slash: the Terragrim); it goes on while you hold the button.
+func _start_slash(def: Dictionary) -> bool:
+	if slash_out():
+		return false
+	slash = Slash.new()
+	slash.setup(self, def)
+	Game.current.entities.add_child(slash)
+	return true
+
+
+func slash_out() -> bool:
+	return slash != null and is_instance_valid(slash) and not slash.is_queued_for_deletion()
 
 
 ## Throws a boomerang: one at a time, like Terraria's (the Trimarang three),
