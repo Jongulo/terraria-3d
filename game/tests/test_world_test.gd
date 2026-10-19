@@ -411,6 +411,7 @@ func _run() -> void:
 	await _furniture2_checks(c)
 	await _sky_checks()
 	await _dungeon_checks(c)
+	await _skeletron_checks(c)
 	await _door_checks(c)
 	await _flora_checks(c)
 	await _cut_checks(c)
@@ -509,6 +510,141 @@ func _run() -> void:
 	for f in failures:
 		print("  - " + f)
 	get_tree().quit(1 if failures.size() > 0 else 0)
+
+
+## Skeletron: the Old Man's Curse (only at night) brings it with its two
+## hands; its hover, spin and enraged day; a hand's attacks; killing the head
+## takes the hands and drops its loot; the Old Man back at dawn until it's
+## beaten; and the Dungeon Guardian before then.
+func _skeletron_checks(c: Vector3i) -> void:
+	var p := game.player
+	var hud := game.hud
+	var d := Vector3i(c.x + TestWorld.DUNGEON.x, TestWorld.GROUND, c.z + TestWorld.DUNGEON.z)
+	var was_day: bool = game.sky.is_day
+	var was_time: float = game.sky.time
+	var god := p.god_mode
+	p.god_mode = true
+	var old_men := game.npcs().filter(func(n): return n.kind == "OldMan")
+	check(old_men.size() == 1, "the Old Man is at the Dungeon")
+	if old_men.size() != 1:
+		return
+	var om: NPC = old_men[0]
+	var buttons := func() -> Array:
+		hud.open_chat(om)
+		var names := hud._chat_buttons.get_children().filter(func(b): return not b.is_queued_for_deletion()).map(func(b): return b.text)
+		return names
+	game.sky.is_day = true
+	game.sky.time = 27000.0
+	check(not buttons.call().has("Curse"), "by day the Old Man has no Curse to offer")
+	hud.close_chat()
+	game.sky.is_day = false
+	game.sky.time = 0.0
+	check(buttons.call().has("Curse"), "at night he does")
+	p.global_position = om.global_position + Vector3(6, 0, 0)
+	hud.chat_button("Curse")
+	await frames(3)
+	var heads := game.npcs().filter(func(n): return n.kind == "SkeletronHead")
+	var hands := game.npcs().filter(func(n): return n.kind == "SkeletronHand")
+	check(not is_instance_valid(om) or om.is_queued_for_deletion(), "cursing him: the Old Man dies")
+	check(heads.size() == 1 and hands.size() == 2 and game.boss_alive() and last_message() == "Skeletron has awoken!",
+			"and Skeletron rises with its two hands (%d heads, %d hands)" % [heads.size(), hands.size()])
+	if heads.size() != 1 or hands.size() != 2:
+		return
+	var head: NPC = heads[0]
+	check(head.life_max == 4400 and head.damage == 32 and head.defense == 10 and hands[0].life_max == 600 and hands[0].defense == 14,
+			"Terraria's numbers: a 4400-life head (32 damage, 10 defense), 600-life hands (14 defense)")
+	check(hands[0]._side != hands[1]._side and hands[0]._head == head, "a hand on each side")
+	# Hovering, it climbs to keep 250 px over your head.
+	head.global_position = p.global_position + Vector3(0, 2, 0)
+	head.velocity = Vector3.ZERO
+	await frames(30)
+	check(head.ai_state == 0 and head.velocity.y > 0.0, "hovering, it rises over you (%.2f)" % head.velocity.y)
+	# Every 800 ticks it spins at you for 400, its defense 10 lower.
+	head._sk_timer = 799.5
+	await frames(3)
+	check(head.ai_state == 1 and head.defense == 0, "after 800 ticks it spins (defense %d)" % head.defense)
+	await frames(2)
+	var to_you: Vector3 = (p.center() - head.center()).normalized()
+	check(head.velocity.normalized().dot(to_you) > 0.95 and absf(head.velocity.length() - 1.5 * NPC.PX_TICK) < 0.05,
+			"spinning, it comes at you at 1.5 px a tick (%.2f blocks/s)" % head.velocity.length())
+	head._sk_timer = 399.5
+	await frames(3)
+	check(head.ai_state == 0, "and goes back to hovering after 400")
+	# A hand, every 300 ticks: up over the head, then down at you.
+	var hand: NPC = hands[0]
+	hand.ai_state = 0
+	hand.ai_timer = 299.5
+	hand.velocity = Vector3.ZERO
+	for i in 3:
+		await get_tree().physics_frame
+	check(hand.ai_state == 1 and hand.velocity.y > 0.0, "a hand rises to strike (state %d, %.2f up)" % [hand.ai_state, hand.velocity.y])
+	hand.global_position = head.center() + Vector3(0, 9.0, 0)
+	await frames(3)
+	check(hand.ai_state == 2 and hand.velocity.length() > 17.0 * NPC.PX_TICK * 0.95, "then slams down at you (%.1f blocks/s)" % hand.velocity.length())
+	check(hand.get_child_count() >= 3, "its arm: two bones")
+	# Enraged by day.
+	game.sky.is_day = true
+	game.sky.time = 100.0
+	await frames(3)
+	check(head.ai_state == 2 and head.damage == 9999 and head.defense == 9999, "by day it's enraged: 9999 damage and defense")
+	game.sky.is_day = false
+	game.sky.time = 0.0
+	head.ai_state = 0
+	await frames(2)
+	# Killing the head: the hands go too, its loot drops, Skeletron is beaten.
+	game._collected_drops = {}
+	var guard := 0
+	while is_instance_valid(head) and head.life > 0 and guard < 200:
+		head.ai_state = 0
+		head.defense = 0
+		head.hit(1000, 0.0, Vector3.FORWARD, 0.0)
+		guard += 1
+	var drops: Dictionary = game._collected_drops
+	game._collected_drops = null
+	for i in 10:
+		await get_tree().physics_frame
+	check(game.defeated_bosses.has("SkeletronHead") and last_message() == "Skeletron has been defeated!", "killing the head beats Skeletron")
+	check(game.npcs().filter(func(n): return n.kind == "SkeletronHand").is_empty(), "and its hands go with it")
+	check(drops.get("HealingPotion", 0) >= 5 and drops.get("HealingPotion", 0) <= 15 and drops.has("GoldCoin"), "it drops 5-15 Healing Potions and gold (%s)" % [drops])
+	# No Old Man once it's beaten; until then, he's back at dawn.
+	game._on_dawn()
+	check(game.npcs().filter(func(n): return n.kind == "OldMan").is_empty(), "the Old Man doesn't come back once Skeletron is beaten")
+	game.defeated_bosses.erase("SkeletronHead")
+	game._on_dawn()
+	check(game.npcs().filter(func(n): return n.kind == "OldMan").size() == 1, "before then he's back at dawn")
+	# The Dungeon Guardian: below the ground in the Dungeon before Skeletron
+	# is beaten.
+	var deep := Vector3.INF
+	for x in range(-12, 13):
+		for z in range(-12, 13):
+			for y in range(d.y - 30, d.y - 3):
+				var q := d + Vector3i(x, y - d.y, z)
+				if not game.world.is_solid(q) and not game.world.is_solid(q + Vector3i.UP) and game.detect_biome(Vector3(q) + Vector3(0.5, 0.5, 0.5)) == "dungeon":
+					deep = Vector3(q) + Vector3(0.5, 0, 0.5)
+	check(deep != Vector3.INF, "somewhere below the ground in the Dungeon")
+	if deep != Vector3.INF:
+		p.global_position = deep
+		game.biome = "dungeon"
+		game._biome_timer = 1000.0
+		game.spawner.process_mode = Node.PROCESS_MODE_INHERIT
+		for i in 40:
+			game.spawner._timer = 0.0
+			game.spawner._physics_process(0.016)
+		game.spawner.process_mode = Node.PROCESS_MODE_DISABLED
+		var guardians := game.npcs().filter(func(n): return n.kind == "DungeonGuardian")
+		check(guardians.size() == 1, "the Dungeon Guardian comes for you (%d)" % guardians.size())
+		if guardians.size() == 1:
+			var g: NPC = guardians[0]
+			await frames(3)
+			check(g.ai_state == 2 and g.damage == 9999 and g.velocity.length() > 19.0, "always enraged, at 8 px a tick")
+			g.queue_free()
+		game.biome = ""
+		game._biome_timer = 0.0
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	game.sky.is_day = was_day
+	game.sky.time = was_time
+	p.god_mode = god
+	await frames(3)
 
 
 ## Doors: the gallery and arena doors, opening away from you (or the other way
@@ -1533,7 +1669,7 @@ func _armor_checks(c: Vector3i) -> void:
 	var armor_items := Data.items.keys().filter(func(n): return Data.item(n).get("type") == "armor")
 	for n in armor_items:
 		var d := Data.item(n)
-		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []))
+		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n))
 		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped
 		if not d.get("slot") in Data.ARMOR_SLOTS or Assets.armor_texture(d.slot, n) == null or d.id == 0 or not sources:
 			bad.append(n)
@@ -2738,9 +2874,10 @@ func _sky_checks() -> void:
 	await frames(2)
 
 
-## The Dungeon's entrance: the keep, its arched door, a walkable way from the
-## plaza down the shaft's stair into the chamber, hard bricks, the dungeon
-## biome inside (its music, no spawns), the Old Man, the sealed chamber's sign.
+## The Dungeon: the keep, its arched door, a way from the plaza down the
+## entrance hallway into the Dungeon under it, hard bricks, the dungeon biome
+## inside (its music, no spawns), the Old Man, a Locked Gold Chest a Golden
+## Key opens, a switch that switches its light, and spikes that hurt.
 func _dungeon_checks(c: Vector3i) -> void:
 	var p := game.player
 	var w := game.world
@@ -2751,46 +2888,33 @@ func _dungeon_checks(c: Vector3i) -> void:
 	check(w.get_shape(d + Vector3i(7, 6, -2)) >= Game.SHAPE_CEILING and w.get_shape(d + Vector3i(7, 6, 2)) >= Game.SHAPE_CEILING,
 			"the doorway is arched (upside-down ramps)")
 	# Walk it: standing cells (open feet and head, something solid under the
-	# feet) joined by steps of at most one block up or down.
+	# feet) joined by steps of at most one block up, or a drop down.
 	var start := d + Vector3i(27, 0, 0)  # the plaza past the porch's end
 	var stands := func(q: Vector3i) -> bool:
 		return not w.is_solid(q) and not w.is_solid(q + Vector3i.UP) and w.is_solid(q + Vector3i.DOWN)
 	var seen := {start: true}
 	var queue: Array[Vector3i] = [start]
 	var deepest := start.y
-	while not queue.is_empty() and seen.size() < 20000:
+	while not queue.is_empty() and seen.size() < 40000:
 		var q: Vector3i = queue.pop_front()
 		deepest = mini(deepest, q.y)
 		for n in [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]:
 			for dy in [0, 1, -1]:
 				var r: Vector3i = q + n + Vector3i(0, dy, 0)
-				if seen.has(r) or (r - d).length() > 60:
-					continue
 				# Stepping up needs headroom over where you are too.
 				if dy == 1 and w.is_solid(q + Vector3i(0, 2, 0)):
+					continue
+				# Off an edge: fall to the floor below.
+				if dy == -1 and not w.is_solid(r) and not w.is_solid(r + Vector3i.UP):
+					while not w.is_solid(r + Vector3i.DOWN) and r.y > 2:
+						r.y -= 1
+				if seen.has(r) or (r - d).length() > 120:
 					continue
 				if stands.call(r):
 					seen[r] = true
 					queue.append(r)
-	check(deepest <= d.y - 36, "you can walk from the plaza through the door and down the stair to the chamber (down to %d below)" % (d.y - deepest))
-	# The shaft's mouth: platforms round its edge, over the stair (a step below
-	# every one, so dropping through lands you on the stair); the middle open.
-	var shaft := d + Vector3i(-3, 0, 0)
-	var edge_ok := true
-	var middle_open := true
-	for a in range(-2, 3):
-		for b in range(-2, 3):
-			var q := shaft + Vector3i(a, 0, b)
-			if absi(a) == 2 or absi(b) == 2:
-				var step_below := false
-				for k in range(1, 37):
-					if w.is_solid(q - Vector3i(0, k, 0)):
-						step_below = k < 36
-						break
-				edge_ok = edge_ok and Data.block(w.get_block(q)).get("name", "") == "wood_platform" and step_below
-			else:
-				middle_open = middle_open and w.get_block(q) == 0
-	check(edge_ok and middle_open, "the shaft has platforms round its edge, over the stair, and an open middle")
+	check(deepest <= d.y - 20, "you can walk from the plaza through the door and down the hallway into the Dungeon (down to %d below)" % (d.y - deepest))
+	check(w.get_block(d + Vector3i(-2, 0, 0)) == 0, "the back of the hall floor opens into the hallway")
 	# Dungeon brick needs a strong pickaxe (65%, like Terraria's).
 	p.target = {"block": d + Vector3i(7, 3, 6), "normal": Vector3i(1, 0, 0), "id": w.get_block(d + Vector3i(7, 3, 6)), "distance": 2.0}
 	p._mine(Data.item("PlatinumPickaxe"))
@@ -2838,11 +2962,101 @@ func _dungeon_checks(c: Vector3i) -> void:
 		game.hud.close_chat()
 		om.hit(500, 0.0, Vector3.FORWARD, 0.0)
 		check(is_instance_valid(om) and om.life == om.life_max, "he can't be hurt")
-	# The chamber's sign.
-	var sign_at := Vector3i(-1, -1, -1)
+	# A Locked Gold Chest: locked without a key, a Golden Key opens it for
+	# good (used up), its loot inside.
+	var locked := Vector3i(-1, -1, -1)
 	for dd in w.get_decorations():
-		if dd.kind == "sign" and (Vector3i(dd.pos) - d).length() < 60:
-			sign_at = Vector3i(dd.pos)
-	check(sign_at.y < d.y - 30 and game.sign_text(sign_at).begins_with("The dungeon's depths are sealed"), "the sealed chamber's sign says so")
+		if dd.kind == "chest" and int(dd.style) >= 7 and Data.block(w.get_block(Vector3i(dd.pos))).get("name", "") == "locked_gold_chest":
+			locked = Vector3i(dd.pos)
+			break
+	check(locked.y >= 0, "the Dungeon has a Locked Gold Chest")
+	if locked.y >= 0:
+		p.inventory.remove("GoldenKey", p.inventory.count_of("GoldenKey"))
+		check(not game.unlock_chest(locked) and last_message() == "It's locked", "without a Golden Key it stays locked")
+		p.inventory.add("GoldenKey", 2)
+		check(game.unlock_chest(locked) and Data.block(w.get_block(locked)).get("name", "") == "gold_chest" and p.inventory.count_of("GoldenKey") == 1,
+				"a Golden Key opens it for good: a Gold Chest now, the key used up")
+		check(not game.chests.get_inventory(locked).is_empty(), "its loot is inside")
+		game.hud.close_inventory()
+		p.inventory.remove("GoldenKey", 1)
+	# A switch and the light it's wired to.
+	var sw := Vector3i(-1, -1, -1)
+	for k in game.wires:
+		if (game.wires[k] - d).length() < 120:
+			var parts: PackedStringArray = k.split(",")
+			sw = Vector3i(int(parts[0]), int(parts[1]), int(parts[2]))
+			break
+	check(sw.y >= 0, "the Dungeon's lights have switches")
+	if sw.y >= 0:
+		var light: Vector3i = game.wires[Chests.key(sw)]
+		var before_light := w.get_block(light)
+		var lb := Data.block(before_light)
+		game.hit_switch(sw)
+		var twin: String = lb.get("off", lb.get("lit", ""))
+		check(twin != "" and w.get_block(light) == Data.block_id(twin), "hitting the switch switches its light (%s -> %s)" % [lb.get("name", ""), twin])
+		game.hit_switch(sw)
+		check(w.get_block(light) == before_light, "and back")
+	# Spikes hurt (Terraria's 60, give or take 15%).
+	var spot := start + Vector3i(0, 0, 3)
+	var under := w.get_block(spot + Vector3i.DOWN)
+	w.set_block(spot + Vector3i.DOWN, Data.block_id("spike"))
+	p.global_position = Vector3(spot) + Vector3(0.5, 0.0, 0.5)
+	var god: bool = p.god_mode
+	p.god_mode = false
+	p._immune = 0.0
+	var life_before: int = p.life
+	p._liquid_effects(0.016)
+	p.god_mode = god
+	var lost := life_before - p.life
+	check(lost >= int(60 * 0.85) - p.defense() / 2 - 1 and lost <= int(60 * 1.15) - p.defense() / 2 + 1, "standing on spikes hurts (%d)" % lost)
+	w.set_block(spot + Vector3i.DOWN, under)
+	p.life = p.life_max
+	# The Cobalt Shield: no knockback.
+	var saved_acc := p.accessories.slots.duplicate()
+	p.accessories.slots.fill(null)
+	p.accessories.slots[0] = Inventory.stack("CobaltShield", 1)
+	p.god_mode = false
+	p._immune = 0.0
+	p.velocity = Vector3.ZERO
+	p.hurt(10, p.global_position + Vector3(2, 0, 0))
+	check(p.velocity.length() < 0.01 and p.defense() >= 1, "the Cobalt Shield: no knockback (and 1 defense)")
+	p.accessories.slots = saved_acc
+	p.god_mode = god
+	p.life = p.life_max
+	# The dungeon's spells: the Water Bolt bounces off blocks; the Aqua
+	# Scepter's two streams a use cost its mana once; the Magic Missile flies
+	# toward your crosshair while you hold the button.
+	var bolt := game.spawn_projectile("WaterBolt", Vector3(spot) + Vector3(0.5, 1.5, 0.5), Vector3(0, -20, 0), 19, 5.0)
+	for i in 20:
+		await get_tree().physics_frame
+	check(is_instance_valid(bolt) and bolt.velocity.y > 0.0 and bolt.bounces == 9, "a Water Bolt bounces off the floor")
+	if is_instance_valid(bolt):
+		bolt.queue_free()
+	var scepter := Data.item("AquaScepter")
+	p.mana = p.mana_max
+	p._free_shots = 0
+	p._cast(scepter)
+	p._cast(scepter)
+	check(p.mana == p.mana_max - p.mana_cost(scepter), "the Aqua Scepter's two streams cost %d mana once (%d left of %d)" % [p.mana_cost(scepter), p.mana, p.mana_max])
+	var missile_def := Data.item("MagicMissile")
+	p.mana = p.mana_max
+	p.global_position = Vector3(start) + Vector3(0.5, 0, 0.5)
+	p.look_at_yaw_pitch(0.0, 0.0)
+	p.hold_use = true
+	p._cast(missile_def)
+	var missile: Projectile = p.channelled
+	check(missile != null and not p._cast(missile_def), "one Magic Missile at a time")
+	p.look_at_yaw_pitch(PI * 0.5, 0.0)
+	for i in 20:
+		await get_tree().physics_frame
+	var to_aim := (p.aim_point() - missile.global_position).normalized() if is_instance_valid(missile) else Vector3.ZERO
+	# (It set off straight away from where it's now steered.)
+	check(is_instance_valid(missile) and missile.velocity.normalized().dot(to_aim) > 0.5, "the Magic Missile turns toward the crosshair")
+	p.hold_use = false
+	if is_instance_valid(missile):
+		missile.queue_free()
+	for n in game.entities.get_children():
+		if n is Projectile:
+			n.queue_free()
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	await frames(5)

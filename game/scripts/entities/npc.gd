@@ -74,6 +74,14 @@ var _door = null
 var _waypoints: Array = []
 var _roam_from := Vector3.INF
 var _help_index := 0
+## Skeletron: a hand's head and side (Terraria's ai[1] and ai[0]: -1 rests to
+## your right of the head, 1 to your left), the head's spin, a timer in ticks
+## (Terraria's ai[2]) and a hand's two arm bones.
+var _head: NPC = null
+var _side := 1
+var _spin := 0.0
+var _sk_timer := 0.0
+var _bones: Array = []
 
 
 func setup(kind_name: String) -> void:
@@ -120,7 +128,7 @@ static func look(kind_name: String) -> Dictionary:
 	var s: float = sc.scale
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
-	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm"]
+	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand"]
 	var tex := Assets.texture("Images/NPC_%d" % int(d.sprite))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
@@ -222,6 +230,24 @@ func _physics_process(delta: float) -> void:
 	var to_player: Vector3 = player.global_position - global_position
 	if not boss and not def.get("persistent", false) and to_player.length() > DESPAWN_DISTANCE:
 		queue_free()
+		return
+
+	if def.ai in ["skeletron", "skeletron_hand"]:
+		# Through the blocks (Terraria's noTileCollide), like the worms.
+		if def.ai == "skeletron":
+			_ai_skeletron(delta, game, player)
+		else:
+			_ai_skeletron_hand(delta, game, player)
+		if is_queued_for_deletion():
+			return
+		global_position += velocity * delta
+		if on_fire > 0.0:
+			_burn_tick(delta, game)
+			if life <= 0:
+				return
+		if damage > 0 and player.alive and overlaps_box(player.global_position, player.half):
+			player.hurt(damage, center(), false, self)
+		_update_sprite(delta, game)
 		return
 
 	if def.ai == "worm":
@@ -1480,6 +1506,225 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 					game.spawn_dust(center(), Color(0.6, 0.0, 0.0), 6)
 
 
+# ------------------------------------------------------------ skeletron
+
+## Terraria's px for Skeletron's distances (24 a block, like its sprites).
+const SK_PX := 24.0
+
+
+## One axis of Skeletron's steering (aiStyles 11 and 12), in px a tick: toward
+## `target` by `accel` a tick, braking by `damp` a tick while it still moves
+## the other way, and no faster than `cap` that other way (Terraria caps only
+## that side).
+static func _sk_axis(v: float, pos: float, target: float, accel: float, damp: float, cap: float, ticks: float) -> float:
+	if pos > target:
+		if v > 0.0:
+			v *= pow(damp, ticks)
+		v -= accel * ticks
+		return minf(v, cap)
+	if pos < target:
+		if v < 0.0:
+			v *= pow(damp, ticks)
+		v += accel * ticks
+		return maxf(v, -cap)
+	return v
+
+
+## Skeletron's head (aiStyle 11; the Dungeon Guardian too). It brings its two
+## hands. Hovering (ai_state 0), it keeps 250 px over your head and closes on
+## you across (0.02 / 0.05 px a tick, 2 / 8 at most the other way); after 800
+## ticks it spins at you for 400 (1.5 px a tick, its defense 10 lower). By
+## day (always, for the Guardian) it's enraged (2): 9999 damage and defense,
+## spinning at you at 8 px a tick. With you dead or 2000 px off it sinks away
+## and leaves (3).
+func _ai_skeletron(delta: float, game, player) -> void:
+	var ticks := delta * 60.0
+	var guardian := kind == "DungeonGuardian"
+	defense = int(def.defense)
+	if ai_count == 0:
+		ai_count = 1
+		Audio.play_at("Roar_0", center())
+		if not guardian:
+			for side in [-1, 1]:
+				var hand: NPC = game.spawn_npc("SkeletronHand", center())
+				if hand != null:
+					hand._head = self
+					hand._side = side
+					# The second hand's timer starts half way (Terraria's ai[3] 150).
+					hand.ai_timer = 150.0 if side == 1 else 0.0
+	var to: Vector3 = player.center() - center()
+	if not player.alive or to.length() > 2000.0 / SK_PX or (guardian and game.biome != "dungeon"):
+		if ai_state != 3:
+			ai_state = 3
+			_sk_timer = 0.0
+	elif (guardian or game.sky.is_day) and ai_state != 2 and ai_state != 3:
+		ai_state = 2
+		Audio.play_at("Roar_0", center())
+	var cam: Camera3D = player.camera
+	match ai_state:
+		0:
+			damage = int(def.damage)
+			_sk_timer += ticks
+			if _sk_timer >= 800.0:
+				_sk_timer = 0.0
+				ai_state = 1
+			var v := velocity / PX_TICK
+			var top := global_position.y + half.y
+			var player_top: float = player.global_position.y + player.half.y
+			v.y = _sk_axis(v.y, top, player_top + 250.0 / SK_PX, 0.02, 0.98, 2.0, ticks)
+			# Across (Terraria's x): toward you, any drift sideways braking.
+			var d := Vector3(to.x, 0, to.z)
+			d = d.normalized() if d.length() > 0.01 else Vector3.FORWARD
+			var flat := Vector3(v.x, 0, v.z)
+			var along := _sk_axis(flat.dot(d), 0.0, 1.0, 0.05, 0.98, 8.0, ticks)
+			var drift := (flat - d * flat.dot(d)) * pow(0.98, ticks)
+			v = d * along + drift + Vector3(0, v.y, 0)
+			velocity = v * PX_TICK
+			# Tilted by its speed across your view (Terraria: velocity.x / 15).
+			_spin = velocity.dot(cam.global_transform.basis.x) / PX_TICK / 15.0
+		1:
+			damage = int(def.damage)
+			defense -= 10
+			if _sk_timer < 2.0 and _sk_timer + ticks >= 2.0:
+				Audio.play_at("Roar_0", center())
+			_sk_timer += ticks
+			if _sk_timer >= 400.0:
+				_sk_timer = 0.0
+				ai_state = 0
+			_spin += 0.3 * ticks
+			velocity = to.normalized() * 1.5 * PX_TICK
+		2:
+			damage = 9999
+			defense = 9999
+			_spin += 0.3 * ticks
+			velocity = to.normalized() * 8.0 * PX_TICK
+		3:
+			# Falls away (Terraria's +0.1 a tick downward) and is gone.
+			velocity.y -= 0.1 * PX_TICK * ticks
+			if velocity.y > 0.0:
+				velocity.y *= pow(0.95, ticks)
+			velocity.x *= pow(0.95, ticks)
+			velocity.z *= pow(0.95, ticks)
+			_sk_timer += ticks
+			if _sk_timer > 180.0:
+				if boss:
+					game.on_boss_despawned(self)
+				queue_free()
+				return
+	if sprite is EntitySprite:
+		sprite.set_frame(0)
+		sprite.set_rotation_angle(_spin)
+
+
+## Skeletron's hand (aiStyle 12): in your view's terms (Terraria's x across
+## it, y up and down; toward you it keeps level with the head). Idle (0, 3) it
+## hangs 200 px out to its side and 230 below the head's top (by a spinning
+## head: 120 out and 100 above); every 300 ticks it attacks, in turn: up past
+## 200 over the head, then down at you at 18 px a tick (1, 2), or out to 500
+## px beside the head, then across at you at 17 (4, 5). Without its head it's
+## gone in a few ticks.
+func _ai_skeletron_hand(delta: float, game, player) -> void:
+	var ticks := delta * 60.0
+	if _head == null or not is_instance_valid(_head) or _head.life <= 0 or _head.is_queued_for_deletion():
+		_sk_timer += 10.0 * ticks
+		if _sk_timer > 50.0:
+			game.spawn_dust(center(), Color(0.85, 0.85, 0.7), 10)
+			for b in _bones:
+				b.queue_free()
+			queue_free()
+		return
+	var head: NPC = _head
+	var f: Vector3 = player.center() - head.center()
+	f.y = 0.0
+	f = f.normalized() if f.length() > 0.01 else Vector3.FORWARD
+	var r := Vector3(-f.z, 0, f.x)
+	var rel := center() - head.center()
+	var hx := rel.dot(r) * SK_PX
+	var hz := rel.dot(f) * SK_PX
+	# Tops compared, up positive (Terraria's y the other way).
+	var hy := ((global_position.y + half.y) - (head.global_position.y + head.half.y)) * SK_PX
+	var v := velocity / PX_TICK
+	var vx := v.dot(r)
+	var vz := v.dot(f)
+	var vy := v.y
+	var to: Vector3 = player.center() - center()
+	var steer := true
+	match ai_state:
+		0, 3:
+			if head.ai_state != 0:
+				vy = _sk_axis(vy, hy, 100.0, 0.07, 0.96, 6.0, ticks)
+				vx = _sk_axis(vx, hx, -120.0 * _side, 0.1, 0.96, 8.0, ticks)
+			else:
+				ai_timer += ticks
+				if ai_timer >= 300.0:
+					ai_state += 1
+					ai_timer = 0.0
+				vy = _sk_axis(vy, hy, -230.0, 0.04, 0.96, 3.0, ticks)
+				vx = _sk_axis(vx, hx, -200.0 * _side, 0.07, 0.96, 8.0, ticks)
+			vz = _sk_axis(vz, hz, 0.0, 0.07, 0.96, 8.0, ticks)
+		1:
+			vx *= pow(0.95, ticks)
+			vz *= pow(0.95, ticks)
+			vy = minf(vy + 0.1 * ticks, 8.0)
+			if hy > 200.0:
+				ai_state = 2
+				velocity = to.normalized() * 18.0 * PX_TICK
+				steer = false
+		2:
+			steer = false
+			if global_position.y < player.global_position.y or velocity.dot(to) <= 0.0 or to.length() > 2000.0 / SK_PX or velocity.y > 0.0:
+				ai_state = 3
+		4:
+			vy *= pow(0.95, ticks)
+			vx = clampf(vx - 0.1 * _side * ticks, -8.0, 8.0)
+			if absf(hx) > 500.0:
+				ai_state = 5
+				velocity = to.normalized() * 17.0 * PX_TICK
+				steer = false
+		5:
+			steer = false
+			var hand_r := center().dot(r)
+			var player_r: float = player.center().dot(r)
+			if (vx > 0.0 and hand_r > player_r) or (vx < 0.0 and hand_r < player_r) or velocity.dot(to) <= 0.0 or to.length() > 2000.0 / SK_PX:
+				ai_state = 0
+	if steer:
+		velocity = (r * vx + f * vz + Vector3(0, vy, 0)) * PX_TICK
+	if sprite is EntitySprite:
+		sprite.set_frame(0)
+		# Its wrist toward where it rests (Terraria: atan2 to it + 90 degrees).
+		var rest := head.center() + r * (-200.0 * _side / SK_PX) + Vector3(0, -230.0 / SK_PX, 0)
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, center() - rest))
+	_update_arm(game, head, r)
+
+
+## A hand's arm (Main.DrawNPCDirect): from 20 px down its wrist, a bone 92 px
+## toward 200 px out and 130 below the head's middle, then one 60 px toward
+## 50 out and 80 below it, each Terraria's Arm_Bone drawn along its way.
+func _update_arm(game, head: NPC, r: Vector3) -> void:
+	if _bones.is_empty():
+		var tex := Assets.texture("Images/Arm_Bone")
+		for i in 2:
+			var b := EntitySprite.new()
+			b.setup(tex, 1, Vector2(tex.get_width(), tex.get_height()) / SK_PX, true, true)
+			b.top_level = true
+			add_child(b)
+			_bones.append(b)
+	var cam: Camera3D = game.player.camera
+	var p := center() + Vector3(0, half.y * 0.5 - 20.0 / SK_PX, 0) - r * (5.0 * _side / SK_PX)
+	var hc := head.center()
+	for i in 2:
+		var aim := hc + (r * (-200.0 * _side) + Vector3(0, -130.0, 0)) / SK_PX if i == 0 else hc + (r * (-50.0 * _side) + Vector3(0, -80.0, 0)) / SK_PX
+		var dir := (aim - p).normalized()
+		var length := (92.0 if i == 0 else 60.0) / SK_PX
+		p += dir * length
+		var b: EntitySprite = _bones[i]
+		b.global_position = p
+		b.set_rotation_angle(EntitySprite.facing_angle(cam, dir))
+		b.update_light(game.world, game.sky, p)
+		if i == 0:
+			p += dir * length * 0.5
+
+
 # ------------------------------------------------------------ damage
 
 ## Terraria damage: defense halves, ±15% variance, 4% base crit doubles.
@@ -1634,6 +1879,11 @@ func _die(game) -> void:
 	for d in def.get("drops", []):
 		if randf() < float(d[3]):
 			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center())
+	# One of these at most: the first that rolls (Skeletron's mask, hand, book).
+	for d in def.get("drops_chain", []):
+		if randf() < float(d[1]):
+			game.spawn_item(d[0], 1, center())
+			break
 	var one_of: Array = def.get("drops_one_of", [])
 	if not one_of.is_empty():
 		game.spawn_item(one_of[randi() % one_of.size()], 1, center())

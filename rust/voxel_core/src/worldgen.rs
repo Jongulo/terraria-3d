@@ -10,6 +10,7 @@ use fastnoise_lite::{FastNoiseLite, FractalType, NoiseType};
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+#[derive(Clone, Copy)]
 pub struct Layers {
     pub underworld_top: i32,
     pub cavern_top: i32,
@@ -1837,9 +1838,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // The Dungeon's entrance, on the Snow's side near the coast; its brick
     // colour is the world's, like Terraria's (blue, green or pink).
     let dungeon = dungeon_site(w, seed, &coast);
+    let dungeon_brick = ["blue_brick", "green_brick", "pink_brick"][rng.range(0, 3) as usize];
     if let Some((x, y, z, door)) = dungeon {
-        let brick = ["blue_brick", "green_brick", "pink_brick"][rng.range(0, 3) as usize];
-        dungeon_entrance(w, (x, y, z), door, brick);
+        dungeon_entrance(w, (x, y, z), door, dungeon_brick);
     }
     set_progress(0.705);
 
@@ -2033,6 +2034,11 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     living_trees(w, seed, ids.grass, ids.chest);
     mahogany_trees(w, seed, &l, ids.chest);
     jungle_cave_trees(w, seed, &l);
+    // Pass 6b: the Dungeon under its entrance (Terraria's Dungeon pass, before
+    // its Buried Chests), protected from the structures after it.
+    if let Some((x, y, z, door)) = dungeon {
+        crate::dungeon::dungeon(w, seed as u64, &l, (x, y, z), door, dungeon_brick, 1.0);
+    }
     // Pass 7: underground cabins, after the liquids and the trees as in
     // Terraria (its Buried Chests pass). Terraria's CaveHouseCount is 35-40 in
     // a small world, scaled with its area; its worlds are a 2D slice, so here
@@ -2767,12 +2773,12 @@ pub fn skyware_house(w: &mut World, base: (i32, i32, i32), door: i32) {
 /// door - a thick roof with its own battlements and a raised block at its far
 /// end, on pillars, over a raised brick floor that steps down at the end. The
 /// door faces FACING[door] (toward the world's centre). In the hall: pillars,
-/// dungeon banners, chain lanterns and wall torches, and a shaft (wooden
-/// platforms round its edge, over the stair) with a spiral stair down to a first chamber (the dungeon
-/// proper is sealed for now). The Old Man waits under the porch.
+/// dungeon banners, chain lanterns and wall torches; the Dungeon itself
+/// (dungeon.rs) opens the back of its floor into the entrance hallway. The
+/// Old Man waits under the porch.
 /// `ground` = (x, y, z): the hall floor is y.
-/// Leaves decorations: "dungeon" (the entrance), "old_man", "sign" (style 0:
-/// the sealed door's sign) and "rotation" for the banners, torches and sign.
+/// Leaves decorations: "dungeon" (the entrance), "old_man" and "rotation" for
+/// the banners and torches.
 pub fn dungeon_entrance(w: &mut World, ground: (i32, i32, i32), door: i32, brick_name: &str) {
     let brick = w.id_of(brick_name);
     if brick == 0 {
@@ -2801,7 +2807,7 @@ pub fn dungeon_entrance(w: &mut World, ground: (i32, i32, i32), door: i32, brick
     };
     // A battlement along a line of blocks: every other one, a block up.
     let merlon = |a: i32, b: i32| (a + b).rem_euclid(2) == 0;
-    let (lantern, sign, platform) = (w.id_of("chain_lantern"), w.id_of("sign"), w.id_of("wood_platform"));
+    let lantern = w.id_of("chain_lantern");
     let banners: Vec<u16> = ["marching_bones_banner", "necromantic_sign", "ragged_brotherhood_sigil"].iter().map(|n| w.id_of(n)).filter(|&b| b != 0).collect();
     const H: i32 = 7; // half size of the keep (15 x 15)
     const WALL: i32 = 18; // the keep's roof, above the floor
@@ -2967,74 +2973,6 @@ pub fn dungeon_entrance(w: &mut World, ground: (i32, i32, i32), door: i32, brick
         torch(w, a, gy + 4, -H + 2, lf);
         torch(w, a, gy + 10, H - 2, rt);
         torch(w, a, gy + 10, -H + 2, lf);
-    }
-    // The shaft: 5 x 5 inside, lined with brick, behind the hall's centre,
-    // with a stair spiralling down its walls to the first chamber.
-    let (sa, sb): (i32, i32) = (-3, 0);
-    let depth = 36.min(gy - 20);
-    for a in sa - 3..=sa + 3 {
-        for b in sb - 3..=sb + 3 {
-            let wall = (a - sa).abs() == 3 || (b - sb).abs() == 3;
-            for y in gy - depth..gy {
-                set(w, a, y, b, if wall { brick } else { 0 });
-            }
-            if !wall {
-                // Open in the hall floor: wooden platforms round its edge, over
-                // the stair (drop through one onto the steps, or stand on it);
-                // the middle is left open, so you can see the drop.
-                let edge = (a - sa).abs() == 2 || (b - sb).abs() == 2;
-                set(w, a, gy, b, if edge { platform } else { 0 });
-            }
-        }
-    }
-    // The stair: one step down per block along the inside of the shaft walls.
-    let ring: Vec<(i32, i32)> = {
-        let mut r = Vec::new();
-        for b in -2..2 { r.push((2, b)); }
-        for a in (-1..=2).rev() { r.push((a, 2)); }
-        for b in (-1..=2).rev() { r.push((-2, b)); }
-        for a in -2..2 { r.push((a, -2)); }
-        r
-    };
-    // The first chamber at the bottom (11 x 11, 6 high), the shaft opening
-    // into its ceiling; its far wall seals the way on, with a sign.
-    let cy = gy - depth;
-    for a in sa - 8..=sa + 4 {
-        for b in -6i32..=6 {
-            let wall = a == sa - 8 || a == sa + 4 || b.abs() == 6;
-            for y in cy - 6..=cy {
-                let in_shaft = (a - sa).abs() <= 2 && (b - sb).abs() <= 2 && y == cy;
-                let id = if wall || y == cy - 6 || (y == cy && !in_shaft) { brick } else { 0 };
-                set(w, a, y, b, id);
-            }
-        }
-    }
-    // (after the chamber, whose ceiling opens under the shaft: the stair runs
-    // on unbroken down to its floor).
-    for k in 0..depth + 5 {
-        let (ra, rb) = ring[k as usize % ring.len()];
-        set(w, sa + ra, gy - 1 - k, sb + rb, brick);
-    }
-    // Torches down the shaft, every few blocks, round its walls.
-    for (n, y) in (gy - depth + 3..gy - 2).rev().step_by(6).enumerate() {
-        let (ta, tb, out) = match n % 4 {
-            0 => (sa, sb + 2, rt),
-            1 => (sa - 2, sb, bk),
-            2 => (sa, sb - 2, lf),
-            _ => (sa + 2, sb, fw),
-        };
-        torch(w, ta, y, tb, out);
-    }
-    if lantern != 0 {
-        for (la, lb) in [(sa - 5, -3), (sa - 5, 3)] {
-            set(w, la, cy - 1, lb, lantern);
-        }
-    }
-    if sign != 0 {
-        let (x, z) = at(sa - 7, 0);
-        set(w, sa - 7, cy - 5, 0, sign);
-        w.decorations.push(Decoration { kind: "sign".into(), pos: (x, cy - 5, z), style: 0 });
-        w.decorations.push(Decoration { kind: "rotation".into(), pos: (x, cy - 5, z), style: door });
     }
     // The Old Man, under the porch by the door; the entrance itself.
     let (ox, oz) = at(H + 4, 3);
@@ -3477,6 +3415,7 @@ mod tests {
             );
         }
         crate::cabins::tests::add_cabin_defs(&mut w);
+        crate::dungeon::tests::add_dungeon_defs(&mut w);
         for name in ["silt", "slush"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
@@ -3548,6 +3487,101 @@ mod tests {
         assert!(on_water > 0 && on_water == count("lily_pad") + count("cattail"), "pond plants in ponds ({on_water})");
     }
 
+    /// The Dungeon (dungeon.rs): reached from its entrance down a hallway,
+    /// rooms and halls of brick deep below, doors, platforms, shelves,
+    /// chests in Terraria's order, lights with their switches, banners and
+    /// spikes, and the entrance above its floor left as it was built.
+    #[test]
+    fn the_dungeon_is_built_under_its_entrance() {
+        let w = gen_world_sized(42, 0, (384, 384, 384));
+        let l = layers(w.sy);
+        let id = |n: &str| w.id_of(n);
+        let (keep, door) = w.decorations.iter().find(|d| d.kind == "dungeon").map(|d| (d.pos, d.style)).expect("a Dungeon");
+        let (x0, gy, z0) = keep;
+        let brick = ["blue_brick", "green_brick", "pink_brick"].iter().map(|n| id(n)).find(|&b| w.get(x0, gy, z0 + 3) == b || w.get(x0 + 3, gy, z0) == b).expect("brick floor");
+        let count = |b: u16| w.blocks.iter().filter(|&&c| c == b).count();
+        assert!(count(brick) > 150_000, "a mass of dungeon brick ({})", count(brick));
+        let (lo, hi) = *w.structures.last().expect("the Dungeon is a protected structure");
+        assert!(lo.1 >= l.underworld_top - 6 && hi.1 < gy + 30, "between the underworld and the surface: {lo:?} {hi:?}");
+        // Walk from the hall floor through open cells, doors and platforms.
+        // (Spikes too: you can walk over them, if it hurts.)
+        let pass = |b: u16| b == 0 || !w.def(b).solid || [id("dungeon_door"), id("door_top"), id("blue_dungeon_door"), id("green_dungeon_door"), id("pink_dungeon_door"), id("spike")].contains(&b);
+        let f = FACING[door as usize];
+        let s = (-f.1, f.0);
+        let start = (x0 + f.0 * 0 + s.0 * 2, gy + 1, z0 + f.1 * 0 + s.1 * 2);
+        let mut seen = std::collections::HashSet::new();
+        let mut queue = std::collections::VecDeque::from([start]);
+        seen.insert(start);
+        let mut deepest = gy;
+        while let Some(p) = queue.pop_front() {
+            deepest = deepest.min(p.1);
+            for d in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
+                let n = (p.0 + d.0, p.1 + d.1, p.2 + d.2);
+                if n.0 < lo.0 || n.0 > hi.0 || n.2 < lo.2 || n.2 > hi.2 || n.1 < lo.1 || n.1 > gy + 18 || seen.contains(&n) {
+                    continue;
+                }
+                if pass(w.get(n.0, n.1, n.2)) {
+                    seen.insert(n);
+                    queue.push_back(n);
+                }
+            }
+        }
+        assert!(deepest < depth_y_t(&l, 230.0), "the Dungeon goes deep, reached from the entrance (to y {deepest})");
+        let chests: Vec<_> = w.decorations.iter().filter(|d| d.kind == "chest" && d.style >= crate::dungeon::DUNGEON_LOOT).collect();
+        assert!(chests.len() >= 5, "a chest in each room ({})", chests.len());
+        let reached = chests.iter().filter(|d| seen.contains(&(d.pos.0, d.pos.1 + 1, d.pos.2))).count();
+        assert!(reached * 2 >= chests.len(), "most chests reached from the entrance ({reached} of {})", chests.len());
+        for c in &chests {
+            let b = w.get(c.pos.0, c.pos.1, c.pos.2);
+            let key = c.style == crate::dungeon::DUNGEON_LOOT + 6;
+            assert_eq!(b, if key { id("chest") } else { id("locked_gold_chest") }, "a locked Gold Chest (a wooden one with the key) at {:?}", c.pos);
+            assert!(w.is_solid(c.pos.0, c.pos.1 - 1, c.pos.2), "on the floor");
+        }
+        // In Terraria's order, a shallow chest being a key chest.
+        let deep: Vec<i32> = chests.iter().map(|c| c.style).collect();
+        assert_eq!(deep[0], crate::dungeon::DUNGEON_LOOT, "the first chest holds the Muramasa (or a key near the top): {deep:?}");
+        let doors: Vec<_> = (0..w.blocks.len()).filter(|&i| w.blocks[i] == id("dungeon_door") || [id("blue_dungeon_door"), id("green_dungeon_door"), id("pink_dungeon_door")].contains(&w.blocks[i])).collect();
+        assert!(doors.len() >= 5, "doors in the halls ({})", doors.len());
+        for &i in &doors {
+            let (x, y, z) = unflat(&w, i);
+            assert_eq!(w.get(x, y + 1, z), id("door_top"), "a door's top half over it");
+            assert!(w.is_solid(x, y - 1, z), "a door stands on the floor");
+        }
+        let platform = id(&format!("{}_platform", w.def(brick).name));
+        assert!(count(platform) > 20, "platforms across the shafts ({})", count(platform));
+        let shelves: usize = ["metal_shelf", "brass_shelf", "wood_shelf", "dungeon_shelf"].iter().map(|n| count(id(n))).sum();
+        assert!(shelves > 30 && count(id("book")) > 20, "shelves ({shelves}) with books ({})", count(id("book")));
+        assert!(count(id("spike")) > 200, "spikes ({})", count(id("spike")));
+        let banners: usize = ["marching_bones_banner", "necromantic_sign", "rusted_company_standard", "ragged_brotherhood_sigil", "molten_legion_flag", "diabolic_sigil"].iter().map(|n| count(id(n))).sum();
+        assert!(banners > 20, "banners ({banners})");
+        // Each switch is wired to a light.
+        let switches: Vec<_> = w.decorations.iter().filter(|d| d.kind == "switch").collect();
+        assert!(switches.len() >= 10, "lights with switches ({})", switches.len());
+        for sw in &switches {
+            assert_eq!(w.get(sw.pos.0, sw.pos.1, sw.pos.2), id("switch"));
+            let o = (sw.style & 31, (sw.style >> 5) & 31, sw.style >> 10);
+            let light = (sw.pos.0 + o.0 - 16, sw.pos.1 + o.2, sw.pos.2 + o.1 - 16);
+            let name = w.def(w.get(light.0, light.1, light.2)).name.clone();
+            assert!(name.contains("lantern") || name.contains("lamp") || name.contains("sconse") || name.contains("chandelier"), "switch at {:?} wired to a light, not {name}", sw.pos);
+        }
+        // The entrance above its floor is as it was built: its towers and
+        // hall pillars stand, its door is open.
+        let at = |a: i32, b: i32| (x0 + f.0 * a + s.0 * b, z0 + f.1 * a + s.1 * b);
+        let (tx, tz) = at(7, 7);
+        assert!(w.get(tx, gy + 22, tz) == brick && w.get(at(2, 3).0, gy + 3, at(2, 3).1) == brick, "the keep stands");
+        assert_eq!(w.get(at(7, 0).0, gy + 2, at(7, 0).1), 0, "the doorway is open");
+    }
+
+    fn depth_y_t(l: &Layers, d: f64) -> i32 {
+        crate::dungeon::depth_y(l, d)
+    }
+
+    /// A cell's position from its index (World::idx).
+    fn unflat(w: &World, i: usize) -> (i32, i32, i32) {
+        let i = i as i32;
+        ((i / w.sy) % w.sx, i % w.sy, i / (w.sy * w.sx))
+    }
+
     #[test]
     fn the_dungeon_entrance_stands_on_the_snow_side() {
         let w = gen_world(42);
@@ -3578,8 +3612,8 @@ mod tests {
                 assert_eq!(w.get(px, y, pz), 0, "the doorway is open at {b},{y}");
             }
         }
-        let (hx, hz) = at(-3, 0);
-        assert!(!w.is_solid(hx, gy - 10, hz) && w.is_solid(hx, gy - 37 - 6, hz), "a shaft down from the hall to the chamber floor");
+        let (hx, hz) = at(-2, 0);
+        assert!(!w.is_solid(hx, gy, hz), "the back of the hall floor opens into the Dungeon's hallway");
         // The overhang: the upper front juts out over the door, open below.
         let (ox, oz) = at(17, 0);
         assert!(w.is_solid(ox, gy + 8, oz) && !w.is_solid(ox, gy + 3, oz) && w.is_solid(ox, gy, oz), "a long covered porch out from the door");

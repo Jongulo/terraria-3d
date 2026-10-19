@@ -33,7 +33,13 @@ func _physics_process(delta: float) -> void:
 	if randf() > 0.45:
 		return
 	if game.biome == "dungeon":
-		return  # (the Dungeon's enemies aren't in yet; nothing spawns in it)
+		# Below the ground before Skeletron is beaten, the Dungeon Guardian
+		# comes for you (Terraria's); its other enemies aren't in yet.
+		var p := player.global_position
+		if not game.defeated_bosses.has("SkeletronHead") and not game.boss_alive() and p.y < game.world.surface_y(floori(p.x), floori(p.z)) \
+				and not game.npcs().any(func(n): return n.kind == "DungeonGuardian"):
+			game.spawn_npc("DungeonGuardian", p + Vector3(randf_range(-1, 1), 0.6, randf_range(-1, 1)).normalized() * 40.0)
+		return
 	var table := _table(depth, night, game.biome)
 	var kind: String = _pick(table)
 	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy"]

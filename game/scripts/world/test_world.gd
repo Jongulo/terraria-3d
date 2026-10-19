@@ -34,7 +34,7 @@ const HELP := [
 	"West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower",
 	"North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson",
 	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
-	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon entrance",
+	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon",
 	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad and Demolitionist (right-click to talk)",
 ]
 
@@ -511,12 +511,16 @@ func _build_library(c: Vector3i) -> void:
 
 
 ## Far west: the Dungeon's entrance (the world generator's), its door facing
-## spawn, the Old Man by it.
+## spawn, the Old Man by it, and a small Dungeon under it (a few of the
+## generator's layout steps).
 const DUNGEON := Vector3i(-62, 0, 0)
+const DUNGEON_STEPS := 0.25
 
 
 func _build_dungeon(c: Vector3i) -> void:
-	game.world.generate_dungeon_entrance(Vector3i(c.x + DUNGEON.x, GROUND, c.z + DUNGEON.z), 1, "blue_brick")
+	var at := Vector3i(c.x + DUNGEON.x, GROUND, c.z + DUNGEON.z)
+	game.world.generate_dungeon_entrance(at, 1, "blue_brick")
+	game.world.generate_dungeon(at, 1, "blue_brick", DUNGEON_STEPS, 7)
 	_label(Vector3(c.x + DUNGEON.x + 9.5, GROUND + 9, c.z + 0.5), "Dungeon entrance", 26)
 
 

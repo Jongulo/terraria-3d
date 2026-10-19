@@ -106,6 +106,10 @@ var _yaw := 0.0
 var _pitch := 0.0
 var _immune := 0.0
 var _use_timer := 0.0
+## The channelled projectile (Magic Missile) you're steering, if any.
+var channelled: Projectile = null
+var _free_shots := 0
+var _free_shots_item := ""
 var _fall_start := 0.0
 var _panic := 0.0
 var _jump_held := false
@@ -877,6 +881,10 @@ func _liquid_effects(delta: float) -> void:
 	elif not fire_immune and _touching_hot():
 		# Hellstone, like Terraria's fire blocks, sets you on fire.
 		on_fire = ON_FIRE_TIME
+	# Spikes (Terraria's TouchDamageImmediate): hurt at once, give or take 15%.
+	var spikes := _touch_damage()
+	if spikes > 0:
+		hurt(int(round(spikes * randf_range(0.85, 1.15))), Vector3.ZERO)
 	elif in_liquid == LIQ_WATER:
 		on_fire = 0.0
 	if on_fire > 0.0:
@@ -920,6 +928,19 @@ func _touching_hot() -> bool:
 			if Data.block(w.get_block(Vector3i((global_position + Vector3(dx, -0.05, dz)).floor()))).get("hot", false):
 				return true
 	return false
+
+
+## The touch damage of a block you're in or standing on (Spikes), 0 for none.
+func _touch_damage() -> int:
+	var w := Game.current.world
+	var lo := (global_position - Vector3(half.x, 0.05, half.z)).floor()
+	var hi := (global_position + Vector3(half.x, half.y, half.z) - Vector3.ONE * 0.001).floor()
+	var most := 0
+	for x in range(int(lo.x), int(hi.x) + 1):
+		for y in range(int(lo.y), int(hi.y) + 1):
+			for z in range(int(lo.z), int(hi.z) + 1):
+				most = maxi(most, int(Data.block(w.get_block(Vector3i(x, y, z))).get("touch_damage", 0)))
+	return most
 
 
 ## Damage from drowning or burning: ignores immunity frames and knockback.
@@ -1281,13 +1302,28 @@ func _shoot_ranged(def: Dictionary) -> bool:
 
 
 func _cast(def: Dictionary) -> bool:
+	# A channelled spell (the Magic Missile): one at a time, steered while
+	# the button is held.
+	if def.get("channel", false) and channelled != null and is_instance_valid(channelled):
+		return false
+	# A use that shoots more than once (Terraria's useAnimation over
+	# useTime: the Aqua Scepter's two streams) costs its mana once.
 	var cost := mana_cost(def)
+	if _free_shots > 0 and _free_shots_item == def.internal:
+		_free_shots -= 1
+		cost = 0
+	elif def.has("use_animation"):
+		_free_shots = int(def.use_animation) / int(def.get("use_time", 20)) - 1
+		_free_shots_item = def.internal
 	if mana < cost:
 		return false
 	mana -= cost
 	stats_changed.emit()
-	Game.current.spawn_projectile(def.projectile, camera.global_position + forward() * 0.6, forward() * float(def.shoot_speed),
+	var pr := Game.current.spawn_projectile(def.projectile, camera.global_position + forward() * 0.6, forward() * float(def.shoot_speed),
 			weapon_damage(def), float(def.knockback), 0.0, 0.0, 0.5, true, crit_chance(def))
+	if def.get("channel", false):
+		channelled = pr
+		pr.steered_by = self
 	Audio.play(def.get("sound", "Item_8"), 0.7)
 	return true
 
@@ -1699,6 +1735,10 @@ func _interact() -> void:
 		Doors.toggle(Game.current, target.block, global_position)
 	elif bdef.get("interact") == "chest":
 		Game.current.open_chest(target.block)
+	elif bdef.get("interact") == "locked_chest":
+		Game.current.unlock_chest(target.block)
+	elif bdef.get("interact") == "switch":
+		Game.current.hit_switch(target.block)
 	elif bdef.get("interact") == "bed":
 		use_bed(target.block)
 	elif bdef.get("interact") == "sign":
@@ -1742,7 +1782,8 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null)
 	game.floating_text(str(dmg), center() + Vector3(0, 1.2, 0) + forward() * 0.8, Color(1.0, 0.25, 0.25))
 	Audio.play("Player_Hit_*")
 	game.hud.flash_damage()
-	if from != Vector3.ZERO:
+	# The Cobalt Shield: no knockback.
+	if from != Vector3.ZERO and not has_effect("no_knockback"):
 		var away := (global_position - from)
 		away.y = 0
 		velocity += away.normalized() * 7.0

@@ -41,5 +41,45 @@
 		"_doc": "Terraria's Sandstone Chest in the lower 3/7 of the underground desert: one of Storm Spear, Thunder Zapper, Bast Statue.",
 		"pick_one": [["ThunderSpear", 1, 1], ["ThunderStaff", 1, 1], ["CatBast", 1, 1]],
 		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
+	},
+	"dungeon_Muramasa": {
+		"_doc": "The Dungeon's chest 1 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Muramasa; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["Muramasa", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_CobaltShield": {
+		"_doc": "The Dungeon's chest 2 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Cobalt Shield; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["CobaltShield", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_AquaScepter": {
+		"_doc": "The Dungeon's chest 3 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Aqua Scepter; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["AquaScepter", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_BlueMoon": {
+		"_doc": "The Dungeon's chest 4 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Blue Moon; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["BlueMoon", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_MagicMissile": {
+		"_doc": "The Dungeon's chest 5 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Magic Missile; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["MagicMissile", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_Valor": {
+		"_doc": "The Dungeon's chest 6 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Valor; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["Valor", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_GoldenKey": {
+		"_doc": "The Dungeon's chest 7 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): a Golden Key, in a wooden chest (and any chest near the surface); AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["GoldenKey", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"dungeon_Handgun": {
+		"_doc": "The Dungeon's chest 8 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Handgun; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"pick_one": [["Handgun", 1, 1]],
+		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	}
 }

@@ -2,6 +2,7 @@
 //! modules; this file converts types and manages threads.
 
 pub mod cabins;
+pub mod dungeon;
 pub mod liquid;
 pub mod lod;
 pub mod mesher;
@@ -373,6 +374,16 @@ impl VoxelWorld {
     fn generate_dungeon_entrance(&mut self, ground: Vector3i, door: i32, brick: GString) {
         let mut w = self.shared.world.write().unwrap();
         worldgen::dungeon_entrance(&mut w, (ground.x, ground.y, ground.z), door.rem_euclid(4), &brick.to_string());
+    }
+
+    /// The Dungeon under an entrance made with generate_dungeon_entrance (test
+    /// world; see dungeon::dungeon): `steps` x Terraria's layout steps. Call
+    /// `relight_all` after.
+    #[func]
+    fn generate_dungeon(&mut self, ground: Vector3i, door: i32, brick: GString, steps: f32, seed: i32) -> bool {
+        let mut w = self.shared.world.write().unwrap();
+        let l = worldgen::layers(w.sy);
+        dungeon::dungeon(&mut w, seed as u64, &l, (ground.x, ground.y, ground.z), door.rem_euclid(4), &brick.to_string(), steps as f64)
     }
 
     /// Where worldgen put the big biomes: [{biome, x, z, radius}].

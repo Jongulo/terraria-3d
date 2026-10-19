@@ -119,6 +119,10 @@ pub struct World {
     /// Far terrain leaves out faces in the dark below this height (caves);
     /// above it (floating islands' shaded undersides) they're kept (lod.rs).
     pub lod_cave_level: i32,
+    /// Worldgen's protected areas (Terraria's GenVars.structures): boxes
+    /// (low and high corners, inclusive) later structures keep out of, like
+    /// the Dungeon's.
+    pub structures: Vec<((i32, i32, i32), (i32, i32, i32))>,
 }
 
 /// Block shapes made with a hammer. A ramp rises toward its direction
@@ -179,6 +183,7 @@ impl World {
             track_dirty: false,
             dirty: HashSet::new(),
             lod_cave_level: i32::MAX,
+            structures: Vec::new(),
             chunk_version: HashMap::new(),
             shapes: HashMap::new(),
             sky_floor: Vec::new(),
@@ -201,6 +206,7 @@ impl World {
         self.chunk_version.clear();
         self.shapes.clear();
         self.sky_floor.clear();
+        self.structures.clear();
     }
 
     /// Takes the sky floor from the blocks as they are (the world as made).

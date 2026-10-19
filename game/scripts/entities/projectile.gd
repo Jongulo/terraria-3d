@@ -55,8 +55,24 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
 ## tick] once it has flown "dust_after" ticks (the Enchanted Beam, AI 27: at
 ## its tail, a tenth of its speed).
+## ghost: flies through blocks (the Book of Skulls' skull: tileCollide off);
+## home: turns toward the nearest enemy within 25 blocks (how hard it turns). Water Bolt (AI 8): bounces off blocks; pierce: how many enemies it goes
+## through (Terraria's penetrate); gravity in blocks/s^2 (the Aqua Scepter's
+## stream, AI 12: 0.075 px a tick each of its 3 updates); hidden: no sprite,
+## only its dust (Terraria draws them at alpha 255); glow: lit by itself
+## (the Magic Missile's light).
 const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
-		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7}}
+		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7},
+		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
+		"WaterStream": {"gravity": 50.6, "pierce": 5, "hidden": true, "dust": [33], "life": 2.0},
+		"MagicMissile": {"dust": [15], "glow": true, "life": 10.0},
+		"BookOfSkullsSkull": {"ghost": true, "home": 0.6, "pierce": 3, "life": 8.0}}
+## Bounces left off blocks (Water Bolt).
+var bounces := 0
+## The player steering it while they hold the button (a channelled spell:
+## the Magic Missile flies toward their crosshair, Terraria's AI 9).
+var steered_by = null
+var _flight := {}
 var _frames := 1
 var _frame_t := 0.0
 var _turn := PI
@@ -79,6 +95,10 @@ func setup(proj: String, size := 0.5) -> void:
 	sprite.setup(tex, _frames, Vector2(size * aspect, size), true, true)
 	add_child(sprite)
 	var flight: Dictionary = FLIGHT.get(proj, {})
+	_flight = flight
+	bounces = int(flight.get("bounce", 0))
+	if flight.get("hidden", false):
+		sprite.visible = false
 	if flight.has("zigzag"):
 		_zigzag = Vector2(flight.zigzag[0], flight.zigzag[1])
 	life = float(flight.get("life", life))
@@ -86,8 +106,39 @@ func setup(proj: String, size := 0.5) -> void:
 	_trail_ticks = -float(flight.get("dust_after", 0))
 
 
+func _ready() -> void:
+	# After the spawner has set what the item gives it.
+	if _flight.has("gravity"):
+		gravity = float(_flight.gravity)
+	if _flight.has("pierce"):
+		penetrate = int(_flight.pierce)
+	if _flight.get("glow", false):
+		glow = Color(0.4, 0.6, 1.0)
+
+
 func _physics_process(delta: float) -> void:
 	var game := Game.current
+	if _flight.has("home") and friendly:
+		var best: NPC = null
+		var best_d := 25.0
+		for npc in game.npcs():
+			if npc.def.ai in ["town", "dummy"] or npc.untouchable:
+				continue
+			var dd: float = npc.center().distance_to(global_position)
+			if dd < best_d:
+				best_d = dd
+				best = npc
+		if best != null:
+			var speed := velocity.length()
+			velocity = velocity.lerp((best.center() - global_position).normalized() * speed, minf(1.0, float(_flight.home) * delta * 6.0)).normalized() * speed
+	if steered_by != null:
+		if is_instance_valid(steered_by) and steered_by.alive and steered_by.use_down():
+			var to: Vector3 = steered_by.aim_point() - global_position
+			if to.length() > 0.3:
+				var speed := velocity.length()
+				velocity = velocity.lerp(to.normalized() * speed, minf(1.0, delta * 8.0)).normalized() * speed
+		else:
+			steered_by = null
 	if not explosive.is_empty():
 		_explosive_step(delta, game)
 		return
@@ -121,7 +172,22 @@ func _physics_process(delta: float) -> void:
 		# The player's projectiles cut grass, vines, cobwebs, pots...
 		if friendly and damage > 0:
 			game.cut_tiles_at(global_position, 0.25)
-		if game.world.is_solid(Vector3i(global_position.floor())):
+		if not _flight.get("ghost", false) and game.world.is_solid(Vector3i(global_position.floor())):
+			if bounces > 0:
+				# Back out and turn round on the axes that ran into the block.
+				bounces -= 1
+				var sub := step / maxi(n, 1)
+				global_position -= sub
+				var turned := false
+				for axis in 3:
+					var probe := global_position
+					probe[axis] += sub[axis]
+					if game.world.is_solid(Vector3i(probe.floor())):
+						velocity[axis] = -velocity[axis]
+						turned = true
+				if not turned:
+					velocity = -velocity
+				break
 			Audio.play_at("Dig_*", global_position, 0.4)
 			queue_free()
 			return

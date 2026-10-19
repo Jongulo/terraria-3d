@@ -193,7 +193,8 @@ fn place(w: &mut World, rng: &mut Rng, ids: &Ids, o: (i32, i32, i32)) -> Option<
     // structure.
     let reach = (20.0 * scale) as i32;
     let blocked = |w: &World, x0: i32, x1: i32, y0: i32, y1: i32, z0: i32, z1: i32| {
-        (x0..=x1).any(|x| (y0..=y1).any(|y| (z0..=z1).any(|z| ids.blacklist[w.get(x, y, z) as usize])))
+        w.structures.iter().any(|&(lo, hi)| x0 <= hi.0 && lo.0 <= x1 && y0 <= hi.1 && lo.1 <= y1 && z0 <= hi.2 && lo.2 <= z1)
+            || (x0..=x1).any(|x| (y0..=y1).any(|y| (z0..=z1).any(|z| ids.blacklist[w.get(x, y, z) as usize])))
     };
     if blocked(w, ox - reach, ox + reach, room.1 - 20, room.1 + 20, oz - reach, oz + reach)
         || blocked(w, ox - 2, ox + 2, oy - 2, surface + 2, oz - 2, oz + 2)

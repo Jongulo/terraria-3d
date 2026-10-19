@@ -145,7 +145,8 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
   the house door.
 - **East of the house:** hammered blocks: half blocks, a ramp staircase, an arch with
   upside-down ramps and two grass ramps.
-- **Far west:** the Dungeon's entrance (blue brick), its door facing spawn, with the Old Man.
+- **Far west:** the Dungeon's entrance (blue brick), its door facing spawn, with the Old Man, and a
+  small Dungeon under it (a quarter of the generator's layout steps).
 - **South-west of spawn:** a staircase of wooden platforms up to a floating platform floor.
 - **South:** one of every block, an ore wall labelled with required pickaxe power, a 25-block
   staircase tower with a water landing pool for fall tests, and a sealed dark room.
@@ -819,7 +820,7 @@ can walk through:
   for their own, and rocks stay everywhere.
 - **Not yet:** herbs don't grow from seeds (Daybloom only appears at world creation).
 
-The Dungeon's entrance: every new world gets one. It sits on the Snow's side of the world (away
+The Dungeon: every new world gets one. Its entrance sits on the Snow's side of the world (away
 from the Jungle) near the coast, its door facing the world's centre, built of the world's dungeon
 brick colour (blue, green or pink, like Terraria's).
 - **The keep:** shaped like Terraria's cross-section. A tall 15 x 15 keep with corner towers and
@@ -831,17 +832,64 @@ brick colour (blue, green or pink, like Terraria's).
   (upside-down ramps).
 - **The hall:** pillared and hung with two rows of dungeon banners (Marching Bones, Necromantic Sign, Ragged
   Brotherhood Sigil), lit by chain lanterns and wall torches.
-- **The way down:** a shaft in the hall's floor, a wooden platform across its top (drop through
-  with Shift), with a stair spiralling down its walls (lit by torches)
-  leads 36 blocks down to a first chamber. Its far wall is sealed for now, and a sign there says so.
+- **The way down:** the back of the hall's floor opens into the entrance hallway, a wide tunnel
+  stepping down in sloping stretches (Terraria's LegacyEntranceDungeonHall) to where Terraria's
+  dungeon starts: halfway down to the cavern layer, give or take, at least 60 tiles underground.
+- **The Dungeon itself** (rust/voxel_core/src/dungeon.rs, a port of 1.4.5's
+  DungeonCrawler.MakeDungeon with the legacy layout every normal world gets): from there a walker
+  lays rooms and halls of brick, Terraria's sizes a block a tile, its 2D walk spread into 3D (halls
+  run up, down or any of the four ways across). It's sent down until 100 tiles under the cavern
+  layer's top and kept 100 from the underworld (depths mapped onto this world's layers), inside the
+  ocean and within a quarter of the world of where it started, and it stays under the ground.
+  Cabins and Enchanted Sword Shrines keep out of it.
+- **Doors and platforms:** horizontal halls end in doors (2 in 3 the plain Dungeon Door, else the
+  brick colour's) set in a wall of brick across the passage; vertical ones, and halls opening into a
+  room's top or bottom, get a platform of the colour's brick across the shaft.
+- **Furnishings, in Terraria's order and numbers:** spikes (strips on floors, ceilings and walls,
+  every other one sticking 2 out; 60 damage to touch, give or take 15%), shelves (Metal, Brass,
+  Wood or Dungeon Shelf) with books (1 in 50 a Water Bolt, deep down), Water Candles and Lesser
+  Healing / Mana Potions, a chest in each room, lanterns (three of Terraria's seven styles) and the
+  colour's Dungeon Chandeliers hanging from ceilings, each with a switch on a wall nearby that turns
+  it on or off (2 in 3 start off), and banners hanging from the ceiling on the walls: Marching
+  Bones / Necromantic Sign, Rusted Company Standard / Ragged Brotherhood Sigil or Molten Legion Flag /
+  Diabolic Sigil, by which of Terraria's three wall kinds that part of the dungeon would have.
+- **Chests:** Locked Gold Chests hold, in turn, the Muramasa, Cobalt Shield, Aqua Scepter, Blue
+  Moon, Magic Missile, Valor, a Golden Key (in a wooden chest, as is any chest near the surface)
+  and Handgun, with the cavern layer's extras. Right-click one with a Golden Key to open it for good
+  (the key is used up; it becomes a Gold Chest).
+- **The new weapons:** the Muramasa, Valor (a yoyo) and Handgun with Terraria's stats; the Water
+  Bolt bounces off blocks (10 times, through 10 enemies); the Aqua Scepter sprays two streams a use
+  for its mana once, falling as they go; the Magic Missile flies toward your crosshair while you
+  hold the button, one at a time. The Cobalt Shield stops knockback.
+- **Not yet:** Terraria's cracked-brick pit traps, dart and boulder traps, locked biome chests,
+  furniture and paintings, and the Dungeon's enemies (Angry Bones and the rest).
 - **Bricks:** dungeon brick needs 65% pickaxe power (Nightmare / Deathbringer Pickaxe), as in
   Terraria.
-- **The Dungeon biome:** inside the keep (under its roof) the Dungeon music plays, and nothing
-  spawns.
-- **The Old Man:** he waits under the porch. Right-click him to talk; he can't be hurt. Skeletron, his
-  curse, isn't in yet.
-- **New items:** Blue / Green / Pink Brick, Chain Lantern and the three banners are placeable.
-- **Old worlds:** worlds made before this don't get an entrance.
+- **The Dungeon biome:** inside (under the keep's roof, or among dungeon brick underground) the
+  Dungeon music plays; nothing spawns there yet but the Dungeon Guardian.
+- **The Old Man:** he waits under the porch. Right-click him to talk; he can't be hurt. At night he
+  offers his Curse (Terraria's NPC.SpawnSkeletron): he dies and Skeletron rises where he stood.
+  He's back at dawn if it isn't beaten, and gone for good once it is (the Clothier who'd take his
+  place isn't in yet).
+- **Skeletron** (Terraria's aiStyles 11 and 12, its numbers): a 4400-life head (32 damage, 10
+  defense) with two 600-life hands (20 damage, 14 defense), all flying through blocks. The head
+  keeps 250 px (Terraria's, 24 a block here) over your head and closes on you; every 800 ticks it
+  spins at you for 400, its defense 10 lower. Each hand hangs out to its side below the head and,
+  every 300 ticks, in turn rises over the head and slams down at you (18 px a tick) or swings out
+  500 px and sweeps across at you (17); its arm is Terraria's two bones. By day it's enraged
+  (9999 damage and defense, spinning at you fast); with you dead or far off it sinks away. Kill the
+  head and the hands go with it. It drops 5-15 Healing Potions, 5 gold and, at most one of, the
+  Skeletron Mask (1 in 7), Skeletron Hand or Book of Skulls (each 1 in 7 of what's left; the Hand
+  isn't in yet, being a grappling hook). The Book of Skulls shoots skulls that fly through blocks
+  and home in. Not yet: its trophy, Chippy's Couch, the Hellforge it brings, expert-mode skulls.
+- **The Dungeon Guardian:** go below the ground in the Dungeon before Skeletron is beaten and it
+  comes for you: Skeletron's head always enraged, 9999 damage, at 8 px a tick through the walls.
+  It leaves when you leave the Dungeon.
+- **New items:** Blue / Green / Pink Brick, the brick platforms, Spikes, Books, Water Candles,
+  the four shelves, the Dungeon Doors, the seven lanterns, the Dungeon Chandeliers, the six banners
+  and the Switch are placeable.
+- **Old worlds:** worlds made before the entrance don't get one; worlds made before the Dungeon
+  keep their sealed shaft.
 
 Sky:
 - **Colours:** a gradient from the horizon up that follows the time of day. The sun's side of the
@@ -903,8 +951,8 @@ Furniture: Terraria's early house furniture and the crafting chain behind it.
   and 2 Bottles make 2).
 - **Bed:** you respawn at your bed. The bed is saved with your character; if it's gone, you're
   told and come back at the world spawn.
-- **Books and Bones:** Terraria's Books come from the Dungeon, which isn't here yet, so for now they
-  turn up in underground chests. Skeletons drop Bones.
+- **Books and Bones:** Books sit on the Dungeon's shelves (and, as before, turn up in underground
+  chests). Skeletons drop Bones.
 - **Signs:** the editor closes with Save, or with Cancel or Escape to leave the sign as it was.
   What's written is saved with the world and goes when the sign is broken.
 - **Cobwebs:** they hang in patches in cave corners. They slow you to a crawl and break your
@@ -1057,7 +1105,8 @@ Melee speed throws it faster and brings it back sooner.
 
 Flails: the Mace (underground chests), Flaming Mace (a Mace and 99 Torches), Ball O' Hurt (Shadow
 Orbs), The Meatball (10 Crimtane Bars and 5 Tissue Samples at an anvil), and the Blue Moon and Sunfury
-(creative only for now: the Dungeon's chests and the Underworld's Shadow Chests aren't in yet), with
+(the Blue Moon in the Dungeon's chests; the Sunfury creative only for now: the Underworld's Shadow
+Chests aren't in yet), with
 Terraria's stats and its flail AI (AI_015_Flails), in its pixels (16 a block) and ticks:
 - **Spinning:** hold the button and it whirls round over your head, 5 turns a second. After 12 ticks
   it hits anything within 55 px of you that you can see, each enemy every 15 ticks, for 1.2x damage
@@ -1181,5 +1230,5 @@ have none. Settings → Interface → "Enemy health bars" turns them off.
 Not yet: the evil bosses (Eater of Worlds, Brain of Cthulhu), Devourers and Blood Crawlers,
 Giant Worms, the other town NPCs (Goblin Tinkerer, Clothier...), NPC happiness,
 other biomes and bosses; the ocean's palm
-trees, seashells and fishing; the Glowing Mushroom biome, Granite and Marble caves, the Dungeon beyond its entrance
-(corridors, Angry Bones, Skeletron), and the Underground Desert's open caverns.
+trees, seashells and fishing; the Glowing Mushroom biome, Granite and Marble caves, the Dungeon's
+enemies, traps and furniture, and the Underground Desert's open caverns.

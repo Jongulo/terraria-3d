@@ -38,6 +38,9 @@ var falling_leaves := FallingLeaves.new()
 var dust := DustParticles.new()
 ## "x,y,z" -> quarter turns, for directional block models (set when placed).
 var block_rotations := {}
+## Worldgen's switches and the lights they're wired to (dungeon.rs: a "switch"
+## decoration whose style is the light's offset): "x,y,z" -> the light's cell.
+var wires := {}
 ## Where the Dungeon's entrance is (its hall floor), or NO_DUNGEON.
 var dungeon_entrance := NO_DUNGEON
 const NO_DUNGEON := Vector3i(-1, -1, -1)
@@ -245,11 +248,15 @@ func _on_world_ready() -> void:
 			signs[Chests.key(d.pos)] = WORLDGEN_SIGNS[int(d.style) % WORLDGEN_SIGNS.size()]
 		elif d.kind == "dungeon":
 			dungeon_entrance = Vector3i(d.pos)
+		elif d.kind == "switch":
+			var o := int(d.style)
+			wires[Chests.key(d.pos)] = Vector3i(d.pos) + Vector3i((o & 31) - 16, o >> 10, ((o >> 5) & 31) - 16)
 	player.input_enabled = false
 	hud.bind(player)
 	player.died.connect(func(): hud.show_death())
 	player.respawned.connect(func(): hud.hide_death())
 	sky.dusk.connect(_on_dusk)
+	sky.dawn.connect(_on_dawn)
 	state = State.STREAMING
 
 
@@ -263,10 +270,9 @@ func _begin_play() -> void:
 	state = State.PLAYING
 	hud.hide_loading()
 	add_child(spawner)
-	# Town NPCs that worldgen placed (the Old Man at the Dungeon's door).
-	for d in world.get_decorations():
-		if d.kind == "old_man":
-			spawn_npc("OldMan", Vector3(d.pos) + Vector3(0.5, 0, 0.5))
+	# Town NPCs that worldgen placed (the Old Man at the Dungeon's door,
+	# until Skeletron is beaten).
+	_spawn_old_man()
 	# No mountains rising out of the sea on the horizon.
 	if has_ocean:
 		sky.sea_query = func(at: Vector2, n: int, reach: float) -> PackedFloat32Array:
@@ -642,6 +648,33 @@ func on_npc_killed(npc: NPC) -> void:
 	if npc.boss:
 		defeated_bosses[npc.kind] = true
 		message("%s has been defeated!" % Assets.npc_name(npc.kind), Color(0.69, 0.29, 1.0))
+
+
+## The Old Man at the Dungeon's door (worldgen's "old_man" decoration), if
+## Skeletron isn't beaten and he isn't there already.
+func _spawn_old_man() -> void:
+	if defeated_bosses.has("SkeletronHead") or npcs().any(func(n): return n.kind == "OldMan"):
+		return
+	for d in world.get_decorations():
+		if d.kind == "old_man":
+			spawn_npc("OldMan", Vector3(d.pos) + Vector3(0.5, 0, 0.5))
+
+
+## Terraria's NPC.SpawnSkeletron: the Old Man, cursed at night, dies and
+## Skeletron rises where he stood (he's back at dawn if it isn't beaten).
+func curse_old_man(old_man: NPC) -> void:
+	if sky.is_day or boss_alive() or not is_instance_valid(old_man):
+		return
+	var at := old_man.center()
+	Audio.play_at(old_man.def.get("death_sound", "NPC_Killed_1"), at)
+	spawn_dust(at, Color(0.65, 0.05, 0.05), 14)
+	old_man.queue_free()
+	spawn_npc("SkeletronHead", at + Vector3(0, 1.0, 0))
+	message("Skeletron has awoken!", Color(0.69, 0.29, 1.0))
+
+
+func _on_dawn() -> void:
+	_spawn_old_man()
 
 
 ## Terraria: at dusk a strong enough player may be visited by the Eye of Cthulhu.
@@ -1166,6 +1199,37 @@ func block_rotation(p: Vector3i) -> int:
 func open_chest(p: Vector3i) -> void:
 	Audio.play("Menu_Open")
 	hud.open_chest(chests.get_inventory(p), p)
+
+
+## A locked chest (the Dungeon's Locked Gold Chests): its key, if you carry
+## one, is used up and opens it for good - it becomes its unlocked chest, its
+## loot still in it (Terraria's Chest.Unlock).
+func unlock_chest(p: Vector3i) -> bool:
+	var b := Data.block(world.get_block(p))
+	var key: String = b.get("key", "")
+	if key == "" or not player.inventory.remove(key, 1):
+		message("It's locked", Color(0.9, 0.7, 0.7))
+		return false
+	world.set_block(p, Data.block_id(b.unlocks_to))
+	Audio.play_at("Unlock", Vector3(p) + Vector3(0.5, 0.5, 0.5))
+	open_chest(p)
+	return true
+
+
+## Flips a switch and the light it's wired to (Terraria's Wiring.HitSwitch:
+## the light goes on or off).
+func hit_switch(p: Vector3i) -> void:
+	var b := Data.block(world.get_block(p))
+	if b.has("toggles_to"):
+		world.set_block(p, Data.block_id(b.toggles_to))
+	Audio.play_at("Mech_0", Vector3(p) + Vector3(0.5, 0.5, 0.5))
+	if not wires.has(Chests.key(p)):
+		return
+	var light: Vector3i = wires[Chests.key(p)]
+	var l := Data.block(world.get_block(light))
+	var twin: String = l.get("off", l.get("lit", ""))
+	if twin != "":
+		world.set_block(light, Data.block_id(twin))
 
 
 ## Crafting stations within reach (block names like "work_bench").

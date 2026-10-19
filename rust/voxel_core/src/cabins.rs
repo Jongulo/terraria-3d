@@ -418,6 +418,13 @@ fn rooms_in_place(w: &World, rooms: &[Room], l: &Layers) -> bool {
 /// cabin within 5 (AreRoomsValid; StructureMap's padding).
 fn rooms_clear(w: &World, ids: &Ids, rooms: &[Room], built: &[Vec<Room>]) -> bool {
     for r in rooms {
+        // Out of worldgen's protected areas (the Dungeon).
+        let pad = 3;
+        if w.structures.iter().any(|&(lo, hi)| {
+            r.x0 - pad <= hi.0 && lo.0 <= r.x1() + pad && r.z0 - pad <= hi.2 && lo.2 <= r.z1() + pad && r.y0 - pad <= hi.1 && lo.1 <= r.ceiling() + pad
+        }) {
+            return false;
+        }
         for other in built.iter().flatten() {
             let pad = 5;
             if r.x0 - pad <= other.x1() && other.x0 <= r.x1() + pad && r.z0 - pad <= other.z1() && other.z0 <= r.z1() + pad

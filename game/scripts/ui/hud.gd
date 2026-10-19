@@ -1373,6 +1373,8 @@ func open_chat(npc: NPC) -> void:
 	if town_def.has("shop"):
 		buttons.append("Shop")
 	buttons.append_array(town_def.get("buttons", []))
+	if not Game.current.sky.is_day:
+		buttons.append_array(npc.def.get("night_buttons", []))
 	buttons.append("Close")
 	for name in buttons:
 		var b := Button.new()
@@ -1401,6 +1403,11 @@ func chat_button(name: String) -> void:
 			_chat_text.text = Game.current.town.nurse_heal()
 		"Status":
 			_chat_text.text = Game.current.town.dryad_status()
+		"Curse":
+			var old_man := chat_npc
+			close_chat()
+			Game.current.curse_old_man(old_man)
+			return
 		"Close":
 			close_chat()
 	Audio.play("Menu_Tick")

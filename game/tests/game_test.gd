@@ -337,7 +337,10 @@ func _run() -> void:
 	var was_time: float = game.sky.time
 	game.starfall.boost = 1.0
 	check(absf(game.starfall.chance() / game.starfall.world_scale() - 10.0 / 8000.0) < 1e-9, "stars fall at Terraria's rate")
+	# Early night (a day's time past the night's length would roll straight
+	# over to morning).
 	game.sky.is_day = false
+	game.sky.time = 0.0
 	game.starfall.process_mode = Node.PROCESS_MODE_DISABLED
 	for n in game.entities.get_children():
 		if n is FallingStar:
