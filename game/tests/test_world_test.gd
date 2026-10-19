@@ -412,6 +412,7 @@ func _run() -> void:
 	await _sky_checks()
 	await _dungeon_checks(c)
 	await _skeletron_checks(c)
+	await _mushroom_checks(c)
 	await _door_checks(c)
 	await _flora_checks(c)
 	await _cut_checks(c)
@@ -516,6 +517,88 @@ func _run() -> void:
 ## hands; its hover, spin and enraged day; a hand's attacks; killing the head
 ## takes the hands and drops its loot; the Old Man back at dawn until it's
 ## beaten; and the Dungeon Guardian before then.
+func _mushroom_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var m := c + TestWorld.MUSHROOM
+	var was_selected := p.selected
+	var id := func(n: String) -> int: return Data.block_id(n)
+	var counts := {}
+	for n in ["mushroom_grass", "glowing_mushroom", "mushroom_trunk", "mushroom_vines"]:
+		counts[n] = 0
+	var on_grass := true
+	var styles := {}
+	for dx in range(-24, 25):
+		for dz in range(-24, 25):
+			for dy in range(-12, 18):
+				var q := m + Vector3i(dx, dy, dz)
+				var n: String = Data.block(w.get_block(q)).get("name", "")
+				if n.begins_with("glowing_mushroom"):
+					styles[n] = true
+					n = "glowing_mushroom"
+					if w.get_block(q + Vector3i.DOWN) != id.call("mushroom_grass"):
+						on_grass = false
+				if counts.has(n):
+					counts[n] += 1
+	var caps := w.get_decorations().filter(func(d): return d.kind == "tree_top" and int(d.style) >= 270 and int(d.style) < 273)
+	check(counts.mushroom_grass > 500 and counts.glowing_mushroom > 100 and counts.mushroom_vines > 20 and on_grass,
+			"the test world's Glowing Mushroom cavern: mushroom grass, glowing mushrooms on it, vines (%s)" % [counts])
+	check(styles.size() == 5 and counts.glowing_mushroom < counts.mushroom_grass / 2, "all five styles of glowing mushroom, in clumps (%s)" % [styles.keys()])
+	# Each stands somewhere of its own in its block, turned its own way.
+	var a := BlockModels.scatter_at(m, 0.3)
+	var b := BlockModels.scatter_at(m + Vector3i(1, 0, 0), 0.3)
+	check(a.origin != b.origin and absf(a.origin.x) <= 0.3 and absf(a.origin.z) <= 0.3 and not a.basis.is_equal_approx(b.basis) and a.is_equal_approx(BlockModels.scatter_at(m, 0.3)),
+			"glowing mushrooms are scattered off their blocks' middles and turned, the same each time")
+	check(caps.size() >= 1 and counts.mushroom_trunk >= 3, "giant glowing mushrooms: stems under their caps (%d)" % caps.size())
+	# It glows blue, it's the biome you're in (its music), its enemies.
+	var floor_at := m + Vector3i(0, -3, 0)
+	while not w.is_solid(floor_at + Vector3i.DOWN) and floor_at.y > m.y - 10:
+		floor_at += Vector3i.DOWN
+	var light: Color = w.get_light(Vector3(floor_at) + Vector3(0.5, 0.5, 0.5))
+	check(light.b > 0.5 and light.b > light.r * 2.0, "it glows blue (%s)" % light)
+	check(game.detect_biome(Vector3(floor_at) + Vector3(0.5, 0.5, 0.5)) == "mushroom" and game.biome_music("mushroom", true) == "Mushroom",
+			"it's the Glowing Mushroom biome, with its music")
+	var table: Array = game.spawner._table("caverns", false, "mushroom")
+	var kinds := table.map(func(e): return e[0])
+	check(kinds.has("SporeSkeleton") and kinds.has("SporeBat") and not kinds.has("Skeleton") and not kinds.has("CaveBat"),
+			"Spore Skeletons and Spore Bats in place of Skeletons and bats (%s)" % [kinds])
+	check(Data.npcs.SporeBat.drops.any(func(e): return e[0] == "Shroomerang" and is_equal_approx(float(e[3]), 0.025)), "a Spore Bat drops the Shroomerang 1 in 40")
+	# Terraria's drops: a glowing mushroom (small or giant) 1 in 40 Mushroom Grass
+	# Seeds, else half the time a Glowing Mushroom; mushroom grass: mud.
+	var got := {}
+	for i in 4000:
+		var item: String = game.block_drop(Data.block(id.call("glowing_mushroom")))
+		got[item] = got.get(item, 0) + 1
+	check(absf(got.get("GlowingMushroom", 0) / 4000.0 - 0.4875) < 0.04 and absf(got.get("MushroomGrassSeeds", 0) / 4000.0 - 0.025) < 0.012,
+			"a glowing mushroom drops a Glowing Mushroom half the time, Mushroom Grass Seeds 1 in 40 (%s)" % [got])
+	check(Data.block(id.call("mushroom_grass")).drop == "MudBlock" and Data.block(id.call("mushroom_block")).drop == "GlowingMushroom", "mushroom grass drops mud, a Mushroom Block a Glowing Mushroom")
+	# Seeds plant mushroom grass on mud; a Glowing Mushroom places a Mushroom Block.
+	var mud_at := floor_at + Vector3i(2, -1, 0)
+	for k in 3:
+		w.set_block(mud_at + Vector3i(0, k + 1, 0), 0)
+	w.set_block(mud_at, id.call("mud"))
+	p.inventory.slots[9] = Inventory.stack("MushroomGrassSeeds", 2)
+	p.select(9)
+	p.target = {"block": mud_at, "normal": Vector3i.UP, "id": w.get_block(mud_at), "distance": 3.0}
+	check(p._place(Data.item("MushroomGrassSeeds")) and w.get_block(mud_at) == id.call("mushroom_grass") and p.inventory.count_of("MushroomGrassSeeds") == 1,
+			"Mushroom Grass Seeds turn mud to mushroom grass")
+	p.target = {"block": mud_at, "normal": Vector3i.UP, "id": w.get_block(mud_at), "distance": 3.0}
+	check(not p._place(Data.item("MushroomGrassSeeds")), "not on anything else")
+	check(Data.item("GlowingMushroom").place == "mushroom_block", "a Glowing Mushroom places a Mushroom Block")
+	p.inventory.slots[9] = null
+	p.select(was_selected)
+	# The Mushroom Chest: a cabin chest's loot, half the time the Mushroom set.
+	var sets := 0
+	var split := 0
+	for i in 400:
+		var loot: Array = Game.roll_loot("mushroom_chest")
+		var items := loot.map(func(e): return e[0])
+		var n := ["MushroomHat", "MushroomVest", "MushroomPants"].filter(func(x): return items.has(x)).size()
+		sets += int(n == 3)
+		split += int(n != 0 and n != 3)
+	check(absf(sets / 400.0 - 0.5) < 0.1 and split == 0 and Chests.LOOT[15] == "mushroom_chest", "a Mushroom Chest holds the Mushroom Hat, Vest and Pants half the time (%d of 400)" % sets)
+
+
 func _skeletron_checks(c: Vector3i) -> void:
 	var p := game.player
 	var hud := game.hud
@@ -541,6 +624,11 @@ func _skeletron_checks(c: Vector3i) -> void:
 	game.sky.time = 0.0
 	check(buttons.call().has("Curse"), "at night he does")
 	p.global_position = om.global_position + Vector3(6, 0, 0)
+	# (As a 3D model, to see it face you.)
+	var old_method := NPCModels.method("SkeletronHead")
+	var old_arm := NPCModels.method("SkeletronArm")
+	NPCModels.set_method("SkeletronHead", "claude")
+	NPCModels.set_method("SkeletronArm", "hull")
 	hud.chat_button("Curse")
 	await frames(3)
 	var heads := game.npcs().filter(func(n): return n.kind == "SkeletronHead")
@@ -559,6 +647,25 @@ func _skeletron_checks(c: Vector3i) -> void:
 	head.velocity = Vector3.ZERO
 	await frames(30)
 	check(head.ai_state == 0 and head.velocity.y > 0.0, "hovering, it rises over you (%.2f)" % head.velocity.y)
+	var facing := func() -> Vector3:
+		return head.sprite._mi.basis.z if head.sprite is NPCModel else Vector3.ZERO
+	var toward := func() -> Vector3:
+		var f: Vector3 = p.camera.global_position - head.center()
+		return Vector3(f.x, 0, f.z).normalized()
+	head.global_position = p.global_position + Vector3(10, 4, 0)
+	head.velocity = Vector3.ZERO
+	head._model_facing = Vector3.ZERO
+	await frames(2)
+	var fz: Vector3 = facing.call()
+	check(Vector3(fz.x, 0, fz.z).normalized().dot(toward.call()) > 0.95 and absf(fz.y) < sin(NPC.SK_TILT_MAX) + 0.01,
+			"its model's face looks your way, not its bottom, tipped only a little (%s)" % fz)
+	# Step round it: it turns after you slowly, so you see its side.
+	var round_it: Vector3 = head.global_position + (p.global_position - head.global_position).rotated(Vector3.UP, PI * 0.5)
+	p.global_position = Vector3(round_it.x, p.global_position.y, round_it.z)
+	await frames(10)
+	fz = facing.call()
+	check(Vector3(fz.x, 0, fz.z).normalized().dot(toward.call()) < 0.5, "step round it and you see its side for a while (%.2f)" % Vector3(fz.x, 0, fz.z).normalized().dot(toward.call()))
+	NPCModels.set_method("SkeletronHead", old_method)
 	# Every 800 ticks it spins at you for 400, its defense 10 lower.
 	head._sk_timer = 799.5
 	await frames(3)
@@ -582,6 +689,17 @@ func _skeletron_checks(c: Vector3i) -> void:
 	await frames(3)
 	check(hand.ai_state == 2 and hand.velocity.length() > 17.0 * NPC.PX_TICK * 0.95, "then slams down at you (%.1f blocks/s)" % hand.velocity.length())
 	check(hand.get_child_count() >= 3, "its arm: two bones")
+	var bone: Node3D = hand._bones[0]
+	var bone_ok: bool = bone.get_child_count() == 1 and bone.get_child(0) is NPCModel and bone.get_child(0).kind == "SkeletronArm"
+	check(bone_ok, "its bones take the NPC picker's look for the Skeletron Arm (a hull model)")
+	if bone_ok:
+		var model: NPCModel = bone.get_child(0)
+		var mid: Vector3 = model._mi.global_transform * (model._mi.mesh.get_aabb().get_center())
+		var down: Vector3 = -model._mi.global_basis.y.normalized()
+		var to_elbow: Vector3 = hand._bones[1].get_child(0)._mi.global_transform * (model._mi.mesh.get_aabb().get_center()) - mid
+		check(down.dot(to_elbow.normalized()) > 0.0 and mid.distance_to(hand.center()) < 6.0,
+				"lying along the arm, the art's bottom toward the elbow (%.2f)" % down.dot(to_elbow.normalized()))
+	NPCModels.set_method("SkeletronArm", old_arm)
 	# Enraged by day.
 	game.sky.is_day = true
 	game.sky.time = 100.0
@@ -1670,7 +1788,8 @@ func _armor_checks(c: Vector3i) -> void:
 	for n in armor_items:
 		var d := Data.item(n)
 		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n))
-		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped
+		var in_set: bool = Data.loot.values().any(func(t): return t is Dictionary and t.get("sets", []).any(func(e): return n in e[0]))
+		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set
 		if not d.get("slot") in Data.ARMOR_SLOTS or Assets.armor_texture(d.slot, n) == null or d.id == 0 or not sources:
 			bad.append(n)
 	check(armor_items.size() >= 50 and bad.is_empty(), "%d armor pieces, each with its equip sprite and a recipe, chest or enemy drop (bad: %s)" % [armor_items.size(), bad])

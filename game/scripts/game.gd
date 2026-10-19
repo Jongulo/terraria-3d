@@ -49,7 +49,7 @@ const WORLDGEN_SIGNS := ["The dungeon's depths are sealed. (The rest of the Dung
 ## What's written on each sign: "x,y,z" -> text.
 var signs := {}
 ## The biome the player is in ("", "ocean", "snow", "desert", "jungle",
-## "corruption", "crimson"): the coast, or the biome blocks around them; orbs/hearts smashed toward the next boss.
+## "corruption", "crimson", "dungeon", "mushroom"): the coast, or the biome blocks around them; orbs/hearts smashed toward the next boss.
 var biome := ""
 var orbs_broken := 0
 var _biome_timer := 0.0
@@ -195,6 +195,11 @@ func _on_world_ready() -> void:
 			_make_test_world()
 			test_world.load_state(meta.test_world)
 		has_ocean = meta.get("ocean", false)
+		# A world saved before plants had styles (blocks.json "variant_of"):
+		# its plants take theirs now, as a new world's do (not the test
+		# world's, whose plants are each placed as themselves).
+		if not meta.get("styles", false) and test_world == null:
+			world.scatter_styles(world.get_seed())
 	if test_world:
 		surface_level = TestWorld.GROUND
 		cavern_level = 20
@@ -437,6 +442,8 @@ func biome_music(b: String, under: bool) -> String:
 			return ("Underground" if under else "") + "Crimson"
 		"dungeon":
 			return "Dungeon"
+		"mushroom":
+			return "Mushroom"
 	return ("Underground" if under else "") + "Corruption"
 
 
@@ -823,6 +830,11 @@ static func roll_loot(table_name: String) -> Array:
 	for e in table.get("extras", []):
 		if randf() < float(e[3]):
 			out.append([e[0], randi_range(int(e[1]), int(e[2]))])
+	# Sets that come together (the Mushroom Chest's Mushroom Hat, Vest and Pants).
+	for e in table.get("sets", []):
+		if randf() < float(e[1]):
+			for item in e[0]:
+				out.append([item, 1])
 	return out
 
 
@@ -1113,12 +1125,16 @@ func _orb_smashed(c: Vector3, b: Dictionary) -> void:
 
 ## What breaking a block drops: its "drop", or for a gem tree's trunk its gem
 ## 1 time in 10 (Terraria's SetGemTreeDrops; else Stone Block), or its
-## "rare_drop" [item, n] 1 time in n (the sword in stone's Terragrim, 1 in 30).
+## "rare_drop" [item, n] 1 time in n (the sword in stone's Terragrim, 1 in 30;
+## a glowing mushroom's Mushroom Grass Seeds, 1 in 40); with "drop_chance" its
+## drop only that often (the glowing mushrooms: half the time), else nothing.
 func block_drop(b: Dictionary) -> String:
 	if b.has("gem") and randf() < 0.1:
 		return b.gem
 	if b.has("rare_drop") and randi() % int(b.rare_drop[1]) == 0:
 		return b.rare_drop[0]
+	if b.has("drop_chance") and randf() >= float(b.drop_chance):
+		return ""
 	return b.get("drop", "")
 
 
@@ -1131,8 +1147,9 @@ func _fell_tree(p: Vector3i, trunk: int) -> void:
 		spawn_item(block_drop(b), 1, Vector3(p.x + 0.5, y + 0.5, p.z + 0.5))
 		y += 1
 	if world.remove_decorations_at(Vector3i(p.x, y, p.z)) > 0:
-		# The canopy drops a few extra logs, like Terraria's tree tops.
-		for i in randi_range(2, 5):
+		# The canopy drops a few extra logs, like Terraria's tree tops (a
+		# giant mushroom's cap is just its top cell: one more roll).
+		for i in (randi_range(2, 5) if b.get("top_drops", true) else 1):
 			spawn_item(block_drop(b), 1, Vector3(p.x + 0.5, y, p.z + 0.5))
 		decorations.refresh()
 		far_trees.invalidate()
@@ -1267,6 +1284,7 @@ func save_world() -> bool:
 	meta["orbs_broken"] = orbs_broken
 	meta["ocean"] = has_ocean
 	meta["creative"] = creative
+	meta["styles"] = true
 	meta["shapes"] = Array(world.get_shapes())
 	meta["signs"] = signs
 	meta["town"] = town.save_state()

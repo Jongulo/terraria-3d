@@ -58,6 +58,12 @@ func face(heading: Vector3) -> void:
 	_mi.rotation = Vector3(0, atan2(h.z, -h.x), 0)
 
 
+## Turns it to exactly `b` (mesh space to the NPC): Skeletron's face toward
+## you, rolled by its lean and spin.
+func orient(b: Basis) -> void:
+	_mi.basis = b
+
+
 func set_tint(c: Color) -> void:
 	_mi.set_instance_shader_parameter("tint", c)
 

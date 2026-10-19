@@ -164,4 +164,5 @@ func armor_texture(slot: String, internal: String) -> Texture2D:
 
 
 func npc_name(internal: String) -> String:
-	return ids.get("names", {}).get("npcs", {}).get(internal, internal)
+	var own = Data.npcs.get(internal, {}).get("name")
+	return own if own != null else ids.get("names", {}).get("npcs", {}).get(internal, internal)

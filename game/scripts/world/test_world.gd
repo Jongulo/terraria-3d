@@ -35,6 +35,7 @@ const HELP := [
 	"North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson",
 	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
 	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon",
+	"South-east, down the shaft past the tower: the Glowing Mushroom biome",
 	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad and Demolitionist (right-click to talk)",
 ]
 
@@ -118,6 +119,7 @@ func build() -> void:
 	_build_library(c)
 	_build_hammered(c)
 	_build_town(c)
+	_build_mushroom_cavern(c)
 
 	w.set_blocks_raw(_blocks)
 	for sh in _shapes:
@@ -127,6 +129,7 @@ func build() -> void:
 	_build_evil(c)
 	_build_biomes(c)
 	_build_dungeon(c)
+	game.world.generate_mushroom_biome(c + MUSHROOM, 26, 41, false)
 	w.relight_all()
 	_blocks = PackedInt32Array()
 	_liquids = PackedInt32Array()
@@ -524,6 +527,35 @@ func _build_dungeon(c: Vector3i) -> void:
 	_label(Vector3(c.x + DUNGEON.x + 9.5, GROUND + 9, c.z + 0.5), "Dungeon entrance", 26)
 
 
+## South-east, under the ground past the tower: a mud cavern the world
+## generator's Glowing Mushroom biome grows in (generate_mushroom_biome: its
+## mushroom grass, giant and small glowing mushrooms, vines; not its patches,
+## whose shape is chance), down a shaft with platforms every 4 blocks.
+const MUSHROOM := Vector3i(56, -32, 18)
+const MUSHROOM_SHAFT := Vector3i(56, 0, 6)
+
+
+func _build_mushroom_cavern(c: Vector3i) -> void:
+	var m := c + MUSHROOM
+	# Hollow inside, a mud shell 4 blocks thick round it.
+	for dx in range(-21, 22):
+		for dz in range(-21, 22):
+			for dy in range(-9, 18):
+				var e := Vector3(dx / 16.0, dy / (12.0 if dy > 0 else 4.5), dz / 16.0)
+				var shell := Vector3(dx / 20.0, dy / (16.0 if dy > 0 else 8.5), dz / 20.0)
+				if e.length() < 1.0:
+					_b(m + Vector3i(dx, dy, dz), "")
+				elif shell.length() < 1.0 and m.y + dy < GROUND - 4:
+					_b(m + Vector3i(dx, dy, dz), "mud")
+	var s := c + MUSHROOM_SHAFT
+	var bottom := m.y + 5
+	_box(Vector3i(s.x - 1, bottom, s.z - 1), Vector3i(s.x + 1, GROUND, s.z + 1), "")
+	for y in range(bottom + 2, GROUND, 4):
+		_box(Vector3i(s.x - 1, y, s.z - 1), Vector3i(s.x + 1, y, s.z + 1), "wood_platform")
+	_box(Vector3i(s.x - 2, GROUND, s.z - 2), Vector3i(s.x + 2, GROUND, s.z - 2), "gray_brick")
+	_label(Vector3(s.x + 0.5, GROUND + 3, s.z + 0.5), "Glowing Mushroom biome below", 24)
+
+
 ## East of the house: blocks reshaped with a hammer - half blocks, a ramp
 ## staircase and an arch with upside-down ramps in its corners.
 const HAMMERED := Vector3i(26, 0, -32)
@@ -650,7 +682,7 @@ func activate() -> void:
 func _make_spawner_visual(sp: Dictionary) -> void:
 	var def: Dictionary = Data.npcs[sp.kind]
 	var s := EntitySprite.new()
-	var tex := Assets.texture("Images/NPC_%d" % int(def.sprite))
+	var tex := Assets.texture(NPC.image_path(sp.kind))
 	var frame_h := float(tex.get_height()) / int(def.frames)
 	var h := 0.9
 	s.setup(tex, int(def.frames), Vector2(h * tex.get_width() / frame_h, h), true)

@@ -246,8 +246,60 @@
 		},
 		"cattail": {
 			"bevel": "chamfer",
-			"bevel_size": 3,
-			"depth": 7
+			"bevel_size": 3.0,
+			"depth": 7.0
+		},
+		"cattail_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"cattail_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"cattail_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"cattail_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
 		},
 		"chain_lantern": {
 			"depth": 16.0,
@@ -268,6 +320,258 @@
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
 			"depth": 3.0
+		},
+		"corrupt_plants_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"corrupt_plants_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
 		},
 		"crimson_altar": {
 			"bevel": "chamfer",
@@ -292,8 +596,260 @@
 		},
 		"crimson_plants": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
+			"bevel_size": 1.0,
 			"depth": 2.0,
+			"one_color": true
+		},
+		"crimson_plants_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"crimson_plants_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
 			"one_color": true
 		},
 		"daybloom": {
@@ -305,8 +861,8 @@
 				"right",
 				"front"
 			],
-			"bevel_size": 1,
-			"depth": 2
+			"bevel_size": 1.0,
+			"depth": 2.0
 		},
 		"demon_altar": {
 			"bevel": "chamfer",
@@ -384,6 +940,492 @@
 			"depth": 3.0,
 			"one_color": true
 		},
+		"flowers_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": false
+		},
+		"flowers_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_23": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_24": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_25": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_26": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_27": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_28": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_29": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_30": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_31": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_32": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_33": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_34": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_35": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_36": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_37": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_38": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
+		"flowers_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true
+		},
 		"frozen_platform": {
 			"noise": "grain",
 			"strength": 0.35
@@ -399,6 +1441,23 @@
 		"glass_platform": {
 			"noise": "speckle",
 			"strength": 0.3
+		},
+		"glowing_mushroom_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"one_color": true,
+			"strength": 0.25
+		},
+		"glowing_mushroom_5": {
+			"one_color": false
 		},
 		"gold_chandelier": {
 			"bevel": "chamfer",
@@ -420,6 +1479,12 @@
 		"icicle": {
 			"one_color": false
 		},
+		"icicle_2": {
+			"one_color": false
+		},
+		"icicle_3": {
+			"one_color": false
+		},
 		"iron_anvil": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -438,6 +1503,246 @@
 		"ivy_chest": {
 			"one_color": true
 		},
+		"jungle_plants_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_plants_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
 		"jungle_spores": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -449,6 +1754,306 @@
 				"back"
 			],
 			"bevel_size": 3.0,
+			"one_color": true
+		},
+		"jungle_vines_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_23": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_24": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_25": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_26": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"jungle_vines_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
 			"one_color": true
 		},
 		"keg": {
@@ -478,6 +2083,71 @@
 			"one_color": true,
 			"strength": 1.0
 		},
+		"large_rocks_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"large_rocks_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"large_rocks_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"large_rocks_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"large_rocks_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"lead_anvil": {
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
@@ -495,6 +2165,201 @@
 			"seed": 7.0,
 			"strength": 1.0
 		},
+		"lily_pad_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"lily_pad_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"loom": {
 			"depth": 7.0,
 			"noise": "speckle",
@@ -511,6 +2376,309 @@
 			],
 			"bevel_size": 3.0,
 			"one_color": true
+		},
+		"mushroom_vines_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_23": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_24": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_25": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_26": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"mushroom_vines_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"oil_rag_sconse": {
+			"depth": 9.0
 		},
 		"palm_wood_bathtub": {
 			"bevel": "chamfer",
@@ -538,6 +2706,20 @@
 			"strength": 0.2
 		},
 		"pot": {
+			"bevel": "chamfer",
+			"bevel_size": 3.0,
+			"depth": 9.0,
+			"noise": "grain",
+			"one_color": false
+		},
+		"pot_2": {
+			"bevel": "chamfer",
+			"bevel_size": 3.0,
+			"depth": 9.0,
+			"noise": "grain",
+			"one_color": false
+		},
+		"pot_3": {
 			"bevel": "chamfer",
 			"bevel_size": 3.0,
 			"depth": 9.0,
@@ -623,6 +2805,67 @@
 			"one_color": true,
 			"strength": 1.0
 		},
+		"small_rocks_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"small_rocks_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"no_outline": false,
+			"one_color": true
+		},
+		"small_rocks_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"small_rocks_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"small_rocks_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
 		"snow_platform": {
 			"noise": "speckle",
 			"strength": 0.2
@@ -645,7 +2888,31 @@
 		},
 		"sunflower": {
 			"bevel": "chamfer",
-			"depth": 5
+			"depth": 5.0
+		},
+		"sunflower_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"sunflower_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
 		},
 		"sword_in_stone": {
 			"bevel": "chamfer",
@@ -663,7 +2930,482 @@
 			"bevel": "chamfer",
 			"depth": 5.0
 		},
+		"tall_flowers_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_23": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_24": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_25": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_26": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_27": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_28": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_29": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_30": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_31": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_32": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_33": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_34": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_35": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_36": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_37": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_38": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": false
+		},
+		"tall_flowers_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_flowers_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"tall_grass_2": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 1.0,
+			"one_color": true
+		},
 		"taller_grass": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 1.0
+		},
+		"taller_grass_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0
+		},
+		"taller_grass_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0
+		},
+		"taller_grass_4": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 1.0
+		},
+		"taller_grass_5": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 1.0
+		},
+		"taller_grass_6": {
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
 			"depth": 1.0
@@ -1286,6 +4028,30 @@
 			"one_color": true,
 			"strength": 0.6
 		},
+		"twigs_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"twigs_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
 		"vile_mushroom": {
 			"one_color": true
 		},
@@ -1294,10 +4060,610 @@
 			"bevel_size": 2.0,
 			"depth": 5.0
 		},
+		"vine_flowers_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_23": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_24": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_25": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_26": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vine_flowers_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
 		"vines": {
 			"bevel": "chamfer",
 			"bevel_size": 2.0,
 			"depth": 5.0
+		},
+		"vines_10": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_11": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_12": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_13": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_14": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_15": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_16": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_17": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_18": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_19": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_20": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_21": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_22": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_23": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_24": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_25": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_26": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_7": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_8": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
+		},
+		"vines_9": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"depth": 5.0,
+			"one_color": true
 		},
 		"wall_torch": {
 			"bevel": "chamfer",
@@ -1339,6 +4705,21 @@
 		},
 		"bone_platform": {
 			"noise": "speckle"
+		},
+		"book": {
+			"one_color": false
+		},
+		"book_2": {
+			"one_color": false
+		},
+		"book_3": {
+			"one_color": false
+		},
+		"book_4": {
+			"one_color": false
+		},
+		"book_5": {
+			"one_color": false
 		},
 		"bottle": {
 			"one_color": true
@@ -1393,6 +4774,18 @@
 		"glass_platform": {
 			"noise": "grain"
 		},
+		"glowing_mushroom_2": {
+			"one_color": true
+		},
+		"glowing_mushroom_3": {
+			"one_color": true
+		},
+		"glowing_mushroom_4": {
+			"one_color": true
+		},
+		"glowing_mushroom_5": {
+			"one_color": true
+		},
 		"gold_chest": {
 			"one_color": true
 		},
@@ -1408,14 +4801,35 @@
 		"icicle": {
 			"one_color": true
 		},
+		"icicle_2": {
+			"one_color": true
+		},
+		"icicle_3": {
+			"one_color": true
+		},
 		"jungle_vines": {
 			"one_color": true
 		},
 		"lamp_post": {
 			"one_color": true
 		},
+		"lesser_healing_potion_bottle": {
+			"one_color": true
+		},
+		"lesser_mana_potion_bottle": {
+			"one_color": true
+		},
 		"lily_pad": {
 			"one_color": true
+		},
+		"lily_pad_2": {
+			"one_color": true
+		},
+		"lily_pad_3": {
+			"one_color": true
+		},
+		"metal_shelf": {
+			"one_color": false
 		},
 		"mushroom": {
 			"one_color": true
@@ -1443,6 +4857,16 @@
 			"one_color": true,
 			"strength": 0.3
 		},
+		"pot_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.3
+		},
+		"pot_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.3
+		},
 		"purple_torch": {
 			"one_color": true
 		},
@@ -1455,6 +4879,12 @@
 		"sandstone_stalactite": {
 			"one_color": true
 		},
+		"sandstone_stalactite_2": {
+			"one_color": true
+		},
+		"sandstone_stalactite_3": {
+			"one_color": true
+		},
 		"shadewood_lamp": {
 			"one_color": true
 		},
@@ -1462,6 +4892,10 @@
 			"one_color": true
 		},
 		"small_rocks": {
+			"one_color": false
+		},
+		"small_rocks_3": {
+			"no_outline": false,
 			"one_color": false
 		},
 		"tiki_torch": {
@@ -1474,6 +4908,12 @@
 			"one_color": true
 		},
 		"vile_mushroom": {
+			"one_color": true
+		},
+		"water_bolt_book": {
+			"one_color": true
+		},
+		"water_candle": {
 			"one_color": true
 		},
 		"white_torch": {
@@ -1520,42 +4960,221 @@
 		"cactus": "extruded",
 		"cactus_lamp": "hull",
 		"cattail": "flat",
+		"cattail_2": "extruded",
+		"cattail_3": "extruded",
+		"cattail_4": "extruded",
+		"cattail_5": "extruded",
 		"chain_lantern": "hull",
 		"chest": "extruded",
 		"chimney": "hull",
 		"clay_pot": "hull",
 		"copper_chandelier": "billboard",
 		"corrupt_plants": "hull",
+		"corrupt_plants_10": "extruded",
+		"corrupt_plants_11": "extruded",
+		"corrupt_plants_12": "extruded",
+		"corrupt_plants_13": "extruded",
+		"corrupt_plants_14": "extruded",
+		"corrupt_plants_15": "extruded",
+		"corrupt_plants_16": "extruded",
+		"corrupt_plants_17": "extruded",
+		"corrupt_plants_18": "extruded",
+		"corrupt_plants_19": "extruded",
+		"corrupt_plants_2": "extruded",
+		"corrupt_plants_20": "extruded",
+		"corrupt_plants_21": "extruded",
+		"corrupt_plants_22": "extruded",
+		"corrupt_plants_3": "extruded",
+		"corrupt_plants_4": "extruded",
+		"corrupt_plants_5": "hull",
+		"corrupt_plants_6": "extruded",
+		"corrupt_plants_7": "extruded",
+		"corrupt_plants_8": "extruded",
+		"corrupt_plants_9": "extruded",
 		"crimson_altar": "extruded",
 		"crimson_heart": "extruded",
 		"crimson_plants": "extruded",
+		"crimson_plants_10": "extruded",
+		"crimson_plants_11": "extruded",
+		"crimson_plants_12": "extruded",
+		"crimson_plants_13": "extruded",
+		"crimson_plants_14": "extruded",
+		"crimson_plants_15": "extruded",
+		"crimson_plants_16": "extruded",
+		"crimson_plants_17": "extruded",
+		"crimson_plants_18": "extruded",
+		"crimson_plants_19": "extruded",
+		"crimson_plants_2": "extruded",
+		"crimson_plants_20": "extruded",
+		"crimson_plants_21": "extruded",
+		"crimson_plants_22": "extruded",
+		"crimson_plants_3": "extruded",
+		"crimson_plants_4": "extruded",
+		"crimson_plants_5": "extruded",
+		"crimson_plants_6": "extruded",
+		"crimson_plants_7": "extruded",
+		"crimson_plants_8": "extruded",
+		"crimson_plants_9": "extruded",
 		"daybloom": "extruded",
 		"demon_altar": "extruded",
 		"demon_torch": "hull",
 		"ebonwood_lamp": "hull",
 		"extractinator": "extruded",
 		"flowers": "extruded",
+		"flowers_10": "extruded",
+		"flowers_11": "extruded",
+		"flowers_12": "extruded",
+		"flowers_13": "extruded",
+		"flowers_14": "extruded",
+		"flowers_15": "extruded",
+		"flowers_16": "extruded",
+		"flowers_17": "extruded",
+		"flowers_18": "extruded",
+		"flowers_19": "extruded",
+		"flowers_2": "extruded",
+		"flowers_20": "extruded",
+		"flowers_21": "extruded",
+		"flowers_22": "extruded",
+		"flowers_23": "extruded",
+		"flowers_24": "extruded",
+		"flowers_25": "extruded",
+		"flowers_26": "extruded",
+		"flowers_27": "extruded",
+		"flowers_28": "extruded",
+		"flowers_29": "extruded",
+		"flowers_3": "extruded",
+		"flowers_30": "extruded",
+		"flowers_31": "extruded",
+		"flowers_32": "extruded",
+		"flowers_33": "extruded",
+		"flowers_34": "extruded",
+		"flowers_35": "extruded",
+		"flowers_36": "extruded",
+		"flowers_37": "extruded",
+		"flowers_38": "extruded",
+		"flowers_4": "extruded",
+		"flowers_5": "extruded",
+		"flowers_6": "extruded",
+		"flowers_7": "extruded",
+		"flowers_8": "extruded",
+		"flowers_9": "extruded",
 		"frozen_chest": "extruded",
 		"furnace": "extruded",
 		"glass_bowl": "hull",
+		"glowing_mushroom_3": "extruded",
 		"gold_chandelier": "billboard",
 		"gold_chest": "extruded",
 		"grandfather_clock": "hull",
 		"green_torch": "hull",
 		"ice_torch": "hull",
 		"icicle": "hull",
+		"icicle_2": "hull",
+		"icicle_3": "hull",
 		"iron_anvil": "extruded",
 		"ivy_chest": "rendered",
 		"jungle_plants": "hull",
+		"jungle_plants_10": "extruded",
+		"jungle_plants_11": "extruded",
+		"jungle_plants_12": "extruded",
+		"jungle_plants_13": "extruded",
+		"jungle_plants_14": "extruded",
+		"jungle_plants_15": "extruded",
+		"jungle_plants_16": "extruded",
+		"jungle_plants_17": "extruded",
+		"jungle_plants_18": "extruded",
+		"jungle_plants_19": "extruded",
+		"jungle_plants_2": "extruded",
+		"jungle_plants_20": "extruded",
+		"jungle_plants_21": "extruded",
+		"jungle_plants_3": "extruded",
+		"jungle_plants_4": "extruded",
+		"jungle_plants_5": "extruded",
+		"jungle_plants_6": "extruded",
+		"jungle_plants_7": "extruded",
+		"jungle_plants_8": "extruded",
+		"jungle_plants_9": "extruded",
 		"jungle_spores": "extruded",
 		"jungle_vines": "hull",
+		"jungle_vines_10": "extruded",
+		"jungle_vines_11": "extruded",
+		"jungle_vines_12": "extruded",
+		"jungle_vines_13": "extruded",
+		"jungle_vines_14": "extruded",
+		"jungle_vines_15": "extruded",
+		"jungle_vines_16": "extruded",
+		"jungle_vines_17": "extruded",
+		"jungle_vines_18": "extruded",
+		"jungle_vines_19": "extruded",
+		"jungle_vines_2": "extruded",
+		"jungle_vines_20": "extruded",
+		"jungle_vines_21": "extruded",
+		"jungle_vines_22": "extruded",
+		"jungle_vines_23": "extruded",
+		"jungle_vines_24": "extruded",
+		"jungle_vines_25": "extruded",
+		"jungle_vines_26": "extruded",
+		"jungle_vines_3": "extruded",
+		"jungle_vines_4": "extruded",
+		"jungle_vines_5": "extruded",
+		"jungle_vines_6": "extruded",
+		"jungle_vines_7": "extruded",
+		"jungle_vines_8": "extruded",
+		"jungle_vines_9": "extruded",
 		"keg": "extruded",
 		"lamp_post": "hull",
 		"large_rocks": "extruded",
+		"large_rocks_2": "extruded",
+		"large_rocks_3": "extruded",
+		"large_rocks_4": "extruded",
+		"large_rocks_5": "extruded",
+		"large_rocks_6": "extruded",
 		"lead_anvil": "extruded",
 		"life_crystal": "extruded",
 		"lily_pad": "extruded",
+		"lily_pad_10": "extruded",
+		"lily_pad_11": "extruded",
+		"lily_pad_12": "extruded",
+		"lily_pad_13": "extruded",
+		"lily_pad_14": "extruded",
+		"lily_pad_15": "extruded",
+		"lily_pad_16": "extruded",
+		"lily_pad_17": "extruded",
+		"lily_pad_18": "extruded",
+		"lily_pad_2": "extruded",
+		"lily_pad_3": "extruded",
+		"lily_pad_4": "extruded",
+		"lily_pad_5": "extruded",
+		"lily_pad_6": "extruded",
+		"lily_pad_7": "extruded",
+		"lily_pad_8": "extruded",
+		"lily_pad_9": "extruded",
 		"mug": "extruded",
+		"mushroom_vines_10": "extruded",
+		"mushroom_vines_11": "extruded",
+		"mushroom_vines_12": "extruded",
+		"mushroom_vines_13": "extruded",
+		"mushroom_vines_14": "extruded",
+		"mushroom_vines_15": "extruded",
+		"mushroom_vines_16": "extruded",
+		"mushroom_vines_17": "extruded",
+		"mushroom_vines_18": "extruded",
+		"mushroom_vines_19": "extruded",
+		"mushroom_vines_2": "extruded",
+		"mushroom_vines_20": "extruded",
+		"mushroom_vines_21": "extruded",
+		"mushroom_vines_22": "extruded",
+		"mushroom_vines_23": "extruded",
+		"mushroom_vines_24": "extruded",
+		"mushroom_vines_25": "extruded",
+		"mushroom_vines_26": "extruded",
+		"mushroom_vines_3": "extruded",
+		"mushroom_vines_4": "extruded",
+		"mushroom_vines_5": "extruded",
+		"mushroom_vines_6": "extruded",
+		"mushroom_vines_7": "extruded",
+		"mushroom_vines_8": "extruded",
+		"mushroom_vines_9": "extruded",
+		"oil_rag_sconse": "billboard",
 		"orange_torch": "hull",
 		"palm_wood_lamp": "hull",
 		"picnic_table": "hull",
@@ -1563,12 +5182,16 @@
 		"pink_vase": "hull",
 		"platinum_chandelier": "billboard",
 		"pot": "hull",
+		"pot_2": "hull",
+		"pot_3": "hull",
 		"purple_torch": "hull",
 		"red_torch": "hull",
 		"rich_mahogany_chest": "extruded",
 		"rich_mahogany_lamp": "hull",
 		"sandstone_chest": "extruded",
 		"sandstone_stalactite": "hull",
+		"sandstone_stalactite_2": "hull",
+		"sandstone_stalactite_3": "hull",
 		"shadewood_lamp": "hull",
 		"shadow_orb": "extruded",
 		"silver_chandelier": "billboard",
@@ -1576,12 +5199,67 @@
 		"skyware_chest": "rendered",
 		"skyware_lantern": "hull",
 		"small_rocks": "extruded",
+		"small_rocks_2": "extruded",
+		"small_rocks_3": "extruded",
+		"small_rocks_4": "extruded",
+		"small_rocks_5": "extruded",
+		"small_rocks_6": "extruded",
 		"solidifier": "extruded",
 		"sunflower": "extruded",
+		"sunflower_2": "extruded",
+		"sunflower_3": "extruded",
+		"switch": "hull",
 		"sword_in_stone": "extruded",
 		"tall_flowers": "extruded",
+		"tall_flowers_10": "extruded",
+		"tall_flowers_11": "extruded",
+		"tall_flowers_12": "extruded",
+		"tall_flowers_13": "extruded",
+		"tall_flowers_14": "extruded",
+		"tall_flowers_15": "extruded",
+		"tall_flowers_16": "extruded",
+		"tall_flowers_17": "extruded",
+		"tall_flowers_18": "extruded",
+		"tall_flowers_19": "extruded",
+		"tall_flowers_2": "extruded",
+		"tall_flowers_20": "extruded",
+		"tall_flowers_21": "extruded",
+		"tall_flowers_22": "extruded",
+		"tall_flowers_23": "extruded",
+		"tall_flowers_24": "extruded",
+		"tall_flowers_25": "extruded",
+		"tall_flowers_26": "extruded",
+		"tall_flowers_27": "extruded",
+		"tall_flowers_28": "extruded",
+		"tall_flowers_29": "extruded",
+		"tall_flowers_3": "extruded",
+		"tall_flowers_30": "extruded",
+		"tall_flowers_31": "extruded",
+		"tall_flowers_32": "extruded",
+		"tall_flowers_33": "extruded",
+		"tall_flowers_34": "extruded",
+		"tall_flowers_35": "extruded",
+		"tall_flowers_36": "extruded",
+		"tall_flowers_37": "extruded",
+		"tall_flowers_38": "extruded",
+		"tall_flowers_4": "extruded",
+		"tall_flowers_5": "extruded",
+		"tall_flowers_6": "extruded",
+		"tall_flowers_7": "extruded",
+		"tall_flowers_8": "extruded",
+		"tall_flowers_9": "extruded",
 		"tall_grass": "hull",
+		"tall_grass_2": "extruded",
+		"tall_grass_3": "flat",
+		"tall_grass_4": "flat",
+		"tall_grass_5": "hull",
+		"tall_grass_6": "flat",
 		"taller_grass": "extruded",
+		"taller_grass_2": "extruded",
+		"taller_grass_3": "extruded",
+		"taller_grass_4": "extruded",
+		"taller_grass_5": "extruded",
+		"taller_grass_6": "extruded",
 		"tiki_torch": "hull",
 		"tin_chandelier": "billboard",
 		"torch": "hull",
@@ -1646,6 +5324,9 @@
 		"tree_canopy@260": "billboard",
 		"tree_canopy@261": "billboard",
 		"tree_canopy@262": "billboard",
+		"tree_canopy@270": "billboard",
+		"tree_canopy@271": "billboard",
+		"tree_canopy@272": "billboard",
 		"tree_canopy@30": "billboard",
 		"tree_canopy@31": "billboard",
 		"tree_canopy@32": "billboard",
@@ -1672,8 +5353,59 @@
 		"vicious_mushroom": "hull",
 		"vile_mushroom": "hull",
 		"vine_flowers": "extruded",
+		"vine_flowers_10": "extruded",
+		"vine_flowers_11": "extruded",
+		"vine_flowers_12": "extruded",
+		"vine_flowers_13": "extruded",
+		"vine_flowers_14": "extruded",
+		"vine_flowers_15": "extruded",
+		"vine_flowers_16": "extruded",
+		"vine_flowers_17": "extruded",
+		"vine_flowers_18": "extruded",
+		"vine_flowers_19": "extruded",
+		"vine_flowers_2": "extruded",
+		"vine_flowers_20": "extruded",
+		"vine_flowers_21": "extruded",
+		"vine_flowers_22": "extruded",
+		"vine_flowers_23": "extruded",
+		"vine_flowers_24": "extruded",
+		"vine_flowers_25": "extruded",
+		"vine_flowers_26": "extruded",
+		"vine_flowers_3": "extruded",
+		"vine_flowers_4": "extruded",
+		"vine_flowers_5": "extruded",
+		"vine_flowers_6": "extruded",
+		"vine_flowers_7": "extruded",
+		"vine_flowers_8": "extruded",
+		"vine_flowers_9": "extruded",
 		"vines": "extruded",
+		"vines_10": "extruded",
+		"vines_11": "extruded",
+		"vines_12": "extruded",
+		"vines_13": "extruded",
+		"vines_14": "extruded",
+		"vines_15": "extruded",
+		"vines_16": "extruded",
+		"vines_17": "extruded",
+		"vines_18": "extruded",
+		"vines_19": "extruded",
+		"vines_2": "extruded",
+		"vines_20": "extruded",
+		"vines_21": "extruded",
+		"vines_22": "extruded",
+		"vines_23": "extruded",
+		"vines_24": "extruded",
+		"vines_25": "extruded",
+		"vines_26": "extruded",
+		"vines_3": "extruded",
+		"vines_4": "extruded",
+		"vines_5": "extruded",
+		"vines_6": "extruded",
+		"vines_7": "extruded",
+		"vines_8": "extruded",
+		"vines_9": "extruded",
 		"wall_torch": "extruded",
+		"water_candle": "hull",
 		"white_torch": "hull",
 		"wine_glass": "hull",
 		"work_bench": "hull",
@@ -1698,10 +5430,85 @@
 		"candle": {
 			"model": "extruded"
 		},
+		"cattail_2": {
+			"model": "extruded"
+		},
+		"cattail_3": {
+			"model": "extruded"
+		},
+		"cattail_4": {
+			"model": "extruded"
+		},
+		"cattail_5": {
+			"model": "extruded"
+		},
 		"chest": {
 			"model": "extruded"
 		},
 		"copper_chandelier": {
+			"model": "extruded"
+		},
+		"corrupt_plants_10": {
+			"model": "extruded"
+		},
+		"corrupt_plants_11": {
+			"model": "extruded"
+		},
+		"corrupt_plants_12": {
+			"model": "extruded"
+		},
+		"corrupt_plants_13": {
+			"model": "extruded"
+		},
+		"corrupt_plants_14": {
+			"model": "extruded"
+		},
+		"corrupt_plants_15": {
+			"model": "extruded"
+		},
+		"corrupt_plants_16": {
+			"model": "extruded"
+		},
+		"corrupt_plants_17": {
+			"model": "extruded"
+		},
+		"corrupt_plants_18": {
+			"model": "extruded"
+		},
+		"corrupt_plants_19": {
+			"model": "extruded"
+		},
+		"corrupt_plants_2": {
+			"model": "extruded"
+		},
+		"corrupt_plants_20": {
+			"model": "extruded"
+		},
+		"corrupt_plants_21": {
+			"model": "extruded"
+		},
+		"corrupt_plants_22": {
+			"model": "extruded"
+		},
+		"corrupt_plants_3": {
+			"model": "extruded"
+		},
+		"corrupt_plants_4": {
+			"model": "extruded"
+		},
+		"corrupt_plants_5": {
+			"model": "extruded"
+		},
+		"corrupt_plants_6": {
+			"model": "extruded"
+		},
+		"corrupt_plants_7": {
+			"model": "extruded"
+		},
+		"corrupt_plants_8": {
+			"model": "extruded"
+		},
+		"corrupt_plants_9": {
 			"model": "extruded"
 		},
 		"crimson_altar": {
@@ -1711,6 +5518,69 @@
 			"model": "extruded"
 		},
 		"crimson_plants": {
+			"model": "extruded"
+		},
+		"crimson_plants_10": {
+			"model": "extruded"
+		},
+		"crimson_plants_11": {
+			"model": "extruded"
+		},
+		"crimson_plants_12": {
+			"model": "extruded"
+		},
+		"crimson_plants_13": {
+			"model": "extruded"
+		},
+		"crimson_plants_14": {
+			"model": "extruded"
+		},
+		"crimson_plants_15": {
+			"model": "extruded"
+		},
+		"crimson_plants_16": {
+			"model": "extruded"
+		},
+		"crimson_plants_17": {
+			"model": "extruded"
+		},
+		"crimson_plants_18": {
+			"model": "extruded"
+		},
+		"crimson_plants_19": {
+			"model": "extruded"
+		},
+		"crimson_plants_2": {
+			"model": "extruded"
+		},
+		"crimson_plants_20": {
+			"model": "extruded"
+		},
+		"crimson_plants_21": {
+			"model": "extruded"
+		},
+		"crimson_plants_22": {
+			"model": "extruded"
+		},
+		"crimson_plants_3": {
+			"model": "extruded"
+		},
+		"crimson_plants_4": {
+			"model": "extruded"
+		},
+		"crimson_plants_5": {
+			"model": "extruded"
+		},
+		"crimson_plants_6": {
+			"model": "extruded"
+		},
+		"crimson_plants_7": {
+			"model": "extruded"
+		},
+		"crimson_plants_8": {
+			"model": "extruded"
+		},
+		"crimson_plants_9": {
 			"model": "extruded"
 		},
 		"demon_altar": {
@@ -1731,6 +5601,117 @@
 		"flowers": {
 			"model": "extruded"
 		},
+		"flowers_10": {
+			"model": "extruded"
+		},
+		"flowers_11": {
+			"model": "extruded"
+		},
+		"flowers_12": {
+			"model": "extruded"
+		},
+		"flowers_13": {
+			"model": "extruded"
+		},
+		"flowers_14": {
+			"model": "extruded"
+		},
+		"flowers_15": {
+			"model": "extruded"
+		},
+		"flowers_16": {
+			"model": "extruded"
+		},
+		"flowers_17": {
+			"model": "extruded"
+		},
+		"flowers_18": {
+			"model": "extruded"
+		},
+		"flowers_19": {
+			"model": "extruded"
+		},
+		"flowers_2": {
+			"model": "extruded"
+		},
+		"flowers_20": {
+			"model": "extruded"
+		},
+		"flowers_21": {
+			"model": "extruded"
+		},
+		"flowers_22": {
+			"model": "extruded"
+		},
+		"flowers_23": {
+			"model": "extruded"
+		},
+		"flowers_24": {
+			"model": "extruded"
+		},
+		"flowers_25": {
+			"model": "extruded"
+		},
+		"flowers_26": {
+			"model": "extruded"
+		},
+		"flowers_27": {
+			"model": "extruded"
+		},
+		"flowers_28": {
+			"model": "extruded"
+		},
+		"flowers_29": {
+			"model": "extruded"
+		},
+		"flowers_3": {
+			"model": "extruded"
+		},
+		"flowers_30": {
+			"model": "extruded"
+		},
+		"flowers_31": {
+			"model": "extruded"
+		},
+		"flowers_32": {
+			"model": "extruded"
+		},
+		"flowers_33": {
+			"model": "extruded"
+		},
+		"flowers_34": {
+			"model": "extruded"
+		},
+		"flowers_35": {
+			"model": "extruded"
+		},
+		"flowers_36": {
+			"model": "extruded"
+		},
+		"flowers_37": {
+			"model": "extruded"
+		},
+		"flowers_38": {
+			"model": "extruded"
+		},
+		"flowers_4": {
+			"model": "extruded"
+		},
+		"flowers_5": {
+			"model": "extruded"
+		},
+		"flowers_6": {
+			"model": "extruded"
+		},
+		"flowers_7": {
+			"model": "extruded"
+		},
+		"flowers_8": {
+			"model": "extruded"
+		},
+		"flowers_9": {
+			"model": "extruded"
+		},
 		"furnace": {
 			"model": "extruded"
 		},
@@ -1746,7 +5727,142 @@
 		"ivy_chest": {
 			"model": "extruded"
 		},
+		"jungle_plants_10": {
+			"model": "extruded"
+		},
+		"jungle_plants_11": {
+			"model": "extruded"
+		},
+		"jungle_plants_12": {
+			"model": "extruded"
+		},
+		"jungle_plants_13": {
+			"model": "extruded"
+		},
+		"jungle_plants_14": {
+			"model": "extruded"
+		},
+		"jungle_plants_15": {
+			"model": "extruded"
+		},
+		"jungle_plants_16": {
+			"model": "extruded"
+		},
+		"jungle_plants_17": {
+			"model": "extruded"
+		},
+		"jungle_plants_18": {
+			"model": "extruded"
+		},
+		"jungle_plants_19": {
+			"model": "extruded"
+		},
+		"jungle_plants_2": {
+			"model": "extruded"
+		},
+		"jungle_plants_20": {
+			"model": "extruded"
+		},
+		"jungle_plants_21": {
+			"model": "extruded"
+		},
+		"jungle_plants_3": {
+			"model": "extruded"
+		},
+		"jungle_plants_4": {
+			"model": "extruded"
+		},
+		"jungle_plants_5": {
+			"model": "extruded"
+		},
+		"jungle_plants_6": {
+			"model": "extruded"
+		},
+		"jungle_plants_7": {
+			"model": "extruded"
+		},
+		"jungle_plants_8": {
+			"model": "extruded"
+		},
+		"jungle_plants_9": {
+			"model": "extruded"
+		},
 		"jungle_spores": {
+			"model": "extruded"
+		},
+		"jungle_vines_10": {
+			"model": "extruded"
+		},
+		"jungle_vines_11": {
+			"model": "extruded"
+		},
+		"jungle_vines_12": {
+			"model": "extruded"
+		},
+		"jungle_vines_13": {
+			"model": "extruded"
+		},
+		"jungle_vines_14": {
+			"model": "extruded"
+		},
+		"jungle_vines_15": {
+			"model": "extruded"
+		},
+		"jungle_vines_16": {
+			"model": "extruded"
+		},
+		"jungle_vines_17": {
+			"model": "extruded"
+		},
+		"jungle_vines_18": {
+			"model": "extruded"
+		},
+		"jungle_vines_19": {
+			"model": "extruded"
+		},
+		"jungle_vines_2": {
+			"model": "extruded"
+		},
+		"jungle_vines_20": {
+			"model": "extruded"
+		},
+		"jungle_vines_21": {
+			"model": "extruded"
+		},
+		"jungle_vines_22": {
+			"model": "extruded"
+		},
+		"jungle_vines_23": {
+			"model": "extruded"
+		},
+		"jungle_vines_24": {
+			"model": "extruded"
+		},
+		"jungle_vines_25": {
+			"model": "extruded"
+		},
+		"jungle_vines_26": {
+			"model": "extruded"
+		},
+		"jungle_vines_3": {
+			"model": "extruded"
+		},
+		"jungle_vines_4": {
+			"model": "extruded"
+		},
+		"jungle_vines_5": {
+			"model": "extruded"
+		},
+		"jungle_vines_6": {
+			"model": "extruded"
+		},
+		"jungle_vines_7": {
+			"model": "extruded"
+		},
+		"jungle_vines_8": {
+			"model": "extruded"
+		},
+		"jungle_vines_9": {
 			"model": "extruded"
 		},
 		"keg": {
@@ -1755,10 +5871,70 @@
 		"large_rocks": {
 			"model": "extruded"
 		},
+		"large_rocks_2": {
+			"model": "extruded"
+		},
+		"large_rocks_3": {
+			"model": "extruded"
+		},
+		"large_rocks_4": {
+			"model": "extruded"
+		},
+		"large_rocks_5": {
+			"model": "extruded"
+		},
+		"large_rocks_6": {
+			"model": "extruded"
+		},
 		"lead_anvil": {
 			"model": "extruded"
 		},
 		"life_crystal": {
+			"model": "extruded"
+		},
+		"lily_pad_10": {
+			"model": "extruded"
+		},
+		"lily_pad_11": {
+			"model": "extruded"
+		},
+		"lily_pad_12": {
+			"model": "extruded"
+		},
+		"lily_pad_13": {
+			"model": "extruded"
+		},
+		"lily_pad_14": {
+			"model": "extruded"
+		},
+		"lily_pad_15": {
+			"model": "extruded"
+		},
+		"lily_pad_16": {
+			"model": "extruded"
+		},
+		"lily_pad_17": {
+			"model": "extruded"
+		},
+		"lily_pad_18": {
+			"model": "extruded"
+		},
+		"lily_pad_4": {
+			"model": "extruded"
+		},
+		"lily_pad_5": {
+			"model": "extruded"
+		},
+		"lily_pad_6": {
+			"model": "extruded"
+		},
+		"lily_pad_7": {
+			"model": "extruded"
+		},
+		"lily_pad_8": {
+			"model": "extruded"
+		},
+		"lily_pad_9": {
 			"model": "extruded"
 		},
 		"loom": {
@@ -1769,6 +5945,81 @@
 		},
 		"mushroom": {
 			"model": "auto"
+		},
+		"mushroom_vines_10": {
+			"model": "extruded"
+		},
+		"mushroom_vines_11": {
+			"model": "extruded"
+		},
+		"mushroom_vines_12": {
+			"model": "extruded"
+		},
+		"mushroom_vines_13": {
+			"model": "extruded"
+		},
+		"mushroom_vines_14": {
+			"model": "extruded"
+		},
+		"mushroom_vines_15": {
+			"model": "extruded"
+		},
+		"mushroom_vines_16": {
+			"model": "extruded"
+		},
+		"mushroom_vines_17": {
+			"model": "extruded"
+		},
+		"mushroom_vines_18": {
+			"model": "extruded"
+		},
+		"mushroom_vines_19": {
+			"model": "extruded"
+		},
+		"mushroom_vines_2": {
+			"model": "extruded"
+		},
+		"mushroom_vines_20": {
+			"model": "extruded"
+		},
+		"mushroom_vines_21": {
+			"model": "extruded"
+		},
+		"mushroom_vines_22": {
+			"model": "extruded"
+		},
+		"mushroom_vines_23": {
+			"model": "extruded"
+		},
+		"mushroom_vines_24": {
+			"model": "extruded"
+		},
+		"mushroom_vines_25": {
+			"model": "extruded"
+		},
+		"mushroom_vines_26": {
+			"model": "extruded"
+		},
+		"mushroom_vines_3": {
+			"model": "extruded"
+		},
+		"mushroom_vines_4": {
+			"model": "extruded"
+		},
+		"mushroom_vines_5": {
+			"model": "extruded"
+		},
+		"mushroom_vines_6": {
+			"model": "extruded"
+		},
+		"mushroom_vines_7": {
+			"model": "extruded"
+		},
+		"mushroom_vines_8": {
+			"model": "extruded"
+		},
+		"mushroom_vines_9": {
+			"model": "extruded"
 		},
 		"platinum_chandelier": {
 			"model": "auto"
@@ -1788,7 +6039,28 @@
 		"small_rocks": {
 			"model": "extruded"
 		},
+		"small_rocks_2": {
+			"model": "extruded"
+		},
+		"small_rocks_3": {
+			"model": "extruded"
+		},
+		"small_rocks_4": {
+			"model": "extruded"
+		},
+		"small_rocks_5": {
+			"model": "extruded"
+		},
+		"small_rocks_6": {
+			"model": "extruded"
+		},
 		"solidifier": {
+			"model": "extruded"
+		},
+		"sunflower_2": {
+			"model": "extruded"
+		},
+		"sunflower_3": {
 			"model": "extruded"
 		},
 		"sword_in_stone": {
@@ -1797,7 +6069,133 @@
 		"tall_flowers": {
 			"model": "extruded"
 		},
+		"tall_flowers_10": {
+			"model": "extruded"
+		},
+		"tall_flowers_11": {
+			"model": "extruded"
+		},
+		"tall_flowers_12": {
+			"model": "extruded"
+		},
+		"tall_flowers_13": {
+			"model": "extruded"
+		},
+		"tall_flowers_14": {
+			"model": "extruded"
+		},
+		"tall_flowers_15": {
+			"model": "extruded"
+		},
+		"tall_flowers_16": {
+			"model": "extruded"
+		},
+		"tall_flowers_17": {
+			"model": "extruded"
+		},
+		"tall_flowers_18": {
+			"model": "extruded"
+		},
+		"tall_flowers_19": {
+			"model": "extruded"
+		},
+		"tall_flowers_2": {
+			"model": "extruded"
+		},
+		"tall_flowers_20": {
+			"model": "extruded"
+		},
+		"tall_flowers_21": {
+			"model": "extruded"
+		},
+		"tall_flowers_22": {
+			"model": "extruded"
+		},
+		"tall_flowers_23": {
+			"model": "extruded"
+		},
+		"tall_flowers_24": {
+			"model": "extruded"
+		},
+		"tall_flowers_25": {
+			"model": "extruded"
+		},
+		"tall_flowers_26": {
+			"model": "extruded"
+		},
+		"tall_flowers_27": {
+			"model": "extruded"
+		},
+		"tall_flowers_28": {
+			"model": "extruded"
+		},
+		"tall_flowers_29": {
+			"model": "extruded"
+		},
+		"tall_flowers_3": {
+			"model": "extruded"
+		},
+		"tall_flowers_30": {
+			"model": "extruded"
+		},
+		"tall_flowers_31": {
+			"model": "extruded"
+		},
+		"tall_flowers_32": {
+			"model": "extruded"
+		},
+		"tall_flowers_33": {
+			"model": "extruded"
+		},
+		"tall_flowers_34": {
+			"model": "extruded"
+		},
+		"tall_flowers_35": {
+			"model": "extruded"
+		},
+		"tall_flowers_36": {
+			"model": "extruded"
+		},
+		"tall_flowers_37": {
+			"model": "extruded"
+		},
+		"tall_flowers_38": {
+			"model": "extruded"
+		},
+		"tall_flowers_4": {
+			"model": "extruded"
+		},
+		"tall_flowers_5": {
+			"model": "extruded"
+		},
+		"tall_flowers_6": {
+			"model": "extruded"
+		},
+		"tall_flowers_7": {
+			"model": "extruded"
+		},
+		"tall_flowers_8": {
+			"model": "extruded"
+		},
+		"tall_flowers_9": {
+			"model": "extruded"
+		},
 		"taller_grass": {
+			"model": "extruded"
+		},
+		"taller_grass_2": {
+			"model": "extruded"
+		},
+		"taller_grass_3": {
+			"model": "extruded"
+		},
+		"taller_grass_4": {
+			"model": "extruded"
+		},
+		"taller_grass_5": {
+			"model": "extruded"
+		},
+		"taller_grass_6": {
 			"model": "extruded"
 		},
 		"trash_can": {
@@ -1830,11 +6228,167 @@
 		"twigs": {
 			"model": "extruded"
 		},
+		"twigs_2": {
+			"model": "extruded"
+		},
+		"twigs_3": {
+			"model": "extruded"
+		},
 		"vine_flowers": {
 			"model": "auto"
 		},
+		"vine_flowers_10": {
+			"model": "extruded"
+		},
+		"vine_flowers_11": {
+			"model": "extruded"
+		},
+		"vine_flowers_12": {
+			"model": "extruded"
+		},
+		"vine_flowers_13": {
+			"model": "extruded"
+		},
+		"vine_flowers_14": {
+			"model": "extruded"
+		},
+		"vine_flowers_15": {
+			"model": "extruded"
+		},
+		"vine_flowers_16": {
+			"model": "extruded"
+		},
+		"vine_flowers_17": {
+			"model": "extruded"
+		},
+		"vine_flowers_18": {
+			"model": "extruded"
+		},
+		"vine_flowers_19": {
+			"model": "extruded"
+		},
+		"vine_flowers_2": {
+			"model": "extruded"
+		},
+		"vine_flowers_20": {
+			"model": "extruded"
+		},
+		"vine_flowers_21": {
+			"model": "extruded"
+		},
+		"vine_flowers_22": {
+			"model": "extruded"
+		},
+		"vine_flowers_23": {
+			"model": "extruded"
+		},
+		"vine_flowers_24": {
+			"model": "extruded"
+		},
+		"vine_flowers_25": {
+			"model": "extruded"
+		},
+		"vine_flowers_26": {
+			"model": "extruded"
+		},
+		"vine_flowers_3": {
+			"model": "extruded"
+		},
+		"vine_flowers_4": {
+			"model": "extruded"
+		},
+		"vine_flowers_5": {
+			"model": "extruded"
+		},
+		"vine_flowers_6": {
+			"model": "extruded"
+		},
+		"vine_flowers_7": {
+			"model": "extruded"
+		},
+		"vine_flowers_8": {
+			"model": "extruded"
+		},
+		"vine_flowers_9": {
+			"model": "extruded"
+		},
 		"vines": {
 			"model": "auto"
+		},
+		"vines_10": {
+			"model": "extruded"
+		},
+		"vines_11": {
+			"model": "extruded"
+		},
+		"vines_12": {
+			"model": "extruded"
+		},
+		"vines_13": {
+			"model": "extruded"
+		},
+		"vines_14": {
+			"model": "extruded"
+		},
+		"vines_15": {
+			"model": "extruded"
+		},
+		"vines_16": {
+			"model": "extruded"
+		},
+		"vines_17": {
+			"model": "extruded"
+		},
+		"vines_18": {
+			"model": "extruded"
+		},
+		"vines_19": {
+			"model": "extruded"
+		},
+		"vines_2": {
+			"model": "extruded"
+		},
+		"vines_20": {
+			"model": "extruded"
+		},
+		"vines_21": {
+			"model": "extruded"
+		},
+		"vines_22": {
+			"model": "extruded"
+		},
+		"vines_23": {
+			"model": "extruded"
+		},
+		"vines_24": {
+			"model": "extruded"
+		},
+		"vines_25": {
+			"model": "extruded"
+		},
+		"vines_26": {
+			"model": "extruded"
+		},
+		"vines_3": {
+			"model": "extruded"
+		},
+		"vines_4": {
+			"model": "extruded"
+		},
+		"vines_5": {
+			"model": "extruded"
+		},
+		"vines_6": {
+			"model": "extruded"
+		},
+		"vines_7": {
+			"model": "extruded"
+		},
+		"vines_8": {
+			"model": "extruded"
+		},
+		"vines_9": {
+			"model": "extruded"
 		},
 		"wooden_chair": {
 			"model": "extruded"

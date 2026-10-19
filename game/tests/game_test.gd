@@ -65,6 +65,18 @@ func _run() -> void:
 	await frames(30)
 	check(p.on_floor or p.velocity.y <= 0.0, "player spawned on the ground")
 	check(p.inventory.count_of("CopperPickaxe") == 1, "starting items given")
+	# Plants take their styles (blocks.json variant_of): the grass round spawn
+	# is many of tall grass's, all tall grass to everything else.
+	var grass_styles := {}
+	var sp := Vector3i(p.global_position.floor())
+	for dx in range(-40, 41):
+		for dz in range(-40, 41):
+			for dy in range(-12, 13):
+				var b := game.world.get_block(sp + Vector3i(dx, dy, dz))
+				if b != 0 and Data.kind_of(b) == "tall_grass":
+					grass_styles[b] = true
+	check(grass_styles.size() >= 4 and Data.kind_of(Data.block_id("tall_grass_3")) == "tall_grass" and Data.block(Data.block_id("tall_grass_3")).get("sound") == Data.block(Data.block_id("tall_grass")).get("sound"),
+			"the grass round spawn in its different styles, each still tall grass (%d)" % grass_styles.size())
 	# At the beach the horizon's mountains and trees aren't drawn over the sea,
 	# only over the land.
 	var home := p.global_position
@@ -106,7 +118,7 @@ func _run() -> void:
 		var def: Dictionary = Data.npcs[kind]
 		if def.has("trim_bottom"):
 			continue
-		var img := Assets.image("Images/NPC_%d" % int(def.sprite))
+		var img := Assets.image(NPC.image_path(kind))
 		var row_used := func(y: int) -> bool:
 			for x in img.get_width():
 				if img.get_pixel(x, y).a > 0.0:

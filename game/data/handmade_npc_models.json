@@ -8,7 +8,8 @@
 		"ops, in order:",
 		"  ball {color, inner}: a shell two voxels thick; 'inner' is its inside, seen only through gaps.",
 		"  revolve {depth, color}: instead of a ball, a solid body spun from the sprite's silhouette (a slime): each row's span an ellipse depth times as deep as wide; project then colours its surface.",
-		"  project {side_band}: the sprite projected through the ball along z, so the front view is the sprite and the back its mirror; see-through pixels cut gaps right through. A band side_band degrees wide round each side takes the sprite's columns folded (seamless) instead of its thin edge; in caps bottom_cap and top_cap degrees round the bottom and top, the faces looking down or up take its middle column row by row (round from below or above, the front unchanged).",
+		"  carve {depth, light, dark, max_sat}: after revolve, sinks the body's front where the sprite is darker than light (luminance) and duller than max_sat (HSV saturation): depth voxels where it's as dark as dark, less as it lightens (a skull's eye sockets, nose and the gaps between its teeth).",
+		"  project {side_band}: the sprite projected through the ball along z, so the front view is the sprite and the back its mirror; see-through pixels cut gaps right through. A band side_band degrees wide round each side takes the sprite's columns folded (seamless) instead of its thin edge; in caps bottom_cap and top_cap degrees round the bottom and top, the faces looking down or up take its middle column row by row (round from below or above, the front unchanged). With back_inset (pixels), the back half isn't the mirror: each voxel takes a pixel of its row's flank, that far in from the silhouette's edge on its side (a skull's back is bone, not its face again).",
 		"  mouth {aspect, count, ring, lip, color, teeth, lip_color, skin}: fills the inside of the ball on rows where the sprite has gaps in it, behind its opaque pixels (front and back unchanged), leaving an oval cavity as wide as the gap and aspect times as long front to back: seen from below, the mouth is that oval, ringed by count teeth ring voxels deep (flesh 'color' between), a lip, then skin.",
 		"  outside {drift, rise, wave}: the sprite's pixels outside the ball (tendrils), where they are seen from the front, drifting up to drift voxels in depth by rise pixels above the ball, along a wave across the sprite."
 	],
@@ -86,6 +87,26 @@
 				"op": "project",
 				"side_band": 35,
 				"top_cap": 40
+			}
+		]
+	},
+	"SkeletronHead": {
+		"ops": [
+			{
+				"op": "revolve",
+				"depth": 1.1,
+				"color": [
+					"#b2b28a"
+				]
+			},
+			{
+				"op": "carve",
+				"depth": 4
+			},
+			{
+				"op": "project",
+				"side_band": 40,
+				"back_inset": 2
 			}
 		]
 	}

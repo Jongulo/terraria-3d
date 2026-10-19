@@ -373,6 +373,7 @@ pub fn dungeon(w: &mut World, seed: u64, l: &Layers, keep: P, door: i32, brick: 
     g.place_platforms();
     g.shelves();
     g.chests();
+    g.tidy_cut_flora();
     // DungeonBounds.Inflate(25) before the lights.
     g.lo = (g.lo.0 - 25, g.lo.1 - 25, g.lo.2 - 25);
     g.hi = (g.hi.0 + 25, g.hi.1 + 25, g.hi.2 + 25);
@@ -825,6 +826,48 @@ impl<'a> Gen<'a> {
             i += 1;
             !stale[i - 1]
         });
+    }
+
+    /// The trees and plants the Dungeon cut into (Terraria digs its Dungeon
+    /// before they grow; here they're older): a canopy whose trunk no longer
+    /// stands on the ground goes, with what's left of its trunk, and a plant
+    /// left standing on brick or over a gap goes (worldgen::tidy_plants).
+    fn tidy_cut_flora(&mut self) {
+        let (lo, hi) = (self.lo, self.hi);
+        let bricks = self.ids.bricks.clone();
+        let w = &mut *self.w;
+        let mut cut: Vec<(usize, i32, i32, Vec<i32>)> = Vec::new();
+        for (k, d) in w.decorations.iter().enumerate() {
+            let (x, y, z) = d.pos;
+            if d.kind != "tree_top" || x < lo.0 || x > hi.0 || z < lo.2 || z > hi.2 || y < lo.1 || y > hi.1 + 30 {
+                continue;
+            }
+            let trunk = w.get(x, y - 1, z);
+            let mut cells = Vec::new();
+            let mut yy = y - 1;
+            if trunk != 0 && w.def(trunk).name.contains("trunk") {
+                while yy > 0 && w.get(x, yy, z) == trunk {
+                    cells.push(yy);
+                    yy -= 1;
+                }
+            }
+            if cells.is_empty() || !w.is_solid(x, yy, z) || bricks.contains(&w.get(x, yy, z)) {
+                cut.push((k, x, z, cells));
+            }
+        }
+        for (_, x, z, cells) in &cut {
+            for &y in cells {
+                let i = w.idx(*x, y, *z);
+                w.blocks[i] = 0;
+            }
+        }
+        let gone: std::collections::HashSet<usize> = cut.iter().map(|c| c.0).collect();
+        let mut k = 0;
+        w.decorations.retain(|_| {
+            k += 1;
+            !gone.contains(&(k - 1))
+        });
+        crate::worldgen::tidy_plants(w, lo, (hi.0, hi.1 + 30, hi.2), &bricks);
     }
 
     // ---------------------------------------------- doors and platforms

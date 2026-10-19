@@ -3,6 +3,9 @@
 		"EyeofCthulhu": {
 			"noise": "none",
 			"one_color": true
+		},
+		"SkeletronHead": {
+			"one_color": true
 		}
 	},
 	"extruded": {
@@ -15,7 +18,9 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 4.0
+			"bevel_size": 4.0,
+			"no_outline": true,
+			"one_color": true
 		},
 		"ArmsDealer": {
 			"bevel": "round",
@@ -28,16 +33,19 @@
 			],
 			"bevel_size": 4.0,
 			"depth": 7.0,
+			"no_outline": true,
 			"strength": 0.55
 		},
 		"BlueSlime": {
 			"bevel": "round",
 			"bevel_size": 6.0,
-			"depth": 16.0
+			"depth": 16.0,
+			"no_outline": true
 		},
 		"CaveBat": {
 			"bevel": "chamfer",
-			"depth": 5.0
+			"depth": 5.0,
+			"one_color": true
 		},
 		"Crab": {
 			"bevel": "chamfer",
@@ -45,18 +53,33 @@
 			"depth": 5.0
 		},
 		"Crimera": {
-			"depth": 5.0
+			"bevel": "chamfer",
+			"bevel_size": 2.0,
+			"depth": 6.0,
+			"no_outline": true,
+			"one_color": true
 		},
 		"DemonEye": {
-			"bevel": "chamfer",
+			"bevel": "round",
 			"bevel_size": 6.0,
-			"depth": 19.0
+			"depth": 10.0,
+			"no_outline": true,
+			"one_color": true
 		},
 		"Dryad": {
 			"depth": 20.0
 		},
+		"DungeonGuardian": {
+			"bevel": "chamfer",
+			"bevel_size": 6.0,
+			"depth": 40.0,
+			"one_color": true
+		},
 		"EaterofSouls": {
-			"depth": 21.0
+			"bevel": "chamfer",
+			"bevel_size": 4.0,
+			"depth": 21,
+			"one_color": true
 		},
 		"EaterofWorldsBody": {
 			"bevel": "round",
@@ -85,21 +108,80 @@
 			"depth": 55.0,
 			"one_color": true
 		},
+		"FaceMonster": {
+			"depth": 17.0
+		},
+		"Hornet": {
+			"bevel": "chamfer",
+			"bevel_size": 2.0,
+			"depth": 5.0,
+			"no_outline": true,
+			"one_color": true
+		},
 		"KingSlime": {
 			"depth": 87.0
 		},
+		"ManEater": {
+			"bevel": "chamfer",
+			"bevel_size": 2.0,
+			"depth": 26,
+			"no_outline": true,
+			"one_color": true
+		},
+		"PinkJellyfish": {
+			"bevel": "chamfer",
+			"bevel_size": 4.0,
+			"depth": 9.0,
+			"no_outline": true,
+			"one_color": true,
+			"strength": 0.45
+		},
+		"Piranha": {
+			"bevel": "chamfer",
+			"bevel_size": 3.0,
+			"depth": 7.0,
+			"no_outline": true,
+			"one_color": true
+		},
 		"ServantofCthulhu": {
-			"depth": 10.0
+			"bevel": "chamfer",
+			"bevel_size": 3.0,
+			"depth": 7.0,
+			"no_outline": true,
+			"one_color": true
 		},
 		"Shark": {
 			"bevel": "chamfer",
 			"bevel_size": 4.0,
-			"depth": 10.0
+			"depth": 9.0,
+			"no_outline": true,
+			"one_color": true
+		},
+		"SkeletronArm": {
+			"bevel": "chamfer",
+			"bevel_size": 2.0,
+			"depth": 13.0,
+			"no_outline": true,
+			"one_color": true,
+			"strength": 0.4
+		},
+		"SkeletronHand": {
+			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"no_outline": true,
+			"one_color": true
+		},
+		"SkeletronHead": {
+			"one_color": true
 		},
 		"Snatcher": {
 			"bevel": "chamfer",
 			"bevel_size": 5.0,
+			"depth": 11.0,
+			"no_outline": true,
 			"noise": "grain",
+			"one_color": true,
 			"strength": 1.0
 		},
 		"TargetDummy": {
@@ -109,6 +191,7 @@
 			"bevel": "round",
 			"bevel_size": 6.0,
 			"depth": 12.0,
+			"no_outline": true,
 			"noise": "speckle",
 			"strength": 1.0
 		},
@@ -117,8 +200,9 @@
 		},
 		"Zombie": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 11,
+			"bevel_size": 5.0,
+			"depth": 11.0,
+			"no_outline": true,
 			"one_color": true
 		}
 	},
@@ -128,18 +212,119 @@
 		}
 	},
 	"hull_top": {},
-	"lathe": {},
+	"lathe": {
+		"BlueSlime": {
+			"no_outline": true,
+			"one_color": true
+		}
+	},
 	"methods": {
 		"EaterofWorldsBody": "rendered",
 		"EaterofWorldsHead": "rendered",
 		"EaterofWorldsTail": "rendered",
 		"EyeofCthulhu": "rendered",
-		"KingSlime": "claude",
-		"Snatcher": "extruded"
+		"KingSlime": "rendered",
+		"ManEater": "rendered",
+		"ServantofCthulhu": "rendered",
+		"SkeletronArm": "rendered",
+		"SkeletronHand": "rendered",
+		"SkeletronHead": "rendered",
+		"Snatcher": "rendered"
 	},
 	"rendered": {
-		"Zombie": {
+		"Antlion": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ArmsDealer": {
+			"model": "extruded",
+			"outline": true
+		},
+		"BlueSlime": {
+			"model": "extruded",
+			"outline": true
+		},
+		"CaveBat": {
 			"model": "extruded"
+		},
+		"Crab": {
+			"model": "extruded"
+		},
+		"Crimera": {
+			"model": "extruded",
+			"outline": true
+		},
+		"DemonEye": {
+			"model": "extruded",
+			"outline": true
+		},
+		"DungeonGuardian": {
+			"model": "extruded"
+		},
+		"EaterofSouls": {
+			"model": "extruded"
+		},
+		"EaterofWorldsBody": {
+			"outline": true
+		},
+		"EaterofWorldsHead": {
+			"outline": true
+		},
+		"EaterofWorldsTail": {
+			"outline": true
+		},
+		"EyeofCthulhu": {
+			"outline": true
+		},
+		"Hornet": {
+			"model": "extruded",
+			"outline": true
+		},
+		"KingSlime": {
+			"outline": true
+		},
+		"ManEater": {
+			"model": "extruded",
+			"outline": true
+		},
+		"PinkJellyfish": {
+			"model": "extruded",
+			"outline": true
+		},
+		"Piranha": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ServantofCthulhu": {
+			"model": "extruded",
+			"outline": true
+		},
+		"Shark": {
+			"model": "extruded",
+			"outline": true
+		},
+		"SkeletronArm": {
+			"model": "extruded",
+			"outline": true
+		},
+		"SkeletronHand": {
+			"model": "extruded",
+			"outline": true
+		},
+		"SkeletronHead": {
+			"outline": true
+		},
+		"Snatcher": {
+			"model": "extruded",
+			"outline": true
+		},
+		"WalkingAntlion": {
+			"model": "extruded",
+			"outline": true
+		},
+		"Zombie": {
+			"model": "extruded",
+			"outline": true
 		}
 	},
 	"tuned": {}

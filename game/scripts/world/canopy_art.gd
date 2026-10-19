@@ -12,14 +12,16 @@ const STYLES := 3  # forest styles (shown in the sprite editor)
 ## look (3, 10-13) and one jungle look (4, 14); palm trees on the beach have
 ## 15 (PalmArt), the gem trees in the caves 16-22 (worldgen.rs gem_trees), the
 ## vanity trees in the forest 23 (Sakura) and 24 (Yellow Willow), the ash
-## trees in the Underworld 25, and the underground jungle's mahogany 26.
+## trees in the Underworld 25, the underground jungle's mahogany 26, and the
+## Giant Glowing Mushrooms' caps 27 (Terraria's Shroom_Tops; worldgen's
+## mushroom.rs).
 const SHEETS := ["Tree_Tops_0", "Tree_Tops_1", "Tree_Tops_5", "Tree_Tops_17", "Tree_Tops_2",
 		"Tree_Tops_6", "Tree_Tops_7", "Tree_Tops_8", "Tree_Tops_9", "Tree_Tops_10",
 		"Tree_Tops_12", "Tree_Tops_16", "Tree_Tops_18", "Tree_Tops_4", "Tree_Tops_11",
 		"Tree_Tops_15",
 		"Tree_Tops_22", "Tree_Tops_23", "Tree_Tops_24", "Tree_Tops_25", "Tree_Tops_26", "Tree_Tops_27", "Tree_Tops_28",
 		"Tree_Tops_29", "Tree_Tops_30", "Tree_Tops_31",
-		"Tree_Tops_13"]
+		"Tree_Tops_13", "Shroom_Tops"]
 ## What each sheet is (sprite editor).
 const SHEET_NAMES := ["Forest", "Corruption", "Crimson", "Snowy pine", "Jungle",
 		"Forest", "Forest", "Forest", "Forest", "Forest",
@@ -27,7 +29,7 @@ const SHEET_NAMES := ["Forest", "Corruption", "Crimson", "Snowy pine", "Jungle",
 		"Palm",
 		"Gem: topaz", "Gem: amethyst", "Gem: sapphire", "Gem: emerald", "Gem: ruby", "Gem: diamond", "Gem: amber",
 		"Sakura", "Yellow willow", "Ash",
-		"Underground jungle"]
+		"Underground jungle", "Glowing mushroom"]
 ## Frame size (texture pixels, 2 px apart) per sheet: most are 80 x 80; the
 ## jungle's are bigger, like Terraria's.
 const FRAMES := [Vector2i(80, 80), Vector2i(80, 80), Vector2i(80, 80), Vector2i(80, 80), Vector2i(114, 96),
@@ -36,7 +38,7 @@ const FRAMES := [Vector2i(80, 80), Vector2i(80, 80), Vector2i(80, 80), Vector2i(
 		Vector2i(80, 80),
 		Vector2i(116, 96), Vector2i(116, 96), Vector2i(116, 96), Vector2i(116, 96), Vector2i(116, 96), Vector2i(116, 96), Vector2i(116, 96),
 		Vector2i(118, 96), Vector2i(118, 96), Vector2i(116, 96),
-		Vector2i(116, 96)]
+		Vector2i(116, 96), Vector2i(60, 42)]
 ## Every canopy style (three frames per sheet).
 static var STYLE_IDS: Array[int] = _style_ids()
 const FRAME := 80  # the usual frame width, which SIZE is measured against

@@ -24,7 +24,9 @@ class_name BlockModelMesh
 ##   rendered  shots of a model from every angle (PlaceableRenders; BlockModels
 ##             draws them): here, the model they're of.
 ## Every voxel method has a "one colour per voxel" setting (one_color): each
-## voxel's faces all take one colour (TunedModels.one_color_mesh).
+## voxel's faces all take one colour (TunedModels.one_color_mesh). Extruded,
+## hull, hull_top and lathe can cut the sprite's dark outline away first
+## (no_outline; Data.OUTLINE_METHODS).
 
 ## Where an extruded model's bevel goes (Data.extrude_options "bevel_sides"):
 ## which edges of the silhouette, and the front and/or back face.
@@ -71,6 +73,8 @@ static func build(block_id: int, method: String, frame := 0) -> Dictionary:
 	var sh := h * px
 	# Voxel methods work at art resolution.
 	var art: Image = d.anim_arts[frame] if frame > 0 else d.get("art", img)
+	if method in Data.OUTLINE_METHODS and Data.method_options(settings, method).no_outline:
+		art = PixelArt.without_outline(art, true)
 	var apx: float = d.get("art_px", px)
 	var out := {}
 	match method:
@@ -196,6 +200,9 @@ static func _extrude(img: Image, px: float, o: Dictionary) -> ArrayMesh:
 	else:
 		inset.resize(w * h)
 	var beveled := inset.count(0) != inset.size()
+	# Each pixel's own front and back (not the whole sprite alpha-cut, which
+	# would show an outline the art no longer has).
+	var per_pixel: bool = beveled or o.get("no_outline", false)
 	var front_k := 1 if "front" in sides else 0
 	var back_k := 1 if "back" in sides else 0
 	var ins_f := func(x: int, y: int) -> int:
@@ -209,7 +216,7 @@ static func _extrude(img: Image, px: float, o: Dictionary) -> ArrayMesh:
 	var dz := depth * 0.5
 	var to_m := func(x: float, y: float, z: float) -> Vector3:
 		return Vector3((x + ox) * px, y * px, z * px)
-	if not beveled:
+	if not per_pixel:
 		# Front and back: the whole sprite (alpha-cut in the shader).
 		var full := [Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)]
 		_quad(st, [to_m.call(0, 0, dz), to_m.call(w, 0, dz), to_m.call(w, h, dz), to_m.call(0, h, dz)], full, SHADES.front)
@@ -235,7 +242,7 @@ static func _extrude(img: Image, px: float, o: Dictionary) -> ArrayMesh:
 			var my_f: int = ins_f.call(pxl, py)
 			var my_b: int = ins_b.call(pxl, py)
 			var own_uv := Vector2((pxl + 0.5) / w, (py + 0.5) / h)
-			if beveled:
+			if per_pixel:
 				# This pixel's own front and back, at their recessed depths.
 				var zf: float = dz - my_f
 				var zb: float = -dz + my_b

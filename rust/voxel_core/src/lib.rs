@@ -6,6 +6,7 @@ pub mod dungeon;
 pub mod liquid;
 pub mod lod;
 pub mod mesher;
+pub mod mushroom;
 pub mod physics;
 pub mod save;
 pub mod shrines;
@@ -236,6 +237,7 @@ impl VoxelWorld {
             color_side: color8(val(&def, "color_side")),
             platform: val(&def, "platform").try_to::<bool>().unwrap_or(false),
             better_grass: val(&def, "better_grass").try_to::<bool>().unwrap_or(false),
+            variant_of: int_of(&val(&def, "variant_of"), 0).max(0) as u16,
         };
         self.shared.world.write().unwrap().set_def(id as u16, d);
     }
@@ -384,6 +386,23 @@ impl VoxelWorld {
         let mut w = self.shared.world.write().unwrap();
         let l = worldgen::layers(w.sy);
         dungeon::dungeon(&mut w, seed as u64, &l, (ground.x, ground.y, ground.z), door.rem_euclid(4), &brick.to_string(), steps as f64)
+    }
+
+    /// A Glowing Mushroom biome at `at`, its grass and mushrooms within
+    /// `radius`; without `patches`, only the grass and mushrooms on the mud
+    /// there (test world; see mushroom::biome_at). Call `relight_all` after.
+    #[func]
+    fn generate_mushroom_biome(&mut self, at: Vector3i, radius: i32, seed: i32, patches: bool) {
+        let mut w = self.shared.world.write().unwrap();
+        let l = worldgen::layers(w.sy);
+        mushroom::biome_at(&mut w, seed, &l, (at.x, at.y, at.z), radius, patches);
+    }
+
+    /// Every block with styles turned to a random one of them (a world saved
+    /// before plants had styles; see World::scatter_styles).
+    #[func]
+    fn scatter_styles(&mut self, seed: i32) {
+        self.shared.world.write().unwrap().scatter_styles(seed);
     }
 
     /// Where worldgen put the big biomes: [{biome, x, z, radius}].
@@ -796,6 +815,13 @@ impl VoxelWorld {
     #[func]
     fn shrink_majority(data: PackedByteArray, w: i32, h: i32, factor: i32) -> PackedByteArray {
         PackedByteArray::from(shrink::shrink_majority(data.as_slice(), w as usize, h as usize, factor as usize))
+    }
+
+    /// A one-pixel outline round an RGBA8 image's opaque parts, `shade` times
+    /// their colour (shrink.rs; rendered sprites' "outline").
+    #[func]
+    fn outline_rgba(data: PackedByteArray, w: i32, h: i32, shade: f32) -> PackedByteArray {
+        PackedByteArray::from(shrink::outline(data.as_slice(), w as usize, h as usize, shade))
     }
 
     /// Far terrain leaves out dark faces only below this height (caves).

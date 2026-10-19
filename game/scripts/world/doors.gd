@@ -131,7 +131,7 @@ static func place_from_player(game: Game, player: Player, p: Vector3i, id: int) 
 	var w := game.world
 	for q in [p, p + Vector3i.UP]:
 		var b := w.get_block(q)
-		if b != 0 and Data.block(b).get("name") != "tall_grass":
+		if b != 0 and Data.kind_of(b) != "tall_grass":
 			return false
 		if player.overlaps_block(q) or game.any_npc_in_block(q):
 			return false

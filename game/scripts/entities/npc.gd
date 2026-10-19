@@ -128,8 +128,8 @@ static func look(kind_name: String) -> Dictionary:
 	var s: float = sc.scale
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
-	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand"]
-	var tex := Assets.texture("Images/NPC_%d" % int(d.sprite))
+	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm"]
+	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
 	var out := {"hitbox": [float(size[0]) * hs, float(size[1]) * hs], "tex": tex, "frames": int(d.frames), "frame_h": frame_h,
@@ -159,6 +159,12 @@ static func look(kind_name: String) -> Dictionary:
 			out.trim = float(d.trim_bottom)
 		out.top = vis_h * (1.075 if flier else 1.1)
 	return out
+
+
+## Its sheet (Images/NPC_<sprite>, or its own "image").
+static func image_path(kind_name: String) -> String:
+	var d: Dictionary = Data.npcs[kind_name]
+	return "Images/" + str(d.image) if d.has("image") else "Images/NPC_%d" % int(d.sprite)
 
 
 ## Sets up `sprite` (EntitySprite) from look().
@@ -334,6 +340,20 @@ func _update_sprite(delta: float, game) -> void:
 			sprite.face(_worm_dir)
 		elif _worm_dir.length() > 0.001:
 			sprite.set_rotation_angle(EntitySprite.facing_angle(cam, _worm_dir) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+	elif def.ai == "skeletron" and (sprite is NPCModel or sprite is RenderedSprite):
+		# Its face turning slowly round toward you (not its bottom along its
+		# flight, as fliers point: circle it and you see its sides), tipped
+		# only part way down at you, rolled as the billboard turns: its lean
+		# and its spin.
+		var front := cam.global_position - center()
+		var flat := Vector3(front.x, 0, front.z)
+		if flat.length() > 0.01:
+			turn_rate = SK_TURN
+			var yaw := turn_facing(flat, delta)
+			var pitch := clampf(atan2(front.y, flat.length()) * SK_TILT, -SK_TILT_MAX, SK_TILT_MAX)
+			var z := (yaw * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
+			var x := Vector3.UP.cross(z).normalized()
+			sprite.orient(Basis(x, z.cross(x), z) * Basis(Vector3.BACK, _spin))
 	elif sprite is NPCModel or sprite is RenderedSprite:
 		var heading := velocity if look_dir == Vector3.ZERO else look_dir
 		if look_dir == Vector3.ZERO and Vector2(velocity.x, velocity.z).length() < 0.3 and not flying:
@@ -1510,6 +1530,12 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 
 ## Terraria's px for Skeletron's distances (24 a block, like its sprites).
 const SK_PX := 24.0
+## Its 3D model (not Terraria's: its sprite always faces the screen): how fast
+## it turns round toward you (radians a second), and how much of the way down
+## (or up) at you it tips, at most SK_TILT_MAX.
+const SK_TURN := 0.6
+const SK_TILT := 0.35
+const SK_TILT_MAX := deg_to_rad(25.0)
 
 
 ## One axis of Skeletron's steering (aiStyles 11 and 12), in px a tick: toward
@@ -1694,18 +1720,29 @@ func _ai_skeletron_hand(delta: float, game, player) -> void:
 		# Its wrist toward where it rests (Terraria: atan2 to it + 90 degrees).
 		var rest := head.center() + r * (-200.0 * _side / SK_PX) + Vector3(0, -230.0 / SK_PX, 0)
 		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, center() - rest))
+	# (A model points the same way, not along its flight.)
+	look_dir = center() - (head.center() + r * (-200.0 * _side / SK_PX) + Vector3(0, -230.0 / SK_PX, 0))
 	_update_arm(game, head, r)
 
 
 ## A hand's arm (Main.DrawNPCDirect): from 20 px down its wrist, a bone 92 px
 ## toward 200 px out and 130 below the head's middle, then one 60 px toward
-## 50 out and 80 below it, each Terraria's Arm_Bone drawn along its way.
+## 50 out and 80 below it, each Terraria's Arm_Bone drawn along its way (as
+## the NPC picker shows the SkeletronArm: a billboard, or its 3D or rendered
+## look, its art's bottom along the bone and its face turned to you).
 func _update_arm(game, head: NPC, r: Vector3) -> void:
 	if _bones.is_empty():
-		var tex := Assets.texture("Images/Arm_Bone")
+		var lk := look("SkeletronArm")
 		for i in 2:
-			var b := EntitySprite.new()
-			b.setup(tex, 1, Vector2(tex.get_width(), tex.get_height()) / SK_PX, true, true)
+			var b: Node3D
+			if NPCModels.method("SkeletronArm") == "billboard":
+				var s := EntitySprite.new()
+				s.setup(lk.tex, 1, lk.sprite_size, true, true)
+				b = s
+			else:
+				# Held (the look keeps its own place in it) and turned whole.
+				b = Node3D.new()
+				b.add_child(make_look("SkeletronArm", lk))
 			b.top_level = true
 			add_child(b)
 			_bones.append(b)
@@ -1717,12 +1754,33 @@ func _update_arm(game, head: NPC, r: Vector3) -> void:
 		var dir := (aim - p).normalized()
 		var length := (92.0 if i == 0 else 60.0) / SK_PX
 		p += dir * length
-		var b: EntitySprite = _bones[i]
-		b.global_position = p
-		b.set_rotation_angle(EntitySprite.facing_angle(cam, dir))
-		b.update_light(game.world, game.sky, p)
+		var b: Node3D = _bones[i]
+		if b is EntitySprite:
+			b.global_position = p
+			b.set_rotation_angle(EntitySprite.facing_angle(cam, dir))
+			b.update_light(game.world, game.sky, p)
+		else:
+			_place_bone(b, p, dir, cam)
+			b.get_child(0).update_light(game.world, game.sky, p)
 		if i == 0:
 			p += dir * length * 0.5
+
+
+## A 3D or rendered arm bone (in its holder) with its middle at `p`, its art's
+## bottom along `dir` and its face turned as far toward the camera as that lets.
+func _place_bone(holder: Node3D, p: Vector3, dir: Vector3, cam: Camera3D) -> void:
+	var y := -dir
+	var to_cam := cam.global_position - p
+	var z := to_cam - y * to_cam.dot(y)
+	z = z.normalized() if z.length() > 0.001 else cam.global_transform.basis.z
+	var b := Basis(y.cross(z), y, z)
+	var lk := look("SkeletronArm")
+	var node: Node3D = holder.get_child(0)
+	holder.global_position = p - Vector3(0, lk.sprite_y, 0)
+	if node is NPCModel:
+		# Its mesh stands on its bottom: turned round its middle instead.
+		node.position = Vector3(0, lk.sprite_y, 0) - b * Vector3(0, NPCModels.frames_of("SkeletronArm").size.y * 0.5, 0)
+	node.orient(b)
 
 
 # ------------------------------------------------------------ damage

@@ -11,6 +11,11 @@ class_name NPCSculpt
 
 const PATH := "res://data/handmade_npc_models.json"
 
+## What carve sinks (and the back's flanks skip): darker than this luminance
+## and no more saturated than this (HSV): a skull's sockets, not a red hat.
+const DARK_LIGHT := 0.26
+const DARK_MAX_SAT := 0.44
+
 static var _specs := {}
 static var _loaded := false
 
@@ -51,8 +56,11 @@ static func voxels(sp: Dictionary, art: Image, faces := {}, body := {}) -> Dicti
 			"revolve":
 				c = _revolve(vox, art, float(op.get("depth", 1.0)), _colors(op.color), body)
 				solid = true
+			"carve":
+				_carve(vox, art, op, _colors(op.get("color", "#808080")), body)
 			"project":
-				_project(vox, c, r, art, float(op.get("side_band", 35.0)), float(op.get("bottom_cap", 0.0)), float(op.get("top_cap", 0.0)), faces, solid)
+				_project(vox, c, r, art, float(op.get("side_band", 35.0)), float(op.get("bottom_cap", 0.0)), float(op.get("top_cap", 0.0)), faces, solid,
+						int(op.get("back_inset", -1)), body)
 			"mouth":
 				_mouth(vox, c, r, art, op, faces)
 			"outside":
@@ -128,11 +136,25 @@ static func _ball(vox: Dictionary, c: Vector3, r: float, outer: Array[Color], in
 ## round seen from below or above (the Eye's iris, which it turns on you).
 ## Where its column is see-through the voxel goes (both layers: a gap right
 ## through, like the Eye's mouth); the band never cuts gaps of its own.
+## With `back_inset` 0 or more the back half and the sides (outside the front
+## 180 - side_band degrees) aren't the mirror image or the sprite's edge:
+## each of their voxels takes a pixel of its row's flank (the brightest few
+## of the pixels from `back_inset` in from the silhouette's edge on its side,
+## passing over dark dull ones: shadows and sockets; a row with none borrows
+## the nearest row's), so a skull's back is plain bone and a hat's is its
+## crown and brim, not the face again. So do the faces looking down or up
+## (the ledges between rows: the chin seen from below is bone, not the teeth
+## dragged back, and a hat's brim is red underneath).
 static func _project(vox: Dictionary, c: Vector3, r: float, art: Image, side_band: float, bottom_cap: float, top_cap: float, faces: Dictionary,
-		solid := false) -> void:
+		solid := false, back_inset := -1, body := {}) -> void:
 	var w := art.get_width()
 	var h := art.get_height()
 	var edge := deg_to_rad(90.0 - side_band * 0.5)
+	# Each row's flank colours, left and right: [row] -> [left, right].
+	var spans := _flanks(art, back_inset) if back_inset >= 0 else {}
+	var flank := func(v: Vector3i, left: bool) -> Color:
+		var pick: Array = spans[v.y][0 if left else 1]
+		return pick[int(BlockModelMesh._hash(v.x, v.y, v.z, 3, 5) * pick.size()) % pick.size()]
 	for v: Vector3i in vox.keys():
 		var own := art.get_pixel(v.x, v.y) if v.x >= 0 and v.x < w and v.y >= 0 and v.y < h else Color(0, 0, 0, 0)
 		if own.a <= 0.5:
@@ -151,6 +173,8 @@ static func _project(vox: Dictionary, c: Vector3, r: float, art: Image, side_ban
 		# The band only colours (where its pixel is see-through it keeps the
 		# ball's): gaps come from the columns themselves, so the Eye's mouth
 		# is an oval seen from below, not a cross.
+		if back_inset >= 0 and (p.z < 0.0 or a > edge) and spans.has(v.y):
+			col = flank.call(v, p.x < 0.0)
 		if col.a > 0.5:
 			vox[v] = col
 		# Art y runs down: +y is the ball's bottom.
@@ -158,6 +182,22 @@ static func _project(vox: Dictionary, c: Vector3, r: float, art: Image, side_ban
 			var mid := art.get_pixel(floori(c.x), v.y)
 			if mid.a > 0.5:
 				faces[v] = {BlockModelMesh.FACE_UP: mid, BlockModelMesh.FACE_DOWN: mid}
+	# The ledges between rows, seen from below or above: the flanks' colours.
+	if back_inset >= 0:
+		var columns: Dictionary = body.get("columns", {})
+		var filled := func(q: Vector3i) -> bool:
+			if not solid:
+				return vox.has(q)
+			var cr = columns.get(Vector2i(q.x, q.y))
+			return cr != null and q.z >= cr.x and q.z <= cr.y
+		for v: Vector3i in vox:
+			if not spans.has(v.y):
+				continue
+			for d in [[Vector3i(0, 1, 0), BlockModelMesh.FACE_DOWN], [Vector3i(0, -1, 0), BlockModelMesh.FACE_UP]]:
+				if not filled.call(v + d[0]):
+					if not faces.has(v):
+						faces[v] = {}
+					faces[v][d[1]] = flank.call(v, v.x + 0.5 < c.x)
 	# What the front and back show: each column's nearest face, its pixel.
 	var near := {}
 	var far := {}
@@ -172,7 +212,63 @@ static func _project(vox: Dictionary, c: Vector3, r: float, art: Image, side_ban
 		for end in [[Vector3i(k.x, k.y, near[k]), BlockModelMesh.FACE_FRONT], [Vector3i(k.x, k.y, far[k]), BlockModelMesh.FACE_BACK]]:
 			if not faces.has(end[0]):
 				faces[end[0]] = {}
-			faces[end[0]][end[1]] = own
+			var back: bool = end[1] == BlockModelMesh.FACE_BACK and back_inset >= 0 and spans.has(k.y)
+			faces[end[0]][end[1]] = vox[end[0]] if back else own
+
+
+## Each row's flank colours (project's back_inset): [left, right] lists of
+## the brightest few pixels from `inset` to inset + 7 in from the
+## silhouette's edge, passing over dark dull ones; a row with none of its own
+## borrows the nearest row's.
+static func _flanks(art: Image, inset: int) -> Dictionary:
+	var w := art.get_width()
+	var out := {}
+	var own := {}
+	for y in art.get_height():
+		var first := -1
+		var last := -1
+		for x in w:
+			if art.get_pixel(x, y).a > 0.5:
+				last = x
+				if first < 0:
+					first = x
+		if first < 0:
+			continue
+		var sides := []
+		for left in [true, false]:
+			var light: Array[Color] = []
+			for i in range(inset, inset + 8):
+				var x: int = first + i if left else last - i
+				if x < first or x > last:
+					break
+				var col := art.get_pixel(x, y)
+				if col.a > 0.5 and (col.get_luminance() >= DARK_LIGHT or col.s > DARK_MAX_SAT):
+					light.append(col)
+			light.sort_custom(func(a: Color, b: Color) -> bool: return a.get_luminance() > b.get_luminance())
+			# (Not a shade much darker than the brightest: no stripes round the back.)
+			var keep: Array[Color] = []
+			for col in light.slice(0, 3):
+				if col.get_luminance() >= 0.8 * light[0].get_luminance():
+					keep.append(col)
+			sides.append(keep)
+		out[y] = sides
+		own[y] = [not sides[0].is_empty(), not sides[1].is_empty()]
+	for y: int in out:
+		for i in 2:
+			if own[y][i]:
+				continue
+			for dy in range(1, art.get_height()):
+				var near := -1
+				if own.has(y - dy) and own[y - dy][i]:
+					near = y - dy
+				elif own.has(y + dy) and own[y + dy][i]:
+					near = y + dy
+				if near >= 0:
+					out[y][i] = out[near][i]
+					break
+			if out[y][i].is_empty():
+				out[y][i] = [art.get_pixel(clampi(w / 2, 0, w - 1), y)]
+	return out
 
 
 ## A solid body spun from the sprite's silhouette (a slime): each row's span of
@@ -213,7 +309,14 @@ static func _revolve(vox: Dictionary, art: Image, depth: float, cols: Array[Colo
 				z0 = floori(mz)
 				z1 = z0
 			columns[Vector2i(x, y)] = Vector2i(z0, z1)
-	# The surface: each column's ends, and the depths its neighbours don't reach.
+	_surface(vox, columns, cols)
+	body["columns"] = columns
+	return Vector3(w * 0.5, (top + bottom + 1) * 0.5, mz)
+
+
+## A solid body's surface voxels (in `cols`): each column's ends, and the
+## depths its neighbours don't reach.
+static func _surface(vox: Dictionary, columns: Dictionary, cols: Array[Color]) -> void:
 	for k: Vector2i in columns:
 		var r: Vector2i = columns[k]
 		var lo := r.x
@@ -230,8 +333,31 @@ static func _revolve(vox: Dictionary, art: Image, depth: float, cols: Array[Colo
 			if whole or z <= maxi(lo - 1, r.x) or z >= mini(hi + 1, r.y) or lo > hi:
 				var v := Vector3i(k.x, k.y, z)
 				vox[v] = _pick(cols, v)
-	body["columns"] = columns
-	return Vector3(w * 0.5, (top + bottom + 1) * 0.5, mz)
+
+
+## Hollows in a solid body's front (a skull's eye sockets, nose and the gaps
+## between its teeth): each pixel darker than `light` (luminance) and duller
+## than `max_sat` (HSV; so a hat's dark red folds stay) sinks, `depth` voxels where
+## it's as dark as `dark` or darker, less as it lightens, so the sockets are
+## bowls. Rebuilds the surface (in `cols`, before project colours it).
+static func _carve(vox: Dictionary, art: Image, op: Dictionary, cols: Array[Color], body: Dictionary) -> void:
+	if not body.has("columns"):
+		return
+	var columns: Dictionary = body.columns
+	var depth := float(op.get("depth", 4.0))
+	var light := float(op.get("light", DARK_LIGHT))
+	var dark := float(op.get("dark", 0.15))
+	var max_sat := float(op.get("max_sat", DARK_MAX_SAT))
+	for k: Vector2i in columns:
+		var col := art.get_pixel(k.x, k.y)
+		var lum := col.get_luminance()
+		if lum >= light or col.s > max_sat:
+			continue
+		var r: Vector2i = columns[k]
+		var sink := roundi(depth * clampf((light - lum) / maxf(light - dark, 0.001), 0.0, 1.0))
+		columns[k] = Vector2i(r.x, maxi(r.x, r.y - sink))
+	vox.clear()
+	_surface(vox, columns, cols)
 
 
 ## What's inside a solid body (voxels() `body`): for the mesher, which mustn't
@@ -245,39 +371,10 @@ static func solid_test(body: Dictionary) -> Callable:
 		return r != null and v.z >= r.x and v.z <= r.y
 
 
-## The sprite without its outline: each pixel on the silhouette's edge (beside
-## a see-through pixel) that's clearly darker than the pixels just inside it
-## takes the colour of the brightest of them, so the 3D model doesn't wear
-## Terraria's dark outline as black voxels. The silhouette stays as it is.
+## The sprite without its outline (PixelArt.without_outline: recoloured, the
+## silhouette as it is).
 static func without_outline(art: Image) -> Image:
-	var w := art.get_width()
-	var h := art.get_height()
-	var out := art.duplicate() as Image
-	var opaque := func(x: int, y: int) -> bool:
-		return x >= 0 and y >= 0 and x < w and y < h and art.get_pixel(x, y).a > 0.5
-	for y in h:
-		for x in w:
-			if not opaque.call(x, y):
-				continue
-			if opaque.call(x - 1, y) and opaque.call(x + 1, y) and opaque.call(x, y - 1) and opaque.call(x, y + 1):
-				continue  # inside, not on the edge
-			# The pixels round it that are inside the silhouette (not on its edge).
-			var best := Color(0, 0, 0, 0)
-			var sum := 0.0
-			var n := 0
-			for d in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
-				var q: Vector2i = Vector2i(x, y) + d
-				if not opaque.call(q.x, q.y):
-					continue
-				var col := art.get_pixel(q.x, q.y)
-				sum += col.get_luminance()
-				n += 1
-				if best.a < 0.5 or col.get_luminance() > best.get_luminance():
-					best = col
-			var own := art.get_pixel(x, y)
-			if n > 0 and own.get_luminance() < 0.8 * sum / n:
-				out.set_pixel(x, y, best)
-	return out
+	return PixelArt.without_outline(art)
 
 
 ## Fills the inside of the ball on the rows where the sprite has gaps in it

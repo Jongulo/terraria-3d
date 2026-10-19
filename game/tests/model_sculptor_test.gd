@@ -369,8 +369,8 @@ func _run() -> void:
 	var canopy_keys := {}
 	for cs in canopies:
 		canopy_keys[cs.key] = true
-	check(canopies.size() == 81 and canopy_keys.size() == 81 and canopies.all(func(cs): return cs.label.begins_with("Canopy: ")),
-			"all 81 tree canopies are listed, each its own model (%d)" % canopies.size())
+	check(canopies.size() == 84 and canopy_keys.size() == 84 and canopies.all(func(cs): return cs.label.begins_with("Canopy: ")),
+			"all 84 tree canopies (the 3 giant mushroom caps too) are listed, each its own model (%d)" % canopies.size())
 	var csrc: Dictionary = canopies.filter(func(cs): return cs.name == "tree_canopy@11")[0]
 	var cid := Data.block_id("tree_canopy@11")
 	ed.select(csrc)

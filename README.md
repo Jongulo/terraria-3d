@@ -136,6 +136,8 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 - **South-west / south-east:** a small Corruption and Crimson patch, with Shadow Orbs and
   Crimson Hearts to smash.
 - **North-west / north / north-east:** a small Snow, Desert and Jungle patch.
+- **South-east, down the shaft past the tower:** a mud cavern with the Glowing Mushroom biome grown
+  in it (mushroom grass, giant and small glowing mushrooms, vines; its music and enemies).
 - **North of the trees:** the forest's plants and debris: a meadow with one of each, a sunflower
   patch, a pond with lily pads and cattails, and a grassy ledge with vines under it.
 - **East of the forest garden:** a furnished wooden house (door, table with a candle, chair, bed,
@@ -185,6 +187,15 @@ python3 -I tools/terraria_test_world.py template.wld ~/.var/app/com.valvesoftwar
 checked by loading it with the dedicated server and having it save; nothing should change.
 
 ## Placeables
+
+**Styles:** Terraria draws one plant tile in several frames (tall grass in 6, flowers in 38, vines
+in 26...). Here each frame is its own block (`flowers_2` ... `flowers_38`, marked `variant_of` in
+blocks.json), so the placeable picker gives each its own model; the plants, vines, rocks, twigs,
+lily pads, cattails, cobwebs, icicles, stalactites, pots, dungeon books and glowing mushrooms all
+have theirs. Worldgen places the plain block, then as its last step turns each into a random one
+of its styles (the same every time for its spot); everything else treats a style as its block
+(drops, sounds, being replaced when you build). A world saved before this gets its plants' styles
+the first time it's loaded.
 
 Besides the blocks, stations and chests, Terraria's furniture and decor (built from its item and
 tile data, each with Terraria's recipe):
@@ -341,6 +352,14 @@ can differ, like a hull's tops taking the colour from just inside the outline. D
 this rule (they're drawn on their own, not through the picker): the door art pushed through, every
 voxel one colour.
 
+**Remove outline:** the methods that work the sprite out by themselves (Extruded, Hull, Hull Top,
+Lathe) can cut away its dark outline first (the settings panel, or press L): each pixel on the
+silhouette's edge that's clearly darker than the pixels just inside it goes, so the model has no
+black rim and is a pixel smaller each side. **Add outline**, under Rendered (or Shift+L), draws a
+dark one-pixel outline round every shot instead, as Terraria's sprites have: the outline of the
+view you see, from any angle, not the sprite's. The two go together: cut the outline away from the
+model, then have the rendered shots put it back.
+
 **Claude's hand-made models** live in `game/data/handmade_models.json`, built at the sprite's
 art resolution (one voxel per pixel of the original art).
 - **Parts:** each part covers a rectangle of the sprite, sets which depths its pixels have voxels
@@ -394,7 +413,12 @@ thick). Depth and bevel size are measured in art voxels; older `placeables.json`
 converted on load.
 
 Directional methods face the player when placed (saved with the world). PageUp/PageDown
-switch blocks, Space spins a turntable, Q/E turn the models, MMB orbits, wheel zooms.
+switch blocks, Space spins a turntable, Q/E turn the models, MMB orbits, wheel zooms. The
+search box above the list (Ctrl+F) keeps only the placeables whose name or block name holds the
+text; PageUp/PageDown then step through the matches and Enter shows the first. **Copy**, **Paste**
+and **Paste to styles** (Ctrl+C, Ctrl+V, Ctrl+Shift+V) copy one placeable's method, the settings
+of every method and its transform onto another (or onto all styles of its kind); a Claude or
+Tuned choice is only pasted where that model exists.
 
 **Extruded settings** (right panel, per block, saved with the methods): **depth** in voxels, from
 1 up to a full block; **side noise** for the voxel cells along the sides - *none*, *speckle*
@@ -531,7 +555,8 @@ bottom of the settings panel) picks the model: **Auto** (tuned, else Claude's, e
 that matches how you see it, turned in the screen plane to line up, and lit like any sprite. The
 shots are made off screen the first time the NPC appears (about five seconds for the Eye), kept in
 `user://rendered_npcs/`, and made again when its model changes. Every voxel method has the **one colour per voxel** setting
-(O), as in the placeable picker.
+(O), and Extruded, Hull, Hull Top and Lathe have **remove outline** (L), with **add outline** for the
+rendered shots (Shift+L), as in the placeable picker.
 
 ## Model sculptor
 
@@ -683,11 +708,12 @@ world for each 640 x 640 blocks), each built in a cave below the surface and awa
 a main room on the ground (Terraria's smallest, 15 x 8 tiles: 10 x 10 x 6 blocks), sometimes a
 room stacked above and below fitted to the cave (up to 20 x 20 x 7), sunk 2 blocks into the
 ground. Its kind follows the ground round it, as in Terraria: Wood in dirt and stone, Ice in the
-snow, Desert in the underground desert, Jungle in the mud. A frame (Wood, Boreal Wood, Sandstone
-or Rich Mahogany) with its wall (Planked, Boreal Wood, Sandstone or Rich Mahogany Wall) lining the
+snow, Desert in the underground desert, Jungle in the mud, Mushroom in the Glowing Mushroom biome.
+A frame (Wood, Boreal Wood, Sandstone, Rich Mahogany or Mushroom Blocks) with its wall (Planked,
+Boreal Wood, Sandstone, Rich Mahogany or Mushroom Wall) lining the
 walls and an outer layer of the frame, platform stairs between stacked rooms up through a hatch,
 doors where there's open cave outside, platform hatches in the roof and floor where it's open
-beyond, beams down to the ground (Wooden, Boreal, Rich Mahogany Beams, Sandstone Columns), unlit
+beyond, beams down to the ground (Wooden, Boreal, Rich Mahogany, Mushroom Beams, Sandstone Columns), unlit
 chandeliers (copper, silver, gold, tin, tungsten or platinum; break and replace one to light
 it), furniture against the walls in the kind's style (table, anvil, work bench, loom, piano, keg,
 bookcase), and the kind's chest. Then each room ages its own way: the wooden cabin gets
@@ -695,13 +721,17 @@ cobwebs, walls gone to dirt in patches and holes in the frame; the Ice cabin's f
 to ice (some snow), icicles hang from the ceiling and the walls go to snow in patches; the Desert
 cabin gets a little hardened sand, sandstone stalactites and patches of hardened sand wall; the
 Jungle cabin's frame goes mostly to jungle grass (some mud), jungle vines hang from the ceiling
-and the walls go to jungle mud in patches. Chests: a Gold Chest or Rich Mahogany Chest
+and the walls go to jungle mud in patches; the Mushroom cabin's frame goes to mushroom grass in
+patches, glowing mushrooms grow on its floor and roof, and its wall is gone in places. Chests: a
+Gold Chest or Rich Mahogany Chest
 (underground chest loot); a Frozen Chest (Ice Boomerang, Ice Blade, Ice Skates, Snowball
 Cannon, Blizzard in a Bottle, Flurry Boots or Glacier Fang, now and then an Extractinator); a
 Sandstone Chest (Ancient Chisel, Dunerider Boots, Snake Charmer's Flute or Magic Conch; in the
-deeper desert the Storm Spear, Thunder Zapper or Bast Statue). The first desert cabins also get
+deeper desert the Storm Spear, Thunder Zapper or Bast Statue); a Mushroom Chest (a Gold Chest's
+loot, and half the time the Mushroom Hat, Vest and Pants: Terraria's other half, a Shroom
+Minecart, waits for minecarts). The first desert cabins also get
 an Extractinator and a Bast Statue (3 in the world at most), the first jungle cabins a Sharpening
-Station. Terraria's Mushroom, Granite and Marble cabins wait for their biomes, and cabins have
+Station. Terraria's Granite and Marble cabins wait for their biomes, and cabins have
 none of Terraria's paintings, statues or rubble piles yet; Enchanted Sword Shrines, Terraria's
 EnchantedSwordBiome with its 2D shapes spun round into 3D (1-2 tries per small world for each 640 x
 640 blocks, each half the time, as in Terraria), 50 to 99 blocks under the surface in the outer
@@ -797,6 +827,35 @@ music (surface and underground) and enemies:
 | Snow | Snow-covered ground, boreal trees with snowy pine tops | Snow and slippery ice, narrowing into the caverns | Ice Slimes, Zombie Eskimos at night; Ice Bats and Spiked Ice Slimes below |
 | Desert | Deep sand with cacti | Hardened sand and sandstone | Antlions buried in the sand throwing sand at you, Vultures; Walking Antlions below |
 | Jungle | Mud and jungle grass under dense mahogany trees with Terraria's big jungle canopies, jungle plants and glowing Jungle Spores | Mud all the way down to the Underworld, with jungle grass in its caves | Jungle Slimes and Snatchers (jaws on a vine); Jungle Bats, Hornets that shoot stingers, Man Eaters and Piranhas below |
+
+**The Glowing Mushroom biome**, Terraria's Mushroom Patches pass in 3D (rust `mushroom.rs`):
+
+- **Where:** Terraria's maxTilesX / 700 biomes (6 in a small world) for each 640 x 640 blocks of the
+  map, fewer as the patches grow with the world, 180 blocks apart, in the cavern layer (Terraria's
+  50 tiles below it to 300 above the world's bottom), away from the Jungle, the snow, the deserts,
+  the Dungeon and the ocean. No lava in them.
+- **Shape:** each is six of Terraria's ShroomPatches, one at its spot and five within 40 tiles: a
+  chain of 20-25 flattened balls of mud (2.3 times as wide as tall, about 80-100 tiles across),
+  their middles hollowed out above, drifting a block sideways and half a block up each step, with
+  blobs of mud just below.
+- **Grass:** then, as in Terraria, every mud block below the surface open to the air turns to
+  mushroom grass (so the mud patches through the caverns get some too; not the Jungle's mud), the
+  ground round it is smoothed, and some mud inside the ground turns to mushroom grass too.
+- **Mushrooms:** on every mushroom grass block open above, a Giant Glowing Mushroom where Terraria's
+  GrowShroom fits one (grass on all four sides, 13 blocks clear above; a stem 4-10 tall under its
+  cap, Terraria's Shroom_Tops, a canopy style in the placeable picker), else a small Glowing
+  Mushroom; mushroom vines hang under some of its ceilings.
+- **It glows:** mushroom grass, the mushrooms, their stems, vines and Mushroom Blocks light up blue
+  (Terraria's 0, 0.3, 1).
+- **Drops (Terraria's):** mushroom grass gives mud; small and giant glowing mushrooms 1 in 40
+  Mushroom Grass Seeds, else half the time a Glowing Mushroom; vines half the time a Glowing
+  Mushroom; Mushroom Blocks a Glowing Mushroom. A Glowing Mushroom places a Mushroom Block;
+  Mushroom Grass Seeds turn mud into mushroom grass.
+- **Music and enemies:** its own music ("Mushrooms"). Before Hardmode its enemies are Terraria's:
+  Spore Skeletons and Spore Bats in place of the cavern's Skeletons and bats (a Spore Bat drops the
+  Shroomerang 1 in 40). Its Hardmode enemies (Anomura Fungus, Fungi Bulb, Mushi Ladybug, Fungo
+  Fish) and the Truffle wait for Hardmode.
+- **Mushroom cabins:** see the underground cabins.
 
 - **Cacti:** drawn like Terraria's, one flat sprite facing you (a trunk with arms, put together from
   Tiles_80's pieces; Corruption and Crimson ones in their colours), walk-through. Each is a column
@@ -1230,5 +1289,5 @@ have none. Settings → Interface → "Enemy health bars" turns them off.
 Not yet: the evil bosses (Eater of Worlds, Brain of Cthulhu), Devourers and Blood Crawlers,
 Giant Worms, the other town NPCs (Goblin Tinkerer, Clothier...), NPC happiness,
 other biomes and bosses; the ocean's palm
-trees, seashells and fishing; the Glowing Mushroom biome, Granite and Marble caves, the Dungeon's
+trees, seashells and fishing; Granite and Marble caves, the Dungeon's
 enemies, traps and furniture, and the Underground Desert's open caverns.

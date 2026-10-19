@@ -1924,6 +1924,17 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     set_progress(0.72);
 
+    // Pass 3c: the Glowing Mushroom biome (Terraria's Mushroom Patches pass,
+    // before its chests and pots), kept out of the Dungeon's way; its own
+    // random numbers, so the passes after it come out as before.
+    let shrooms = {
+        let mut mrng = Rng::new(seed as u64 ^ 0x5_4800_0000);
+        let keep_out: Vec<(i32, i32, i32)> = dungeon.map(|(x, _, z, _)| (x, z, 150)).into_iter().collect();
+        let inland = |x: i32, z: i32| coast.inland(x, z) > sea.width + sea.beach + 60.0;
+        crate::mushroom::mushroom_biomes(w, &mut mrng, &l, &inland, &keep_out)
+    };
+    set_progress(0.73);
+
     // Pass 4: cave floor treasures.
     let place_on_floor = |w: &mut World, rng: &mut Rng, id: u16, count: usize, y_lo: i32, y_hi: i32, deco: Option<&str>| {
         if id == 0 {
@@ -1959,7 +1970,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     };
     let surface_low = l.surface_base - 8;
     place_on_floor(w, &mut rng, ids.pot, (area / 180.0) as usize, l.underworld_top + 2, surface_low, None);
-    place_on_floor(w, &mut rng, ids.life_crystal, (area / 4000.0) as usize, l.underworld_top + 2, surface_low - 15, None);
+    life_crystals(w, seed, &l, ids.life_crystal);
     place_on_floor(w, &mut rng, ids.chest, (area / 2500.0) as usize, l.underworld_top + 2, surface_low - 10, Some("chest"));
     // Altars of the world's evil scattered through the caverns, as in Terraria.
     let altar = w.id_of(if evil == EVIL_CRIMSON { "crimson_altar" } else { "demon_altar" });
@@ -1981,6 +1992,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
                 y -= 1;
             }
             if !w.is_solid(x, y - 1, z) {
+                continue;
+            }
+            // No lava in the Glowing Mushroom biome (ShroomPatch drains it).
+            if t == LIQ_LAVA && shrooms.iter().any(|&(mx, my, mz)| (mx - x).pow(2) + (mz - z).pow(2) < 90 * 90 && (my - y).abs() < 50) {
                 continue;
             }
             w.fill_basin((x, y, z), y + rng.range(0, max_depth), t, max_cells);
@@ -2055,6 +2070,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             x >= r.x0 - 1 && x <= r.x1() + 1 && z >= r.z0 - 1 && z <= r.z1() + 1 && y >= r.y0 - 1 && y <= r.ceiling() + 1
         })
     });
+    // Last: each plant takes a random one of its styles (blocks.json
+    // "variant_of": Terraria's frames of its tile, each a block here).
+    w.scatter_styles(seed);
     set_progress(0.79);
 
     // Spawn at the world centre, on the surface.
@@ -2109,6 +2127,63 @@ pub fn biome_regions(sx: i32, sz: i32, seed: i32) -> Vec<(i32, i32, i32, i32)> {
 ///           grass on the surface and in the caves, jungle plants and spores,
 ///           and dense mahogany trees.
 /// Returns how many columns changed.
+/// Life Crystals, Terraria's Life Crystals pass: maxTilesX * maxTilesY * 2e-5
+/// of them (100 in a small world) for each 640 x 640 blocks of the map, from
+/// a third of the way down to the cavern layer to 100 tiles above the
+/// Underworld, on solid ground with room above, not in lava. Terraria drops
+/// each from a random open spot to the floor under it, so the biggest caverns
+/// catch the most; a 3D cavern has far more open space for its floor (a
+/// Glowing Mushroom cavern caught a handful), so here each goes on a cave
+/// floor chosen evenly among them all. Its own random numbers, so the passes
+/// after it come out as before.
+fn life_crystals(w: &mut World, seed: i32, l: &Layers, crystal: u16) {
+    if crystal == 0 {
+        return;
+    }
+    let mut rng = Rng::new(seed as u64 ^ 0x11fe_c875_7a15);
+    let (lo, hi) = (crate::dungeon::depth_y(l, 610.0), crate::dungeon::depth_y(l, 130.0 / 3.0));
+    let want = (w.sx as f32 * w.sz as f32 / (640.0 * 640.0) * 100.0) as usize;
+    let mut placed = 0;
+    for _ in 0..want * 3000 {
+        if placed >= want {
+            break;
+        }
+        let (x, y, z) = (rng.range(1, w.sx - 1), rng.range(lo, hi.max(lo + 1)), rng.range(1, w.sz - 1));
+        let i = w.idx(x, y, z);
+        if w.blocks[i] != 0 || w.liquid[i] != 0 || w.get(x, y + 1, z) != 0 || w.liquid_at(x, y + 1, z).0 == LIQ_LAVA {
+            continue;
+        }
+        if !w.is_solid(x, y - 1, z) || w.def(w.get(x, y - 1, z)).render != RENDER_CUBE {
+            continue;
+        }
+        w.blocks[i] = crystal;
+        placed += 1;
+    }
+}
+
+/// The ground plants in a box (a structure's) left standing on one of `on`
+/// (the structure's blocks: the Dungeon's brick, a cabin's frame) or over a
+/// gap once it was built under them go.
+pub fn tidy_plants(w: &mut World, lo: (i32, i32, i32), hi: (i32, i32, i32), on: &[u16]) {
+    let plants: Vec<u16> = ["tall_grass", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "sunflower", "small_rocks", "twigs",
+        "large_rocks", "fallen_log", "jungle_plants", "jungle_spores", "glowing_mushroom", "glowing_mushroom_2", "glowing_mushroom_3", "glowing_mushroom_4", "glowing_mushroom_5",
+        "vile_mushroom", "vicious_mushroom"]
+        .iter()
+        .map(|n| w.id_of(n))
+        .filter(|&b| b != 0)
+        .collect();
+    for x in lo.0.max(0)..=hi.0.min(w.sx - 1) {
+        for z in lo.2.max(0)..=hi.2.min(w.sz - 1) {
+            for y in lo.1.max(1)..=hi.1.min(w.sy - 1) {
+                let i = w.idx(x, y, z);
+                if plants.contains(&w.blocks[i]) && (!w.is_solid(x, y - 1, z) || on.contains(&w.get(x, y - 1, z))) {
+                    w.blocks[i] = 0;
+                }
+            }
+        }
+    }
+}
+
 /// Whether a block of `id` is within `r` of `p` (a cube round it).
 fn near_block(w: &World, p: (i32, i32, i32), r: i32, id: u16) -> bool {
     if id == 0 {
@@ -3416,10 +3491,13 @@ mod tests {
         }
         crate::cabins::tests::add_cabin_defs(&mut w);
         crate::dungeon::tests::add_dungeon_defs(&mut w);
+        crate::mushroom::tests::add_mushroom_defs(&mut w);
         for name in ["silt", "slush"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
         }
+        let id = w.defs.len() as u16;
+        w.set_def(id, BlockDef { name: "life_crystal".into(), render: crate::world::RENDER_CUTOUT, solid: true, variants: 1, ..Default::default() });
         w.resize(size.0, size.1, size.2);
         w.gen_evil = evil;
         generate(&mut w, seed, &AtomicU32::new(0));
@@ -3491,6 +3569,81 @@ mod tests {
     /// rooms and halls of brick deep below, doors, platforms, shelves,
     /// chests in Terraria's order, lights with their switches, banners and
     /// spikes, and the entrance above its floor left as it was built.
+    #[test]
+    fn the_glowing_mushroom_biome() {
+        // A small world (Terraria's patches are sized to its width: in a
+        // smaller one the caverns are too low for giant mushrooms).
+        let w = gen_world_sized(42, 0, (768, 384, 768));
+        let l = layers(w.sy);
+        let id = |n: &str| w.id_of(n);
+        let (mud, grass, trunk, vines) = (id("mud"), id("mushroom_grass"), id("mushroom_trunk"), id("mushroom_vines"));
+        let plants: Vec<u16> = ["glowing_mushroom", "glowing_mushroom_2", "glowing_mushroom_3", "glowing_mushroom_4", "glowing_mushroom_5"].iter().map(|n| id(n)).collect();
+        let mut styles = std::collections::HashSet::new();
+        let (mut grass_n, mut on_grass, mut high_grass, mut vines_n) = (0, 0, 0, 0);
+        for z in 1..w.sz - 1 {
+            for x in 1..w.sx - 1 {
+                for y in 1..w.sy - 1 {
+                    let b = w.get(x, y, z);
+                    if b == grass {
+                        grass_n += 1;
+                        high_grass += (y >= l.surface_base) as usize;
+                    } else if plants.contains(&b) {
+                        styles.insert(b);
+                        assert_eq!(w.get(x, y - 1, z), grass, "a glowing mushroom at {x},{y},{z} grows on mushroom grass, not {}", w.def(w.get(x, y - 1, z)).name);
+                        on_grass += 1;
+                    } else if b == vines {
+                        vines_n += 1;
+                    }
+                }
+            }
+        }
+        assert!(grass_n > 3000 && on_grass > 500 && vines_n > 50, "mushroom grass ({grass_n}), glowing mushrooms on it ({on_grass}), vines ({vines_n})");
+        assert_eq!(high_grass, 0, "none at or above the surface level");
+        assert_eq!(styles.len(), 5, "all five styles of glowing mushroom");
+        assert!(on_grass < grass_n / 2, "in clumps, not on every grass block ({on_grass} on {grass_n})");
+        // Giant Glowing Mushrooms: a stem on mushroom grass under its cap.
+        let caps: Vec<&Decoration> = w.decorations.iter().filter(|d| d.kind == "tree_top" && (crate::mushroom::MUSHROOM_CAP..crate::mushroom::MUSHROOM_CAP + 3).contains(&d.style)).collect();
+        assert!(caps.len() > 10, "giant glowing mushrooms ({})", caps.len());
+        for d in caps {
+            let (x, z) = (d.pos.0, d.pos.2);
+            let mut y = d.pos.1 - 1;
+            let mut h = 0;
+            while w.get(x, y, z) == trunk {
+                h += 1;
+                y -= 1;
+            }
+            assert!((3..=9).contains(&h) && w.get(x, y, z) == grass, "a stem 3-9 tall (and its cap) on mushroom grass at {:?} ({h})", d.pos);
+        }
+        // The mud round it, and no lava in it.
+        let spot = (0..w.sx).flat_map(|x| (0..w.sz).map(move |z| (x, z))).find(|&(x, z)| (1..l.surface_base).any(|y| w.get(x, y, z) == grass && w.get(x, y + 1, z) == trunk));
+        let (sx, sz) = spot.expect("a giant mushroom");
+        let mut muds = 0;
+        let mut lava = 0;
+        for x in (sx - 20).max(0)..(sx + 20).min(w.sx) {
+            for z in (sz - 20).max(0)..(sz + 20).min(w.sz) {
+                for y in 1..l.surface_base {
+                    muds += (w.get(x, y, z) == mud) as usize;
+                    lava += (w.liquid_at(x, y, z).0 == crate::world::LIQ_LAVA) as usize;
+                }
+            }
+        }
+        assert!(muds > 2000 && lava == 0, "mud round it ({muds}), no lava ({lava})");
+        // Life Crystals: Terraria's 100 for each 640 x 640 blocks, spread over
+        // the cave floors (not crowding into the big mushroom caverns).
+        let crystal = id("life_crystal");
+        let (mut crystals, mut on_shroom) = (0, 0);
+        for (i, &b) in w.blocks.iter().enumerate() {
+            if b == crystal {
+                crystals += 1;
+                on_shroom += (w.blocks[i - 1] == grass) as usize;
+            }
+        }
+        let want = (768.0 * 768.0 / (640.0 * 640.0) * 100.0) as usize;
+        // (A few go under the Dungeon and the cabins built after them.)
+        assert!(crystals * 100 >= want * 85 && crystals <= want, "{crystals} Life Crystals (want {want})");
+        assert!(on_shroom <= 10, "about one a biome on mushroom grass ({on_shroom} of {crystals})");
+    }
+
     #[test]
     fn the_dungeon_is_built_under_its_entrance() {
         let w = gen_world_sized(42, 0, (384, 384, 384));
@@ -3758,7 +3911,10 @@ mod tests {
         }
         let share = cavern_silt as f32 / cavern_solid as f32;
         assert!(share > 0.011 && share < 0.02 && high_silt == 0, "silt: {:.1}% of the cavern layer, {high_silt} above it", share * 100.0);
-        assert!(near(snow, "slush") > 100, "snow: slush ({})", near(snow, "slush"));
+        // (In this small world the Dungeon, on the snow's side, can take all
+        // the snow's cavern layer, and its slush with it.)
+        let dungeon_holds = |(_, x, z, r): (i32, i32, i32, i32)| a.structures.iter().any(|&(lo, hi)| x - r >= lo.0 && x + r <= hi.0 && z - r >= lo.2 && z + r <= hi.2);
+        assert!(near(snow, "slush") > 100 || dungeon_holds(snow), "snow: slush ({})", near(snow, "slush"));
         assert!(near(desert, "sand") > 3000 && near(desert, "hardened_sand") > 1000 && near(desert, "cactus") > 5, "desert: sand, hardened sand, cacti");
         assert!(near(jungle, "mud") > 10000 && near(jungle, "jungle_grass") > 1000 && near(jungle, "mahogany_trunk") > 50, "jungle: mud, jungle grass, mahogany");
         let styles: Vec<i32> = a.decorations.iter().filter(|d| d.kind == "tree_top").map(|d| d.style).collect();

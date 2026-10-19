@@ -66,7 +66,11 @@ var _ex_depth_label := Label.new()
 var _ex_noise := OptionButton.new()
 ## Every voxel one colour (all voxel methods).
 var _one_color := CheckBox.new()
+## Extruded, hull, hull_top and lathe: cut the sprite's outline away first.
+var _no_outline := CheckBox.new()
 var _render_model := OptionButton.new()
+## Rendered: an outline round every shot.
+var _render_outline := CheckBox.new()
 var _ex_strength := HSlider.new()
 var _ex_strength_label := Label.new()
 var _ex_seed := SpinBox.new()
@@ -240,7 +244,7 @@ func _build_ui() -> void:
 	_help.add_theme_stylebox_override("panel", hsb)
 	var ht := Label.new()
 	ht.add_theme_font_size_override("font_size", 15)
-	ht.text = "Click a model or press 1-9, 0 to choose its method   ·   PageUp/PageDown: NPC\nSpace: turntable   Q/E: turn   P: pause   MMB: orbit   Shift+MMB: pan   Wheel: zoom\nNoise: N mode   Shift+N seed   O one colour per voxel   ·   Extruded: [ ] depth   B bevel   ·   Ctrl+S: save"
+	ht.text = "Click a model or press 1-9, 0 to choose its method   ·   PageUp/PageDown: NPC\nSpace: turntable   Q/E: turn   P: pause   MMB: orbit   Shift+MMB: pan   Wheel: zoom\nNoise: N mode   Shift+N seed   O one colour per voxel   L remove outline   Shift+L rendered outline   ·   Extruded: [ ] depth   B bevel   ·   Ctrl+S: save"
 	_help.add_child(ht)
 	_ui.add_child(_help)
 
@@ -313,6 +317,13 @@ func _build_settings_panel(parent: Control) -> void:
 		_set_option("one_color", on)
 		get_viewport().gui_release_focus())
 	box.add_child(_one_color)
+	_no_outline.text = "Remove outline (L)"
+	_no_outline.tooltip_text = "Cut the sprite's dark outline away before building the model"
+	_no_outline.add_theme_font_size_override("font_size", 16)
+	_no_outline.toggled.connect(func(on):
+		_set_option("no_outline", on)
+		get_viewport().gui_release_focus())
+	box.add_child(_no_outline)
 
 	_ex_bevel_title.text = "Bevel"
 	_ex_bevel_title.add_theme_font_size_override("font_size", 16)
@@ -360,7 +371,7 @@ func _build_settings_panel(parent: Control) -> void:
 			_rebuild_methods["rendered"] = true
 		get_viewport().gui_release_focus())
 	box.add_child(reset)
-	var hint := _small("[ ] depth   N noise   Shift+N seed   B bevel   O one colour", 14)
+	var hint := _small("[ ] depth   N noise   Shift+N seed   B bevel   O one colour   L outline", 14)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
 
@@ -374,6 +385,13 @@ func _build_settings_panel(parent: Control) -> void:
 		_set_option("model", NPCModels.RENDER_MODELS[i], "rendered")
 		get_viewport().gui_release_focus())
 	box.add_child(_render_model)
+	_render_outline.text = "Add outline (Shift+L)"
+	_render_outline.tooltip_text = "Draw a dark one-pixel outline round every shot, as Terraria's sprites have"
+	_render_outline.add_theme_font_size_override("font_size", 16)
+	_render_outline.toggled.connect(func(on):
+		_set_option("outline", on, "rendered")
+		get_viewport().gui_release_focus())
+	box.add_child(_render_outline)
 
 
 func _fit_ui() -> void:
@@ -567,6 +585,9 @@ func _sync_settings_ui() -> void:
 	_ex_strength_label.text = "Noise strength: %d%%" % roundi(o.strength * 100.0)
 	_ex_seed.set_value_no_signal(o.seed)
 	_one_color.set_pressed_no_signal(o.one_color)
+	_no_outline.visible = _settings_method in Data.OUTLINE_METHODS
+	_no_outline.set_pressed_no_signal(o.get("no_outline", false))
+	_render_outline.set_pressed_no_signal(NPCModels.options(current, "rendered").outline)
 	_render_model.select(NPCModels.RENDER_MODELS.find(NPCModels.options(current, "rendered").model))
 	_ex_bevel.select(Data.EXTRUDE_BEVELS.find(ex.bevel))
 	_ex_bevel_size.set_value_no_signal(ex.bevel_size)
@@ -683,6 +704,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_option("bevel", Data.EXTRUDE_BEVELS[posmod(Data.EXTRUDE_BEVELS.find(o.bevel) + step, Data.EXTRUDE_BEVELS.size())], "extruded")
 		elif k == KEY_O:
 			_set_option("one_color", not NPCModels.options(current, _settings_method).one_color)
+		elif k == KEY_L and event.shift_pressed:
+			_set_option("outline", not NPCModels.options(current, "rendered").outline, "rendered")
+		elif k == KEY_L and _settings_method in Data.OUTLINE_METHODS:
+			_set_option("no_outline", not NPCModels.options(current, _settings_method).no_outline)
 		elif k == KEY_N and event.shift_pressed:
 			_set_option("seed", (int(NPCModels.options(current, _settings_method).seed) + 1) % 10000)
 		elif k == KEY_N:

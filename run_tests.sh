@@ -50,7 +50,7 @@ echo "== Godot (headless)"
 run game_test 240 --headless --fixed-fps 60
 run editor_test 90 --headless --fixed-fps 60
 run test_world_test 120 --headless --fixed-fps 60
-run placeables_test 120 --headless --fixed-fps 60
+run placeables_test 240 --headless --fixed-fps 60
 run sprite_editor_test 90 --headless --fixed-fps 60
 run npc_scale_editor_test 90 --headless --fixed-fps 60
 run npc_picker_test 120 --headless --fixed-fps 60

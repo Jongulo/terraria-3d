@@ -64,7 +64,8 @@ static func _bake(block_id: int) -> void:
 	# One pixel per voxel: the art's pixels, at the block's scale.
 	var apx: float = float(d.get("art_px", d.sprite_px)) * Data.block_transform(d).basis.get_scale().x
 	var done := await NPCRenders.bake_shots("block-" + d.name, meshes,
-			func(f: int, textured: bool): return BlockModels.material_for(block_id, textured, {}, f), apx, [src], YAWS, PITCHES)
+			func(f: int, textured: bool): return BlockModels.material_for(block_id, textured, {}, f), apx, [src], YAWS, PITCHES,
+			Data.method_options(d.get("settings", d.name), "rendered").outline)
 	_baking.erase(block_id)
 	if _stale.has(block_id):
 		_stale.erase(block_id)

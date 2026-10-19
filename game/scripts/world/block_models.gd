@@ -115,7 +115,7 @@ func chunk_updated(c: Vector3i) -> void:
 			var bd := Data.block(id)
 			kinds[id] = {"trunk": bd.get("trunk", false) and not bd.get("palm", false), "palm": bd.get("palm", false),
 					"cactus": bd.get("cactus", false), "door": Doors.is_part(bd), "method": bd.get("method", "panels"),
-					"wall": bd.get("wall", false), "variants": bd.get("variants", 1)}
+					"wall": bd.get("wall", false), "variants": bd.get("variants", 1), "scatter": float(bd.get("scatter", 0.0))}
 		var k: Dictionary = kinds[id]
 		if k.trunk:
 			trunks.append(pos)  # and on with its own billboard below
@@ -147,7 +147,7 @@ func chunk_updated(c: Vector3i) -> void:
 			if not PlaceableRenders.renders(id).is_empty():
 				if not rendered.has(id):
 					rendered[id] = []
-				rendered[id].append([pos, game.block_rotation(pos)])
+				rendered[id].append([pos, game.block_rotation(pos), scatter_at(pos, k.scatter)])
 				continue
 			_waiting_renders[id] = true
 			method = "billboard"  # until its shots are made
@@ -176,6 +176,9 @@ func chunk_updated(c: Vector3i) -> void:
 			batches[mkey] = {"id": id, "mesh": model.mesh, "textured": model.textured, "items": [],
 					"method": method, "rotation": rotation, "frame": frame}
 		var t := Transform3D(Basis(Vector3.UP, int(model.turn) * PI * 0.5), Vector3(pos) + Vector3(0.5, 0.0, 0.5))
+		if k.scatter > 0.0:
+			var sc := scatter_at(pos, k.scatter)
+			t = Transform3D(sc.basis * t.basis, t.origin + sc.origin)
 		# A stair's beam hangs below its block to meet the next stair down.
 		t.origin.y -= float(Data.block(id).get("stair_drop", 0.0))
 		batches[mkey].items.append([t, pos])
@@ -301,6 +304,19 @@ func anim_frame_at(pos: Vector3i) -> int:
 	return -1
 
 
+## A scattered plant's place in its cell ("scatter": how far it may sit off
+## the middle, blocks): turned any way and moved off the middle, the same
+## every time for its cell, so a field of them doesn't stand in a grid.
+static func scatter_at(pos: Vector3i, scatter: float) -> Transform3D:
+	if scatter <= 0.0:
+		return Transform3D.IDENTITY
+	var h := absi(hash(pos))
+	var turn := float(h % 6283) / 1000.0
+	var ox := (float((h / 6283) % 1000) / 999.0 * 2.0 - 1.0) * scatter
+	var oz := (float(absi(hash(pos * 7 + Vector3i(3, 1, 5))) % 1000) / 999.0 * 2.0 - 1.0) * scatter
+	return Transform3D(Basis(Vector3.UP, turn), Vector3(ox, 0.0, oz))
+
+
 ## Variant for a block at `pos`: stable, and different between neighbours.
 static func variant_at(pos: Vector3i, variants: int) -> int:
 	if variants <= 1:
@@ -340,9 +356,10 @@ func _billboard_batch(block_id: int, variant: int, positions: Array, keys: Array
 	# The block's transform, once (billboard_instance per block).
 	var bt := Data.block_transform(Data.block(block_id))
 	var bscale := Basis.from_scale(Vector3.ONE * bt.basis.get_scale().x)
+	var scatter := float(Data.block(block_id).get("scatter", 0.0))
 	for i in positions.size():
 		var pos: Vector3i = positions[i]
-		var t := Transform3D(bscale, Vector3(pos) + Vector3(0.5, 0.0, 0.5) + bt.origin)
+		var t := Transform3D(bscale, Vector3(pos) + Vector3(0.5, 0.0, 0.5) + bt.origin + scatter_at(pos, scatter).origin)
 		var light := world.get_light(Vector3(pos) + Vector3(0.5, 0.5, 0.5))
 		mm.set_instance_transform(i, t)
 		mm.set_instance_custom_data(i, light)
@@ -355,9 +372,9 @@ func _billboard_batch(block_id: int, variant: int, positions: Array, keys: Array
 	return mi
 
 
-## Rendered placeables of one block: `items` [block position, rotation], each a
-## quad turned to the camera in the shader, the instance turned the way the
-## block was placed (the shots turn with it).
+## Rendered placeables of one block: `items` [block position, rotation,
+## scatter_at], each a quad turned to the camera in the shader, the instance
+## turned the way the block was placed and scattered (the shots turn with it).
 func _rendered_batch(block_id: int, items: Array, keys: Array, frame := 0) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -367,6 +384,9 @@ func _rendered_batch(block_id: int, items: Array, keys: Array, frame := 0) -> Mu
 	for i in items.size():
 		var pos: Vector3i = items[i][0]
 		var t := Transform3D(Basis(Vector3.UP, int(items[i][1]) * PI * 0.5), Vector3(pos) + Vector3(0.5, 0.0, 0.5))
+		if items[i].size() > 2:
+			var sc: Transform3D = items[i][2]
+			t = Transform3D(sc.basis * t.basis, t.origin + sc.origin)
 		var light := world.get_light(Vector3(pos) + Vector3(0.5, 0.5, 0.5))
 		mm.set_instance_transform(i, t)
 		mm.set_instance_custom_data(i, light)

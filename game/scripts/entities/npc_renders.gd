@@ -24,6 +24,9 @@ const SUPERSAMPLE := 4
 const BATCH := 24
 const DIR := "user://rendered_npcs/"
 const VERSION := 2
+## The "outline" setting's ring round every shot: its edge colours times this
+## (Terraria's outlines are its colours, much darker: a skull's bone at a fifth).
+const OUTLINE_SHADE := 0.25
 ## Where renders are cached (DIR; tests point it elsewhere).
 static var dir := DIR
 
@@ -123,7 +126,8 @@ static func _bake(kind: String) -> void:
 	var meshes: Array = []
 	for f in fr.arts.size():
 		meshes.append(NPCModels.mesh(kind, src, f))
-	var done := await bake_shots(kind, meshes, func(f: int, textured: bool): return NPCModels.material(kind, f, textured), fr.apx, [src])
+	var done := await bake_shots(kind, meshes, func(f: int, textured: bool): return NPCModels.material(kind, f, textured), fr.apx, [src],
+			YAWS, PITCHES, NPCModels.options(kind, "rendered").outline)
 	_baking.erase(kind)
 	if _stale.has(kind):
 		# Its model changed meanwhile: the next renders() shoots it again.
@@ -138,10 +142,12 @@ static func _bake(kind: String) -> void:
 ## the version): {n: pixels square, px, center: the model's middle (mesh
 ## space), radius: how far the model reaches from it, yaws and pitches (the
 ## shots: `yaws` round at each of `pitches`), atlases: an ImageTexture per
-## frame (yaws x pitches shots)}.
+## frame (yaws x pitches shots)}. With `outline` each shot gets a one-pixel
+## dark outline round it (OUTLINE_SHADE), as Terraria's sprites have, after
+## it's shrunk: an outline of the view, not of the sprite it was built from.
 ## Can only run where things render (can_render()).
 static func bake_shots(key: String, meshes: Array, material: Callable, apx: float, sig_extra := [],
-		yaws := YAWS, pitches := PITCHES) -> Dictionary:
+		yaws := YAWS, pitches := PITCHES, outline := false) -> Dictionary:
 	if _baker == null or not is_instance_valid(_baker):
 		_baker = Node.new()
 		_baker.name = "NPCRenderBaker"
@@ -152,6 +158,8 @@ static func bake_shots(key: String, meshes: Array, material: Callable, apx: floa
 	var nf := meshes.size()
 	var box := AABB()
 	var sig := [VERSION, yaws, pitches, SUPERSAMPLE] + sig_extra
+	if outline:
+		sig.append(["outline", OUTLINE_SHADE])
 	for built in meshes:
 		var m: ArrayMesh = built.mesh
 		if m.get_surface_count() == 0:
@@ -205,6 +213,8 @@ static func bake_shots(key: String, meshes: Array, material: Callable, apx: floa
 				img.convert(Image.FORMAT_RGBA8)
 				img = Image.create_from_data(n, n, false, Image.FORMAT_RGBA8,
 						VoxelWorld.shrink_majority(img.get_data(), img.get_width(), img.get_height(), SUPERSAMPLE))
+				if outline:
+					img = Image.create_from_data(n, n, false, Image.FORMAT_RGBA8, VoxelWorld.outline_rgba(img.get_data(), n, n, OUTLINE_SHADE))
 				atlases[job[0]].blit_rect(img, Rect2i(0, 0, n, n), Vector2i(job[1] * n, job[2] * n))
 		# Drop renders of older versions of the model (its own files only:
 		# "<key>_<hex>_<frame>.png", not another key that starts the same).

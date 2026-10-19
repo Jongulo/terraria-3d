@@ -7,6 +7,7 @@
 //! That is Terraria's light: ground you dig out keeps its background wall,
 //! which stops sunlight, so a shaft darkens as it goes down.
 
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 pub const CS: i32 = 32;
@@ -75,6 +76,8 @@ pub struct BlockDef {
     /// grass all the way down its steps (mesher.rs); far terrain draws its
     /// sides in the top's colour (lod.rs).
     pub better_grass: bool,
+    /// One of that block's styles (0: none): scatter_styles picks among them.
+    pub variant_of: u16,
 }
 
 #[derive(Clone, Debug)]
@@ -653,6 +656,40 @@ impl World {
         }
     }
 
+    /// Every block that has styles (blocks.json "variant_of": a plant's
+    /// frames, each its own block) turned to a random one of them, the same
+    /// every time for its cell and `seed` (a new world's last step: worldgen
+    /// places the plain block, as its tests expect).
+    pub fn scatter_styles(&mut self, seed: i32) {
+        let n = self.defs.len();
+        let base: Vec<usize> = (0..n).map(|i| match self.defs[i].variant_of as usize { 0 => i, b if b < n => b, _ => i }).collect();
+        let mut groups: Vec<Vec<u16>> = vec![Vec::new(); n];
+        for i in 1..n {
+            groups[base[i]].push(i as u16);
+        }
+        if groups.iter().all(|g| g.len() < 2) {
+            return;
+        }
+        let (sx, sy) = (self.sx, self.sy);
+        self.blocks.par_chunks_mut(sy as usize).enumerate().for_each(|(ci, col)| {
+            let (x, z) = ((ci as i32) % sx, (ci as i32) / sx);
+            for (y, b) in col.iter_mut().enumerate() {
+                let id = *b as usize;
+                if id == 0 || id >= n {
+                    continue;
+                }
+                let g = &groups[base[id]];
+                if g.len() > 1 {
+                    let mut h = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F) ^ (z as u64).wrapping_mul(0x1656_67B1_9E37_79F9) ^ seed as u64;
+                    h ^= h >> 31;
+                    h = h.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+                    h ^= h >> 29;
+                    *b = g[(h % g.len() as u64) as usize];
+                }
+            }
+        });
+    }
+
     /// Topmost solid block in a column, or -1.
     pub fn surface_y(&self, x: i32, z: i32) -> i32 {
         if !self.in_bounds(x, 0, z) {
@@ -775,6 +812,34 @@ pub fn unpack_light(l: u16) -> [u8; 4] {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+
+    #[test]
+    fn plants_take_random_styles() {
+        let mut w = World::new();
+        w.set_def(1, BlockDef { name: "stone".into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
+        w.set_def(2, BlockDef { name: "flowers".into(), render: RENDER_CROSS, variants: 1, ..Default::default() });
+        w.set_def(3, BlockDef { name: "flowers_2".into(), render: RENDER_CROSS, variants: 1, variant_of: 2, ..Default::default() });
+        w.set_def(4, BlockDef { name: "flowers_3".into(), render: RENDER_CROSS, variants: 1, variant_of: 2, ..Default::default() });
+        w.resize(32, 8, 32);
+        for z in 0..32 {
+            for x in 0..32 {
+                let (i, j) = (w.idx(x, 0, z), w.idx(x, 1, z));
+                w.blocks[i] = 1;
+                w.blocks[j] = 2;
+            }
+        }
+        let before = w.blocks.clone();
+        w.scatter_styles(5);
+        let count = |w: &World, id: u16| w.blocks.iter().filter(|&&b| b == id).count();
+        assert_eq!(count(&w, 1), 1024, "other blocks stay");
+        for id in 2..=4 {
+            assert!((250..440).contains(&count(&w, id)), "each style about a third of the flowers ({id}: {})", count(&w, id));
+        }
+        let after = w.blocks.clone();
+        w.blocks = before;
+        w.scatter_styles(5);
+        assert!(after == w.blocks, "the same every time for a seed");
+    }
 
     pub fn test_world() -> World {
         let mut w = World::new();

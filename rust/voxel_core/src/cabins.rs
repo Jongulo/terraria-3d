@@ -17,11 +17,12 @@
 //!   2 blocks (3 tiles) into the ground.
 //! - Not near lava or other structures; its surroundings decide its kind
 //!   (Terraria's GetHouseType): Wood in dirt and stone, Ice in the snow,
-//!   Desert in the underground desert, Jungle in the mud (Terraria's Mushroom,
-//!   Granite and Marble cabins wait for their biomes: those sites are skipped).
+//!   Desert in the underground desert, Jungle in the mud, Mushroom in the
+//!   Glowing Mushroom biome (Terraria's Granite and Marble cabins wait for
+//!   their biomes: those sites are skipped).
 //! - Each kind is built the same way from its own materials (HouseBuilder and
 //!   its WoodHouseBuilder, IceHouseBuilder, DesertHouseBuilder and
-//!   JungleHouseBuilder): a frame (floor, ceiling, the walls' corner posts) with
+//!   JungleHouseBuilder, MushroomHouseBuilder): a frame (floor, ceiling, the walls' corner posts) with
 //!   the background wall between, the walls clad outside in a second layer of
 //!   the frame (Terraria's wall is behind the room; here it lines the walls, so
 //!   the outside is the frame like the Skyware house's Sunplate over its Disc
@@ -37,6 +38,7 @@
 //!   Ice     Boreal Wood / its wall / Boreal Beam   Frozen Chest
 //!   Desert  Sandstone / its wall / Sandstone Column Sandstone Chest
 //!   Jungle  Rich Mahogany / its wall / its beam    Rich Mahogany Chest
+//!   Mushroom Mushroom Block / its wall / its beam  Mushroom Chest
 //!
 //! - Then each room ages (AgeRoom), its own way for each kind:
 //!   Wood    cobwebs, the wall gone to dirt in patches, holes in the frame.
@@ -134,6 +136,7 @@ const CHEST_GOLD: i32 = 3;
 const CHEST_FROZEN: i32 = 4;
 const CHEST_SANDSTONE: i32 = 5;
 const CHEST_SANDSTONE_DEEP: i32 = 6;
+const CHEST_MUSHROOM: i32 = 15;
 
 struct Ids {
     door_top: u16,
@@ -145,6 +148,8 @@ struct Ids {
     hardened_sand: u16,
     mud: u16,
     jungle_grass: u16,
+    mushroom_grass: u16,
+    glowing_mushrooms: Vec<u16>,
     /// Hanging stalactites, large and small (Terraria's tile 165): ice, sandstone.
     icicles: [u16; 2],
     sand_stalactites: [u16; 2],
@@ -201,6 +206,12 @@ impl Ids {
             hardened_sand: id("hardened_sand"),
             mud: id("mud"),
             jungle_grass: id("jungle_grass"),
+            mushroom_grass: id("mushroom_grass"),
+            glowing_mushrooms: ["glowing_mushroom", "glowing_mushroom_2", "glowing_mushroom_3", "glowing_mushroom_4", "glowing_mushroom_5"]
+                .iter()
+                .map(|n| id(n))
+                .filter(|&i| i != 0)
+                .collect(),
             icicles: [id("icicle"), id("small_icicle")],
             sand_stalactites: [id("sandstone_stalactite"), id("small_sandstone_stalactite")],
             jungle_vines: id("jungle_vines"),
@@ -218,6 +229,7 @@ impl Ids {
                 style(Kind::Ice, "boreal_wood", "boreal_wood", "boreal_wood_wall", "boreal_beam", "frozen_chest", CHEST_FROZEN),
                 style(Kind::Desert, "sandstone", "sandstone", "sandstone_wall", "sandstone_column", "sandstone_chest", CHEST_SANDSTONE),
                 style(Kind::Jungle, "rich_mahogany", "rich_mahogany", "rich_mahogany_wall", "rich_mahogany_beam", "rich_mahogany_chest", CHEST_GOLD),
+                style(Kind::Mushroom, "mushroom", "mushroom_block", "mushroom_wall", "mushroom_beam", "mushroom_chest", CHEST_MUSHROOM),
             ],
             blacklist,
         }
@@ -307,6 +319,11 @@ fn try_cabin(w: &mut World, rng: &mut Rng, ids: &Ids, cx: &mut Context, origin: 
         return None;
     }
     build(w, rng, ids, style, cx, &rooms);
+    // Plants it left standing on its frame (the cave's, grown before it).
+    let built_of = [style.frame, style.lining, style.platform, style.beam];
+    for r in &rooms {
+        crate::worldgen::tidy_plants(w, (r.x0 - 2, r.y0, r.z0 - 2), (r.x1() + 2, r.ceiling() + 2, r.z1() + 2), &built_of);
+    }
     Some(rooms)
 }
 
@@ -557,6 +574,7 @@ fn build(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, cx: &mut Contex
             Kind::Ice => age_ice(w, rng, ids, style, r),
             Kind::Desert => age_desert(w, rng, ids, style, r),
             Kind::Jungle => age_jungle(w, rng, ids, style, r),
+            Kind::Mushroom => age_mushroom(w, rng, ids, style, r),
             _ => age_wood(w, rng, ids, style, r),
         }
     }
@@ -1018,6 +1036,25 @@ fn age_jungle(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room) 
     age_walls(w, rng, r, style.lining, 0.85, 0.3, ids.mud);
 }
 
+/// MushroomHouseBuilder.AgeRoom: the Mushroom Block frame gone to mushroom
+/// grass in patches (Dither 0.7, Blotches 0.5); glowing mushrooms on 2 in 5
+/// of the mushroom grass of the floor (in the room) and the roof (on top);
+/// the wall cleared in patches (Dither 0.85, Blotches 0.3: Terraria's
+/// ClearWall, here the frame behind the lining showing through).
+fn age_mushroom(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room) {
+    age_frame(w, rng, r, style.frame, 0.7, 0.5, ids.mushroom_grass, 1.0, 0);
+    if !ids.glowing_mushrooms.is_empty() {
+        for (x, y, z) in ceiling_and_floor(r) {
+            if rng.unit() < 0.6 || w.get(x, y, z) != ids.mushroom_grass || w.get(x, y + 1, z) != 0 {
+                continue;
+            }
+            let style = ids.glowing_mushrooms[rng.range(0, ids.glowing_mushrooms.len() as i32) as usize];
+            put(w, x, y + 1, z, style);
+        }
+    }
+    age_walls(w, rng, r, style.lining, 0.85, 0.3, style.frame);
+}
+
 /// The cabin's chest (HouseBuilder.PlaceChests: every cabin has one, the
 /// kind's): 10 random spots on each room's floor, then every spot, then on the
 /// roof.
@@ -1075,13 +1112,15 @@ pub(crate) mod tests {
             id += 1;
         };
         for name in ["wood", "planked_wall", "wooden_beam", "boreal_wood", "boreal_wood_wall", "boreal_beam", "sandstone", "sandstone_wall", "sandstone_column",
-                "rich_mahogany", "rich_mahogany_wall", "rich_mahogany_beam", "dirt", "snow_block", "ice_block", "hardened_sand", "mud", "jungle_grass"] {
+                "rich_mahogany", "rich_mahogany_wall", "rich_mahogany_beam", "dirt", "snow_block", "ice_block", "hardened_sand", "mud", "jungle_grass",
+                "mushroom_block", "mushroom_wall", "mushroom_beam", "mushroom_grass"] {
             add(w, name, RENDER_CUBE, true, false);
         }
-        for wood in ["wood", "boreal_wood", "sandstone", "rich_mahogany"] {
+        for wood in ["wood", "boreal_wood", "sandstone", "rich_mahogany", "mushroom"] {
             add(w, &format!("{wood}_platform"), RENDER_CUTOUT, false, true);
         }
-        for name in ["wooden_door", "boreal_wood_door", "sandstone_door", "rich_mahogany_door", "door_top", "gold_chest", "frozen_chest", "sandstone_chest", "rich_mahogany_chest"] {
+        for name in ["wooden_door", "boreal_wood_door", "sandstone_door", "rich_mahogany_door", "mushroom_door", "door_top", "gold_chest", "frozen_chest", "sandstone_chest",
+                "rich_mahogany_chest", "mushroom_chest"] {
             add(w, name, RENDER_CUTOUT, true, false);
         }
         for m in ["copper", "silver", "gold", "tin", "tungsten", "platinum"] {
@@ -1090,12 +1129,12 @@ pub(crate) mod tests {
         for name in ["wooden_table", "iron_anvil", "work_bench", "loom", "piano", "keg", "bookcase", "bast_statue", "extractinator", "sharpening_station"] {
             add(w, name, RENDER_CUTOUT, false, false);
         }
-        for wood in ["boreal_wood", "sandstone", "rich_mahogany"] {
+        for wood in ["boreal_wood", "sandstone", "rich_mahogany", "mushroom"] {
             for piece in ["table", "work_bench", "piano", "bookcase"] {
                 add(w, &format!("{wood}_{piece}"), RENDER_CUTOUT, false, false);
             }
         }
-        for name in ["cobweb", "icicle", "small_icicle", "sandstone_stalactite", "small_sandstone_stalactite", "jungle_vines"] {
+        for name in ["cobweb", "icicle", "small_icicle", "sandstone_stalactite", "small_sandstone_stalactite", "jungle_vines", "glowing_mushroom"] {
             add(w, name, RENDER_CROSS, false, false);
         }
     }
@@ -1282,6 +1321,8 @@ pub(crate) mod tests {
         assert_eq!(house_type(&w, &rooms), Kind::Desert);
         fill(&mut w, "mud");
         assert_eq!(house_type(&w, &rooms), Kind::Jungle, "mud: the Jungle (ties go to the first)");
+        fill(&mut w, "mushroom_grass");
+        assert_eq!(house_type(&w, &rooms), Kind::Mushroom, "mushroom grass: the Glowing Mushroom biome's");
     }
 
     /// The cave world with its stone all `fill`, and the first cabin built in
@@ -1404,6 +1445,25 @@ pub(crate) mod tests {
         assert_eq!(the_chest(&w), (CHEST_GOLD, w.id_of("rich_mahogany_chest")), "a Rich Mahogany Chest, an underground chest's loot");
         assert_eq!(tally(&w, &cells, &["sharpening_station"])[0], 1, "the first jungle cabins' Sharpening Station");
         assert_eq!(cx.sharpeners, 1);
+    }
+
+    #[test]
+    fn mushroom_cabins() {
+        let mut cx = Context::default();
+        let (w, rooms, ids) = biome_cabin("mushroom_grass", 0, &mut cx);
+        let frame: Vec<_> = rooms.iter().flat_map(frame_cells).collect();
+        let t = tally(&w, &frame, &["mushroom_block", "mushroom_grass"]);
+        assert!(t[0] > 0 && t[1] > 0, "frame: {} mushroom block, {} gone to mushroom grass", t[0], t[1]);
+        let cells = all_cells(&rooms);
+        let mut on_grass = 0;
+        for &(x, y, z) in &cells {
+            if ids.glowing_mushrooms.contains(&w.get(x, y, z)) {
+                assert_eq!(w.get(x, y - 1, z), ids.mushroom_grass, "glowing mushrooms grow on its mushroom grass");
+                on_grass += 1;
+            }
+        }
+        assert!(on_grass > 0, "glowing mushrooms on its floor and roof");
+        assert_eq!(the_chest(&w), (CHEST_MUSHROOM, w.id_of("mushroom_chest")), "a Mushroom Chest");
     }
 
     #[test]

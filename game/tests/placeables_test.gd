@@ -135,7 +135,7 @@ func _run() -> void:
 	# Tree canopies: every style a picker entry of its own (not a world block),
 	# with its own method and settings, named for its art.
 	var canopy_names: Array = CanopyArt.STYLE_IDS.map(func(st): return CanopyArt.block_name(st))
-	check(canopy_names.size() == 81 and canopy_names.all(func(n): return n in names), "all 81 canopies are listed in the picker")
+	check(canopy_names.size() == 84 and canopy_names.all(func(n): return n in names), "all 84 canopies (the giant mushroom caps too) are listed in the picker")
 	check(Data.placeable_label("tree_canopy@11") == "Canopy: Corruption (Tree_Tops_1) 2", "named for their art (%s)" % Data.placeable_label("tree_canopy@11"))
 	check(Data.blocks.all(func(b): return not b.name.begins_with("tree_canopy")), "tree canopy is not a world block")
 	var canopy_d := Data.block(Data.block_id("tree_canopy"))
@@ -528,6 +528,48 @@ func _run() -> void:
 	Data.reset_transform("pot")
 	check(cross_model and Data.render_for(pot) == 3, "a cross placeable is drawn as a model only while transformed")
 	Data.set_block_method("pot", "hull")
+	# Copy one placeable's choices and paste them onto another (Ctrl+C,
+	# Ctrl+V; Ctrl+Shift+V onto all its styles).
+	Data.set_block_method("pot", "extruded")
+	Data.set_method_option("pot", "extruded", "depth", 5)
+	Data.set_method_option("pot", "extruded", "bevel", "round")
+	Data.set_method_option("pot", "hull", "noise", "grain")
+	Data.set_transform_option("pot", "scale", 1.5)
+	picker._select_block("pot")
+	await key(KEY_C, true)
+	picker._select_block("small_rocks")
+	Data.set_transform_option("small_rocks", "offset", [0.0, 2.0, 0.0])
+	await key(KEY_V, true)
+	await frames(2)
+	var rocks := Data.block(Data.block_id("small_rocks"))
+	check(rocks.method == "extruded" and Data.extrude_options("small_rocks").depth == mini(5, Data.extrude_max_depth("small_rocks")) and Data.extrude_options("small_rocks").bevel == "round"
+			and Data.method_options("small_rocks", "hull").noise == "grain" and is_equal_approx(Data.transform_options("small_rocks").scale, 1.5)
+			and Data.transform_options("small_rocks").offset == [0.0, 0.0, 0.0] and picker.dirty,
+			"Ctrl+C on the pot, Ctrl+V on the rocks: its method, every method's settings and its transform, the rest back to defaults")
+	check(picker._models[Data.PLACEABLE_METHODS.find("extruded")] != null and picker._status.text.begins_with("Pasted"), "the models are made again and it says so")
+	picker._select_block("flowers_7")
+	picker.paste_settings(true)
+	await frames(2)
+	var flower_styles := Data.placeable_blocks().filter(func(n): return Data.kind_of(Data.block_id(n)) == "flowers")
+	check(flower_styles.size() == 38 and flower_styles.all(func(n): return Data.block(Data.block_id(n)).method == "extruded" and Data.extrude_options(n).bevel == "round"),
+			"Paste to styles gives all 38 flower styles the copied settings")
+	# Search: Ctrl+F types into the box, the list keeps only the matches
+	# (label or block name) and PageDown/clicks go through them.
+	await key(KEY_F, true)
+	check(picker._search.has_focus(), "Ctrl+F puts the cursor in the search box")
+	picker.get_viewport().gui_release_focus()
+	picker.search("Cattail")
+	check(not picker._shown.is_empty() and picker._shown.all(func(n): return "cattail" in Data.placeable_label(n).to_lower() or "cattail" in n)
+			and picker._list.item_count == picker._shown.size() and picker._shown.size() < picker._names.size(),
+			"searching \"Cattail\" lists only the cattails (%d)" % picker._shown.size())
+	picker._list.item_selected.emit(1)
+	await key(KEY_PAGEDOWN)
+	check(picker.current == picker._shown[2 % picker._shown.size()], "clicks and PageDown go through the matches (%s)" % picker.current)
+	picker.search("small_rocks_3")
+	check(picker._shown == ["small_rocks_3"], "a block name finds its placeable")
+	picker.search("")
+	check(picker._list.item_count == picker._names.size(), "clearing the search lists every placeable again")
+	Data.reset_placeables()
 	picker.queue_free()
 	await frames(2)
 

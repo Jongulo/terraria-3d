@@ -19,7 +19,7 @@ extends Node3D
 
 ## Canopy sheet (CanopyArt.SHEETS index) -> leaf gore (-1: none).
 const SHEET_LEAVES := [910, 915, 916, -1, 914, 910, 910, 910, 910, 910, -1, -1, -1, -1, 914, 911,
-		1249, 1250, 1251, 1252, 1253, 1254, 1255, 1248, 1257, -1, 914]
+		1249, 1250, 1251, 1252, 1253, 1254, 1255, 1248, 1257, -1, 914, -1]
 ## Leaf blocks of living trees -> leaf gore.
 const BLOCK_LEAVES := {"leaf_block": 910, "mahogany_leaves": 914}
 const HALLOW_LEAVES := Vector2i(917, 925)

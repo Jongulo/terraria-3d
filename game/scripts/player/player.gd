@@ -1231,7 +1231,7 @@ func _flower_boots(game) -> void:
 	_last_flower_cell = feet
 	var grass := Data.block_id("grass")
 	if game.world.get_block(feet + Vector3i.DOWN) == grass and game.world.get_block(feet) == 0 and randf() < 0.5:
-		game.world.set_block(feet, Data.block_id("flowers" if randf() < 0.8 else "tall_flowers"))
+		game.world.set_block(feet, Data.random_style("flowers" if randf() < 0.8 else "tall_flowers"))
 
 
 var _last_flower_cell := Vector3i(-1, -1, -1)
@@ -1470,6 +1470,14 @@ func _place(def: Dictionary) -> bool:
 	var bdef := Data.block(id)
 	var pos: Vector3i = target.block
 	var normal: Vector3i = target.normal
+	# Grass seeds ("plant_on"): the block they're used on turns to their grass.
+	if def.has("plant_on"):
+		if Data.block(target.id).get("name", "") != def.plant_on:
+			return false
+		game.world.set_block(pos, id)
+		_use_up(selected)
+		Audio.play("Dig_*", 0.6)
+		return true
 	if Doors.is_door(bdef):
 		if Data.block(target.id).get("render", "cube") != "cross":
 			pos += normal
@@ -1492,7 +1500,7 @@ func _place(def: Dictionary) -> bool:
 		if not on_wall:
 			return false
 		wall_dir = WALL_NORMALS.find(normal)
-	if game.world.get_block(pos) != 0 and Data.block(game.world.get_block(pos)).get("name") != "tall_grass":
+	if game.world.get_block(pos) != 0 and Data.kind_of(game.world.get_block(pos)) != "tall_grass":
 		return false
 	if bdef.get("solid", true):
 		var box_min := Vector3(pos)
@@ -1669,7 +1677,7 @@ func _use_bucket(def: Dictionary) -> bool:
 		var cell: Vector3i = target.block
 		if Data.block(target.id).get("render", "cube") != "cross":
 			cell += target.normal
-		if w.is_solid(cell) or (w.get_block(cell) != 0 and Data.block(w.get_block(cell)).get("name") != "tall_grass"):
+		if w.is_solid(cell) or (w.get_block(cell) != 0 and Data.kind_of(w.get_block(cell)) != "tall_grass"):
 			return false
 		var have: Vector2i = w.get_liquid(cell)
 		if have.y > 0 and have.x != liquid:

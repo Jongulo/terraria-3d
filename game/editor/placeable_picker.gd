@@ -64,6 +64,9 @@ var _materials := {}
 var _ui := Control.new()
 var _list := ItemList.new()
 var _names: Array = []
+var _shown: Array = []  # the placeables the list shows (search)
+var _icons := {}  # name -> list icon
+var _search := LineEdit.new()
 var _header := Label.new()
 var _status := Label.new()
 var _help := PanelContainer.new()
@@ -77,7 +80,11 @@ var _ex_strength_label := Label.new()
 var _ex_seed := SpinBox.new()
 ## Every voxel one colour (all voxel methods).
 var _one_color := CheckBox.new()
+## Extruded, hull, hull_top and lathe: cut the sprite's outline away first.
+var _no_outline := CheckBox.new()
 var _render_model := OptionButton.new()
+## Rendered: an outline round every shot.
+var _render_outline := CheckBox.new()
 var _ex_bevel := OptionButton.new()
 var _ex_bevel_size := HSlider.new()
 var _ex_bevel_label := Label.new()
@@ -104,12 +111,34 @@ func _ready() -> void:
 	_build_ui()
 	_names = Data.placeable_blocks()
 	for n in _names:
-		var d := Data.block(Data.block_id(n))
-		var icon := ImageTexture.create_from_image(d.sprite)
-		_list.add_item(Data.placeable_label(n), icon)
+		_icons[n] = ImageTexture.create_from_image(Data.block(Data.block_id(n)).sprite)
 	if not _names.is_empty():
-		_select_block(_names[0])
-		_list.select(0)
+		current = _names[0]
+		_select_block(current)
+	_fill_list()
+
+
+## Lists the placeables whose label or block name holds the search text.
+func _fill_list() -> void:
+	_list.clear()
+	_shown.clear()
+	var q := _search.text.strip_edges().to_lower()
+	for n in _names:
+		var label := Data.placeable_label(n)
+		if q != "" and not q in label.to_lower() and not q in String(n).to_lower():
+			continue
+		_list.add_item(label, _icons[n])
+		_shown.append(n)
+		if n == current:
+			_list.select(_shown.size() - 1)
+	if _list.is_anything_selected():
+		_list.ensure_current_is_visible()
+
+
+## Searches the list (UI and tests).
+func search(text: String) -> void:
+	_search.text = text
+	_fill_list()
 
 
 func _build_scene() -> void:
@@ -192,12 +221,36 @@ func _build_ui() -> void:
 	var t := Label.new()
 	t.text = "Placeables"
 	box.add_child(t)
+	_search.placeholder_text = "Search (Ctrl+F)"
+	_search.clear_button_enabled = true
+	_search.text_changed.connect(func(_s): _fill_list())
+	# Enter shows the first match.
+	_search.text_submitted.connect(func(_s):
+		if not _shown.is_empty() and not current in _shown:
+			_select_block(_shown[0])
+			_fill_list()
+		get_viewport().gui_release_focus())
+	box.add_child(_search)
 	_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_list.fixed_icon_size = Vector2i(28, 28)
 	_list.item_selected.connect(func(i):
-		_select_block(_names[i])
+		_select_block(_shown[i])
 		get_viewport().gui_release_focus())
 	box.add_child(_list)
+	var copy_row := HBoxContainer.new()
+	for b in [["Copy", "Copy this placeable's method, settings and transform (Ctrl+C)", func(): copy_settings()],
+			["Paste", "Give this placeable the copied ones (Ctrl+V)", func(): paste_settings()],
+			["Paste to styles", "Give this placeable and all its other styles the copied ones (Ctrl+Shift+V)", func(): paste_settings(true)]]:
+		var btn := Button.new()
+		btn.text = b[0]
+		btn.tooltip_text = b[1]
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var act: Callable = b[2]
+		btn.pressed.connect(func():
+			act.call()
+			get_viewport().gui_release_focus())
+		copy_row.add_child(btn)
+	box.add_child(copy_row)
 	var save := Button.new()
 	save.text = "Save (Ctrl+S)"
 	save.pressed.connect(func():
@@ -239,7 +292,7 @@ func _build_ui() -> void:
 	_help.add_theme_stylebox_override("panel", hsb)
 	var ht := Label.new()
 	ht.add_theme_font_size_override("font_size", 15)
-	ht.text = "Click a model or press 1-9, 0, - to choose its method   ·   PageUp/PageDown: block\nSpace: turntable   Q/E: turn   MMB: orbit   Shift+MMB: pan   Wheel: zoom\nNoise: N mode   Shift+N seed   O one colour per voxel   ·   Extruded: [ ] depth   B bevel   ·   Ctrl+S: save"
+	ht.text = "Click a model or press 1-9, 0, - to choose its method   ·   PageUp/PageDown: block\nSpace: turntable   Q/E: turn   MMB: orbit   Shift+MMB: pan   Wheel: zoom\nNoise: N mode   Shift+N seed   O one colour per voxel   L remove outline   Shift+L rendered outline   ·   Extruded: [ ] depth   B bevel\nCtrl+C / Ctrl+V: copy / paste a placeable's settings (Ctrl+Shift+V: to all its styles)   ·   Ctrl+F: search   ·   Ctrl+S: save"
 	_help.add_child(ht)
 	_ui.add_child(_help)
 
@@ -357,6 +410,13 @@ func _build_extrude_panel(parent: Control) -> void:
 		_set_option("one_color", on)
 		get_viewport().gui_release_focus())
 	box.add_child(_one_color)
+	_no_outline.text = "Remove outline (L)"
+	_no_outline.tooltip_text = "Cut the sprite's dark outline away before building the model"
+	_no_outline.add_theme_font_size_override("font_size", 16)
+	_no_outline.toggled.connect(func(on):
+		_set_option("no_outline", on)
+		get_viewport().gui_release_focus())
+	box.add_child(_no_outline)
 	var reset := Button.new()
 	reset.text = "Reset these settings"
 	reset.pressed.connect(func():
@@ -368,7 +428,7 @@ func _build_extrude_panel(parent: Control) -> void:
 		get_viewport().gui_release_focus())
 	box.add_child(reset)
 	var hint := Label.new()
-	hint.text = "[ ] depth   N noise   Shift+N seed   B bevel   O one colour"
+	hint.text = "[ ] depth   N noise   Shift+N seed   B bevel   O one colour   L outline"
 	hint.add_theme_font_size_override("font_size", 14)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
@@ -387,6 +447,13 @@ func _build_extrude_panel(parent: Control) -> void:
 		_set_option("model", NPCModels.RENDER_MODELS[i], "rendered")
 		get_viewport().gui_release_focus())
 	box.add_child(_render_model)
+	_render_outline.text = "Add outline (Shift+L)"
+	_render_outline.tooltip_text = "Draw a dark one-pixel outline round every shot, as Terraria's sprites have"
+	_render_outline.add_theme_font_size_override("font_size", 16)
+	_render_outline.toggled.connect(func(on):
+		_set_option("outline", on, "rendered")
+		get_viewport().gui_release_focus())
+	box.add_child(_render_outline)
 
 
 ## Transform panel: offset, rotation (X / Y / Z) and scale of the block's model.
@@ -498,6 +565,9 @@ func _sync_extrude_ui() -> void:
 	_ex_strength_label.text = "Noise strength: %d%%" % roundi(o.strength * 100.0)
 	_ex_seed.set_value_no_signal(o.seed)
 	_one_color.set_pressed_no_signal(o.one_color)
+	_no_outline.visible = _settings_method in Data.OUTLINE_METHODS
+	_no_outline.set_pressed_no_signal(o.get("no_outline", false))
+	_render_outline.set_pressed_no_signal(Data.method_options(current, "rendered").outline)
 	_render_model.select(NPCModels.RENDER_MODELS.find(Data.method_options(current, "rendered").model))
 	_ex_bevel.select(Data.EXTRUDE_BEVELS.find(ex.bevel))
 	_ex_bevel_size.set_value_no_signal(ex.bevel_size)
@@ -718,6 +788,50 @@ func _refresh_choice() -> void:
 	_marker.position = Vector3((i - (n - 1) * 0.5) * SPACING, 0, 0)
 
 
+## The copied placeable's choices (Data.copy_placeable) and its name.
+var copied := {}
+var copied_from := ""
+
+
+## Copies the current placeable's method, settings and transform.
+func copy_settings() -> void:
+	if current == "":
+		return
+	copied = Data.copy_placeable(_settings_name(current))
+	copied_from = current
+	_flash("Copied %s's settings" % Data.placeable_label(current))
+
+
+## Gives the current placeable (and with `styles`, all its kind's other
+## styles: blocks.json variant_of) the copied choices.
+func paste_settings(styles := false) -> void:
+	if current == "" or copied_from == "":
+		_flash("Nothing copied yet (Ctrl+C on a placeable first)")
+		return
+	var targets: Array[String] = [current]
+	if styles:
+		var kind := Data.kind_of(Data.block_id(current))
+		for i in range(1, Data.blocks.size()):
+			var n: String = Data.blocks[i].name
+			if n != current and Data.kind_of(i) == kind and _names.has(n):
+				targets.append(n)
+	var kept := 0
+	for n in targets:
+		var name := _settings_name(n)
+		var has_model := func(b: String, m: String) -> bool:
+			return Data.handmade_models.has(b) if m == "claude" else TunedModels.has(TunedModels.block_key(b))
+		if not Data.paste_placeable(name, copied, has_model):
+			kept += 1
+		PlaceableRenders.forget(Data.block_id(n))
+	dirty = true
+	_rebuild_all = true
+	_refresh_choice()
+	_sync_extrude_ui()
+	_sync_transform_ui()
+	var what := "%s's settings to %s" % [Data.placeable_label(copied_from), Data.placeable_label(current) if targets.size() == 1 else "%d styles" % targets.size()]
+	_flash("Pasted " + what + ("" if kept == 0 else " (%d kept their method: no model of that kind)" % kept))
+
+
 func _save() -> void:
 	if Data.save_placeables(save_path):
 		dirty = false
@@ -766,7 +880,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_update_camera()
 	elif event is InputEventKey and event.pressed and not event.echo:
 		var k: int = event.keycode
-		if event.ctrl_pressed and k == KEY_S:
+		if event.ctrl_pressed and k == KEY_F:
+			_search.grab_focus()
+			_search.select_all()
+		elif event.ctrl_pressed and k == KEY_C:
+			copy_settings()
+		elif event.ctrl_pressed and k == KEY_V:
+			paste_settings(event.shift_pressed)
+		elif event.ctrl_pressed and k == KEY_S:
 			_save()
 		elif k >= KEY_1 and k <= KEY_9 and k - KEY_1 < Data.PLACEABLE_METHODS.size():
 			choose(Data.PLACEABLE_METHODS[k - KEY_1])
@@ -776,6 +897,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			choose(Data.PLACEABLE_METHODS[10])
 		elif k == KEY_O:
 			_set_option("one_color", not Data.method_options(current, _settings_method).one_color)
+		elif k == KEY_L and event.shift_pressed:
+			_set_option("outline", not Data.method_options(current, "rendered").outline, "rendered")
+		elif k == KEY_L and _settings_method in Data.OUTLINE_METHODS:
+			_set_option("no_outline", not Data.method_options(current, _settings_method).no_outline)
 		elif k in [KEY_PAGEDOWN, KEY_DOWN]:
 			_step(1)
 		elif k in [KEY_PAGEUP, KEY_UP]:
@@ -805,13 +930,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## Steps through the listed (searched) placeables.
 func _step(d: int) -> void:
-	if _names.is_empty():
+	if _shown.is_empty():
 		return
-	var i := wrapi(_names.find(current) + d, 0, _names.size())
+	var at := _shown.find(current)
+	var i := wrapi(at + d, 0, _shown.size()) if at >= 0 else (0 if d > 0 else _shown.size() - 1)
 	_list.select(i)
 	_list.ensure_current_is_visible()
-	_select_block(_names[i])
+	_select_block(_shown[i])
 
 
 ## Chooses the method whose model is nearest the click on screen.

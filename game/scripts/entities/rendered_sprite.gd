@@ -47,6 +47,11 @@ func face(heading: Vector3) -> void:
 	_orient = Basis(Vector3.UP, atan2(h.z, -h.x))
 
 
+## Turns it to exactly `b` (as NPCModel.orient).
+func orient(b: Basis) -> void:
+	_orient = b
+
+
 func set_frame(f: int) -> void:
 	_frame = f
 	if _renders.is_empty():

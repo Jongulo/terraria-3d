@@ -37,7 +37,7 @@ static var _cache := {}  # art key -> {mesh, material}
 static func column(world: VoxelWorld, p: Vector3i) -> Array:
 	var id := world.get_block(p)
 	var d := Data.block(id)
-	if not d.get("trunk", false) or d.get("palm", false):
+	if not d.get("trunk", false) or d.get("palm", false) or not d.get("branches", true):
 		return [p, 0]
 	var base := p
 	while world.get_block(base + Vector3i.DOWN) == id:

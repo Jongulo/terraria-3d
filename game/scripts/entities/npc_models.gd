@@ -107,13 +107,17 @@ static func max_depth(kind: String) -> int:
 
 ## A method's settings with defaults filled in: extruded {depth, noise,
 ## strength, seed, bevel, bevel_size, bevel_sides}; hull and lathe {noise,
-## strength, seed}; rendered {model}. The default depth is half the art's width.
+## strength, seed}; every voxel method one_color, and the ones that work the
+## sprite out themselves (Data.OUTLINE_METHODS) no_outline; rendered {model,
+## outline}. The default depth is half the art's width.
 static func options(kind: String, m: String) -> Dictionary:
 	ensure_loaded()
 	if m == "rendered":
 		var model = rendered.get(kind, {}).get("model", "auto")
-		return {"model": model if model in RENDER_MODELS else "auto"}
+		return {"model": model if model in RENDER_MODELS else "auto", "outline": bool(rendered.get(kind, {}).get("outline", false))}
 	var o := {"noise": "none", "strength": 0.5, "seed": 0, "one_color": false}
+	if m in Data.OUTLINE_METHODS:
+		o.no_outline = false
 	if m == "extruded":
 		var mx := max_depth(kind)
 		o.merge({"depth": maxi(1, mx / 2), "bevel": "none", "bevel_size": 2, "bevel_sides": BlockModelMesh.BEVEL_SIDES})
@@ -128,6 +132,8 @@ static func options(kind: String, m: String) -> Dictionary:
 		o.merge(noise[m].get(kind, {}), true)
 	o.seed = int(o.seed)
 	o.one_color = bool(o.one_color)
+	if o.has("no_outline"):
+		o.no_outline = bool(o.no_outline)
 	o.strength = clampf(float(o.strength), 0.0, 1.0)
 	if not o.noise in Data.EXTRUDE_NOISES:
 		o.noise = "none"
@@ -177,7 +183,7 @@ static func frames_of(kind: String) -> Dictionary:
 	if _frames.has(kind):
 		return _frames[kind]
 	var lk := NPC.look(kind)
-	var sheet := Assets.image("Images/NPC_%d" % int(Data.npcs[kind].sprite))
+	var sheet := Assets.image(NPC.image_path(kind))
 	sheet.convert(Image.FORMAT_RGBA8)
 	var n: int = lk.frames
 	var fh := int(lk.frame_h)
@@ -268,6 +274,8 @@ static func mesh(kind: String, m: String, frame: int) -> Dictionary:
 	if _meshes.has(key):
 		return _meshes[key]
 	var art: Image = fr.arts[frame]
+	if m in Data.OUTLINE_METHODS and options(kind, m).no_outline:
+		art = PixelArt.without_outline(art, true)
 	var apx: float = fr.apx
 	var size: Vector2 = fr.size
 	var out := {}

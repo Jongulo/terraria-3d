@@ -28,6 +28,13 @@ func key(code: Key, ctrl := false) -> void:
 		await frames(1)
 
 
+## A 3 x 3 RGBA8 image, one bone-coloured pixel in its middle.
+func _dot() -> PackedByteArray:
+	var img := Image.create(3, 3, false, Image.FORMAT_RGBA8)
+	img.set_pixel(1, 1, Color(0.7, 0.7, 0.55))
+	return img.get_data()
+
+
 func _ready() -> void:
 	Settings.persist = false
 	_run()
@@ -147,6 +154,50 @@ func _run() -> void:
 	await get_tree().create_timer(1.0).timeout
 	NPCModels.mesh("EyeofCthulhu", "claude", 0)
 	check(NPCModels._pending.is_empty(), "finished builds are collected")
+
+	# 1c. The automatic voxel methods can cut the sprite's outline away first;
+	# rendered shots can draw one round every view.
+	check(not NPCModels.options("Zombie", "hull").no_outline and not NPCModels.options("Zombie", "extruded").no_outline
+			and not NPCModels.options("Zombie", "rendered").outline and not NPCModels.options("Zombie", "claude").has("no_outline"),
+			"outline settings: kept by default on the automatic methods, none on rendered, not offered for Claude's")
+	var z_art: Image = NPCModels.frames_of("Zombie").arts[0]
+	var recoloured := NPCSculpt.without_outline(z_art)
+	var cut := PixelArt.without_outline(z_art, true)
+	var changed := 0
+	var gone := 0
+	var grown := 0
+	for y in z_art.get_height():
+		for x in z_art.get_width():
+			var a: bool = z_art.get_pixel(x, y).a > 0.5
+			if a and recoloured.get_pixel(x, y) != z_art.get_pixel(x, y):
+				changed += 1
+			if a and cut.get_pixel(x, y).a <= 0.5:
+				gone += 1
+			if not a and cut.get_pixel(x, y).a > 0.5:
+				grown += 1
+	check(gone > 0 and gone == changed and grown == 0, "removing the outline cuts its pixels away (%d), nothing else" % gone)
+	var hull_plain: ArrayMesh = NPCModels.mesh("Zombie", "hull", 0).mesh
+	NPCModels.set_option("Zombie", "hull", "no_outline", true)
+	var hull_cut: ArrayMesh = NPCModels.mesh("Zombie", "hull", 0).mesh
+	check(hull_cut.get_aabb().size.x < hull_plain.get_aabb().size.x, "a hull without its outline is a pixel smaller each side")
+	var ex_plain: ArrayMesh = NPCModels.mesh("Zombie", "extruded", 0).mesh
+	NPCModels.set_option("Zombie", "extruded", "no_outline", true)
+	var ex_cut: ArrayMesh = NPCModels.mesh("Zombie", "extruded", 0).mesh
+	check(ex_cut.get_aabb().size.x < ex_plain.get_aabb().size.x and ex_cut.surface_get_array_len(0) != ex_plain.surface_get_array_len(0),
+			"so is an extruded one: its front and back pixel by pixel (no alpha-cut outline)")
+	NPCModels.reset_options("Zombie", "hull")
+	NPCModels.reset_options("Zombie", "extruded")
+	check(not Data.method_options("chest", "lathe").no_outline and not Data.method_options("chest", "rendered").outline
+			and not Data.extrude_options("chest").no_outline, "placeables have the same settings")
+	var chest_id := Data.block_id("chest")
+	var chest_plain: ArrayMesh = BlockModelMesh.build(chest_id, "hull").mesh
+	Data.set_method_option("chest", "hull", "no_outline", true)
+	var chest_cut: ArrayMesh = BlockModelMesh.build(chest_id, "hull").mesh
+	check(chest_cut.get_aabb().size.x < chest_plain.get_aabb().size.x, "a placeable's hull can lose its outline too")
+	Data.reset_method_options("chest", "hull")
+	var ring := Image.create_from_data(3, 3, false, Image.FORMAT_RGBA8, VoxelWorld.outline_rgba(_dot(), 3, 3, NPCRenders.OUTLINE_SHADE))
+	check(ring.get_pixel(1, 0).a > 0.5 and ring.get_pixel(0, 0).a < 0.5 and ring.get_pixel(1, 0).get_luminance() < ring.get_pixel(1, 1).get_luminance(),
+			"the rendered outline: a dark ring round each shot's opaque pixels")
 
 	# 1b'. Claude's King Slime: a see-through slime spun from the sprite; the
 	# ninja and crown stay billboards.

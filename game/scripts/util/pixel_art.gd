@@ -9,6 +9,44 @@ const MIN_UNIFORM := 0.98
 static var _cache := {}
 
 
+## The sprite without its outline: each pixel on the silhouette's edge (beside
+## a see-through pixel) that's clearly darker than the pixels just inside it
+## takes the colour of the brightest of them, so a 3D model doesn't wear
+## Terraria's dark outline as black voxels; the silhouette stays as it is. With
+## `cut` those pixels go instead (the voxel methods' "remove outline": the
+## silhouette a pixel smaller, as a rendered model's added outline makes it
+## up again). A line one pixel wide, as dark as its neighbours, stays.
+static func without_outline(art: Image, cut := false) -> Image:
+	var w := art.get_width()
+	var h := art.get_height()
+	var out := art.duplicate() as Image
+	var opaque := func(x: int, y: int) -> bool:
+		return x >= 0 and y >= 0 and x < w and y < h and art.get_pixel(x, y).a > 0.5
+	for y in h:
+		for x in w:
+			if not opaque.call(x, y):
+				continue
+			if opaque.call(x - 1, y) and opaque.call(x + 1, y) and opaque.call(x, y - 1) and opaque.call(x, y + 1):
+				continue  # inside, not on the edge
+			# The pixels round it that are inside the silhouette (not on its edge).
+			var best := Color(0, 0, 0, 0)
+			var sum := 0.0
+			var n := 0
+			for d in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
+				var q: Vector2i = Vector2i(x, y) + d
+				if not opaque.call(q.x, q.y):
+					continue
+				var col := art.get_pixel(q.x, q.y)
+				sum += col.get_luminance()
+				n += 1
+				if best.a < 0.5 or col.get_luminance() > best.get_luminance():
+					best = col
+			var own := art.get_pixel(x, y)
+			if n > 0 and own.get_luminance() < 0.8 * sum / n:
+				out.set_pixel(x, y, Color(0, 0, 0, 0) if cut else best)
+	return out
+
+
 ## Detects the art scale: Vector3i(scale, grid offset x, grid offset y).
 static func detect_scale(img: Image) -> Vector3i:
 	var key := img.get_instance_id()

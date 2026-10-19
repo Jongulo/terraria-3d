@@ -11,10 +11,11 @@ var _worldgen := {}  # keys of unopened worldgen chests -> loot table
 ## chest, 1 a sky island's, 2 a living mahogany tree's Ivy Chest, 3 a cabin's
 ## (Gold or Rich Mahogany Chest), 4 an ice cabin's Frozen Chest, 5 and 6 a
 ## desert cabin's Sandstone Chest (the upper and the deeper desert), 7 to 14
-## the Dungeon's chests in Terraria's order (dungeon.rs: DUNGEON_LOOT).
+## the Dungeon's chests in Terraria's order (dungeon.rs: DUNGEON_LOOT), 15 a
+## mushroom cabin's Mushroom Chest.
 const LOOT := ["chest", "sky_chest", "ivy_chest", "chest", "frozen_chest", "sandstone_chest", "sandstone_chest_deep",
 		"dungeon_Muramasa", "dungeon_CobaltShield", "dungeon_AquaScepter", "dungeon_BlueMoon", "dungeon_MagicMissile",
-		"dungeon_Valor", "dungeon_GoldenKey", "dungeon_Handgun"]
+		"dungeon_Valor", "dungeon_GoldenKey", "dungeon_Handgun", "mushroom_chest"]
 
 
 static func key(p: Vector3i) -> String:

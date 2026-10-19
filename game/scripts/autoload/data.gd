@@ -23,6 +23,9 @@ const EXTRUDE_NOISES := ["none", "speckle", "grain", "palette"]
 ## Methods with settings: pixel noise and one colour per voxel (extruded also
 ## has depth and bevel).
 const NOISE_METHODS := ["extruded", "hull", "hull_top", "lathe", "claude", "tuned"]
+## The voxel methods that work the sprite out by themselves, which can cut its
+## dark outline away first ("no_outline": PixelArt.without_outline).
+const OUTLINE_METHODS := ["extruded", "hull", "hull_top", "lathe"]
 ## Bevel profiles for the "extruded" method's front and back edges.
 const EXTRUDE_BEVELS := ["none", "chamfer", "round", "cove", "step"]
 ## Bevel size limit, in art voxels.
@@ -115,6 +118,28 @@ func _read_json(path: String) -> Dictionary:
 
 func block_id(name: String) -> int:
 	return block_ids.get(name, 0)
+
+
+## What a block is, its styles being the same thing (blocks.json
+## "variant_of": flowers_7 is flowers).
+func kind_of(id: int) -> String:
+	var b := block(id)
+	return b.get("variant_of", b.get("name", ""))
+
+
+## A random one of a block's styles (itself or one of its variant_of blocks).
+func random_style(name: String) -> int:
+	if _styles.is_empty():
+		for i in range(1, blocks.size()):
+			var k: String = blocks[i].get("variant_of", blocks[i].name)
+			if not _styles.has(k):
+				_styles[k] = []
+			_styles[k].append(i)
+	var ids: Array = _styles.get(name, [block_id(name)])
+	return ids[randi() % ids.size()]
+
+
+var _styles := {}
 
 
 func block(id: int) -> Dictionary:
@@ -821,8 +846,9 @@ func extrude_options(name: String) -> Dictionary:
 	var d := block(block_id(name))
 	var width: int = d.art.get_width() if d.has("art") else 8
 	var o := {"depth": mini(width, extrude_max_depth(name)), "noise": "none", "strength": 0.5, "seed": 0,
-			"bevel": "none", "bevel_size": 2, "one_color": false}
+			"bevel": "none", "bevel_size": 2, "one_color": false, "no_outline": false}
 	o.merge(extrude_settings.get(name, {}), true)
+	o.no_outline = bool(o.no_outline)
 	o.depth = clampi(int(o.depth), 1, extrude_max_depth(name))
 	o.seed = int(o.seed)
 	o.strength = clampf(float(o.strength), 0.0, 1.0)
@@ -851,11 +877,15 @@ func method_options(name: String, method: String) -> Dictionary:
 		return extrude_options(name)
 	if method == "rendered":
 		var model = rendered_settings.get(name, {}).get("model", "auto")
-		return {"model": model if model in NPCModels.RENDER_MODELS else "auto"}
+		return {"model": model if model in NPCModels.RENDER_MODELS else "auto", "outline": bool(rendered_settings.get(name, {}).get("outline", false))}
 	var o := {"noise": "none", "strength": 0.5, "seed": 0, "one_color": false}
+	if method in OUTLINE_METHODS:
+		o.no_outline = false
 	o.merge(noise_settings.get(method, {}).get(name, {}), true)
 	o.seed = int(o.seed)
 	o.one_color = bool(o.one_color)
+	if o.has("no_outline"):
+		o.no_outline = bool(o.no_outline)
 	o.strength = clampf(float(o.strength), 0.0, 1.0)
 	if not o.noise in EXTRUDE_NOISES:
 		o.noise = "none"
@@ -981,6 +1011,50 @@ func set_block_method(name: String, method: String) -> void:
 		placeable_methods[name] = method
 
 
+## Everything chosen for a placeable in the picker (its settings name's):
+## its method, every method's settings and its transform, to paste onto
+## another (paste_placeable). Missing entries are its defaults.
+func copy_placeable(name: String) -> Dictionary:
+	var out := {}
+	for k in _placeable_stores():
+		var store: Dictionary = _placeable_stores()[k]
+		if store.has(name):
+			var v = store[name]
+			out[k] = v.duplicate(true) if v is Dictionary else v
+	return out
+
+
+## Makes a placeable's choices those copied from another (copy_placeable):
+## the method, each method's settings and the transform, what the copy didn't
+## have going back to the defaults. A Claude or tuned method the block has no
+## model for isn't taken (it keeps its own). Returns whether the method was.
+func paste_placeable(name: String, copied: Dictionary, has_model: Callable) -> bool:
+	var stores := _placeable_stores()
+	for k in stores:
+		if k == "methods":
+			continue
+		var store: Dictionary = stores[k]
+		if copied.has(k):
+			store[name] = copied[k].duplicate(true)
+		else:
+			store.erase(name)
+	var d := block(block_id(name))
+	var method: String = copied.get("methods", default_method(d))
+	if method in ["claude", "tuned"] and not has_model.call(name, method):
+		return false
+	set_block_method(name, method)
+	return true
+
+
+## The picker's stores of choices by name: methods, extruded, the noise
+## methods', rendered, transform.
+func _placeable_stores() -> Dictionary:
+	var out := {"methods": placeable_methods, "extruded": extrude_settings, "rendered": rendered_settings, "transform": transform_settings}
+	for m in noise_settings:
+		out[m] = noise_settings[m]
+	return out
+
+
 func register_blocks(world: VoxelWorld) -> void:
 	for id in range(1, blocks.size()):
 		var b := blocks[id]
@@ -997,6 +1071,8 @@ func register_blocks(world: VoxelWorld) -> void:
 			"emit": Color(emit[0], emit[1], emit[2]),
 			"platform": b.get("platform", false),
 			"sun_through": b.get("sun_through", false),
+			# One of that block's styles (worldgen's scatter_styles).
+			"variant_of": block_id(b.variant_of) if b.has("variant_of") else 0,
 			# Grass (its side is dirt under a grass fringe): sides down a slope
 			# show the grass top, like OptiFine's Better Grass (Fancy).
 			"better_grass": b.get("tex", {}).get("side", {}).has("lower") if b.get("tex", {}).get("side") is Dictionary else false,

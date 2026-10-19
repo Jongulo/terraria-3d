@@ -12,6 +12,7 @@
 		"drops: [item, min, max, chance]. drops_one_of: one of these, always.",
 		"king_slime: Terraria's King Slime (AI_015_KingSlime): hops at you in a cycle (one a big jump), shrinking as it's hurt, teleporting next to you when it can't reach you, spitting out Blue Slimes as it loses life.",
 		"worm: Terraria's worms (AI_006_Worms): a head drags its segments (worm.kinds) through the ground; speed / accel in px/tick, spacing in px; killing a middle segment splits it in two. sprite_ppb: draw the sheet at this many texture pixels a block (its true size). boss_group: one boss made of several NPCs (its bar sums them; the last to die drops boss_drops). spawner: false keeps it out of the test world's spawners.",
+		"image: an Images/ sheet that isn't an NPC_<n> one (instead of sprite). part: not a creature, a piece drawn by another (Skeletron's arm bones: skeletron_arm, its art pointing down each bone); it's here so the NPC picker can give it a 3D or rendered look. name: its name where Terraria has none.",
 		"night_buttons: chat buttons only at night (the Old Man's Curse, which brings Skeletron).",
 		"skeletron: Terraria's Skeletron head (aiStyle 11): brings its two hands (skeletron_hand, aiStyle 12), hovers over you, every 800 ticks spins at you for 400 (its defense 10 lower); enraged by day (9999 damage and defense, spinning at you fast); the Dungeon Guardian is one always enraged. drops_chain: [item, chance] tried in order, the first that rolls drops (one of them at most).",
 		"knockback_resist: Terraria's knockBackResist, how much of a hit's knockback it takes (1 all, 0 none). flight: a flier's Terraria steering, in px/tick (a block is 24 px, a tick 1/60 s): x / y [acceleration toward you, extra braking while moving away (negative: less), braking above top speed, top speed] (AI_002 eyes, aiStyle 14 bats), or homing [speed, acceleration] (AI_005: flies at you, accelerating twice as hard against its motion).",
@@ -157,5 +158,13 @@
 	"SkeletronHand": {"sprite": 36, "frames": 2, "sprite_ppb": 24, "size": [2.17, 2.17], "life": 600, "damage": 20, "defense": 14, "knockback_resist": 0.0,
 		"ai": "skeletron_hand", "persistent": true, "spawner": false, "hit_sound": "NPC_Hit_2", "death_sound": "NPC_Killed_2", "drops": [], "coins": 0},
 	"DungeonGuardian": {"sprite": 68, "frames": 1, "sprite_ppb": 24, "size": [3.33, 4.25], "life": 9999, "damage": 9999, "defense": 9999, "knockback_resist": 0.0,
-		"ai": "skeletron", "persistent": true, "spawner": false, "hit_sound": "NPC_Hit_2", "death_sound": "NPC_Killed_2", "drops": [["BoneKey", 1, 1, 1.0]], "coins": 0}
+		"ai": "skeletron", "persistent": true, "spawner": false, "hit_sound": "NPC_Hit_2", "death_sound": "NPC_Killed_2", "drops": [["BoneKey", 1, 1, 1.0]], "coins": 0},
+	"SkeletronArm": {"name": "Skeletron Arm", "image": "Arm_Bone", "frames": 1, "sprite_ppb": 24, "size": [1.08, 4.08], "life": 1, "damage": 0, "defense": 0,
+		"knockback_resist": 0.0, "ai": "skeletron_arm", "part": true, "invulnerable": true, "spawner": false, "drops": [], "coins": 0},
+	"SporeBat": {"flight": {"x": [0.1, -0.05, 0.1, 4.0], "y": [0.04, -0.03, 0.05, 1.5]}, "sprite": 634, "frames": 5, "fly_frames": [0, 3], "size": [0.8, 0.6], "life": 16, "damage": 13, "defense": 2, "knockback_resist": 0.8,
+		"ai": "bat", "speed": 6.0, "accel": 9.0, "hit_sound": "NPC_Hit_1", "death_sound": "NPC_Killed_4",
+		"drops": [["Shroomerang", 1, 1, 0.025]], "coins": 90},
+	"SporeSkeleton": {"sprite": 635, "frames": 16, "walk_frames": [2, 15], "size": [0.7, 1.8], "life": 60, "damage": 20, "defense": 8, "knockback_resist": 0.5,
+		"ai": "fighter", "speed": 3.0, "hit_sound": "NPC_Hit_2", "death_sound": "NPC_Killed_2",
+		"drops": [["ThrowingKnife", 10, 25, 0.1], ["Bone", 1, 3, 0.6]], "coins": 100}
 }

@@ -84,15 +84,22 @@ func _table(depth: String, night: bool, biome := "") -> Array:
 	if biome == "crimson" and depth != "space":
 		var t := [["Crimera", 5], ["FaceMonster", 4]]
 		return t + [["Zombie", 2]] if night and depth == "surface" else t
+	var table: Array
 	match depth:
 		"space":
 			return [["Harpy", 1]]
 		"surface":
 			return [["Zombie", 6], ["DemonEye", 4]] if night else [["GreenSlime", 6], ["BlueSlime", 3]]
 		"underground":
-			return [["BlueSlime", 4], ["RedSlime", 2], ["CaveBat", 4], ["Skeleton", 1]]
+			table = [["BlueSlime", 4], ["RedSlime", 2], ["CaveBat", 4], ["Skeleton", 1]]
 		_:
-			return [["Skeleton", 4], ["CaveBat", 4], ["RedSlime", 2], ["YellowSlime", 2]]
+			table = [["Skeleton", 4], ["CaveBat", 4], ["RedSlime", 2], ["YellowSlime", 2]]
+	# The Glowing Mushroom biome: Terraria's Spore Skeletons and Spore Bats in
+	# place of the Skeletons and bats (before Hardmode its own enemies are
+	# only those; the rest come with Hardmode).
+	if biome == "mushroom":
+		table = table.map(func(e): return [{"Skeleton": "SporeSkeleton", "CaveBat": "SporeBat"}.get(e[0], e[0]), e[1]])
+	return table
 
 
 func _pick(table: Array) -> String:
