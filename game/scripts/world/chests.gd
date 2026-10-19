@@ -4,6 +4,9 @@ extends RefCounted
 ## time they are opened; player-placed chests start empty.
 
 const SIZE := 40
+## Chests less than this far under the surface roll surface loot
+## (Terraria's worldSurface + 25 tiles).
+const SURFACE_DEPTH := 25.0 * 2.0 / 3.0
 
 var _chests := {}  # "x,y,z" -> Inventory
 var _worldgen := {}  # keys of unopened worldgen chests -> loot table
@@ -41,7 +44,13 @@ func get_inventory(p: Vector3i) -> Inventory:
 		if _worldgen.has(k):
 			var table: String = _worldgen[k]
 			_worldgen.erase(k)
-			for drop in Game.roll_loot(table):
+			var game := Game.current
+			# By depth, like Terraria's AddBuriedChest: near the surface its
+			# surface loot, below the lava line a chance of a Lava Charm.
+			if game != null and p.y > game.surface_level - SURFACE_DEPTH and Data.loot.has(table + "_surface"):
+				table += "_surface"
+			var lava := game != null and p.y < game.lava_level()
+			for drop in Game.roll_loot(table, lava):
 				inv.add(drop[0], drop[1])
 		_chests[k] = inv
 	return _chests[k]

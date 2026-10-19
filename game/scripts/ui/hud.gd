@@ -584,7 +584,7 @@ func _process(delta: float) -> void:
 	_flash.color.a = maxf(0.0, _flash.color.a - delta * 1.5)
 	var mouse := _root.get_local_mouse_position()
 	_cursor_icon.position = mouse + Vector2(4, 4)
-	_tooltip.position = mouse + Vector2(22, 18)
+	_tooltip.position = tooltip_position(mouse, _tooltip.size, _root.size)
 	if player == null:
 		return
 	if _death.visible:
@@ -595,7 +595,7 @@ func _process(delta: float) -> void:
 	if not b.is_empty():
 		_boss_bar.value = float(b.life) / b.max * 100.0
 		_boss_label.text = "%s  %d/%d" % [b.name, b.life, b.max]
-	_info.text = _depth_text()
+	_info.text = info_text()
 	_update_liquid_ui(delta)
 	if inventory_open:
 		_station_timer -= delta
@@ -617,14 +617,21 @@ func _update_liquid_ui(delta: float) -> void:
 	elif player.head_liquid == Player.LIQ_LAVA:
 		tint = Color(1.0, 0.35, 0.05, 0.6)
 	_liquid_tint.color = _liquid_tint.color.lerp(tint, minf(1.0, delta * 12.0))
-	# Bubbles: one per tenth of breath, only while short of air.
+	# Bubbles: one per tenth of breath, only while short of air; else the
+	# Lava Charm's flames while its time runs down (Terraria's breath meter).
 	var want := 0 if player.breath >= Player.BREATH_MAX else ceili(player.breath / Player.BREATH_MAX * 10.0)
-	if _bubbles.get_child_count() != want:
+	var icon := "Images/Bubble"
+	var lava_max := player.stat("lava_time")
+	if lava_max > 0.0 and player.lava_time < lava_max and (want == 0 or player.in_liquid == Player.LIQ_LAVA):
+		want = ceili(player.lava_time / lava_max * 10.0)
+		icon = "Images/Flame"
+	if _bubbles.get_child_count() != want or (want > 0 and _bubbles.get_child(0).texture != Assets.texture(icon)):
 		for c in _bubbles.get_children():
+			_bubbles.remove_child(c)
 			c.queue_free()
 		for i in want:
 			var b := TextureRect.new()
-			b.texture = Assets.texture("Images/Bubble")
+			b.texture = Assets.texture(icon)
 			b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			_bubbles.add_child(b)
@@ -655,13 +662,55 @@ func _draw_buffs() -> void:
 		_buffs.add_child(box)
 
 
-func _depth_text() -> String:
+## Radar: enemies within 2000 px (Terraria's accThirdEye count).
+const RADAR_RANGE := 2000.0 / 24.0
+## Feet a block (a foot is half a tile).
+const FEET := 3.0
+
+
+## What your informational accessories show (Terraria's Main.DrawInfoAccs):
+## the Depth Meter, the Compass and the Radar, a line each.
+func info_text() -> String:
+	var game := Game.current
+	var info := player.info_accessories()
+	var lines: PackedStringArray = []
+	if info.has("depth"):
+		lines.append(depth_text())
+	if info.has("compass"):
+		lines.append(compass_text())
+	if info.has("radar"):
+		var n := 0
+		for npc in game.npcs():
+			if not npc.def.ai in ["town", "dummy"] and not npc.untouchable \
+					and int(npc.def.get("life", 0)) > 5 and npc.center().distance_to(player.center()) < RADAR_RANGE:
+				n += 1
+		lines.append("No enemies nearby" if n == 0 else "1 enemy nearby!" if n == 1 else "%d enemies nearby!" % n)
+	return "\n".join(lines)
+
+
+## The Depth Meter: feet under (or over) the surface from your feet, and the
+## layer: "123' Caverns", "Level Surface".
+func depth_text() -> String:
 	var game := Game.current
 	var y := player.global_position.y
-	var depth := int(round(y - game.surface_level))
-	var surface := "Ocean" if game.biome == "ocean" else "Surface"
-	var where := "Space" if y > game.space_level() else surface if depth > -12 else ("Underground" if y > game.cavern_level else ("Caverns" if y > game.underworld_level else "Underworld"))
-	return "%s, %d ft %s" % [where, absi(depth) * 2, "above" if depth >= 0 else "below"]
+	var feet := int((game.surface_level - y) * FEET)
+	var layer := "Underworld" if y < game.underworld_level else "Caverns" if y < game.cavern_level \
+			else "Underground" if feet > 0 else "Surface" if y < game.space_level() else "Space"
+	return ("Level" if feet == 0 else "%d'" % absi(feet)) + " " + layer
+
+
+## The Compass: feet east or west of the world's middle (and, here in 3D,
+## north or south of it): "45' East, 120' North", "Center".
+func compass_text() -> String:
+	var size: Vector3i = Game.current.world.get_size()
+	var x := int((player.global_position.x - size.x * 0.5) * FEET)
+	var z := int((player.global_position.z - size.z * 0.5) * FEET)
+	var parts: PackedStringArray = []
+	if x != 0:
+		parts.append("%d' %s" % [absi(x), "East" if x > 0 else "West"])
+	if z != 0:
+		parts.append("%d' %s" % [absi(z), "South" if z > 0 else "North"])
+	return "Center" if parts.is_empty() else ", ".join(parts)
 
 
 func set_clock(text: String) -> void:
@@ -1068,6 +1117,17 @@ func _update_cursor() -> void:
 		_cursor_count.text = str(_cursor_stack.count) if _cursor_stack.count > 1 else ""
 
 
+## Where the tooltip box goes: below and right of the mouse, flipped to its
+## left (or above it) when it would run past the window's edge.
+static func tooltip_position(mouse: Vector2, box: Vector2, area: Vector2) -> Vector2:
+	var at := mouse + Vector2(22, 18)
+	if at.x + box.x > area.x:
+		at.x = mouse.x - box.x - 10.0
+	if at.y + box.y > area.y:
+		at.y = mouse.y - box.y - 10.0
+	return Vector2(clampf(at.x, 0.0, maxf(0.0, area.x - box.x)), clampf(at.y, 0.0, maxf(0.0, area.y - box.y)))
+
+
 func show_tooltip(stack, slot: ItemSlot = null) -> void:
 	if stack == null and slot != null and slot.tooltip_empty != "" and inventory_open:
 		_tooltip_label.text = slot.tooltip_empty
@@ -1284,10 +1344,17 @@ class DefenseIcon extends Control:
 		var region := Rect2(0, 0, 52, 48)
 		var at := (size - region.size) * 0.5
 		draw_texture_rect_region(Assets.texture("Images/Extra_58"), Rect2(at, region.size), region)
-		var font := Assets.font("Item_Stack")
+		# Terraria's DrawDefenseCounter: the mouse text font, shadowed.
+		var font := Assets.font("Mouse_Text")
 		var text := str(player.defense())
 		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
-		draw_string(font, Vector2((size.x - w) * 0.5, size.y * 0.5 + 8), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		# White with a dark outline, like Terraria's (DrawDefenseCounter's
+		# shadowed text), so it reads on the light shield.
+		var at_text := Vector2((size.x - w) * 0.5, size.y * 0.5 + 8)
+		# (A bitmap font: the outline is the text drawn dark round it.)
+		for d in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+			draw_string(font, at_text + d, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.08, 0.08, 0.14))
+		draw_string(font, at_text, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
 
 
 class RecipeButton extends Control:

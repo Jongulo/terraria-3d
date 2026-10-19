@@ -337,7 +337,9 @@ func _update_playing(delta: float) -> void:
 	# The camera reaches the sky's backdrops, clouds and sun beyond it.
 	player.camera.far = maxf(1000.0, sky.body_distance() + 100.0)
 	_update_music(pos)
-	hud.set_clock(sky.clock_text())
+	# The time only with a watch on you (Terraria's informational accessories).
+	var watch := int(player.info_accessories().get("watch", 0))
+	hud.set_clock(sky.clock_text(watch) if watch > 0 else "")
 	_liquid_acc = minf(_liquid_acc + delta, 0.25)
 	while _liquid_acc >= 1.0 / LIQUID_TPS:
 		_liquid_acc -= 1.0 / LIQUID_TPS
@@ -815,14 +817,23 @@ func spawn_dust(pos: Vector3, color: Color, amount := 8) -> void:
 	p.finished.connect(p.queue_free)
 
 
-static func roll_loot(table_name: String) -> Array:
+## Where lava pockets start, 20 blocks under the caverns' top (worldgen's
+## lava pools; Terraria's lavaLine).
+func lava_level() -> float:
+	return cavern_level - 20.0
+
+
+static func roll_loot(table_name: String, lava := false) -> Array:
 	var table: Dictionary = Data.loot.get(table_name, {})
 	var out := []
 	var pick: Array = table.get("pick_one", [])
 	if not pick.is_empty():
 		var e: Array = pick[randi() % pick.size()]
-		# A rarer primary item instead now and then (the Ivy Chest's).
+		# A rarer primary item instead now and then (the Ivy Chest's; a Lava
+		# Charm only below the lava line, `lava`).
 		for alt in table.get("instead", []):
+			if alt.size() > 4 and alt[4] == "lava" and not lava:
+				continue
 			if randf() < float(alt[3]):
 				e = alt
 				break
@@ -923,6 +934,9 @@ func blast_blocks(pos: Vector3, r: float) -> int:
 	return broken
 
 
+const CORDAGE_VINES := ["vines", "vine_flowers", "jungle_vines"]
+
+
 func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 	var id := world.get_block(p)
 	if id == 0:
@@ -958,6 +972,10 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 		if b.get("on_break") == "pot":
 			for d in roll_loot("pot"):
 				spawn_item(d[0], d[1], c)
+		# The Guide to Plant Fiber Cordage: vines (plain, flower and jungle)
+		# drop Vine Rope half the time (Terraria's KillTile_GetItemDrops).
+		if Data.kind_of(id) in CORDAGE_VINES and player != null and player.has_effect("cordage") and randf() < 0.5:
+			spawn_item("VineRope", 1, c)
 
 	if b.get("trunk", false):
 		_fell_tree(p, id)

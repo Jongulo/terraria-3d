@@ -231,11 +231,17 @@ static func sky_at(h: float) -> Dictionary:
 
 
 ## Terraria-style clock string ("4:30 AM" at dawn).
-func clock_text() -> String:
+## The time, to the minute; `watch` 1 rounds it down to the hour, 2 to the
+## half hour (Terraria's Copper / Silver / Gold Watches, Main.DrawInfoAccs).
+func clock_text(watch := 3) -> String:
 	# One tick is one in-game second; days start at 4:30 AM, nights at 7:30 PM.
 	var seconds := time + (4.5 * 3600.0 if is_day else 19.5 * 3600.0)
 	var hours := int(seconds / 3600.0) % 24
 	var minutes := int(seconds / 60.0) % 60
+	if watch == 1:
+		minutes = 0
+	elif watch == 2:
+		minutes = 0 if minutes < 30 else 30
 	var suffix := "AM" if hours < 12 else "PM"
 	var h12 := hours % 12
 	return "%d:%02d %s" % [12 if h12 == 0 else h12, minutes, suffix]

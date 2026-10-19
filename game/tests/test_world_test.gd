@@ -408,6 +408,7 @@ func _run() -> void:
 	await _platform_checks(c)
 	await _rope_checks(c)
 	await _hook_checks(c)
+	await _accessory_checks(c)
 	await _furniture_checks(c)
 	await _hammer_checks(c)
 	await _furniture2_checks(c)
@@ -1481,6 +1482,199 @@ func _prop_batch_checks(c: Vector3i) -> void:
 		lit = lit and not m.is_empty() and m.light == game.world.get_light(Vector3(q) + Vector3(0.5, 0.5, 0.5)) and m.light.a > 0.5
 	check(bm.model_at(pot).is_empty() and lit, "breaking a prop leaves the props around it lit")
 	game.world.set_block(pot, Data.block_id("pot"))
+	await frames(5)
+
+
+## The accessories added after the first ones: where they come from (drops,
+## chests by depth), the informational ones in your inventory, wall sliding
+## and jumping, wings, the Lava Charm, the Diving Helmet, the Jellyfish
+## Necklace's light and the Guide to Plant Fiber Cordage.
+func _accessory_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var added := ["Aglet", "ClimbingClaws", "ShoeSpikes", "LavaCharm", "Shackle", "JellyfishNecklace", "CordageGuide", "Magiluminescence", "CreativeWings",
+			"CopperWatch", "TinWatch", "SilverWatch", "TungstenWatch", "GoldWatch", "PlatinumWatch", "DepthMeter", "Compass", "Radar", "DivingHelmet"]
+	check(added.all(func(n): return not Data.item(n).is_empty()), "the new accessories are items")
+	var drops := func(npc: String, item: String) -> bool: return Data.npcs[npc].drops.any(func(d): return d[0] == item)
+	check(drops.call("CaveBat", "DepthMeter") and drops.call("Piranha", "Compass") and drops.call("Zombie", "Shackle") and drops.call("Shark", "DivingHelmet") and drops.call("PinkJellyfish", "JellyfishNecklace"),
+			"drops: bats the Depth Meter, Piranhas the Compass, Zombies the Shackle, Sharks the Diving Helmet, Jellyfish the Jellyfish Necklace")
+	check(Data.recipes.any(func(r): return r.result == "CopperWatch" and r.ingredients.get("CopperBar") == 10 and r.ingredients.get("Chain") == 1)
+			and Data.recipes.any(func(r): return r.result == "Magiluminescence" and r.ingredients.get("Topaz") == 5), "recipes: watches (10 bars and a Chain), Magiluminescence")
+	# Chests by depth: near the surface Terraria's surface loot.
+	var surface_items := ["Spear", "WoodenBoomerang", "Aglet", "ClimbingClaws", "CordageGuide", "Radar"]
+	var top := Vector3i(c.x + 3, TestWorld.GROUND + 1, c.z + 60)
+	var all_surface := true
+	for i in 12:
+		game.chests._worldgen[Chests.key(top)] = "chest"
+		game.chests._chests.erase(Chests.key(top))
+		all_surface = all_surface and game.chests.get_inventory(top).slots.any(func(s): return s != null and s.item in surface_items)
+	game.chests._chests.erase(Chests.key(top))
+	check(all_surface, "a chest near the surface rolls Terraria's surface loot (Aglet, Climbing Claws, Radar...)")
+	var lava_charms := [0, 0]
+	for i in 600:
+		for k in 2:
+			if Game.roll_loot("chest", k == 1).any(func(d): return d[0] == "LavaCharm"):
+				lava_charms[k] += 1
+	check(lava_charms[0] == 0 and lava_charms[1] > 10, "Lava Charms only in chests below the lava line (%s of 600)" % [lava_charms])
+	check(Data.loot.chest.pick_one.any(func(e): return e[0] == "ShoeSpikes") and Data.loot.sky_chest.extras.any(func(e): return e[0] == "CreativeWings"),
+			"Shoe Spikes in underground chests, Fledgling Wings in sky chests")
+
+	# Informational accessories: anywhere in the inventory.
+	var held := p.selected
+	var free_slot := 30
+	check(game.hud._clock.text == "" and game.hud.info_text() == "", "no watch, no Depth Meter: no time or depth")
+	p.inventory.slots[free_slot] = Inventory.stack("CopperWatch", 1)
+	await frames(2)
+	check(game.hud._clock.text.ends_with("M") and game.hud._clock.text.contains(":00 "), "a Copper Watch tells the hour (%s)" % game.hud._clock.text)
+	p.inventory.slots[free_slot] = Inventory.stack("GoldWatch", 1)
+	await frames(2)
+	check(game.hud._clock.text == game.sky.clock_text(3), "a Gold Watch, to the minute (%s)" % game.hud._clock.text)
+	p.inventory.slots[free_slot] = Inventory.stack("DepthMeter", 1)
+	p.inventory.slots[free_slot + 1] = Inventory.stack("Compass", 1)
+	p.inventory.slots[free_slot + 2] = Inventory.stack("Radar", 1)
+	await frames(2)
+	var lines := game.hud.info_text().split("\n")
+	check(lines.size() == 3 and (lines[0].ends_with(" Surface") or lines[0].ends_with(" Underground")) and (lines[1].contains("East") or lines[1].contains("West") or lines[1] == "Center")
+			and lines[2].contains("nearby"), "Depth Meter, Compass and Radar, Terraria's way (%s)" % [lines])
+	for k in 3:
+		p.inventory.slots[free_slot + k] = null
+	p.accessories.slots[0] = Inventory.stack("Aglet", 1)
+	check(is_equal_approx(p.stat("move_speed"), 5.0), "the Aglet: 5% movement speed")
+
+	# Wall sliding on the arena's south wall (from inside), facing it.
+	var god := p.god_mode
+	p.god_mode = true
+	var wall_z := c.z + 17
+	var x := c.x + 37
+	p.accessories.slots[0] = Inventory.stack("ClimbingClaws", 1)
+	p.look_at_yaw_pitch(PI, 0.0)
+	p.global_position = Vector3(x + 0.5, TestWorld.GROUND + 4.5, wall_z - 0.31)
+	p.velocity = Vector3(0, -6, 0)
+	Input.action_press("move_forward")
+	await frames(6)
+	check(p.sliding and is_equal_approx(p.velocity.y, -Player.WALL_SLIDE), "Climbing Claws: pressing into a wall in the air slides down it slowly (%.2f)" % p.velocity.y)
+	p.accessories.slots[1] = Inventory.stack("ShoeSpikes", 1)
+	var y0 := p.global_position.y
+	await frames(20)
+	check(p.sliding and absf(p.global_position.y - y0) < 0.05, "with Shoe Spikes too, you stick (moved %.2f)" % (p.global_position.y - y0))
+	Input.action_press("jump")
+	await frames(2)
+	Input.action_release("jump")
+	Input.action_release("move_forward")
+	check(p.velocity.y > 5.0 and p.velocity.z < -3.0, "jumping off the wall: up and away from it (%s)" % p.velocity)
+	await frames(90)
+	p.accessories.slots[0] = null
+	p.accessories.slots[1] = null
+
+	# Fledgling Wings: flight after the jump, then a slow glide.
+	p.global_position = Vector3(c.x + 0.5, TestWorld.GROUND + 1, c.z + 30.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	var climb := func() -> float:
+		var start := p.global_position.y
+		var best := start
+		Input.action_press("jump")
+		for i in 60:
+			await frames(1)
+			best = maxf(best, p.global_position.y)
+		Input.action_release("jump")
+		await frames(90)
+		return best - start
+	var plain: float = await climb.call()
+	p.accessories.slots[0] = Inventory.stack("CreativeWings", 1)
+	var winged: float = await climb.call()
+	check(winged > plain + 0.5, "Fledgling Wings fly you higher (%.1f blocks, %.1f without)" % [winged, plain])
+	p.global_position = Vector3(c.x + 0.5, TestWorld.GROUND + 30, c.z + 30.5)
+	p.velocity = Vector3.ZERO
+	await frames(3)
+	p._wing_time = 0.0
+	Input.action_press("jump")
+	await frames(60)
+	check(absf(p.velocity.y + Player.MAX_FALL / 3.0) < 0.01, "out of flight, holding jump glides down at a third of the fall speed (%.2f)" % p.velocity.y)
+	Input.action_release("jump")
+	p.accessories.slots[0] = null
+	await frames(90)
+
+	# The Lava Charm: 7 s of lava immunity, its flames on the breath meter.
+	p.god_mode = false
+	p.accessories.slots[0] = Inventory.stack("LavaCharm", 1)
+	p.lava_time = 0.0
+	await frames(60)
+	check(absf(p.lava_time - 1.0) < 0.1, "out of lava it fills a second a second (%.2f)" % p.lava_time)
+	p.lava_time = 7.0
+	var life0 := p.life
+	p.global_position = Vector3(c + Vector3i(-23, -1, 10)) + Vector3(0.5, 0.1, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(120)
+	check(p.in_liquid == Player.LIQ_LAVA and p.life == life0 and p.lava_time < 5.5 and p.lava_time > 4.5, "in lava it doesn't hurt while the charm lasts (life %d, %.1f s left)" % [p.life, p.lava_time])
+	check(game.hud._bubbles.get_child_count() > 0 and game.hud._bubbles.get_child(0).texture == Assets.texture("Images/Flame"), "its flames show on the breath meter")
+	p.god_mode = true
+	p.on_fire = 0.0
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(30)
+	p.life = p.life_max
+
+	# Diving Helmet: six times the breath. Jellyfish Necklace: light, more under water.
+	p.accessories.slots[0] = Inventory.stack("JellyfishNecklace", 1)
+	var dry := p.carried_light()
+	p.armor.slots[0] = Inventory.stack("DivingHelmet", 1)
+	p.god_mode = false
+	p.global_position = Vector3(c + Vector3i(-20, -6, -3)) + Vector3(0.5, 0.1, 0.5)
+	p.velocity = Vector3.ZERO
+	p.breath = Player.BREATH_MAX
+	await frames(120)
+	var used := Player.BREATH_MAX - p.breath
+	check(p.head_liquid == Player.LIQ_WATER and absf(used - 2.0 / 6.0) < 0.05, "the Diving Helmet: breath goes six times slower (%.2f s in 2 s)" % used)
+	check(dry.r > 0.0 and p.carried_light().r > dry.r, "the Jellyfish Necklace glows, brighter under water")
+	p.god_mode = true
+	p.armor.slots[0] = null
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(30)
+
+	# The Guide to Plant Fiber Cordage: vines drop Vine Rope half the time.
+	p.accessories.slots[0] = Inventory.stack("CordageGuide", 1)
+	var ledge := Vector3i(c.x + 4, TestWorld.GROUND + 8, c.z + 30)
+	w.set_block(ledge, Data.block_id("stone"))
+	for i in 40:
+		w.set_block(ledge + Vector3i.DOWN, Data.block_id("vines"))
+		game.break_block(ledge + Vector3i.DOWN)
+	var ropes := 0
+	for e in game.entities.get_children():
+		if e is ItemDrop and e.item == "VineRope":
+			ropes += e.count
+			e.queue_free()
+	check(ropes > 8 and ropes < 32, "with the Guide to Plant Fiber Cordage, vines drop Vine Rope about half the time (%d of 40)" % ropes)
+	w.set_block(ledge, 0)
+	p.accessories.slots[0] = Inventory.stack("Magiluminescence", 1)
+	check(p.carried_light().r > 0.8 and p.has_effect("magiluminescence"), "Magiluminescence shines")
+	# The tooltip over the equipment (at the window's right edge) stays in the
+	# window, at UI scale 1 and 2.
+	var hud := game.hud
+	var scale0 = Settings.get_value("ui_scale")
+	var inside := true
+	hud._open_inventory()
+	for ui in [1.0, 2.0]:
+		Settings.set_value("ui_scale", ui)
+		await frames(2)
+		for slot in [hud._accessory_slots[4], hud._armor_slots[0], hud._hook_slot]:
+			hud.show_tooltip(Inventory.stack("Magiluminescence", 1), slot)
+			await frames(1)
+			# A 1600 x 900 window (headless runs have a tiny one): the slot's
+			# place from the right edge, the mouse on it, in the HUD's units.
+			var area: Vector2 = Vector2(1600, 900) / float(ui)
+			var mouse := Vector2(area.x + slot.offset_left + slot.size.x * 0.5, slot.offset_top + slot.size.y * 0.5)
+			var r := Rect2(Hud.tooltip_position(mouse, hud._tooltip.size, area), hud._tooltip.size)
+			inside = inside and r.position.x >= 0.0 and r.end.x <= area.x + 0.5 and r.end.y <= area.y + 0.5 and r.size.x > 100.0 and not r.has_point(mouse)
+	hud.hide_tooltip()
+	hud.close_inventory()
+	Settings.set_value("ui_scale", scale0)
+	check(inside, "the tooltip over equipped items and armor stays inside the window (UI scale 1 and 2)")
+	check(Hud.tooltip_position(Vector2(1580, 100), Vector2(300, 120), Vector2(1600, 900)).x == 1580 - 300 - 10, "near the right edge it flips to the left of the mouse")
+	p.accessories.slots[0] = null
+	p.select(held)
+	p.god_mode = god
 	await frames(5)
 
 

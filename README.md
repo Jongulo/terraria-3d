@@ -826,8 +826,8 @@ round every edge, deepening toward the world's edge (no caves under it). Past th
 water reaches the horizon. Palm trees line the beach, grown like Terraria's (10-20 tall on
 sand, each trunk segment stepping 2 px further along a lean of up to 16 px from a quarter of
 the way up, Tree_Tops_15 leaves on the end), leaning out to sea; chopped, they drop Palm Wood
-(blocks, door, platform, armor and any-wood recipes, all Terraria's). On the coast the ocean biome plays Terraria's Ocean music, the
-depth readout says "Ocean", and its enemies spawn:
+(blocks, door, platform, armor and any-wood recipes, all Terraria's). On the coast the ocean biome plays Terraria's Ocean music
+and its enemies spawn:
 - Crabs on the beach.
 - Pink Jellyfish, which drift in pulses and glow when you're close.
 - Sharks, which chase you while you swim and drop Shark Fins.
@@ -1102,9 +1102,9 @@ Floating islands: high in the Space layer, well above the mountains and away fro
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a
 Skyware house, a sky lake, or nothing. Houses follow Terraria's: a blue Sunplate shell with gold
 trim on its edges, lined with Disc Wall, glass windows, hanging Skyware lanterns, a World Banner
-and a Skyware chest (Starfury, Lucky Horseshoe or Shiny Red Balloon). Clouds break falls, the Lucky Horseshoe stops fall damage, the Shiny Red Balloon
+and a Skyware chest (Starfury, Lucky Horseshoe or Shiny Red Balloon, and 1 in 40 Fledgling Wings). Clouds break falls, the Lucky Horseshoe stops fall damage, the Shiny Red Balloon
 jumps higher and Starfury calls stars down where you aim. Harpies circle above you in Space and
-throw feathers (they drop Feathers); Space has its own music and depth readout.
+throw feathers (they drop Feathers); Space has its own music and Depth Meter layer.
 
 The world evil (Corruption or Crimson; random by seed, or chosen under "World evil" when creating a
 world): 2-3 patches away from spawn where grass, stone, sand, plants and trees turn evil (purple
@@ -1280,6 +1280,33 @@ Cabin loot (Frozen and Sandstone Chests), with Terraria's stats:
   higher than the Cloud's; wearing both, you get both, the Cloud's first), Flurry Boots (run
   fast, like the Hermes Boots), Dunerider Boots (run fast, and 75% faster on sand, sandstone and
   hardened sand), Ancient Chisel (25% faster mining).
+- **More accessories,** with Terraria's numbers and sources:
+  - **Aglet** (5% movement speed), **Climbing Claws** and **Guide to Plant Fiber Cordage** (vines
+    drop Vine Rope half the time) and **Radar**: surface chests. Chests within 25 tiles of the surface
+    roll Terraria's surface loot (Spear, Wooden Boomerang, Aglet, Climbing Claws, the Cordage guide,
+    Radar; its others aren't in the game yet), deeper ones the underground loot, now with **Shoe
+    Spikes**; below the lava line a chest's main item is a **Lava Charm** 1 time in 20.
+  - **Climbing Claws / Shoe Spikes:** in the air, press into a wall and you slide slowly down it (0.5
+    px a tick); with both you stick. Shift slides fast; jump pushes you off it with a full jump and
+    gives back your double jumps.
+  - **Lava Charm:** 7 seconds of lava immunity, refilling out of lava as fast as it runs down; while it
+    does, flames take the bubbles' place on the breath meter.
+  - **Fledgling Wings** (sky chests, 1 in 40): hold jump after a jump to fly for 25 ticks (up to 1.5
+    jump speeds), then glide down at a third of the fall speed with no fall damage.
+  - **Magiluminescence** (12 Demonite or Crimtane Bars and 5 Topaz at an anvil): a warm light, and on
+    the ground 15% more speed and 75% more acceleration.
+  - **Shackle** (Zombies, 1 in 50): 1 defense. **Jellyfish Necklace** (Pink Jellyfish, 1 in 100): a
+    faint light, bright under water. **Diving Helmet** (Sharks, 1 in 20; a helmet, 2 defense):
+    breath lasts six times as long and drowning hurts a sixth as much.
+  - **Informational accessories,** which work anywhere in your inventory, like Terraria's: without
+    them there's no clock or depth readout. Watches (10 bars and a Chain at a work bench) tell the
+    time: Copper and Tin to the hour, Silver and Tungsten to the half hour, Gold and Platinum to the
+    minute. The **Depth Meter** (bats, 1 in 100) shows "123' Caverns" (feet from the surface, the
+    layer), the **Compass** (Piranhas, 1 in 75) feet east or west of the world's middle (and here
+    north or south), the **Radar** the enemies within 125 tiles.
+  - Not yet: the Goblin Tinkerer's combinations (no Tinkerer's Workshop), the Celestial Magnet (no
+    mana stars to pull), the Bezoar (no poison), and those from enemies, chests and NPCs the game
+    doesn't have.
 - **Furniture:** the Bast Statue (+5 defense, The Bast Defense, while one is within Terraria's
   170 x 125 tiles of you), the Sharpening Station (right-click it: Sharpened, melee weapons ignore
   12 of an enemy's defense until you die) and the Extractinator (below).

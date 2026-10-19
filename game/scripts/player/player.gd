@@ -137,6 +137,14 @@ var _conch_timer := -1.0
 var climbing: Node3D = null
 ## Holding on to a rope or chain (_rope_climb).
 var on_rope := false
+## Sliding down (or stuck to) a wall: Climbing Claws / Shoe Spikes; away
+## from the wall is _slide_away.
+var sliding := false
+var _slide_away := Vector3.ZERO
+## Wings: flight left (seconds), refilled on the ground.
+var _wing_time := 0.0
+## Lava Charm: seconds of lava immunity left (Terraria's lavaTime).
+var lava_time := 0.0
 var _rope_cooldown := 0.0
 var _rope_dir_held := false
 ## Jumped off a rope: no grabbing one again until jump is let go.
@@ -305,16 +313,19 @@ static func _damage_kind(def: Dictionary) -> String:
 	return {"melee": "melee", "tool": "melee", "ranged": "ranged", "magic": "magic", "thrown": "thrown"}.get(def.get("type", ""), "")
 
 
-## The light you carry: a held torch or a Mining Helmet (black: none).
+## The light you carry: a held torch, a Mining Helmet or a glowing accessory
+## (black: none).
 ## Shaders add it around the camera (shaders/player_light.gdshaderinc).
 func carried_light() -> Color:
 	var c := Color.BLACK
 	var h := held()
 	# A held Demon Torch pulses like a placed one.
 	var lights := [h.get("light")] if not h.has("pulse") else [_color_array(Data.pulse_color(h.pulse))]
-	for s in armor.slots:
+	for s in armor.slots + accessories.slots:
 		if s != null:
-			lights.append(Data.item(s.item).get("light"))
+			var d := Data.item(s.item)
+			# The Jellyfish Necklace: brighter under water.
+			lights.append(d.get("light_wet") if in_liquid != 0 and d.has("light_wet") else d.get("light"))
 	# Slashing, the Terragrim shines (Terraria's AddLight at its tip).
 	if slash_out():
 		lights.append(slash.def.slash.get("light"))
@@ -521,7 +532,8 @@ func _move(delta: float, game) -> void:
 			slowdown *= 0.1
 	# Shadow armor: quicker to speed up and stop, and a little faster
 	# (Terraria's shadowArmor: acceleration and slowdown x1.75, speeds x1.15).
-	if has_effect("shadow_run"):
+	# Magiluminescence: the same, on the ground only.
+	if has_effect("shadow_run") or has_effect("magiluminescence") and on_floor:
 		accel *= 1.75
 		slowdown *= 1.75
 		max_run *= 1.15
@@ -552,6 +564,14 @@ func _move(delta: float, game) -> void:
 		if on_floor:
 			velocity.y = jump_speed
 			_jump_ticks = jump_ticks
+		elif sliding:
+			# A wall jump: a jump, pushed off the wall (3 px a tick), and
+			# your double jumps back (Terraria's JumpMovement while sliding).
+			velocity.y = jump_speed
+			_jump_ticks = jump_ticks
+			velocity += _slide_away * WALL_JUMP_PUSH
+			_extra_jumps = extra_jumps()
+			sliding = false
 		elif not _extra_jumps.is_empty():
 			velocity.y = jump_speed
 			_jump_ticks = int(jump_ticks * float(_extra_jumps.pop_front()))
@@ -576,7 +596,18 @@ func _move(delta: float, game) -> void:
 			velocity.y = move_toward(velocity.y, -LIQUID_MAX_FALL, 80.0 * delta)
 		_fall_start = global_position.y
 	else:
-		velocity.y = maxf(velocity.y - GRAVITY * delta, -MAX_FALL)
+		var wing := wings()
+		if on_floor or sliding:
+			_wing_time = float(wing.get("time", 0)) / 60.0
+		if not wing.is_empty() and jump and _wing_time > 0.0 and _jump_ticks == 0 and not on_floor:
+			_wing_flight(delta, wing)
+		elif not wing.is_empty() and jump and velocity.y < 0.0:
+			# Gliding: a third of gravity, a third of the fall speed, no fall.
+			velocity.y = maxf(velocity.y - GRAVITY / 3.0 * delta, -MAX_FALL / 3.0)
+			_fall_start = global_position.y
+		else:
+			velocity.y = maxf(velocity.y - GRAVITY * delta, -MAX_FALL)
+	_wall_slide(game, dir)
 	if webbed:
 		# Stuck in a web: you sink and climb slowly, and a fall stops there.
 		velocity.y = clampf(velocity.y, -1.0, 1.5)
@@ -622,6 +653,78 @@ func _move(delta: float, game) -> void:
 	# Out of the world: put the player back.
 	if global_position.y < -10.0:
 		global_position = spawn_point
+
+
+## Terraria's wall jump push (3 px a tick) and wall slides (WallslideMovement:
+## 0.5 px a tick down, 4 holding Down).
+const WALL_JUMP_PUSH := 3.0 * 2.5
+const WALL_SLIDE := 0.5 * 2.5
+const WALL_SLIDE_DOWN := 4.0 * 2.5
+
+
+## Climbing Claws / Shoe Spikes: in the air, pressing into a wall (solid at
+## your feet and above them), you slide down it slowly, or with both you
+## stick; Drop down slides fast. Sliding, you can jump off it.
+func _wall_slide(game, dir: Vector3) -> void:
+	sliding = false
+	var grip := int(stat("wall_slide"))
+	if grip <= 0 or on_floor or dir == Vector3.ZERO or in_liquid != 0:
+		return
+	var side := Vector3(signf(dir.x), 0, 0) if absf(dir.x) > absf(dir.z) else Vector3(0, 0, signf(dir.z))
+	var w: VoxelWorld = game.world
+	for h in [0.05, 0.75]:
+		if not w.is_solid(Vector3i((global_position + side * (half.x + 0.05) + Vector3(0, h, 0)).floor())):
+			return
+	var down := input_enabled and Input.is_action_pressed("drop_down")
+	if grip >= 2:
+		if velocity.y > 0.0:
+			return  # rising past it
+		velocity.y = -WALL_SLIDE_DOWN if down else 0.0
+	elif velocity.y < -WALL_SLIDE:
+		velocity.y = -WALL_SLIDE_DOWN if down else -WALL_SLIDE
+	else:
+		return
+	sliding = true
+	_slide_away = -side
+	_fall_start = global_position.y
+
+
+## The wings you wear ({} if none): their "wings" stats.
+func wings() -> Dictionary:
+	for s in accessories.slots:
+		if s != null and Data.item(s.item).has("wings"):
+			return Data.item(s.item).wings
+	return {}
+
+
+## Flying (Terraria's WingMovement, default wings): no gravity; up 0.1 px a
+## tick each tick, 0.5 more while still falling, 0.1 more while slower than
+## half a jump, up to `lift_max` jump speeds; it uses up flight time.
+func _wing_flight(delta: float, wings: Dictionary) -> void:
+	var k := 0.1 * 150.0 * delta  # 0.1 px a tick each tick, in blocks/s
+	velocity.y += k
+	if velocity.y < 0.0:
+		velocity.y += 5.0 * k
+	elif velocity.y < JUMP_SPEED * 0.5:
+		velocity.y += k
+	velocity.y = minf(velocity.y, JUMP_SPEED * float(wings.get("lift_max", 1.5)))
+	_wing_time -= delta
+
+
+## Your informational accessories, carried anywhere in your inventory or worn
+## (Terraria's): {"watch": best level, "depth", "compass", "radar": true}.
+func info_accessories() -> Dictionary:
+	var out := {}
+	for s in inventory.slots + accessories.slots:
+		if s == null:
+			continue
+		var d := Data.item(s.item)
+		var kind: String = d.get("info", "")
+		if kind == "watch":
+			out["watch"] = maxi(int(out.get("watch", 0)), int(d.watch))
+		elif kind != "":
+			out[kind] = true
+	return out
 
 
 ## Terraria's run (HorizontalMovement), turned to face the way you press:
@@ -1111,20 +1214,30 @@ func invulnerable() -> bool:
 
 
 func _liquid_effects(delta: float) -> void:
+	if in_liquid != LIQ_LAVA:
+		lava_time = minf(stat("lava_time"), lava_time + delta)
+	lava_time = minf(lava_time, stat("lava_time"))
 	if invulnerable():
 		breath = BREATH_MAX
 		on_fire = 0.0
 		mana = mana_max
 		return
+	# The Diving Helmet: breath lasts six times as long (breathCD 7 -> 42
+	# ticks), drowning hurts a sixth as much.
+	var diving := 6.0 if has_effect("diving") else 1.0
 	if head_liquid != 0:
-		breath = maxf(0.0, breath - delta)
+		breath = maxf(0.0, breath - delta / diving)
 	else:
 		breath = minf(BREATH_MAX, breath + delta * 6.0)
 	var dot := 0.0
 	if breath <= 0.0:
-		dot += DROWN_DPS
+		dot += DROWN_DPS / diving
 	var fire_immune := has_effect("fire_immune")
-	if in_liquid == LIQ_LAVA:
+	# The Lava Charm: lava doesn't hurt while its time lasts; out of lava it
+	# fills back up as fast (a tick a tick).
+	if in_liquid == LIQ_LAVA and lava_time > 0.0:
+		lava_time = maxf(0.0, lava_time - delta)
+	elif in_liquid == LIQ_LAVA:
 		hurt(LAVA_DAMAGE, Vector3.ZERO)
 		# The Molten set: "Cannot be set on fire".
 		if not fire_immune:
@@ -2126,6 +2239,7 @@ func respawn_point() -> Vector3:
 func _respawn() -> void:
 	alive = true
 	breath = BREATH_MAX
+	lava_time = stat("lava_time")
 	on_fire = 0.0
 	life = life_max
 	mana = mana_max
