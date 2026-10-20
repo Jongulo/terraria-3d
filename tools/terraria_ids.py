@@ -5,7 +5,7 @@ Terraria.exe's .NET metadata and embedded localization JSON.
 usage: python3 -I terraria_ids.py <Terraria.exe> <out.json>
 
 Writes {"ItemID": {"CopperShortsword": 3507, ...}, ..., "ArmorHead": {"CopperHelmet": 1, ...},
-"names": {"items": {internal: english}, "tooltips": {...}, "set_bonuses": {...},
+"names": {"items": {internal: english}, "tooltips": {...}, "set_bonuses": {...}, "prefixes": {PrefixID name: english},
 "town": {"GuideNames": [...], "LegacyDialog": {...}, "TownNPCHousingFailureReasons": {...}, ...}, ...}}
 """
 import json
@@ -13,7 +13,7 @@ import re
 import struct
 import sys
 
-ID_CLASSES = ["ItemID", "NPCID", "TileID", "WallID", "ProjectileID", "BuffID", "MusicID", "DustID", "AmmoID"]
+ID_CLASSES = ["ItemID", "NPCID", "TileID", "WallID", "ProjectileID", "BuffID", "MusicID", "DustID", "AmmoID", "PrefixID"]
 # Nested classes of ArmorIDs (equip sprite numbers: Armor_Head_N, Armor/Armor_N, Armor_Legs_N).
 ARMOR_CLASSES = {"Head": "ArmorHead", "Body": "ArmorBody", "Legs": "ArmorLegs"}
 
@@ -219,6 +219,7 @@ def extract_names(data):
         "buffs": (b'"BuffName"', "Regeneration", "Regeneration"),
         "tooltips": (b'"ItemTooltip"', "MiningHelmet", "Provides light when worn"),
         "set_bonuses": (b'"ArmorSetBonus"', "Wood", "1 defense"),
+        "prefixes": (b'"Prefix"', "Deadly2", "Deadly"),
     }
     for out, (key, probe, english) in probes.items():
         pos = 0

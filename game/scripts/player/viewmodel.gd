@@ -40,6 +40,8 @@ var _flame_info := {}
 var _ember_dust := -1
 var _mat := ShaderMaterial.new()
 var _item_name := ""
+## Its prefix (Prefixes): a size prefix scales it.
+var _item_prefix := 0
 var _item_px := Vector2i.ONE
 var _style := ""
 var _t := 1.0
@@ -239,7 +241,9 @@ func hand_node() -> Node3D:
 func _process(delta: float) -> void:
 	var s = player.inventory.slots[player.selected]
 	var item: String = "" if s == null else s.item
-	if item != _item_name:
+	var pre := 0 if s == null else int(s.get("prefix", 0))
+	if item != _item_name or pre != _item_prefix:
+		_item_prefix = pre
 		_switch_to(item)
 	# A yoyo or flail that's out isn't in your hand, and a spear is out in the world (Spear).
 	# A boomerang in the air leaves your hand empty, unless you can throw another.
@@ -289,6 +293,9 @@ func refresh_pose() -> void:
 		return
 	var grip := grip_for(_item_name)
 	_item.transform = grip_transform(grip, kind_of(Data.item(_item_name)), _item_px)
+	# A size prefix (Large, Massive, Tiny...) makes it bigger or smaller.
+	var size := float(Prefixes.of(_item_name, _item_prefix).get("scale", 1.0)) if _item_prefix > 0 else 1.0
+	_item.transform.basis = _item.transform.basis.scaled(Vector3.ONE * size)
 	_swing_axis = vec(grip.get("swing_axis", [1, 0, 0])).normalized()
 	_swing_angle = float(grip.get("swing_angle", -60.0))
 

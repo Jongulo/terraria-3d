@@ -64,6 +64,8 @@ var spawner := Spawner.new()
 var chests := Chests.new()
 ## The town NPCs and their homes.
 var town := Town.new()
+## The Goblin Army (Invasion): on its way, here, beaten.
+var invasion := Invasion.new(self)
 ## Set in test worlds (see scripts/world/test_world.gd).
 var test_world: TestWorld
 var _mode := "new"
@@ -283,6 +285,7 @@ func _begin_play() -> void:
 		sky.sea_query = func(at: Vector2, n: int, reach: float) -> PackedFloat32Array:
 			return world.sea_distances(at, n, reach, ocean_width)
 	# The town: as saved, else (a new world, or one from before towns) the Guide.
+	invasion.load_state(_pending_meta.get("invasion", {}))
 	if _pending_meta.has("town"):
 		town.load_state(_pending_meta.town)
 	elif test_world == null:
@@ -336,6 +339,7 @@ func _update_playing(delta: float) -> void:
 		sky.env.fog_depth_begin = sky.env.fog_depth_end * 0.55
 	# The camera reaches the sky's backdrops, clouds and sun beyond it.
 	player.camera.far = maxf(1000.0, sky.body_distance() + 100.0)
+	invasion.update(delta)
 	_update_music(pos)
 	# The time only with a watch on you (Terraria's informational accessories).
 	var watch := int(player.info_accessories().get("watch", 0))
@@ -497,6 +501,8 @@ func space_level() -> float:
 func _update_music(pos: Vector3) -> void:
 	if boss_alive():
 		Audio.set_music("Boss1")
+	elif invasion.near(pos):
+		Audio.set_music("GoblinArmy")
 	elif pos.y > space_level():
 		Audio.set_music("SpaceDay" if sky.is_day else "SpaceNight")
 	elif biome == "ocean":
@@ -643,6 +649,7 @@ func on_boss_despawned(npc: NPC) -> void:
 
 
 func on_npc_killed(npc: NPC) -> void:
+	invasion.on_kill(npc)
 	var group: String = npc.def.get("boss_group", "")
 	if group != "":
 		# The last of it: the boss is beaten, and this one drops its loot.
@@ -651,7 +658,7 @@ func on_npc_killed(npc: NPC) -> void:
 		defeated_bosses[group] = true
 		for d in Data.npcs[group].get("boss_drops", []):
 			if randf() < float(d[3]):
-				spawn_item(d[0], randi_range(int(d[1]), int(d[2])), npc.center())
+				spawn_item(d[0], randi_range(int(d[1]), int(d[2])), npc.center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 		message("%s has been defeated!" % Assets.npc_name(group), Color(0.69, 0.29, 1.0))
 		return
 	if npc.boss:
@@ -684,6 +691,7 @@ func curse_old_man(old_man: NPC) -> void:
 
 func _on_dawn() -> void:
 	_spawn_old_man()
+	invasion.dawn()
 
 
 ## Terraria: at dusk a strong enough player may be visited by the Eye of Cthulhu.
@@ -693,14 +701,18 @@ func _on_dusk() -> void:
 		_evil_presence = 20.0
 
 
-func spawn_item(item: String, count: int, pos: Vector3, vel := Vector3.ZERO, delay := 0.0) -> void:
+## `prefix`: the item's prefix, or Prefixes.NATURAL to roll one (enemy, boss
+## and tile drops, like Terraria's).
+func spawn_item(item: String, count: int, pos: Vector3, vel := Vector3.ZERO, delay := 0.0, prefix := 0) -> void:
 	if item == "" or count <= 0 or Data.item(item).is_empty():
 		return
-	if _collected_drops != null:
+	if prefix == Prefixes.NATURAL:
+		prefix = Prefixes.roll(Data.item(item))
+	if _collected_drops != null and prefix == 0:
 		_collected_drops[item] = _collected_drops.get(item, 0) + count
 		return
 	var d := ItemDrop.new()
-	d.setup(item, count)
+	d.setup(item, count, prefix)
 	entities.add_child(d)
 	d.global_position = pos
 	d.velocity = vel if vel != Vector3.ZERO else Vector3(randf_range(-2, 2), 4.0, randf_range(-2, 2))
@@ -968,7 +980,7 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 		Audio.play_at(_SOUNDS.get(b.get("sound", "dig"), "Dig_*"), c)
 		_block_dust(p, id, true)
 	if drop:
-		spawn_item(block_drop(b), 1, c)
+		spawn_item(block_drop(b), 1, c, Vector3.ZERO, 0.0, Prefixes.NATURAL)
 		if b.get("on_break") == "pot":
 			for d in roll_loot("pot"):
 				spawn_item(d[0], d[1], c)
@@ -979,6 +991,8 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 
 	if b.get("trunk", false):
 		_fell_tree(p, id)
+	if b.get("on_break") == "larva":
+		_larva_burst(c)
 	if b.get("on_break") == "orb":
 		_orb_smashed(c, b)
 	if b.get("on_break") == "cactus":
@@ -1115,6 +1129,15 @@ func _fell_cactus(p: Vector3i, drop: bool) -> void:
 		spawn_item("Cactus", CactusArt.pieces(s) - 1, Vector3(p) + Vector3(0.5, 0.5, 0.5))
 
 
+## A bee larva broken (Terraria's tile 231): its sounds, and Queen Bee would
+## come for you (she isn't in yet).
+func _larva_burst(c: Vector3) -> void:
+	Audio.play_at("NPC_Killed_1", c)
+	Audio.play_at("Item_173", c)
+	spawn_dust(c, Color(1.0, 0.75, 0.2), 16)
+	message("Something buzzes angrily... (Queen Bee is not in this version yet)", Color(0.69, 0.29, 1.0))
+
+
 ## A Shadow Orb or Crimson Heart smashed: its loot, and Terraria's warnings.
 func _orb_smashed(c: Vector3, b: Dictionary) -> void:
 	var table: String = b.get("loot", "shadow_orb")
@@ -1125,7 +1148,7 @@ func _orb_smashed(c: Vector3, b: Dictionary) -> void:
 		var first: Array = Data.loot[table].pick_one[0]
 		drops[0] = [first[0], int(first[1])]
 	for d in drops:
-		spawn_item(d[0], d[1], c)
+		spawn_item(d[0], d[1], c, Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	orbs_broken += 1
 	match orbs_broken % 3:
 		1:
@@ -1279,7 +1302,14 @@ func nearby_stations(radius := 4) -> Dictionary:
 					found[b.name] = true
 					if b.has("station_as"):
 						found[b.station_as] = true
+				# Water, lava or honey nearby (Bottled Honey: a Bottle by honey).
+				var liq: Vector2i = world.get_liquid(Vector3i(x, y, z))
+				if liq.y > 0:
+					found[LIQUID_STATIONS.get(liq.x, "")] = true
 	return found
+
+
+const LIQUID_STATIONS := {1: "water", 2: "lava", 3: "honey"}
 
 
 # ------------------------------------------------------------------ saving
@@ -1288,6 +1318,7 @@ func save_world() -> bool:
 	if state != State.PLAYING:
 		return false
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))
+	hud.stow_temporary_items()
 	var meta := {
 		"name": world_name,
 		"player": player.save_state(),
@@ -1306,6 +1337,7 @@ func save_world() -> bool:
 	meta["shapes"] = Array(world.get_shapes())
 	meta["signs"] = signs
 	meta["town"] = town.save_state()
+	meta["invasion"] = invasion.save_state()
 	var ok := world.save(ProjectSettings.globalize_path(_save_path), JSON.stringify(meta))
 	message("World saved" if ok else "Saving failed!", Color(0.7, 0.9, 0.7) if ok else Color(1, 0.4, 0.4))
 	return ok

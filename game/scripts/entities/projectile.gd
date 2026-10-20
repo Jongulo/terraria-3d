@@ -67,7 +67,8 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
 		"WaterStream": {"gravity": 50.6, "pierce": 5, "hidden": true, "dust": [33], "life": 2.0},
 		"MagicMissile": {"dust": [15], "glow": true, "life": 10.0},
-		"BookOfSkullsSkull": {"ghost": true, "home": 0.6, "pierce": 3, "life": 8.0}}
+		"BookOfSkullsSkull": {"ghost": true, "home": 0.6, "pierce": 3, "life": 8.0},
+		"ChaosBall": {"ghost": true, "hidden": true, "dust": [27]}}
 ## Bounces left off blocks (Water Bolt).
 var bounces := 0
 ## The player steering it while they hold the button (a channelled spell:
@@ -235,7 +236,7 @@ func _physics_process(delta: float) -> void:
 func _explosive_step(delta: float, game) -> void:
 	life -= delta
 	_smoke -= delta
-	if _smoke <= 0.0:
+	if _smoke <= 0.0 and not explosive.get("spiky", false):
 		_smoke = 0.25
 		game.spawn_dust(global_position + Vector3(0, 0.25, 0), Color(0.55, 0.55, 0.55), 1)
 	if not _stuck:
@@ -272,6 +273,12 @@ func _explosive_step(delta: float, game) -> void:
 			for npc in game.npcs():
 				if not npc.def.get("invulnerable", false) and npc.overlaps_point(global_position, 0.3):
 					life = 0.0
+	# A Spiky Ball (Terraria's aiStyle 14): no blast; rolling or lying still,
+	# it hurts each enemy that touches it once, `pierce` of them in all.
+	if explosive.get("spiky", false):
+		if _check_hits(game) or life <= 0.0:
+			queue_free()
+			return
 	var speed := velocity.length()
 	if speed > 0.5:
 		_angle += spin * delta * minf(1.0, speed / 6.0)

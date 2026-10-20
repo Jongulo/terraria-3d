@@ -409,6 +409,9 @@ func _run() -> void:
 	await _rope_checks(c)
 	await _hook_checks(c)
 	await _accessory_checks(c)
+	await _goblin_checks(c)
+	await _prefix_checks(c)
+	await _hive_checks(c)
 	await _furniture_checks(c)
 	await _hammer_checks(c)
 	await _furniture2_checks(c)
@@ -433,7 +436,7 @@ func _run() -> void:
 	await _yoyo_checks(c)
 	await _flail_checks(c)
 	await _terragrim_checks(c)
-	_sword_shrine_checks(c)
+	await _sword_shrine_checks(c)
 	await _swim_checks(c)
 	await _screenshot_checks()
 	await _eater_checks(c)
@@ -501,7 +504,7 @@ func _run() -> void:
 	var town_after := {}
 	for kind in game.town.residents:
 		town_after[kind] = [game.town.residents[kind].display_name, game.town.residents[kind].home_key]
-	check(town_after == town_before and town_after.size() == 6, "the town's residents come back with their names and homes (%s)" % [town_after])
+	check(town_after == town_before and town_after.size() == 7, "the town's residents come back with their names and homes (%s)" % [town_after])
 	check(game.sign_text(c + TestWorld.HOUSE_SIGN) == "Signs keep what you write.", "signs keep their text after loading (%s)" % game.sign_text(c + TestWorld.HOUSE_SIGN))
 	var shaped_after := c + Vector3i(-4, 0, 12)
 	check(game.world.get_shape(shaped_after) == Game.SHAPE_HALF, "hammered shapes come back after loading (%d)" % game.world.get_shape(shaped_after))
@@ -815,8 +818,16 @@ func _door_checks(c: Vector3i) -> void:
 			"a Wooden Door takes plain Wood at a work bench")
 	check(Data.recipes.any(func(r): return r.result == "BorealWoodDoor" and r.ingredients.has("BorealWood")), "Boreal Wood Door recipe")
 
-	# The arena's gate: a closed door facing west (toward spawn).
+	# The arena's gate: a closed door facing west (toward spawn). (The town
+	# NPCs open doors walking through: they wait meanwhile, any by the gate
+	# go home, and one left half through it is undone.)
 	var gate := c + Vector3i(9, 0, 0)
+	for n in game.town.residents.values():
+		n.process_mode = Node.PROCESS_MODE_DISABLED
+		if n.global_position.distance_to(Vector3(gate)) < 4.0:
+			n.global_position = Vector3(n.home_spot) + Vector3(0.5, 0, 0.5) if n.home_key != "" else Vector3(c) + Vector3(-6.5, 0, 0.5)
+	if Doors.is_open(Data.block(w.get_block(gate))):
+		Doors.toggle(game, gate, Vector3(gate) + Vector3(-2.5, 0, 0.5))
 	check(Data.block(w.get_block(gate)).name == "wooden_door" and w.is_solid(gate) and w.is_solid(gate + Vector3i.UP), "the arena gate is a closed wooden door")
 	var model_found := false
 	for nodes in game.block_models._by_chunk.values():
@@ -908,6 +919,8 @@ func _door_checks(c: Vector3i) -> void:
 	w.set_block(spot + Vector3i.DOWN, Data.block_id("dirt"))
 	p.inventory.slots[p.selected] = held
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	for n in game.town.residents.values():
+		n.process_mode = Node.PROCESS_MODE_INHERIT
 	await frames(5)
 
 
@@ -1485,6 +1498,564 @@ func _prop_batch_checks(c: Vector3i) -> void:
 	await frames(5)
 
 
+## The Goblin Army and the Goblin Tinkerer: the Battle Standard summons the
+## army from a world edge, it marches in, its goblins come while you're near
+## and each kill counts down to its defeat; then the Tinkerer, found bound,
+## is freed into the town with his shop, and his Tinkerer's Workshop makes
+## the combinations. His Rocket Boots, the Spiky Ball, the Harpoon and the
+## combinations' effects too.
+func _goblin_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var inv: Invasion = game.invasion
+	# (The goblins killed here drop things you'd pick up: the inventory is put
+	# back as it was at the end.)
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var recipe := func(result: String) -> Dictionary:
+		for r in Data.recipes:
+			if r.result == result:
+				return r
+		return {}
+	check(recipe.call("GoblinBattleStandard").get("ingredients", {}).get("TatteredCloth") == 10 and recipe.call("GoblinBattleStandard").get("station") == "loom",
+			"the Goblin Battle Standard: 10 Tattered Cloth and 5 Wood at a Loom")
+	check(Data.npcs.GoblinScout.drops.any(func(d): return d[0] == "TatteredCloth" and d[3] == 1.0)
+			and ["GoblinPeon", "GoblinThief", "GoblinWarrior", "GoblinSorcerer", "GoblinArcher"].all(func(k): return Data.npcs[k].drops.any(func(d): return d[0] == "SpikyBall") and Data.npcs[k].drops.any(func(d): return d[0] == "Harpoon")),
+			"Goblin Scouts drop Tattered Cloth; the army's goblins Spiky Balls and Harpoons")
+	var combos := ["CloudinaBalloon", "BlueHorseshoeBalloon", "ObsidianShield", "ManaRegenerationBand", "MagicCuffs", "TigerClimbingGear", "SpectreBoots", "LightningBoots", "FrostsparkBoots", "GPS", "LavaSkull", "FairyBoots"]
+	check(combos.all(func(n): return recipe.call(n).get("station") == "tinkerers_workshop"), "the combinations are made at the Tinkerer's Workshop (%s)" % [combos.filter(func(n): return recipe.call(n).get("station") != "tinkerers_workshop")])
+	# The army: summoned, marching in from an edge, arriving.
+	var held := p.selected
+	var god := p.god_mode
+	p.god_mode = true
+	p.inventory.slots[p.selected] = Inventory.stack("GoblinBattleStandard", 1)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(inv.active and inv.size == Invasion.SIZE and last_message().begins_with("A goblin army is approaching from the"), "the Battle Standard summons the Goblin Army (%s)" % last_message())
+	check(p.inventory.slots[p.selected] == null and not inv.start(), "it's used up, and there's only one army at a time")
+	var edge0 := inv.army_x
+	inv.update(1.0)
+	check(absf(inv.army_x - edge0) > 39.0 and absf(inv.army_x - edge0) < 41.0, "it marches in a tile a tick (%.1f blocks in a second)" % absf(inv.army_x - edge0))
+	for i in 20:
+		inv.update(1.0)
+	check(inv.arrived and last_message() == "A goblin army has arrived!", "it arrives at the spawn point")
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	await frames(5)
+	check(inv.near(p.global_position) and Audio._current_track == "GoblinArmy" and game.hud._invasion.visible, "near it: its music and progress bar")
+	# Its goblins spawn round you.
+	for i in 12:
+		game.spawner._timer = 0.0
+		game.spawner._physics_process(0.1)
+	var goblins := game.npcs().filter(func(n): return n.def.get("invasion", "") == "goblin")
+	check(goblins.size() >= 6 and goblins.size() <= Spawner.INVASION_CAP, "its goblins come (%d: %s)" % [goblins.size(), goblins.map(func(n): return n.kind)])
+	# Killing them counts down.
+	var left := inv.size
+	for g in goblins.slice(0, 3):
+		g.hit(9999, 0.0, Vector3.ZERO, 0.0)
+	await frames(2)
+	check(inv.size == left - 3 and absf(game.hud._invasion_bar.value - inv.progress() * 100.0) < 0.01, "each kill brings it closer to defeat (%d left)" % inv.size)
+	var saved := inv.save_state()
+	inv.load_state({})
+	inv.load_state(saved)
+	check(inv.active and inv.size == left - 3, "it's saved with the world, part beaten")
+	inv.size = 1
+	var last := game.spawn_npc("GoblinWarrior", p.global_position + Vector3(4, 0, 0))
+	last.hit(9999, 0.0, Vector3.ZERO, 0.0)
+	await frames(2)
+	check(not inv.active and inv.downed and last_message() == "A goblin army has been defeated!", "the last kill beats it (%s)" % last_message())
+	for n in game.npcs():
+		if n.def.get("invasion", "") != "":
+			n.queue_free()
+	await frames(2)
+
+	# A Goblin Sorcerer teleports near you, then casts Chaos Balls.
+	var sorc := game.spawn_npc("GoblinSorcerer", p.global_position + Vector3(8, 0, 8))
+	var at0 := sorc.global_position
+	await frames(160)
+	var moved := sorc.global_position.distance_to(at0) > 0.5
+	# (Watched each frame: one cast close by can reach you and be gone.)
+	var balls := []
+	for i in 110:
+		await frames(1)
+		for e in game.entities.get_children():
+			if e is Projectile and e.kind == "ChaosBall" and not e.friendly and not balls.has(e):
+				balls.append(e)
+	check(moved and sorc.global_position.distance_to(p.global_position) < 20.0, "the Goblin Sorcerer teleports near you after 150 ticks")
+	check(balls.size() >= 1, "then casts a Chaos Ball at you (%d)" % balls.size())
+	sorc.queue_free()
+	for b in balls:
+		if is_instance_valid(b):
+			b.queue_free()
+
+	# The Tinkerer, bound in the caverns: freed, he joins the town. (The test
+	# town's own Tinkerer steps aside meanwhile.)
+	var resident: NPC = game.town.residents.get("GoblinTinkerer")
+	game.town.residents.erase("GoblinTinkerer")
+	var bound := game.spawn_npc("BoundGoblin", p.global_position + Vector3(2, 0, 0))
+	await frames(2)
+	var tinkerer: NPC = game.town.free_goblin(bound)
+	game.hud.open_chat(tinkerer, NPC.dialog(NPC.FREED_LINE))
+	await frames(2)
+	check(game.town.residents.has("GoblinTinkerer") and game.hud._chat_text.text.begins_with("Thank you for freeing me"), "freed, the Bound Goblin is the Goblin Tinkerer (%s)" % game.hud._chat_text.text.left(40))
+	check(Data.npcs.GoblinTinkerer.town.shop == ["RocketBoots", "Ruler", "TinkerersWorkshop", "GrapplingHook", "Toolbelt", "SpikyBall"], "his shop: Rocket Boots, Ruler, Tinkerer's Workshop, Grappling Hook, Toolbelt, Spiky Ball")
+	game.hud.close_chat()
+	# His workshop is a crafting station.
+	var bench := Vector3i(p.global_position.floor()) + Vector3i(2, 0, 0)
+	w.set_block(bench, Data.block_id("tinkerers_workshop"))
+	check(game.nearby_stations().has("tinkerers_workshop"), "the Tinkerer's Workshop is a crafting station")
+	w.set_block(bench, 0)
+
+	# Rocket Boots: let go of jump in the air and hold it again to fly.
+	p.global_position = Vector3(c.x + 0.5, TestWorld.GROUND + 1, c.z + 30.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	var rise := func() -> float:
+		var start := p.global_position.y
+		var best := start
+		Input.action_press("jump")
+		await frames(15)
+		Input.action_release("jump")
+		await frames(3)
+		Input.action_press("jump")
+		for i in 90:
+			await frames(1)
+			best = maxf(best, p.global_position.y)
+		Input.action_release("jump")
+		for i in 240:
+			await frames(1)
+			if p.on_floor:
+				break
+		await frames(2)
+		return best - start
+	var plain: float = await rise.call()
+	p.accessories.slots[0] = Inventory.stack("RocketBoots", 1)
+	var rocketed: float = await rise.call()
+	check(rocketed > plain + 1.0 and p._rocket_time == Player.ROCKET_TIME, "Rocket Boots fly you up (%.1f blocks, %.1f without), and refill on the ground" % [rocketed, plain])
+	# The combinations' effects.
+	p.accessories.slots[0] = Inventory.stack("MagicCuffs", 1)
+	p.god_mode = false
+	p.mana = 0
+	p._immune = 0.0
+	p.hurt(30, Vector3.ZERO)
+	check(p.mana > 0 and p.mana_cap() == p.mana_max + 40, "Magic Cuffs: +40 mana, and taking damage gives mana back (%d)" % p.mana)
+	p.god_mode = true
+	p.life = p.life_max
+	p.accessories.slots[0] = Inventory.stack("Toolbelt", 1)
+	p.inventory.slots[p.selected] = Inventory.stack("DirtBlock", 10)
+	check(is_equal_approx(p.reach(), Player.REACH + 2.0 / 3.0), "the Toolbelt: a tile more reach placing blocks")
+	p.accessories.slots[0] = Inventory.stack("GPS", 1)
+	await frames(2)
+	check(game.hud._clock.text != "" and game.hud.info_text().split("\n").size() == 2, "the GPS: the time, the depth and the position")
+	p.accessories.slots[0] = Inventory.stack("ManaRegenerationBand", 1)
+	var mrb := Data.item("ManaRegenerationBand")
+	check(p.stat("mana_regen_bonus") == 60.0 and mrb.regen == 2 and mrb.mana_bonus == 40 and Data.item("BandofStarpower").mana_bonus == 40, "the Mana Regeneration Band (+40 mana, regeneration); the Band of Starpower is +40 now, as in 1.4.5")
+	p.accessories.slots[0] = null
+	# The Spiky Ball: thrown, it rolls to a stop and hurts what touches it.
+	var dummy := game.spawn_npc("GoblinWarrior", p.global_position + Vector3(0, 0, -3))
+	dummy.untouchable = false
+	var life0 := dummy.life
+	var ball := game.spawn_projectile("SpikyBall", dummy.center(), Vector3.ZERO, 16, 1.0, 20.0, 18.0, 0.45, true, 0.0)
+	ball.explosive = Data.item("SpikyBall").explosive
+	ball.life = 80.0
+	ball.penetrate = 7
+	await frames(5)
+	check(dummy.life < life0 and is_instance_valid(ball) and ball.penetrate == 6, "a Spiky Ball hurts an enemy that touches it, and stays (%d left)" % ball.penetrate)
+	dummy.queue_free()
+	if is_instance_valid(ball):
+		ball.queue_free()
+	# The Harpoon: out on its chain, back when you let go.
+	p.inventory.slots[p.selected] = Inventory.stack("Harpoon", 1)
+	p.look_at_yaw_pitch(0.0, 0.0)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.hold_use = true
+	p.use_item()
+	await frames(8)
+	var hp := get_tree().get_nodes_in_group("harpoons")
+	check(hp.size() == 1 and not hp[0].returning and hp[0].global_position.distance_to(p.center()) > 3.0, "the Harpoon flies out on its chain")
+	p.hold_use = false
+	await frames(60)
+	check(get_tree().get_nodes_in_group("harpoons").filter(func(h): return is_instance_valid(h) and not h.is_queued_for_deletion()).is_empty(), "let go, it's reeled back in")
+	p.inventory.slots[p.selected] = null
+	p.select(held)
+	p.god_mode = god
+	inv.downed = false
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	tinkerer.queue_free()
+	if resident:
+		game.town.residents.GoblinTinkerer = resident
+	else:
+		game.town.residents.erase("GoblinTinkerer")
+		game.town.arrived.erase("GoblinTinkerer")
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	await frames(5)
+
+
+## Bee hives: the test world's (its larva, hive blocks and honey), the
+## honey recipes, honey (its slow fall, the Honey buff and its healing, the
+## bucket, Bottled Honey), honey meeting water and lava, the sticky honey
+## block, the Extractinator's Honey Block and breaking the larva.
+func _hive_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var hud := game.hud
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var held := p.selected
+	var id := func(n: String) -> int: return Data.block_id(n)
+	var larva: Vector3i = game.test_world.hive_larva
+	var floor_ok := true
+	for dx in range(-1, 2):
+		for dz in range(-1, 2):
+			if w.get_block(larva + Vector3i(dx, -1, dz)) != id.call("hive"):
+				floor_ok = false
+	check(w.get_block(larva) == id.call("larva") and floor_ok, "the test world's hive: its larva on a 3 x 3 hive floor (%s)" % larva)
+	var near := w.count_blocks(larva, 24)
+	var honey_cells := 0
+	for x in range(larva.x - 24, larva.x + 25):
+		for y in range(maxi(1, larva.y - 24), larva.y + 25):
+			for z in range(larva.z - 24, larva.z + 25):
+				if w.get_liquid(Vector3i(x, y, z)).x == Player.LIQ_HONEY:
+					honey_cells += 1
+	check(near[id.call("hive")] > 1000 and honey_cells > 100, "hive blocks round it (%d) and honey (%d cells)" % [near[id.call("hive")], honey_cells])
+	var recipe := func(result: String) -> Dictionary:
+		for r in Data.recipes:
+			if r.result == result:
+				return r
+		return {}
+	check(recipe.call("BottledHoney").get("station") == "honey" and recipe.call("BottledHoney").ingredients == {"Bottle": 1}
+			and recipe.call("CrispyHoneyBlock").get("station") == "furnace" and recipe.call("HoneyBucket").get("station") == "campfire"
+			and recipe.call("HiveWall").get("count") == 4 and recipe.call("HiveWall").ingredients == {"Hive": 1},
+			"Terraria's honey recipes: Bottled Honey by honey, Crispy Honey at a Furnace, the Honey Bucket at a Campfire, 4 Hive Walls a Hive")
+
+	# A tank of honey, glass round it, up in the air.
+	var tank := c + Vector3i(-40, 30, -40)
+	var glass: int = id.call("glass")
+	for x in range(-2, 3):
+		for z in range(-2, 3):
+			w.set_block(tank + Vector3i(x, -1, z), glass)
+			for y in range(0, 9):
+				if absi(x) == 2 or absi(z) == 2:
+					w.set_block(tank + Vector3i(x, y, z), glass)
+	for x in range(-1, 2):
+		for z in range(-1, 2):
+			for y in range(0, 7):
+				w.set_liquid(tank + Vector3i(x, y, z), Player.LIQ_HONEY, 63)
+	p.honey_time = 0.0
+	p.global_position = Vector3(tank) + Vector3(0.5, 8.5, 0.5)
+	p.velocity = Vector3(0, -20.0, 0)
+	await frames(40)
+	check(p.in_liquid == Player.LIQ_HONEY and p.velocity.y >= -Player.HONEY_MAX_FALL - 0.01, "in honey you sink slowly (%.2f, at most %.1f)" % [p.velocity.y, Player.HONEY_MAX_FALL])
+	check(is_equal_approx(p.honey_time, Player.HONEY_TIME) and p.buffs().any(func(b): return b[0] == 48 and b[1] == "Honey"), "and you're Honey for 30 s (Terraria's buff 48)")
+	await frames(20)
+	var tint: Color = hud._liquid_tint.color
+	check(p.head_liquid == Player.LIQ_HONEY and tint.r > 0.9 and tint.g > 0.6 and tint.b < 0.2 and tint.a > 0.4, "under honey the screen goes yellow (%s)" % tint)
+	# Its healing: a life a second more, and natural healing three times as fast.
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(5)
+	var heal_over := func(honey: bool) -> int:
+		p.honey_time = Player.HONEY_TIME if honey else 0.0
+		p.life = p.life_max - 50
+		p._since_hurt = 0.0
+		p._regen_acc = 0.0
+		await frames(120)
+		return p.life - (p.life_max - 50)
+	var plain: int = await heal_over.call(false)
+	var honeyed: int = await heal_over.call(true)
+	check(plain == 0 and honeyed >= 2 and honeyed <= 3, "Honey heals a life a second where you'd heal none yet (%d vs %d in 2 s)" % [honeyed, plain])
+	p.honey_time = 0.0
+	p.life = p.life_max
+
+	# Buckets: scooped, honey fills a Honey Bucket; poured, it's honey.
+	p.global_position = Vector3(tank) + Vector3(0.5, 7.2, 0.5)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(0.0, -PI / 2.0 + 0.01)
+	p.inventory.slots[9] = Inventory.stack("EmptyBucket", 1)
+	p.select(9)
+	await frames(2)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(p.inventory.slots[9] != null and p.inventory.slots[9].item == "HoneyBucket", "an empty bucket scoops up a Honey Bucket")
+	# (Poured from low in the tank, the glass floor in reach.)
+	p.global_position = Vector3(tank) + Vector3(0.5, 2.0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(2)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(p.inventory.slots[9] != null and p.inventory.slots[9].item == "EmptyBucket", "and pours it out again")
+	# Bottled Honey: a Bottle by honey (the honey counts as a crafting station).
+	hud._open_inventory()
+	check(hud._stations.has("honey"), "by honey, honey counts for crafting")
+	p.inventory.add("Bottle", 1)
+	hud._cursor_stack = null
+	hud.craft(recipe.call("BottledHoney"))
+	check(hud._cursor_stack != null and hud._cursor_stack.item == "BottledHoney", "a Bottle by honey makes Bottled Honey")
+	hud._cursor_stack = null
+	hud.close_inventory()
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	await frames(5)
+	p.inventory.slots[9] = Inventory.stack("BottledHoney", 1)
+	p.life = p.life_max - 100
+	p.potion_sickness = 0.0
+	p.honey_time = 0.0
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(p.life == p.life_max - 20 and is_equal_approx(p.honey_time, 15.0) and p.potion_sickness > 0.0, "Bottled Honey heals 80 and makes you Honey for 15 s")
+	p.life = p.life_max
+	p.potion_sickness = 0.0
+
+	# Honey meeting water makes a honey block (where the honey was); meeting
+	# lava, crispy honey (where the lava was).
+	# (Lava first: water would meet the lava and make obsidian.)
+	w.set_liquid(tank + Vector3i(1, 7, 1), 2, 63)
+	await frames(30)
+	var crispy: String = Data.block(w.get_block(tank + Vector3i(1, 7, 1))).get("name", "")
+	w.set_liquid(tank + Vector3i(-1, 7, -1), 1, 63)
+	await frames(30)
+	var block: String = Data.block(w.get_block(tank + Vector3i(-1, 6, -1))).get("name", "")
+	check(crispy == "crispy_honey_block" and block == "honey_block", "honey and lava make crispy honey (where the lava was), honey and water a honey block (where the honey was): %s, %s" % [crispy, block])
+
+	# A honey block's side: you stick to it, sliding slowly down.
+	var pillar := c + Vector3i(-50, 30, -40)
+	for y in range(0, 8):
+		w.set_block(pillar + Vector3i(0, y, 0), id.call("honey_block"))
+	p.global_position = Vector3(pillar) + Vector3(1.0 + p.half.x + 0.01, 6.0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(30)
+	check(p.honey_stuck and p.velocity.y >= -Player.HONEY_STICK_FALL - 0.01 and p.global_position.y > pillar.y + 4.0,
+			"against a honey block you stick, sliding slowly down (%.2f a second, %.1f fallen)" % [p.velocity.y, pillar.y + 6.0 - p.global_position.y])
+	for y in range(0, 8):
+		w.set_block(pillar + Vector3i(0, y, 0), 0)
+
+	# The Extractinator: a Hive gives a Honey Block.
+	var ex := c + Vector3i(-50, 0, -48)
+	w.set_block(ex + Vector3i(0, 0, -2), id.call("extractinator"))
+	p.global_position = Vector3(ex) + Vector3(0.5, 0, 0.5)
+	p.look_at_yaw_pitch(0.0, -0.6)
+	p.inventory.slots[9] = Inventory.stack("Hive", 3)
+	p.select(9)
+	await frames(3)
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	await frames(1)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	var out := game.entities.get_children().filter(func(e): return e is ItemDrop and not e.is_queued_for_deletion())
+	check(out.size() == 1 and out[0].item == "HoneyBlock" and p.inventory.slots[9].count == 2, "a Hive in the Extractinator gives a Honey Block")
+	w.set_block(ex + Vector3i(0, 0, -2), 0)
+
+	# Breaking the larva: its sounds, and Queen Bee would come (not in yet).
+	game.break_block(larva)
+	check(w.get_block(larva) == 0 and "Queen Bee" in last_message(), "breaking the larva: %s" % last_message())
+
+	for x in range(-2, 3):
+		for z in range(-2, 3):
+			for y in range(-1, 9):
+				w.set_block(tank + Vector3i(x, y, z), 0)
+				w.set_liquid(tank + Vector3i(x, y, z), 0, 0)
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.select(held)
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(5)
+
+
+## Item prefixes (Terraria's modifiers): which items can have which, their
+## names and stats rounded as Terraria rounds them, what they add to you, the
+## tooltip lines, rolling on crafting, drops and in chests, keeping them
+## through the inventory, drops and saves, and the Goblin Tinkerer's reforge.
+func _prefix_checks(c: Vector3i) -> void:
+	var p := game.player
+	var hud := game.hud
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var kept_acc := p.accessories.slots.duplicate(true)
+	var d := Prefixes.data()
+	var list := func(item: String) -> Array: return Prefixes.rollable(Data.item(item))
+	check(list.call("PlatinumBroadsword") == d.rollable.swords and list.call("PlatinumPickaxe") == d.rollable.swords and list.call("Spear") == d.rollable.spears
+			and list.call("WoodenBow") == d.rollable.guns_bows and list.call("AmethystStaff") == d.rollable.magic and list.call("WoodenBoomerang") == d.rollable.boomerangs
+			and list.call("WoodYoyo") == d.rollable.boomerangs and list.call("HermesBoots") == d.rollable.accessories,
+			"swords and tools, spears, bows and guns, magic, boomerangs and yoyos, accessories: each their own prefixes")
+	check(["GrapplingHook", "Shuriken", "DirtBlock", "PlatinumHelmet", "LesserHealingPotion", "WoodenArrow"].all(func(n): return list.call(n).is_empty()),
+			"hooks, thrown weapons, blocks, armor, potions and ammo have none")
+	check(d.rollable.swords.size() == 40 and d.rollable.accessories.size() == 19 and d.rollable.guns_bows.size() == 35 and d.rollable.magic.size() == 36,
+			"40 prefixes for swords, 35 for guns and bows, 36 for magic, 19 for accessories")
+	check(Prefixes.prefix_name(81) == "Legendary" and Prefixes.prefix_name(82) == "Unreal" and Prefixes.prefix_name(83) == "Mythical"
+			and Prefixes.prefix_name(65) == "Warding" and Prefixes.prefix_name(72) == "Menacing" and Prefixes.prefix_name(Assets.ids.PrefixID.Deadly2) == "Deadly",
+			"Terraria's names: Legendary, Unreal, Mythical, Warding, Menacing (and the second Deadly)")
+	# Terraria's sums: 32-bit floats, halves rounded to even.
+	check(Prefixes._scaled(10, 1.05) == 10 and Prefixes._scaled(30, 1.15) == 34 and Prefixes.round_even(2.5) == 2.0 and Prefixes.round_even(3.5) == 4.0,
+			"rounded as Terraria rounds (10 x 1.05 is 10, 30 x 1.15 is 34)")
+	# A Legendary Platinum Broadsword.
+	var base := Data.item("PlatinumBroadsword")
+	var leg := Data.item_of(Inventory.stack("PlatinumBroadsword", 1, 81))
+	check(leg.name == "Legendary Platinum Broadsword", "its name: %s" % leg.name)
+	check(leg.damage == Prefixes._scaled(base.damage, 1.15) and leg.use_time == Prefixes._scaled(base.use_time, 0.9) and is_equal_approx(leg.knockback, base.knockback * 1.15)
+			and leg.crit == int(base.get("crit", 0)) + 5 and is_equal_approx(leg.scale, 1.1),
+			"Legendary: +15%% damage, +10%% speed, +5%% crit, +10%% size, +15%% knockback (%d dmg, %d ticks)" % [leg.damage, leg.use_time])
+	var lv := Prefixes.f32(1.15 * 1.1 * 1.1 * 1.15 * 1.1)
+	check(absf(leg.value - Data.value("PlatinumBroadsword") * lv * lv) <= 2.0 and Hud.sell_price("PlatinumBroadsword", 81) == int(leg.value) / 5,
+			"worth the square of its value multiplier more (%d copper), sold for a fifth" % leg.value)
+	var tips := Prefixes.tooltip_lines(leg)
+	var texts := tips.map(func(t): return t[0])
+	check(tips.all(func(t): return t[1]) and texts.has("+5% critical strike chance") and texts.has("+10% size") and texts.has("+15% knockback")
+			and texts.any(func(t): return t.ends_with("% damage") and t.begins_with("+")) and texts.any(func(t): return t.ends_with("% speed") and t.begins_with("+")),
+			"its tooltip lines, all good: %s" % [texts])
+	var broken := Prefixes.tooltip_lines(Data.item_of(Inventory.stack("PlatinumBroadsword", 1, Assets.ids.PrefixID.Broken)))
+	check(broken.size() == 2 and broken.all(func(t): return not t[1]) and broken[0][0].begins_with("-") and broken[1][0] == "-20% knockback",
+			"a Broken one's are bad: %s" % [broken.map(func(t): return t[0])])
+	check(Prefixes.multipliers(Data.item("WoodenBow"), Assets.ids.PrefixID.Intimidating).is_empty() and float(Data.item("WoodenBow").knockback) == 0.0,
+			"a weapon without knockback can't get more of it (no Intimidating Wooden Bow)")
+	# Rolling: a quarter of crafted or found ones have none (more with the
+	# reduced ones), reforging always gives one.
+	var none := 0
+	var ok := true
+	for i in 4000:
+		var r := Prefixes.roll(base)
+		if r == 0:
+			none += 1
+		elif not r in d.rollable.swords:
+			ok = false
+	check(ok and none > 4000 * 0.3 and none < 4000 * 0.43, "rolled naturally, a sword has none %.0f%% of the time" % (none * 100.0 / 4000))
+	var forged := []
+	for i in 500:
+		forged.append(Prefixes.roll(base, Prefixes.REFORGE))
+	check(forged.all(func(r): return r in d.rollable.swords), "reforged it always gets one")
+	check(Prefixes.roll(Data.item("DirtBlock")) == 0 and Prefixes.roll(Data.item("GrapplingHook"), Prefixes.REFORGE) == 0, "something that can't have one never does")
+	# In your hands: its damage and speed.
+	var held := p.selected
+	p.inventory.slots[p.selected] = Inventory.stack("PlatinumBroadsword", 1, 81)
+	check(p.held().name == "Legendary Platinum Broadsword" and p.weapon_damage(p.held()) >= p.weapon_damage(base) and is_equal_approx(p.crit_chance(p.held()) - p.crit_chance(base), 0.05),
+			"held, it hits harder and crits more often")
+	await frames(3)
+	var big := p.viewmodel.item_node().transform.basis.get_scale().x
+	p.inventory.slots[p.selected] = Inventory.stack("PlatinumBroadsword", 1)
+	await frames(3)
+	var plain := p.viewmodel.item_node().transform.basis.get_scale().x
+	check(absf(big / plain - 1.1) < 0.01, "and looks 10%% bigger in your hand (%.3f)" % (big / plain))
+	# An accessory's prefix: Warding adds 4 defense, Menacing 4% damage, Arcane 20 mana.
+	var def0 := p.defense()
+	var dmg0 := p.stat("damage")
+	var mana0 := p.mana_cap()
+	p.accessories.slots[0] = Inventory.stack("HermesBoots", 1, 65)
+	p.accessories.slots[1] = Inventory.stack("CloudinaBottle", 1, 72)
+	p.accessories.slots[2] = Inventory.stack("BandofRegeneration", 1, 66)
+	check(p.defense() == def0 + 4 and is_equal_approx(p.stat("damage"), dmg0 + 4.0) and p.mana_cap() == mana0 + 20,
+			"worn: Warding +4 defense, Menacing +4%% damage, Arcane +20 mana (%d, %.0f, %d)" % [p.defense() - def0, p.stat("damage") - dmg0, p.mana_cap() - mana0])
+	var warding := Data.item_of(p.accessories.slots[0])
+	check(warding.name == "Warding Hermes Boots" and Prefixes.tooltip_lines(warding) == [["+4 defense", true]]
+			and Prefixes.tooltip_lines(Data.item_of(p.accessories.slots[2])) == [["+20 mana", true]],
+			"its tooltip line: +4 defense (Arcane: +20 mana)")
+	check(Prefixes.value("HermesBoots", 65) == int(Prefixes.f32(Data.value("HermesBoots") * Prefixes.f32(Prefixes.f32(1.2) * Prefixes.f32(1.2)))),
+			"a Warding accessory is worth 1.44 times as much")
+	p.accessories.slots = kept_acc.duplicate(true)
+	# Kept: a prefixed item doesn't stack, and stays itself in a save, a drop and back.
+	p.inventory.slots.fill(null)
+	p.inventory.add("PlatinumBroadsword", 1, 81)
+	p.inventory.add("PlatinumBroadsword", 1)
+	var data := p.inventory.to_data()
+	p.inventory.from_data(JSON.parse_string(JSON.stringify(data)))
+	check(int(p.inventory.slots[0].get("prefix", 0)) == 81 and not p.inventory.slots[1].has("prefix"), "a prefixed item keeps its own slot and its prefix through a save")
+	p.selected = 0
+	p.throw_held()
+	await frames(2)
+	var drops := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "PlatinumBroadsword")
+	check(drops.size() == 1 and drops[0].prefix == 81, "thrown away, it's still Legendary on the ground")
+	drops[0].age = 1.0
+	drops[0].global_position = p.global_position + Vector3(0, 0.9, 0)
+	await frames(5)
+	check(p.inventory.slots.any(func(s): return s != null and int(s.get("prefix", 0)) == 81), "and when you pick it up")
+	# Dropped by enemies (and found in chests) they come with one.
+	p.inventory.slots.fill(null)
+	for i in 40:
+		game.spawn_item("PlatinumBroadsword", 1, Vector3(c) + Vector3(0.5, 30, 0.5), Vector3.ZERO, 0.0, Prefixes.NATURAL)
+	var natural := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "PlatinumBroadsword").map(func(e): return e.prefix)
+	check(natural.size() == 40 and natural.any(func(x): return x != 0) and natural.all(func(x): return x == 0 or x in d.rollable.swords),
+			"an enemy's drop rolls a prefix (%d of 40 got one)" % natural.filter(func(x): return x != 0).size())
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	var found := 0
+	for i in 30:
+		var at := Vector3i(5, 3, 5 + i)
+		game.chests._worldgen[Chests.key(at)] = "chest"
+		for s in game.chests.get_inventory(at).slots:
+			if s != null and s.has("prefix"):
+				found += 1
+		game.chests.remove(at)
+	check(found > 0, "chests' weapons and accessories come with prefixes (%d in 30 chests)" % found)
+	# Crafted one at a time, they roll one too.
+	hud._open_inventory()
+	hud._stations = {"work_bench": true}
+	p.inventory.add("Wood", 200)
+	var sword := {}
+	for r in Data.recipes:
+		if r.result == "WoodenSword":
+			sword = r
+	var crafted := []
+	for i in 20:
+		hud.craft(sword)
+		if hud._cursor_stack != null:
+			crafted.append(int(hud._cursor_stack.get("prefix", 0)))
+		hud._cursor_stack = null
+	check(crafted.size() == 20 and crafted.any(func(x): return x != 0) and crafted.all(func(x): return x == 0 or x in d.rollable.swords),
+			"crafted Wooden Swords roll prefixes (%d of 20)" % crafted.filter(func(x): return x != 0).size())
+	hud.close_inventory()
+	# The Goblin Tinkerer reforges: a third of the item's value, a new prefix.
+	var tinkerer: NPC = game.town.residents.get("GoblinTinkerer")
+	check(tinkerer != null, "the test town's Goblin Tinkerer")
+	if tinkerer != null:
+		p.global_position = tinkerer.global_position + Vector3(1, 0, 0)
+		hud.open_chat(tinkerer)
+		check(hud._chat_buttons.get_children().any(func(b): return b.text == "Reforge"), "he has a Reforge button")
+		hud.chat_button("Reforge")
+		check(hud.reforge_open and hud.inventory_open and hud._reforge_panel.visible, "it opens the reforge slot with your inventory")
+		check(not Hud.slot_accepts("reforge", "DirtBlock") and Hud.slot_accepts("reforge", "HermesBoots"), "only things that can have a prefix go in it")
+		p.inventory.slots.fill(null)
+		p.inventory.slots[12] = Inventory.stack("PlatinumBroadsword", 1)
+		p.inventory.add_money(5 * 10000)
+		hud._quick_move(hud._slots[12])
+		check(hud._reforge_inv.slots[0] != null and p.inventory.slots[12] == null, "Shift-click puts the item in the reforge slot")
+		var cost := hud.reforge_cost()
+		check(cost == maxi(1, Data.value("PlatinumBroadsword") / 3), "reforging costs a third of its value (%s)" % Inventory.money_text(cost))
+		var money := p.inventory.money()
+		check(hud.reforge() and int(hud._reforge_inv.slots[0].get("prefix", 0)) in d.rollable.swords and p.inventory.money() == money - cost,
+				"reforged: paid, and a new prefix (%s)" % Data.item_of(hud._reforge_inv.slots[0]).name)
+		var poor := p.inventory.money()
+		p.inventory.pay(poor)
+		check(not hud.reforge(), "without the money, nothing happens")
+		var pre := int(hud._reforge_inv.slots[0].prefix)
+		hud.close_inventory()
+		check(not hud.reforge_open and hud.chat_npc == null and p.inventory.slots.any(func(s): return s != null and s.item == "PlatinumBroadsword" and int(s.get("prefix", 0)) == pre),
+				"closing, the item comes back to your inventory")
+	# Saving with something on the cursor (or in the reforge slot) keeps it.
+	hud._open_inventory()
+	p.inventory.slots.fill(null)
+	hud._cursor_stack = Inventory.stack("HermesBoots", 1, 65)
+	hud._reforge_inv.slots[0] = Inventory.stack("Spear", 1, 59)
+	hud.stow_temporary_items()
+	check(hud._cursor_stack == null and hud._reforge_inv.slots[0] == null and p.inventory.count_of("HermesBoots") == 1 and p.inventory.count_of("Spear") == 1,
+			"saving, what's on the cursor or in the reforge slot goes into your inventory")
+	hud.close_inventory()
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.select(held)
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	await frames(5)
+
+
 ## The accessories added after the first ones: where they come from (drops,
 ## chests by depth), the informational ones in your inventory, wall sliding
 ## and jumping, wings, the Lava Charm, the Diving Helmet, the Jellyfish
@@ -1907,7 +2478,9 @@ func _rope_checks(c: Vector3i) -> void:
 	check(ropes_under.call() == 20, "the next goes on below the first (%d)" % ropes_under.call())
 	coil_at.call(TestWorld.GROUND + 10.5)
 	await frames(90)
-	var drops := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "Rope")
+	# (Only the ones by the tower: a pot broken earlier may have left Rope about.)
+	var near_tower := func(e) -> bool: return e is ItemDrop and e.item == "Rope" and Vector2(e.global_position.x - under.x, e.global_position.z - under.z).length() < 6.0
+	var drops := game.entities.get_children().filter(near_tower)
 	check(ropes_under.call() == 24 and drops.size() == 1 and drops[0].count == 6, "the third has room for 4: the other 6 drop as Rope (%d, %s)" % [ropes_under.call(), drops.map(func(d): return d.count)])
 	coil_at.call(TestWorld.GROUND + 10.5)
 	await frames(90)
@@ -2433,8 +3006,8 @@ func _town_checks(c: Vector3i) -> void:
 	check(Inventory.money_text(12345) == "1 gold 23 silver 45 copper", "money in Terraria's words (%s)" % Inventory.money_text(12345))
 	check(Data.value("Torch") == 50 and Data.value("CopperPickaxe") > 0, "items have values (Copper Pickaxe from its bars: %d)" % Data.value("CopperPickaxe"))
 
-	# The test town: five residents, each at home.
-	check(town.residents.size() == 6 and Town.ROSTER.all(func(k): return town.residents.has(k)), "the Guide, Merchant, Nurse, Arms Dealer, Dryad and Demolitionist live in the test town")
+	# The test town: seven residents, each at home.
+	check(town.residents.size() == 7 and ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer"].all(func(k): return town.residents.has(k)), "the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist and Goblin Tinkerer live in the test town")
 	var guide: NPC = town.residents.Guide
 	var names: Array = Assets.ids.names.town.GuideNames
 	check(guide.display_name in names and guide.title() == guide.display_name + " the Guide", "named from Terraria's list: %s" % guide.title())
@@ -2811,12 +3384,22 @@ func _king_slime_checks(c: Vector3i) -> void:
 	p.select(held)
 	var d0: float = ks.global_position.distance_to(p.global_position)
 	var jumped := false
-	for i in 300:
+	var states := {}
+	var landed := -1
+	var top_vy := -INF
+	# (Up to 10 s: summoned out of sight it may fall or teleport first.)
+	for i in 600:
 		await get_tree().physics_frame
+		states[ks._ks_state] = true
+		top_vy = maxf(top_vy, ks.velocity.y)
+		if ks.on_floor and landed < 0:
+			landed = i
 		if ks.velocity.y > 15.0:
 			jumped = true
+		if jumped and i >= 300 and ks.global_position.distance_to(p.global_position) < d0 - 5.0:
+			break
 	var d1: float = ks.global_position.distance_to(p.global_position)
-	check(jumped and d1 < d0 - 5.0, "it hops at you (%.1f -> %.1f blocks)" % [d0, d1])
+	check(jumped and d1 < d0 - 5.0, "it hops at you (%.1f -> %.1f blocks; states %s, landed at tick %d, fastest rise %.1f, at %s, jump timer %.0f, paused %s)" % [d0, d1, states.keys(), landed, top_vy, ks.global_position - Vector3(c), ks._ks_jump, get_tree().paused])
 	var full: Vector3 = ks.half
 	var slimes_before := game.npcs().filter(func(n): return n.kind == "BlueSlime").size()
 	ks.hit(260, 0.0, Vector3.FORWARD, 0.0)
@@ -3189,10 +3772,19 @@ func _sword_shrine_checks(c: Vector3i) -> void:
 			"the sword in stone: Terraria's LargePiles2 style 17, mined with a pickaxe")
 	var q := c + Vector3i(0, 1, -8)
 	game.world.set_block(q, id)
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	await frames(1)
 	game._collected_drops = {}
 	game.break_block(q, true, true)
 	var got: Dictionary = game._collected_drops
 	game._collected_drops = null
+	# (A sword that rolled a prefix drops on its own, not collected.)
+	for e in game.entities.get_children():
+		if e is ItemDrop and not e.is_queued_for_deletion() and e.item in ["EnchantedSword", "Terragrim"]:
+			got[e.item] = int(got.get(e.item, 0)) + 1
+			e.queue_free()
 	check(game.world.get_block(q) == 0 and got.size() == 1 and (got.has("EnchantedSword") or got.has("Terragrim")),
 			"breaking it drops the sword (%s)" % str(got))
 	var rare := 0

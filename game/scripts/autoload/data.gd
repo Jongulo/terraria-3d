@@ -1088,6 +1088,14 @@ func item(name: String) -> Dictionary:
 	return items.get(name, {})
 
 
+## A stack's item, with its prefix if it has one (Prefixes.of); {} for none.
+func item_of(stack) -> Dictionary:
+	if stack == null:
+		return {}
+	var pre := int(stack.get("prefix", 0))
+	return Prefixes.of(stack.item, pre) if pre > 0 else item(stack.item)
+
+
 func item_id(name: String) -> int:
 	return int(Assets.ids.ItemID.get(name, 0))
 
@@ -1189,7 +1197,11 @@ func _load_items() -> void:
 const TERRARIA_STATIONS := {
 	"WorkBenches": "work_bench", "Furnaces": "furnace", "Anvils": "iron_anvil", "Sawmill": "sawmill",
 	"Loom": "loom", "DemonAltar": "demon_altar", "Bottles": "bottles", "Solidifier": "solidifier",
+	"TinkerersWorkbench": "tinkerers_workshop", "Campfire": "campfire",
 }
+## Terraria's "near a liquid" recipe conditions: the liquid counts as a
+## station when it's within reach (Game.nearby_stations).
+const LIQUID_FLAGS := {"needWater": "water", "needHoney": "honey", "needLava": "lava"}
 ## Terraria's recipe groups: which ingredient they widen, and to what.
 const TERRARIA_GROUPS := {
 	"Wood": ["Wood", ANY_WOOD], "IronBar": ["IronBar", "IronBar|LeadBar"],
@@ -1198,7 +1210,7 @@ const TERRARIA_GROUPS := {
 	"Stone": ["StoneBlock", "StoneBlock|EbonstoneBlock|CrimstoneBlock"],
 }
 ## Recipe conditions this game doesn't have (graveyards, the Torch God...).
-const UNMET_FLAGS := ["needGraveyardBiome", "needTorchGodsFavor", "needMechdusa", "needSnowBiome", "needWater", "needHoney", "needLava"]
+const UNMET_FLAGS := ["needGraveyardBiome", "needTorchGodsFavor", "needMechdusa", "needSnowBiome"]
 const TERRARIA_RECIPES := "res://assets/terraria/recipes.json"
 const TILE_DUST := "res://assets/terraria/tile_dust.json"
 const NPC_GORE := "res://assets/terraria/npc_gore.json"
@@ -1248,6 +1260,9 @@ func _load_terraria_recipes() -> void:
 				ok = false
 			else:
 				stations.append(TERRARIA_STATIONS[tile])
+		for fl in t.flags:
+			if LIQUID_FLAGS.has(fl):
+				stations.append(LIQUID_FLAGS[fl])
 		var ings := {}
 		for ing in t.ingredients:
 			var name: String = ing[0]

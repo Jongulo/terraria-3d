@@ -19,6 +19,15 @@ func _physics_process(delta: float) -> void:
 		return
 	var depth := _depth(player.global_position.y, game)
 	var night := not game.sky.is_day
+	# The Goblin Army near you: its goblins, up to 10 at once, a lot faster
+	# than anything else (Terraria's invasion spawn rate).
+	if game.invasion.near(player.global_position) and not game.boss_alive():
+		if game.npcs().filter(func(n): return n.def.get("invasion", "") != "").size() < INVASION_CAP:
+			var g := _pick(Invasion.SPAWNS)
+			var at = _find_spot(game, player.global_position, false, false)
+			if at != null:
+				game.spawn_npc(g, at)
+		return
 	var cap := 4
 	if depth == "space":
 		cap = 3
@@ -42,11 +51,31 @@ func _physics_process(delta: float) -> void:
 		return
 	var table := _table(depth, night, game.biome)
 	var kind: String = _pick(table)
+	# Goblin Scouts by day on the outer sixths of the surface (here the outer
+	# third of the island across): 1 in 15, 1 in 5 once an orb is smashed
+	# and the army isn't beaten.
+	if depth == "surface" and not night and game.biome == "" and _outer(game, player.global_position) \
+			and randi() % (5 if game.orbs_broken > 0 and not game.invasion.downed else 15) == 0:
+		kind = "GoblinScout"
+	# Once the army is beaten, the Goblin Tinkerer, bound, deep in the caverns
+	# (one at a time, till he's freed).
+	if depth == "caverns" and game.invasion.downed and not game.town.arrived.has("GoblinTinkerer") and randi() % 20 == 0 \
+			and not game.npcs().any(func(n): return n.kind == "BoundGoblin"):
+		kind = "BoundGoblin"
 	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy"]
 	var pos = _find_water_spot(game, player.global_position, NPC.look(kind).hitbox) if Data.npcs[kind].ai == "swim" \
 			else _find_spot(game, player.global_position, depth in ["underground", "caverns"], flying)
 	if pos != null:
 		game.spawn_npc(kind, pos)
+
+
+const INVASION_CAP := 10
+
+
+## Out in the world's outer third (Terraria's outer sixths of its width).
+func _outer(game, p: Vector3) -> bool:
+	var size: Vector3i = game.world.get_size()
+	return absf(p.x - size.x * 0.5) > size.x / 3.0 or absf(p.z - size.z * 0.5) > size.z / 3.0
 
 
 func _depth(y: float, game) -> String:

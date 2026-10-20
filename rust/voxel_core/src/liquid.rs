@@ -1,17 +1,45 @@
-//! Terraria-style finite liquids. Each cell holds 0..=LIQ_MAX of water or lava;
-//! volume is conserved as it falls and levels out sideways. Only "active" cells
-//! (recently changed, or next to a change) are simulated, so settled pools cost
-//! nothing. Water meeting lava turns the lava into obsidian.
+//! Terraria-style finite liquids. Each cell holds 0..=LIQ_MAX of water, lava
+//! or honey; volume is conserved as it falls and levels out sideways. Only
+//! "active" cells (recently changed, or next to a change) are simulated, so
+//! settled pools cost nothing. Two liquids meeting make a block, as in
+//! Terraria (Liquid.GetLiquidMergeTypes): water and lava obsidian (where the
+//! lava was), water and honey a honey block (where the honey was), lava and
+//! honey crispy honey (where the lava was).
 
-use crate::world::{LIQ_LAVA, LIQ_MAX, LIQ_NONE, World};
+use crate::world::{LIQ_HONEY, LIQ_LAVA, LIQ_MAX, LIQ_NONE, LIQ_WATER, World};
 
 const SIDES: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 /// Lava only moves every Nth tick and needs a bigger level difference to spread.
 const LAVA_TICKS: u64 = 3;
+/// Honey moves about half as often again (Terraria: lava every 6th update,
+/// honey every 11th) and spreads like lava.
+const HONEY_TICKS: u64 = 6;
 /// Liquid at or below this amount that can't go anywhere slowly evaporates.
 const PUDDLE: u8 = 2;
-/// A lava cell needs at least this much to harden into obsidian.
+/// A cell needs at least this much to harden into a block when liquids meet.
 const OBSIDIAN_MIN: u8 = 12;
+
+/// The blocks liquids make when they meet.
+#[derive(Clone, Copy)]
+struct Merge {
+    obsidian: u16,
+    honey_block: u16,
+    crispy_honey: u16,
+}
+
+impl Merge {
+    /// Which of two liquids hardens, and into what block (0: none here).
+    fn of(&self, a: u8, b: u8) -> (u8, u16) {
+        let has = |t: u8| a == t || b == t;
+        if has(LIQ_LAVA) && has(LIQ_WATER) {
+            (LIQ_LAVA, self.obsidian)
+        } else if has(LIQ_LAVA) && has(LIQ_HONEY) {
+            (LIQ_LAVA, self.crispy_honey)
+        } else {
+            (LIQ_HONEY, self.honey_block)
+        }
+    }
+}
 
 impl World {
     /// Advances the liquid simulation one tick, processing at most `max_cells`
@@ -28,14 +56,14 @@ impl World {
                 self.liquid_active.insert(c);
             }
         }
-        let obsidian = self.id_of("obsidian");
+        let merge = Merge { obsidian: self.id_of("obsidian"), honey_block: self.id_of("honey_block"), crispy_honey: self.id_of("crispy_honey_block") };
         for (x, y, z) in cells {
-            self.update_liquid_cell(x, y, z, obsidian);
+            self.update_liquid_cell(x, y, z, merge);
         }
         self.liquid_active.len()
     }
 
-    fn update_liquid_cell(&mut self, x: i32, y: i32, z: i32, obsidian: u16) {
+    fn update_liquid_cell(&mut self, x: i32, y: i32, z: i32, merge: Merge) {
         let (t, mut a) = self.liquid_at(x, y, z);
         if a == 0 {
             return;
@@ -44,24 +72,25 @@ impl World {
             self.set_liquid(x, y, z, LIQ_NONE, 0);
             return;
         }
-        if t == LIQ_LAVA && self.liquid_tick % LAVA_TICKS != 0 {
+        if (t == LIQ_LAVA && self.liquid_tick % LAVA_TICKS != 0) || (t == LIQ_HONEY && self.liquid_tick % HONEY_TICKS != 0) {
             self.liquid_active.insert((x, y, z));
             return;
         }
 
-        // Water and lava touching: the lava hardens (or fizzles if it's a trickle).
+        // Two liquids touching: one hardens (or fizzles if it's a trickle).
         for (dx, dy, dz) in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
             let (nx, ny, nz) = (x + dx, y + dy, z + dz);
             let (nt, na) = self.liquid_at(nx, ny, nz);
             if na == 0 || nt == t {
                 continue;
             }
-            let (lx, ly, lz, la) = if t == LIQ_LAVA { (x, y, z, a) } else { (nx, ny, nz, na) };
+            let (hard, block) = merge.of(t, nt);
+            let (lx, ly, lz, la) = if t == hard { (x, y, z, a) } else { (nx, ny, nz, na) };
             self.set_liquid(lx, ly, lz, LIQ_NONE, 0);
-            if la >= OBSIDIAN_MIN && obsidian != 0 {
-                self.set(lx, ly, lz, obsidian);
+            if la >= OBSIDIAN_MIN && block != 0 {
+                self.set(lx, ly, lz, block);
             }
-            if t == LIQ_LAVA {
+            if t == hard {
                 return;
             }
         }
@@ -82,7 +111,7 @@ impl World {
 
         // 2. Level out with lower horizontal neighbours.
         if a > 0 {
-            let threshold = if t == LIQ_LAVA { 4 } else { 2 };
+            let threshold = if t == LIQ_WATER { 2 } else { 4 };
             let mut targets: Vec<(i32, i32, u8)> = Vec::with_capacity(4);
             for (dx, dz) in SIDES {
                 let (nx, nz) = (x + dx, z + dz);
@@ -279,6 +308,39 @@ mod tests {
     }
 
     const LAVA_EMIT_R: u8 = crate::world::LAVA_EMIT[0];
+
+    #[test]
+    fn honey_meeting_water_or_lava_makes_honey_blocks_or_crispy_honey() {
+        use crate::world::LIQ_HONEY;
+        let mut w = world();
+        w.set_def(4, BlockDef { name: "honey_block".into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
+        w.set_def(5, BlockDef { name: "crispy_honey_block".into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
+        dig_pit(&mut w);
+        w.set_liquid(10, 29, 10, LIQ_HONEY, LIQ_MAX);
+        w.set_liquid(11, 29, 10, LIQ_WATER, LIQ_MAX);
+        w.set_liquid(14, 29, 14, LIQ_HONEY, LIQ_MAX);
+        w.set_liquid(13, 29, 14, LIQ_LAVA, LIQ_MAX);
+        settle(&mut w, 60);
+        assert_eq!(w.get(10, 29, 10), 4, "honey and water: a honey block where the honey was");
+        assert_eq!(w.get(13, 29, 14), 5, "honey and lava: crispy honey where the lava was");
+    }
+
+    #[test]
+    fn honey_flows_slower_than_water() {
+        use crate::world::LIQ_HONEY;
+        let mut w = world();
+        dig_pit(&mut w);
+        let mut v = world();
+        dig_pit(&mut v);
+        w.set_liquid(10, 29, 10, LIQ_WATER, LIQ_MAX);
+        v.set_liquid(10, 29, 10, LIQ_HONEY, LIQ_MAX);
+        for _ in 0..12 {
+            w.step_liquids(100_000);
+            v.step_liquids(100_000);
+        }
+        let spread = |w: &World| (10..15).flat_map(|x| (10..15).map(move |z| (x, z))).filter(|&(x, z)| w.liquid_at(x, 29, z).1 > 0).count();
+        assert!(spread(&v) < spread(&w), "honey {} cells, water {}", spread(&v), spread(&w));
+    }
 
     #[test]
     fn placing_a_block_displaces_liquid_and_digging_releases_it() {

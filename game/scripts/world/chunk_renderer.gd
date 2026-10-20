@@ -29,6 +29,7 @@ var opaque_material: ShaderMaterial
 var cutout_material: ShaderMaterial
 var water_material: ShaderMaterial
 var lava_material: ShaderMaterial
+var honey_material: ShaderMaterial
 
 var _chunks := {}  # Vector3i -> MeshInstance3D, or null for empty chunks
 var _pending := {}  # Vector3i -> true while a mesh job is in flight
@@ -59,11 +60,15 @@ func setup(voxel_world: VoxelWorld) -> void:
 	lava_material.shader = load("res://shaders/liquid_lava.gdshader")
 	lava_material.set_shader_parameter("liquid_tex", Assets.texture("Images/Liquid_1"))
 	lava_material.set_shader_parameter("fall_tex", Assets.texture("Images/Waterfall_1"))
+	honey_material = ShaderMaterial.new()
+	honey_material.shader = load("res://shaders/liquid_honey.gdshader")
+	honey_material.set_shader_parameter("liquid_tex", Assets.texture("Images/Liquid_11"))
+	honey_material.set_shader_parameter("fall_tex", Assets.texture("Images/Waterfall_14"))
 	_build_offsets()
 
 
 func set_sky(light: float, color: Color) -> void:
-	for m in [opaque_material, cutout_material, water_material]:
+	for m in [opaque_material, cutout_material, water_material, honey_material]:
 		m.set_shader_parameter("sky_light", light)
 		m.set_shader_parameter("sky_color", color)
 
@@ -186,7 +191,7 @@ func _free_covered() -> void:
 			chunk_unloaded.emit(c)
 
 
-## `surfaces` = [opaque, cutout, water, lava] surface arrays (or null).
+## `surfaces` = [opaque, cutout, water, lava, honey] surface arrays (or null).
 func _apply(c: Vector3i, surfaces: Array) -> void:
 	var mi: MeshInstance3D = _chunks.get(c)
 	chunk_updated.emit(c)
@@ -196,7 +201,7 @@ func _apply(c: Vector3i, surfaces: Array) -> void:
 		_chunks[c] = null
 		return
 	var mesh := ArrayMesh.new()
-	var materials := [opaque_material, cutout_material, water_material, lava_material]
+	var materials := [opaque_material, cutout_material, water_material, lava_material, honey_material]
 	for i in surfaces.size():
 		if surfaces[i] != null:
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surfaces[i])

@@ -277,6 +277,7 @@ func _physics_process(delta: float) -> void:
 		"harpy": _ai_harpy(delta, player)
 		"swim": _ai_swim(delta, player)
 		"turret": _ai_turret(delta, player)
+		"caster": _ai_caster(delta, player)
 		"snatcher": _ai_snatcher(delta, player)
 		"boss_eoc": _ai_eye_of_cthulhu(delta, player)
 		"king_slime": _ai_king_slime(delta, game, player)
@@ -1044,7 +1045,11 @@ const DIALOG := {
 	"dryad": {"any": [70, 71, 72, 73, 74, 75, 78, 79, 80, 81], "night": [76], "corruption": [69, 77], "crimson": [332, 333]},
 	"demolitionist": {"any": [93, 94, 95, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109], "night": [96]},
 	"old_man": {"day": [82, 83, 84], "night": [85, 86, 87, 88]},
+	"bound_goblin": {"any": [121]},
+	"goblin_tinkerer": {"any": [122, 123, 125, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]},
 }
+## What the Goblin Tinkerer says when you free him.
+const FREED_LINE := 120
 ## The Guide's Help button: Terraria's tips that fit this game, in order.
 const GUIDE_HELP := [177, 178, 179, 183, 184, 185, 186, 187, 191, 192, 193, 195, 196, 197, 198, 201, 188, 211, 212,
 		204, 213, 214, 208, 209, 215, 217, 218, 219, 220]
@@ -1237,6 +1242,9 @@ func _try_shoot(delta: float, player) -> void:
 	var aim: Vector3 = player.global_position + Vector3(0, 1.0, 0) - center()
 	if _shot_timer > 0.0 or aim.length() >= float(shot.range):
 		return
+	# Archers shoot only at what they can see (Collision.CanHit).
+	if shot.get("sight", false) and not Game.current.world.raycast(center(), aim.normalized(), aim.length()).is_empty():
+		return
 	_shot_timer = float(shot.interval) * randf_range(0.8, 1.2)
 	var speed := float(shot.speed)
 	var gravity := float(shot.get("gravity", 0.0))
@@ -1247,6 +1255,66 @@ func _try_shoot(delta: float, player) -> void:
 	Audio.play_at("Item_17", center(), 0.6)
 	if def.ai == "turret":
 		anim = 0.0  # the throw animation (see _ai_turret)
+
+
+## Terraria's caster AI (AI_008, the Goblin Sorcerer), in its ticks: every
+## 650 (the first 150 after it appears) it teleports to the ground within
+## 20 tiles of you but more than 5 away, then casts a Chaos Ball at you at
+## ticks 100, 200 and 300. A hit puts the teleport 250 ticks off, with no
+## casting till then.
+var _cast_t := 500.0
+const CAST_AT := [100.0, 200.0, 300.0]
+
+func _ai_caster(delta: float, player) -> void:
+	velocity.x = 0.0
+	velocity.z = 0.0
+	var was := _cast_t
+	_cast_t += delta * 60.0
+	if _cast_t >= 650.0:
+		_cast_t = 1.0
+		_teleport_near(player)
+	for t in CAST_AT:
+		if was < t and _cast_t >= t and player.alive:
+			var cast: Dictionary = def.cast
+			var aim: Vector3 = (player.center() - center()).normalized()
+			var p := Game.current.spawn_projectile(cast.projectile, center() + Vector3(0, 0.35, 0), aim * float(cast.speed), int(cast.damage), 0.0, 0.0, 0.0, 0.4, false)
+			p.life = CHAOS_BALL_LIFE
+			Audio.play_at("Item_8", center(), 0.6)
+	# Its arms up while casting.
+	var casting := CAST_AT.any(func(t): return _cast_t > t - 30.0 and _cast_t < t + 10.0)
+	sprite.set_frame(1 + int(_cast_t / 8.0) % 2 if casting else 0)
+	if is_instance_valid(player):
+		look_dir = player.global_position - global_position
+
+
+## A Chaos Ball's flight (Terraria's is an NPC; here it's a shot): seconds.
+const CHAOS_BALL_LIFE := 5.0
+
+
+## Finds a spot on the ground within 20 tiles of the player and more than 5
+## from them (with 3 x 4 tiles clear over it, no lava) and goes there, in a
+## puff of its dust.
+func _teleport_near(player) -> void:
+	var w: VoxelWorld = Game.current.world
+	var pc: Vector3 = player.global_position
+	for i in 60:
+		var x := pc.x + randf_range(-13.3, 13.3)
+		var z := pc.z + randf_range(-13.3, 13.3)
+		var y0 := floori(pc.y) + randi_range(-8, 8)
+		var cell := Vector3i(floori(x), y0, floori(z))
+		if not w.is_solid(cell) or w.get_liquid(cell + Vector3i.UP).x == 2:
+			continue
+		var clear := true
+		for h in range(1, 4):
+			if w.is_solid(cell + Vector3i(0, h, 0)):
+				clear = false
+		var spot := Vector3(cell.x + 0.5, cell.y + 1, cell.z + 0.5)
+		if not clear or spot.distance_to(pc) < 3.4:
+			continue
+		Game.current.dust.spawn(27, center(), Vector3.ZERO, 1.3)
+		global_position = spot
+		Game.current.dust.spawn(27, center(), Vector3.ZERO, 1.3)
+		return
 
 
 ## Antlions: buried in the sand, they stay put and throw sand at you.
@@ -1797,6 +1865,8 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 		dmg *= 2
 	life -= dmg
 	_flash = 1.0
+	if def.ai == "caster" and _cast_t < 400.0:
+		_cast_t = 400.0  # hurt: no casting, and its teleport 250 ticks off
 	if def.get("invulnerable", false):
 		_hits.append([Time.get_ticks_msec() / 1000.0, dmg])
 		life = life_max
@@ -1936,15 +2006,15 @@ func _die(game) -> void:
 	Audio.play_at(def.get("death_sound", "NPC_Killed_1"), center())
 	for d in def.get("drops", []):
 		if randf() < float(d[3]):
-			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center())
+			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	# One of these at most: the first that rolls (Skeletron's mask, hand, book).
 	for d in def.get("drops_chain", []):
 		if randf() < float(d[1]):
-			game.spawn_item(d[0], 1, center())
+			game.spawn_item(d[0], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 			break
 	var one_of: Array = def.get("drops_one_of", [])
 	if not one_of.is_empty():
-		game.spawn_item(one_of[randi() % one_of.size()], 1, center())
+		game.spawn_item(one_of[randi() % one_of.size()], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	game.spawn_coins(int(def.get("coins", 0)), center())
 	var g: Dictionary = Data.npc_gore.get(kind, {})
 	if g.is_empty():

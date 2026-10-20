@@ -3,6 +3,7 @@
 
 pub mod cabins;
 pub mod dungeon;
+pub mod hives;
 pub mod liquid;
 pub mod lod;
 pub mod mesher;
@@ -388,6 +389,18 @@ impl VoxelWorld {
         dungeon::dungeon(&mut w, seed as u64, &l, (ground.x, ground.y, ground.z), door.rem_euclid(4), &brick.to_string(), steps as f64)
     }
 
+    /// A bee hive centred on `at`, its balls `scale` x Terraria's, wherever
+    /// it is (test world; see hives::hive_at). Returns the larva's cell. Call
+    /// `relight_all` after.
+    #[func]
+    fn generate_hive(&mut self, at: Vector3i, seed: i32, scale: f32) -> Vector3i {
+        let mut w = self.shared.world.write().unwrap();
+        let l = worldgen::layers(w.sy);
+        let ids = hives::Ids::new(&w);
+        let p = hives::hive_at(&mut w, &mut worldgen::Rng::new(seed as u64), &ids, &l, (at.x, at.y, at.z), true, scale as f64).unwrap_or((0, 0, 0));
+        Vector3i::new(p.0, p.1, p.2)
+    }
+
     /// A Glowing Mushroom biome at `at`, its grass and mushrooms within
     /// `radius`; without `patches`, only the grass and mushrooms on the mud
     /// there (test world; see mushroom::biome_at). Call `relight_all` after.
@@ -671,7 +684,7 @@ impl VoxelWorld {
         Self::hit_dict(physics::raycast(&self.world(), v3(origin), v3(dir), max_dist, true))
     }
 
-    /// Liquid in a cell as Vector2i(type, amount): type 0 none, 1 water, 2 lava;
+    /// Liquid in a cell as Vector2i(type, amount): type 0 none, 1 water, 2 lava, 3 honey;
     /// amount 0..63 (63 = full).
     #[func]
     fn get_liquid(&self, p: Vector3i) -> Vector2i {
@@ -761,7 +774,7 @@ impl VoxelWorld {
     }
 
     /// Returns up to `max` finished meshes as
-    /// [chunk: Vector3i, opaque, cutout, water, lava] (surface arrays or null).
+    /// [chunk: Vector3i, opaque, cutout, water, lava, honey] (surface arrays or null).
     /// Stale results (superseded by a newer edit) are dropped.
     #[func]
     fn poll_meshes(&mut self, max: i32) -> VarArray {
@@ -779,6 +792,7 @@ impl VoxelWorld {
             item.push(&surface_arrays(&r.mesh.cutout));
             item.push(&surface_arrays(&r.mesh.water));
             item.push(&surface_arrays(&r.mesh.lava));
+            item.push(&surface_arrays(&r.mesh.honey));
             out.push(&item.to_variant());
         }
         out

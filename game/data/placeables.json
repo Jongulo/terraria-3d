@@ -3454,6 +3454,18 @@
 			"bevel_size": 1.0,
 			"depth": 1.0
 		},
+		"tinkerers_workshop": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 2.0,
+			"noise": "grain"
+		},
 		"torch": {
 			"bevel": "round",
 			"bevel_size": 2.0,
@@ -5363,6 +5375,7 @@
 		"taller_grass_6": "extruded",
 		"tiki_torch": "hull",
 		"tin_chandelier": "billboard",
+		"tinkerers_workshop": "tuned",
 		"torch": "hull",
 		"trash_can": "extruded",
 		"tree_canopy": "billboard",

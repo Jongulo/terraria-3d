@@ -26,6 +26,8 @@ pub const CH_SUN: usize = 0;
 pub const LIQ_NONE: u8 = 0;
 pub const LIQ_WATER: u8 = 1;
 pub const LIQ_LAVA: u8 = 2;
+/// Honey (Terraria's): thick and slow, from bee hives.
+pub const LIQ_HONEY: u8 = 3;
 pub const LIQ_MAX: u8 = 63;
 /// Lava glows orange like Terraria's.
 pub const LAVA_EMIT: [u8; 3] = [14, 7, 2];

@@ -36,7 +36,8 @@ const HELP := [
 	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
 	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon",
 	"South-east, down the shaft past the tower: the Glowing Mushroom biome",
-	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad and Demolitionist (right-click to talk)",
+	"North-east, down the shaft in the Jungle: a bee hive (honey, honey blocks, the larva)",
+	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist and Goblin Tinkerer (right-click to talk)",
 ]
 
 var game: Game
@@ -128,6 +129,7 @@ func build() -> void:
 	_build_islands(c)
 	_build_evil(c)
 	_build_biomes(c)
+	_build_hive(c)
 	_build_dungeon(c)
 	game.world.generate_mushroom_biome(c + MUSHROOM, 26, 41, false)
 	w.relight_all()
@@ -174,6 +176,32 @@ func _build_biomes(c: Vector3i) -> void:
 		var at: Vector2i = b[0]
 		game.world.generate_biome_patch(Vector2i(c.x, c.z) + at, BIOME_RADIUS, b[1], 30 + b[1])
 		_label(Vector3(c.x + at.x * 0.6, GROUND + 3, c.z + at.y * 0.6), b[2], 26)
+
+
+## Under the Jungle patch: a bee hive (the world generator's, its balls 0.6
+## the size), its honey and larva; a shaft with platforms down to the larva.
+const HIVE := Vector3i(75, -26, -70)
+## Where the hive's larva is (a fresh test world).
+var hive_larva := Vector3i.ZERO
+
+
+func _build_hive(c: Vector3i) -> void:
+	var w := game.world
+	hive_larva = w.generate_hive(c + HIVE, 51, 0.6)
+	var s := hive_larva
+	_blocks = PackedInt32Array()
+	_liquids = PackedInt32Array()
+	_box(Vector3i(s.x - 1, s.y + 3, s.z - 1), Vector3i(s.x + 1, GROUND, s.z + 1), "")
+	for y in range(s.y + 3, GROUND + 1):
+		for dx in range(-1, 2):
+			for dz in range(-1, 2):
+				_liquids.append_array([s.x + dx, y, s.z + dz, 0, 0])
+	for y in range(s.y + 6, GROUND, 4):
+		_box(Vector3i(s.x - 1, y, s.z - 1), Vector3i(s.x + 1, y, s.z + 1), "wood_platform")
+	_box(Vector3i(s.x - 2, GROUND, s.z - 2), Vector3i(s.x + 2, GROUND, s.z - 2), "rich_mahogany")
+	w.set_blocks_raw(_blocks)
+	w.set_liquids_raw(_liquids)
+	_label(Vector3(s.x + 0.5, GROUND + 3, s.z + 0.5), "Bee hive below", 24)
 
 
 func _build_storage(c: Vector3i) -> void:
@@ -597,7 +625,7 @@ func _build_hammered(c: Vector3i) -> void:
 ## East of the arena: a row of houses for the town NPCs, each a valid home
 ## (door, light, table, chair), with a resident in each (see activate).
 const TOWN := Vector3i(52, 0, -24)
-const TOWN_HOUSES := 6
+const TOWN_HOUSES := 7
 
 
 ## The north-west corner (at ground + 1) of town house `i`.
@@ -621,7 +649,7 @@ func _build_town(c: Vector3i) -> void:
 		_b(a + Vector3i(4, 0, 1), "wooden_table")
 		_b(a + Vector3i(4, 1, 1), "candle")
 		_b(a + Vector3i(3, 0, 1), "wooden_chair")
-	_label(Vector3(town_house(c, 2)) + Vector3(-1.5, 5.5, 3.0), "Town (NPC houses; Tab > Housing)", 22)
+	_label(Vector3(town_house(c, 3)) + Vector3(-1.5, 5.5, 3.0), "Town (NPC houses; Tab > Housing)", 22)
 
 
 ## Settles the town NPCs in the town's houses (a fresh test world).

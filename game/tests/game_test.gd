@@ -94,6 +94,14 @@ func _run() -> void:
 	var guide = game.town.residents.get("Guide")
 	check(guide != null and guide.global_position.distance_to(p.global_position) < 12.0 and guide.home_key == "",
 			"a new world starts with the Guide by the spawn point, homeless")
+	# Bee hives in the Jungle (Terraria's Hives pass): each larva on a hive floor.
+	var half_size := Vector3i(size.x / 2, size.y / 2, size.z / 2)
+	var larvae := game.world.find_blocks(half_size, half_size, PackedInt32Array([Data.block_id("larva")]), 100)
+	var on_hive := true
+	for i in range(0, larvae.size(), 3):
+		if game.world.get_block(Vector3i(larvae[i], larvae[i + 1] - 1, larvae[i + 2])) != Data.block_id("hive"):
+			on_hive = false
+	check(larvae.size() >= 3 and on_hive, "the world has bee hives in its Jungle, each larva on hive (%d)" % (larvae.size() / 3))
 	# Grass block sides: their grass is the top's texture (several of its
 	# colours across the band, not Terraria's flat edge colour), at square pixels.
 	for name in ["grass", "jungle_grass", "corrupt_grass", "crimson_grass"]:
@@ -278,7 +286,8 @@ func _run() -> void:
 	var before_bolts: int = bolts.call()
 	await use(1)
 	await get_tree().physics_frame
-	check(bolts.call() == before_bolts + 1 and absf(p.spear.reach_at(19.0 / 60.0) - 6.7375) < 0.02, "the Storm Spear reaches 6.74 blocks and throws a bolt")
+	check(bolts.call() == before_bolts + 1 and absf(p.spear.reach_at(19.0 / 60.0) - 6.7375) < 0.02,
+			"the Storm Spear reaches 6.74 blocks and throws a bolt (%.2f; projectiles %d -> %d)" % [p.spear.reach_at(19.0 / 60.0), before_bolts, bolts.call()])
 	await frames(40)
 	p.select(0)
 	await frames(2)

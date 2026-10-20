@@ -2049,6 +2049,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     living_trees(w, seed, ids.grass, ids.chest);
     mahogany_trees(w, seed, &l, ids.chest);
     jungle_cave_trees(w, seed, &l);
+    // Pass 6a: bee hives and honey patches in the Jungle (Terraria's Hives
+    // pass), kept from the structures after them; their own random numbers.
+    crate::hives::hives(w, &mut Rng::new(seed as u64 ^ 0xb33_41e5), &l);
     // Pass 6b: the Dungeon under its entrance (Terraria's Dungeon pass, before
     // its Buried Chests), protected from the structures after it.
     if let Some((x, y, z, door)) = dungeon {

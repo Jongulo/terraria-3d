@@ -1,6 +1,7 @@
 class_name Inventory
 extends RefCounted
-## A list of item stacks. Slots hold null or {"item": internal name, "count": int}.
+## A list of item stacks. Slots hold null or {"item": internal name, "count": int},
+## with "prefix" (Terraria's PrefixID, see Prefixes) when the item has one.
 ## The player's first 10 slots are the hotbar; chests use the same class.
 
 signal changed
@@ -15,7 +16,9 @@ func _init(size := 50) -> void:
 	slots.resize(size)
 
 
-static func stack(item: String, count: int) -> Dictionary:
+static func stack(item: String, count: int, prefix := 0) -> Dictionary:
+	if prefix > 0:
+		return {"item": item, "count": count, "prefix": prefix}
 	return {"item": item, "count": count}
 
 
@@ -24,10 +27,18 @@ func max_stack(item: String) -> int:
 
 
 ## Adds items, filling existing stacks first. Returns how many didn't fit.
-## Coins join your money (100 copper turn into a silver, and so on).
-func add(item: String, count: int) -> int:
+## Coins join your money (100 copper turn into a silver, and so on). An item
+## with a prefix goes into an empty slot of its own.
+func add(item: String, count: int, prefix := 0) -> int:
 	if count <= 0 or item == "":
 		return 0
+	if prefix > 0:
+		for i in slots.size():
+			if slots[i] == null:
+				slots[i] = stack(item, count, prefix)
+				changed.emit()
+				return 0
+		return count
 	var coin := COINS.find(item)
 	if coin >= 0:
 		var total := money() + COIN_VALUES[coin] * count
@@ -35,7 +46,7 @@ func add(item: String, count: int) -> int:
 		return ceili(add_money(total) / float(COIN_VALUES[coin]))
 	var limit := max_stack(item)
 	for s in slots:
-		if s != null and s.item == item and s.count < limit:
+		if s != null and s.item == item and s.count < limit and not s.has("prefix"):
 			var n := mini(count, limit - s.count)
 			s.count += n
 			count -= n
@@ -50,6 +61,11 @@ func add(item: String, count: int) -> int:
 			count -= n
 	changed.emit()
 	return count
+
+
+## Adds a stack (keeping its prefix). Returns how many didn't fit.
+func add_stack(s: Dictionary) -> int:
+	return add(s.item, int(s.count), int(s.get("prefix", 0)))
 
 
 ## How many more of `item` would fit.
@@ -209,5 +225,5 @@ func to_data() -> Array:
 func from_data(data: Array) -> void:
 	for i in mini(data.size(), slots.size()):
 		var s = data[i]
-		slots[i] = null if s == null else stack(s.item, int(s.count))
+		slots[i] = null if s == null else stack(s.item, int(s.count), int(s.get("prefix", 0)))
 	changed.emit()

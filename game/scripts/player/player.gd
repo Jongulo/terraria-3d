@@ -27,6 +27,17 @@ const BALLOON_JUMP_TICKS := 20
 const LIQUID_GRAVITY := 30.0
 const LIQUID_MAX_FALL := 12.5
 const LIQUID_MOVE := 0.5
+## In honey: gravity 0.1, maxFallSpeed 3, a quarter as far.
+const HONEY_GRAVITY := 15.0
+const HONEY_MAX_FALL := 7.5
+const HONEY_MOVE := 0.25
+## Touching honey makes you Honey (Terraria's buff 48) for 1800 ticks.
+const HONEY_TIME := 30.0
+## A honey block's side (Terraria's StickyMovement): 1 px a tick across and
+## down at most, 5 up.
+const HONEY_STICK_ACROSS := 2.5
+const HONEY_STICK_FALL := 2.5
+const HONEY_STICK_RISE := 12.5
 const FLY_SPEED := 13.0
 const REACH := 5.5
 ## Fall damage: 10 for each whole tile fallen beyond 25.
@@ -37,6 +48,7 @@ const MAX_LIFE := 400
 const MAX_MANA := 200
 const LIQ_WATER := 1
 const LIQ_LAVA := 2
+const LIQ_HONEY := 3
 ## Seconds of air underwater (Terraria's 200 breath ticks at 7 ticks each ≈ 23 s).
 const BREATH_MAX := 23.0
 const DROWN_DPS := 20.0
@@ -88,6 +100,8 @@ const NO_BED := Vector3i(-1, -1, -1)
 ## False while a menu has the mouse.
 var input_enabled := true
 var potion_sickness := 0.0
+## The Honey buff (seconds left): better natural healing.
+var honey_time := 0.0
 var respawn_timer := 0.0
 ## Liquid around the body / at the eyes: 0 none, 1 water, 2 lava.
 var in_liquid := 0
@@ -140,9 +154,16 @@ var on_rope := false
 ## Sliding down (or stuck to) a wall: Climbing Claws / Shoe Spikes; away
 ## from the wall is _slide_away.
 var sliding := false
+## Against a honey block's side (sticking to it).
+var honey_stuck := false
 var _slide_away := Vector3.ZERO
 ## Wings: flight left (seconds), refilled on the ground.
 var _wing_time := 0.0
+## Rocket boots: bursts left (Terraria's rocketTime), the one firing (s), and
+## whether jump has been let go in the air since you left the ground.
+var _rocket_time := 0
+var _rocket_burst := 0.0
+var _rocket_release := false
 ## Lava Charm: seconds of lava immunity left (Terraria's lavaTime).
 var lava_time := 0.0
 var _rope_cooldown := 0.0
@@ -197,6 +218,21 @@ func yaw() -> float:
 
 
 ## True if the player's box is in a block with this flag set (cobwebs: "sticky").
+## Whether a block with `flag` is against your side (within Terraria's pixel,
+## 1/24 block, of your box; not under your feet or over your head).
+func touching_side(flag: String) -> bool:
+	var w := Game.current.world
+	var m := 1.0 / 24.0
+	var lo := (global_position - Vector3(half.x + m, -0.01, half.z + m)).floor()
+	var hi := (global_position + Vector3(half.x + m, half.y - 0.01, half.z + m)).floor()
+	for x in range(int(lo.x), int(hi.x) + 1):
+		for y in range(int(lo.y), int(hi.y) + 1):
+			for z in range(int(lo.z), int(hi.z) + 1):
+				if Data.block(w.get_block(Vector3i(x, y, z))).get(flag, false):
+					return true
+	return false
+
+
 func touching(flag: String) -> bool:
 	var w := Game.current.world
 	var lo := (global_position - Vector3(half.x, 0, half.z)).floor()
@@ -207,6 +243,12 @@ func touching(flag: String) -> bool:
 				if Data.block(w.get_block(Vector3i(x, y, z))).get(flag, false):
 					return true
 	return false
+
+
+## How far you reach: blocks you hold go a tile further for each Toolbelt
+## (Terraria's blockRange, a tile is 2/3 of a block).
+func reach() -> float:
+	return REACH + (stat("block_range") * 2.0 / 3.0 if held().get("type") == "block" else 0.0)
 
 
 ## The point the crosshair is on (the targeted block's face), or REACH ahead.
@@ -225,8 +267,7 @@ func overlaps_point(p: Vector3, radius: float) -> bool:
 
 
 func held() -> Dictionary:
-	var s = inventory.slots[selected]
-	return {} if s == null else Data.item(s.item)
+	return Data.item_of(inventory.slots[selected])
 
 
 ## Maximum mana with equipment (Band of Starpower: +20, Jungle armor).
@@ -241,7 +282,10 @@ func equipment() -> Array:
 	for inv in [armor, accessories]:
 		for s in inv.slots:
 			if s != null:
-				out.append(Data.item(s.item))
+				out.append(Data.item_of(s))
+				# An accessory's prefix: Warding's 4 defense and so on.
+				if s.has("prefix"):
+					out.append(Prefixes.bonus(int(s.prefix)))
 	var bonus := armor_set()
 	if not bonus.is_empty():
 		out.append(bonus)
@@ -291,7 +335,7 @@ const SHARPENED_PEN := 12
 
 ## Armor penetration of a weapon's hits: the Sharpening Station's 12 for melee.
 func armor_penetration(def: Dictionary) -> int:
-	return SHARPENED_PEN if sharpened and _damage_kind(def) == "melee" else 0
+	return (SHARPENED_PEN if sharpened and _damage_kind(def) == "melee" else 0) + int(def.get("armor_pen", 0))
 
 
 ## A weapon's damage with your bonuses (Terraria adds them: armor's "7%
@@ -441,7 +485,7 @@ func _physics_process(delta: float) -> void:
 		if _conch_timer < 0.0:
 			ocean_teleport()
 
-	target = Doors.raycast(game, camera.global_position, forward(), REACH) if input_enabled else {}
+	target = Doors.raycast(game, camera.global_position, forward(), reach()) if input_enabled else {}
 	_highlight.visible = not target.is_empty() and not game.taking_screenshot
 	if _highlight.visible:
 		# Doors outline their panel (both halves); other blocks their cell.
@@ -590,17 +634,28 @@ func _move(delta: float, game) -> void:
 
 	if in_liquid != 0:
 		# Water and lava: lighter gravity, a slow sinking speed, fast falls
-		# damped.
-		velocity.y -= LIQUID_GRAVITY * delta
-		if velocity.y < -LIQUID_MAX_FALL:
-			velocity.y = move_toward(velocity.y, -LIQUID_MAX_FALL, 80.0 * delta)
+		# damped; honey more so.
+		var honey := in_liquid == LIQ_HONEY
+		velocity.y -= (HONEY_GRAVITY if honey else LIQUID_GRAVITY) * delta
+		var max_fall := HONEY_MAX_FALL if honey else LIQUID_MAX_FALL
+		if velocity.y < -max_fall:
+			velocity.y = move_toward(velocity.y, -max_fall, 80.0 * delta)
 		_fall_start = global_position.y
 	else:
 		var wing := wings()
 		if on_floor or sliding:
 			_wing_time = float(wing.get("time", 0)) / 60.0
+			_rocket_time = ROCKET_TIME
+			_rocket_burst = 0.0
+			_rocket_release = false
+		elif not jump:
+			_rocket_release = true
 		if not wing.is_empty() and jump and _wing_time > 0.0 and _jump_ticks == 0 and not on_floor:
 			_wing_flight(delta, wing)
+		elif _rocketing(jump, wing):
+			_wing_flight(delta, {"lift_max": 1.5})
+			_rocket_burst -= delta
+			_rocket_effects(delta)
 		elif not wing.is_empty() and jump and velocity.y < 0.0:
 			# Gliding: a third of gravity, a third of the fall speed, no fall.
 			velocity.y = maxf(velocity.y - GRAVITY / 3.0 * delta, -MAX_FALL / 3.0)
@@ -612,6 +667,17 @@ func _move(delta: float, game) -> void:
 		# Stuck in a web: you sink and climb slowly, and a fall stops there.
 		velocity.y = clampf(velocity.y, -1.0, 1.5)
 		_fall_start = global_position.y
+	honey_stuck = touching_side("honey_sticky")
+	if honey_stuck:
+		# Against a honey block you stick: slow across, sliding slowly down,
+		# and a fall stops there; you can still jump off it.
+		var flat := Vector2(velocity.x, velocity.z).limit_length(HONEY_STICK_ACROSS)
+		flat *= pow(0.85 if flat.length() > HONEY_STICK_ACROSS * 0.75 else 0.6, delta * 60.0)
+		velocity.x = flat.x
+		velocity.z = flat.y
+		velocity.y = clampf(velocity.y, -HONEY_STICK_FALL, HONEY_STICK_RISE)
+		velocity.y *= pow(0.96 if velocity.y > 0.0 else 0.3, delta * 60.0)
+		_fall_start = global_position.y
 	# Buried in sand, silt or slush: stuck in it, suffocating, until you dig
 	# out (Terraria doesn't push you clear).
 	if buried():
@@ -620,7 +686,7 @@ func _move(delta: float, game) -> void:
 		return
 	# Holding Drop down falls through platforms (Terraria's down key).
 	var drop := input_enabled and Input.is_action_pressed("drop_down")
-	var step := velocity * delta * (LIQUID_MOVE if in_liquid != 0 else 1.0)
+	var step := velocity * delta * ((HONEY_MOVE if in_liquid == LIQ_HONEY else LIQUID_MOVE) if in_liquid != 0 else 1.0)
 	var r: Dictionary = game.world.move_aabb(global_position, half, step, 1.05 if on_floor else 0.0, drop)
 	var was_on_floor := on_floor
 	global_position = r.position
@@ -711,6 +777,36 @@ func _wing_flight(delta: float, wings: Dictionary) -> void:
 	_wing_time -= delta
 
 
+## Rocket boots (Terraria's): 7 bursts of 10 ticks of the wings' lift, once
+## your wings (if any) are spent and you've let go of jump and pressed it
+## again in the air; they fill up on the ground.
+const ROCKET_TIME := 7
+const ROCKET_BURST := 10.0 / 60.0
+var _rocket_sound := 0.0
+
+func _rocketing(jump: bool, wing: Dictionary) -> bool:
+	if stat("rocket") <= 0.0 or not jump or on_floor or _jump_ticks > 0 or not _rocket_release:
+		return false
+	if not wing.is_empty() and _wing_time > 0.0:
+		return false
+	if _rocket_burst <= 0.0:
+		if _rocket_time <= 0:
+			return false
+		_rocket_time -= 1
+		_rocket_burst = ROCKET_BURST
+	return true
+
+
+## Their flames and roar (Item_13 the Rocket Boots', Item_24 the others').
+func _rocket_effects(delta: float) -> void:
+	var game := Game.current
+	game.dust.spawn(6, global_position + Vector3(0, 0.1, 0), Vector3(0, -2, 0), 1.5)
+	_rocket_sound -= delta
+	if _rocket_sound <= 0.0:
+		_rocket_sound = 0.5 if stat("rocket") <= 1.0 else 0.25
+		Audio.play("Item_13" if stat("rocket") <= 1.0 else "Item_24", 0.5)
+
+
 ## Your informational accessories, carried anywhere in your inventory or worn
 ## (Terraria's): {"watch": best level, "depth", "compass", "radar": true}.
 func info_accessories() -> Dictionary:
@@ -720,7 +816,12 @@ func info_accessories() -> Dictionary:
 			continue
 		var d := Data.item(s.item)
 		var kind: String = d.get("info", "")
-		if kind == "watch":
+		if kind == "gps":
+			# The GPS: a Gold Watch, a Depth Meter and a Compass in one.
+			out["watch"] = 3
+			out["depth"] = true
+			out["compass"] = true
+		elif kind == "watch":
 			out["watch"] = maxi(int(out.get("watch", 0)), int(d.watch))
 		elif kind != "":
 			out[kind] = true
@@ -1051,6 +1152,19 @@ func _grapple(delta: float, game) -> bool:
 	return true
 
 
+## The Harpoon: its head out on its chain where you look, one at a time, back
+## when you let go (HarpoonShot).
+func _shoot_harpoon(def: Dictionary) -> bool:
+	if get_tree().get_nodes_in_group("harpoons").any(func(h): return h.player == self and not h.is_queued_for_deletion()):
+		return false
+	var h := HarpoonShot.new()
+	h.setup(self, def, forward())
+	Game.current.entities.add_child(h)
+	h.global_position = camera.global_position + forward() * 0.6
+	Audio.play(def.get("sound", "Item_10"), 0.6)
+	return true
+
+
 ## A Rope Coil thrown where you look (shootSpeed 10).
 func _throw_rope_coil(def: Dictionary) -> bool:
 	var game := Game.current
@@ -1203,9 +1317,12 @@ func _update_liquid(game) -> void:
 	in_liquid = LIQ_LAVA if (feet.x == LIQ_LAVA or body.x == LIQ_LAVA) else maxi(feet.x, body.x)
 	head_liquid = e.x if e.y > 0 and fposmod(eye.y, 1.0) < surface else 0
 	if in_liquid != was:
-		Audio.play("Splash_*", 0.5)
+		# Honey has its own splash (Terraria's Splash_1) and honey dust.
+		var honey := LIQ_HONEY in [in_liquid, was]
+		Audio.play("Splash_1" if honey else "Splash_*", 0.5)
 		if in_liquid != 0 and velocity.y < -6.0:
-			game.spawn_dust(global_position, Color(0.5, 0.65, 1.0) if in_liquid == LIQ_WATER else Color(1.0, 0.5, 0.1), 14)
+			var col: Color = {LIQ_WATER: Color(0.5, 0.65, 1.0), LIQ_HONEY: Color(1.0, 0.75, 0.15)}.get(in_liquid, Color(1.0, 0.5, 0.1))
+			game.spawn_dust(global_position, col, 20 if in_liquid == LIQ_HONEY else 14)
 
 
 ## No damage of any kind: the test world's god mode, or creative mode.
@@ -1214,6 +1331,7 @@ func invulnerable() -> bool:
 
 
 func _liquid_effects(delta: float) -> void:
+	honey_time = HONEY_TIME if in_liquid == LIQ_HONEY else maxf(0.0, honey_time - delta)
 	if in_liquid != LIQ_LAVA:
 		lava_time = minf(stat("lava_time"), lava_time + delta)
 	lava_time = minf(lava_time, stat("lava_time"))
@@ -1249,7 +1367,7 @@ func _liquid_effects(delta: float) -> void:
 	var spikes := _touch_damage()
 	if spikes > 0:
 		hurt(int(round(spikes * randf_range(0.85, 1.15))), Vector3.ZERO)
-	elif in_liquid == LIQ_WATER:
+	elif in_liquid == LIQ_WATER or in_liquid == LIQ_HONEY:
 		on_fire = 0.0
 	if on_fire > 0.0:
 		on_fire = maxf(0.0, on_fire - delta)
@@ -1332,14 +1450,22 @@ func buffs() -> Array:
 		out.append([215, "The Bast Defense", INF])
 	if suffocating:
 		out.append([68, "Suffocation", INF])
+	if honey_time > 0.0:
+		out.append([48, "Honey", honey_time])
 	return out
 
 
 func _regen(delta: float) -> void:
-	_since_hurt += delta
+	# Honey: natural healing ramps up three times as fast (lifeRegenTime +2
+	# a tick).
+	_since_hurt += delta * (3.0 if honey_time > 0.0 else 1.0)
 	# Terraria's natural regen ramps up the longer you avoid damage.
 	var rate := (0.5 if _since_hurt > 8.0 else 0.0) + (1.0 if _since_hurt > 20.0 else 0.0)
-	if has_effect("regen"):
+	# Terraria's lifeRegen from what you wear: half a life a second each (the
+	# Band of Regeneration's 1, the Mana Regeneration Band's 2).
+	rate += stat("regen") * 0.5
+	# And a life a second more (lifeRegen +2).
+	if honey_time > 0.0:
 		rate += 1.0
 	if life < life_max and rate > 0.0:
 		_regen_acc += rate * delta
@@ -1348,7 +1474,8 @@ func _regen(delta: float) -> void:
 			_regen_acc = fmod(_regen_acc, 1.0)
 			stats_changed.emit()
 	if mana < mana_cap() and _use_timer <= 0.0:
-		_mana_acc += delta * (4.0 + mana_cap() * 0.05)
+		# The Mana Regeneration Band's manaRegenBonus: half a mana a second each.
+		_mana_acc += delta * (4.0 + mana_cap() * 0.05 + stat("mana_regen_bonus") * 0.5)
 		if _mana_acc >= 1.0:
 			mana = mini(mana_cap(), mana + int(_mana_acc))
 			_mana_acc = fmod(_mana_acc, 1.0)
@@ -1608,7 +1735,8 @@ var _last_flower_cell := Vector3i(-1, -1, -1)
 func _melee(def: Dictionary) -> void:
 	var game := Game.current
 	var thrust: bool = def.get("style", "swing") == "thrust"
-	var reach := 2.4 if thrust else 2.9
+	# A bigger sword (a size prefix: Large, Massive...) reaches further.
+	var reach := (2.4 if thrust else 2.9) * float(def.get("scale", 1.0))
 	var cone := cos(deg_to_rad(38.0 if thrust else 65.0))
 	var origin := camera.global_position
 	var fwd := forward()
@@ -1642,6 +1770,8 @@ func _melee(def: Dictionary) -> void:
 
 
 func _shoot_ranged(def: Dictionary) -> bool:
+	if def.has("harpoon"):
+		return _shoot_harpoon(def)
 	var ammo_slot := inventory.find_ammo(def.ammo)
 	if ammo_slot < 0:
 		return false
@@ -1825,6 +1955,7 @@ func _throw(def: Dictionary) -> bool:
 		pr.life = float(def.explosive.get("fuse", 3.0))
 		pr.gravity = 20.0
 		pr.velocity += Vector3(0, 3.0, 0) + velocity * 0.5
+		pr.penetrate = int(def.explosive.get("pierce", 1))
 	_use_up(selected)
 	Audio.play("Item_1", 0.6)
 	return true
@@ -1931,9 +2062,11 @@ func _aiming_at_extractinator() -> bool:
 ## the mouse), just in front of the machine.
 func _extract() -> bool:
 	var game := Game.current
+	# A Hive gives a Honey Block (Terraria's ExtractinatorMode 5).
+	var into: String = held().get("extract_to", "")
 	_use_up(selected)
 	Audio.play("Grab")
-	var drop := Extractinator.roll(_extract_rng)
+	var drop := [into, 1] if into != "" else Extractinator.roll(_extract_rng)
 	var at := camera.global_position + forward() * maxf(0.5, float(target.get("distance", 2.0)) - 0.4)
 	game.spawn_item(drop[0], drop[1], at, Vector3(0, 1.5, 0))
 	return true
@@ -1981,10 +2114,12 @@ func _has_support(pos: Vector3i, hangs := false, platform := false) -> bool:
 func _consume(def: Dictionary) -> bool:
 	var game := Game.current
 	if def.has("heal"):
-		if potion_sickness > 0.0 or life >= life_max:
+		# (Bottled Honey: drunk for its buff at full life too.)
+		if potion_sickness > 0.0 or (life >= life_max and not def.has("honey")):
 			return false
 		heal(int(def.heal))
 		potion_sickness = POTION_SICKNESS if def.internal != "Mushroom" else 0.0
+		honey_time = maxf(honey_time, float(def.get("honey", 0)))
 	elif def.has("mana"):
 		if mana >= mana_cap():
 			return false
@@ -2011,6 +2146,14 @@ func _consume(def: Dictionary) -> bool:
 
 func _summon(def: Dictionary) -> bool:
 	var game := Game.current
+	# The Goblin Battle Standard: the Goblin Army, if you've 200 max life and
+	# none is on (else nothing happens and it isn't used up).
+	if def.has("invasion"):
+		if not game.invasion.start():
+			return false
+		Audio.play("Roar_0", 0.8)
+		_use_up(selected)
+		return true
 	match def.get("summon_when", "night"):
 		"night":
 			if game.sky.is_day:
@@ -2060,7 +2203,7 @@ func _use_bucket(def: Dictionary) -> bool:
 			var take := mini(need, l.y)
 			w.set_liquid(c, t, l.y - take)
 			need -= take
-		_swap_held("WaterBucket" if t == LIQ_WATER else "LavaBucket")
+		_swap_held({LIQ_WATER: "WaterBucket", LIQ_LAVA: "LavaBucket", LIQ_HONEY: "HoneyBucket"}[t])
 	else:
 		if target.is_empty():
 			return false
@@ -2118,11 +2261,16 @@ func throw_held() -> void:
 		return
 	inventory.slots[selected] = null
 	inventory.changed.emit()
-	Game.current.spawn_item(s.item, s.count, camera.global_position + forward(), forward() * 6.0, 1.5)
+	Game.current.spawn_item(s.item, s.count, camera.global_position + forward(), forward() * 6.0, 1.5, int(s.get("prefix", 0)))
 
 
 func _interact() -> void:
 	var npc = talk_target()
+	if npc != null and npc.kind == "BoundGoblin":
+		# Untied, he's the Goblin Tinkerer.
+		var freed: NPC = Game.current.town.free_goblin(npc)
+		Game.current.hud.open_chat(freed, NPC.dialog(NPC.FREED_LINE))
+		return
 	if npc != null:
 		Game.current.hud.open_chat(npc)
 		return
@@ -2172,6 +2320,9 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null)
 	life -= dmg
 	if has_effect("panic"):
 		_panic = 8.0
+	# Magic Cuffs: the damage you take comes back as mana.
+	if has_effect("magic_cuffs"):
+		mana = mini(mana_cap(), mana + dmg)
 	var thorns := int(stat("thorns"))
 	if thorns > 0 and attacker != null and is_instance_valid(attacker) and attacker.life > 0:
 		attacker.hit(thorns, 0.0, (attacker.center() - center()).normalized(), 0.0)
@@ -2241,6 +2392,7 @@ func _respawn() -> void:
 	breath = BREATH_MAX
 	lava_time = stat("lava_time")
 	on_fire = 0.0
+	honey_time = 0.0
 	life = life_max
 	mana = mana_max
 	velocity = Vector3.ZERO

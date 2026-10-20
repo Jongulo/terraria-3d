@@ -39,6 +39,18 @@ var _shop_slots: Array[ItemSlot] = []
 var _shop_title := Label.new()
 var _shop_money := Label.new()
 var _shop_hint: Label
+## The Goblin Tinkerer's reforging (Terraria's reforge menu): its one slot,
+## the cost and the hammer.
+var reforge_open := false
+var _reforge_panel := Control.new()
+var _reforge_inv := Inventory.new(1)
+var _reforge_slot: ItemSlot
+var _reforge_cost := HBoxContainer.new()
+var _reforge_button := TextureButton.new()
+var _reforge_money := Label.new()
+## After a best reforge the hammer rests a second (Main.reforgeCooldown),
+## or until the mouse leaves it.
+var _reforge_cooldown := 0.0
 var _housing_button := Button.new()
 var _housing := PanelContainer.new()
 var _housing_text := Label.new()
@@ -61,10 +73,18 @@ var _pickups := VBoxContainer.new()
 var _pickup_labels := {}
 var _tooltip := PanelContainer.new()
 var _tooltip_label := Label.new()
+## The tooltip's prefix lines (green good, red bad) and the price under them.
+var _tooltip_mods := VBoxContainer.new()
+var _tooltip_extra := Label.new()
 var _crafting := VBoxContainer.new()
 var _crafting_scroll := ScrollContainer.new()
 var _craft_title := Label.new()
 var _boss_bar := ProgressBar.new()
+## The Goblin Army's progress, bottom right while you're near it (Terraria's
+## invasion progress bar, with its Extra_9 icon).
+var _invasion := HBoxContainer.new()
+var _invasion_bar := ProgressBar.new()
+var _invasion_label: Label
 var _boss_label := Label.new()
 var _death := Control.new()
 var _death_label := Label.new()
@@ -278,6 +298,32 @@ func _build_hud() -> void:
 	_boss_bar.add_theme_stylebox_override("fill", fill)
 	_boss_bar.add_theme_stylebox_override("background", bg)
 	_boss_bar.visible = false
+	_invasion.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_invasion.position = Vector2(-330, -120)
+	_invasion.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_invasion.visible = false
+	var icon := TextureRect.new()
+	icon.texture = Assets.texture("Images/Extra_9")
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.custom_minimum_size = Vector2(40, 40)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_invasion.add_child(icon)
+	var col := VBoxContainer.new()
+	_invasion.add_child(col)
+	_invasion_label = _label(col, "Goblin Army", Vector2.ZERO, 18)
+	_invasion_bar.custom_minimum_size = Vector2(260, 14)
+	_invasion_bar.show_percentage = false
+	var ifill := StyleBoxFlat.new()
+	ifill.bg_color = Color(0.69, 0.29, 1.0)
+	var ibg := StyleBoxFlat.new()
+	ibg.bg_color = Color(0.1, 0.05, 0.15, 0.8)
+	ibg.border_color = Color(0.85, 0.75, 1.0)
+	ibg.set_border_width_all(2)
+	_invasion_bar.add_theme_stylebox_override("fill", ifill)
+	_invasion_bar.add_theme_stylebox_override("background", ibg)
+	col.add_child(_invasion_bar)
+	_root.add_child(_invasion)
 	_root.add_child(_boss_bar)
 	_boss_label = _label(_boss_bar, "", Vector2(0, -28))
 	_boss_label.size = Vector2(600, 26)
@@ -359,8 +405,15 @@ func _build_inventory() -> void:
 	sb.set_content_margin_all(8)
 	sb.set_corner_radius_all(4)
 	_tooltip.add_theme_stylebox_override("panel", sb)
+	var tip_box := VBoxContainer.new()
+	tip_box.add_theme_constant_override("separation", 0)
+	_tooltip.add_child(tip_box)
 	_tooltip_label.add_theme_font_size_override("font_size", 20)
-	_tooltip.add_child(_tooltip_label)
+	tip_box.add_child(_tooltip_label)
+	_tooltip_mods.add_theme_constant_override("separation", 0)
+	tip_box.add_child(_tooltip_mods)
+	_tooltip_extra.add_theme_font_size_override("font_size", 20)
+	tip_box.add_child(_tooltip_extra)
 	_root.add_child(_tooltip)
 
 	_cursor_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -585,12 +638,17 @@ func _process(delta: float) -> void:
 	var mouse := _root.get_local_mouse_position()
 	_cursor_icon.position = mouse + Vector2(4, 4)
 	_tooltip.position = tooltip_position(mouse, _tooltip.size, _root.size)
+	_reforge_cooldown = maxf(0.0, _reforge_cooldown - delta)
 	if player == null:
 		return
 	if _death.visible:
 		_death_label.text = "You were slain...\n%d" % ceili(player.respawn_timer)
 	var game := Game.current
 	var b := game.boss_status() if game else {}
+	_invasion.visible = game != null and game.invasion.near(player.global_position)
+	if _invasion.visible:
+		_invasion_bar.value = game.invasion.progress() * 100.0
+		_invasion_label.text = "Goblin Army  %d%%" % int(game.invasion.progress() * 100.0)
 	_boss_bar.visible = not b.is_empty()
 	if not b.is_empty():
 		_boss_bar.value = float(b.life) / b.max * 100.0
@@ -616,6 +674,8 @@ func _update_liquid_ui(delta: float) -> void:
 		tint = Color(0.1, 0.25, 0.7, 0.32)
 	elif player.head_liquid == Player.LIQ_LAVA:
 		tint = Color(1.0, 0.35, 0.05, 0.6)
+	elif player.head_liquid == Player.LIQ_HONEY:
+		tint = Color(1.0, 0.72, 0.1, 0.5)
 	_liquid_tint.color = _liquid_tint.color.lerp(tint, minf(1.0, delta * 12.0))
 	# Bubbles: one per tenth of breath, only while short of air; else the
 	# Lava Charm's flames while its time runs down (Terraria's breath meter).
@@ -795,8 +855,9 @@ func message(text: String, color := Color.WHITE) -> void:
 
 
 ## "Wood (3)" under the crosshair; repeated pickups of one item merge into one line.
-func pickup(item: String, count: int) -> void:
-	var entry: Array = _pickup_labels.get(item, [])
+func pickup(item: String, count: int, prefix := 0) -> void:
+	var key := item if prefix == 0 else "%s#%d" % [item, prefix]
+	var entry: Array = _pickup_labels.get(key, [])
 	var l: Label
 	if entry.is_empty() or not is_instance_valid(entry[0]):
 		l = Label.new()
@@ -807,7 +868,7 @@ func pickup(item: String, count: int) -> void:
 		entry = [l, 0, null]
 	l = entry[0]
 	entry[1] += count
-	l.text = Data.item(item).get("name", item) + (" (%d)" % entry[1] if entry[1] > 1 else "")
+	l.text = Prefixes.of(item, prefix).get("name", item) + (" (%d)" % entry[1] if entry[1] > 1 else "")
 	l.modulate.a = 1.0
 	if entry[2]:
 		entry[2].kill()
@@ -815,10 +876,10 @@ func pickup(item: String, count: int) -> void:
 	tw.tween_interval(1.5)
 	tw.tween_property(l, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(func():
-		_pickup_labels.erase(item)
+		_pickup_labels.erase(key)
 		l.queue_free())
 	entry[2] = tw
-	_pickup_labels[item] = entry
+	_pickup_labels[key] = entry
 
 
 func show_loading(text: String) -> void:
@@ -923,6 +984,9 @@ func close_inventory() -> void:
 		shop_open = false
 		_shop_panel.visible = false
 		close_chat()
+	if reforge_open:
+		_close_reforge()
+		close_chat()
 	_crafting_scroll.visible = false
 	_craft_title.visible = false
 	_creative_panel.visible = false
@@ -932,9 +996,9 @@ func close_inventory() -> void:
 	_tooltip.visible = false
 	# Whatever is on the cursor goes back into the inventory (or onto the ground).
 	if _cursor_stack != null:
-		var left := player.inventory.add(_cursor_stack.item, _cursor_stack.count)
+		var left := player.inventory.add_stack(_cursor_stack)
 		if left > 0:
-			Game.current.spawn_item(_cursor_stack.item, left, player.center() + player.forward())
+			Game.current.spawn_item(_cursor_stack.item, left, player.center() + player.forward(), Vector3.ZERO, 0.0, int(_cursor_stack.get("prefix", 0)))
 		_cursor_stack = null
 	Audio.play("Menu_Close")
 	_set_mouse_free(false)
@@ -959,8 +1023,8 @@ func _loot_all() -> void:
 	for i in _chest.slots.size():
 		var s = _chest.slots[i]
 		if s != null:
-			var left := player.inventory.add(s.item, s.count)
-			_chest.slots[i] = null if left == 0 else Inventory.stack(s.item, left)
+			var left := player.inventory.add_stack(s)
+			_chest.slots[i] = null if left == 0 else Inventory.stack(s.item, left, int(s.get("prefix", 0)))
 	Audio.play("Grab")
 	_refresh()
 
@@ -972,8 +1036,8 @@ func _deposit_all() -> void:
 	for i in range(10, 50):
 		var s = player.inventory.slots[i]
 		if s != null:
-			var left := _chest.add(s.item, s.count)
-			player.inventory.slots[i] = null if left == 0 else Inventory.stack(s.item, left)
+			var left := _chest.add_stack(s)
+			player.inventory.slots[i] = null if left == 0 else Inventory.stack(s.item, left, int(s.get("prefix", 0)))
 	Audio.play("Grab")
 	_refresh()
 
@@ -1008,8 +1072,8 @@ func slot_clicked(slot: ItemSlot, button: int) -> void:
 		if s == null:
 			return
 		if _cursor_stack == null:
-			_cursor_stack = Inventory.stack(s.item, 0)
-		elif _cursor_stack.item != s.item or _cursor_stack.count >= inv.max_stack(s.item):
+			_cursor_stack = Inventory.stack(s.item, 0, int(s.get("prefix", 0)))
+		elif _cursor_stack.item != s.item or _cursor_stack.count >= inv.max_stack(s.item) or s.has("prefix") or _cursor_stack.has("prefix"):
 			return
 		_cursor_stack.count += 1
 		inv.consume_slot(slot.index)
@@ -1022,7 +1086,7 @@ func slot_clicked(slot: ItemSlot, button: int) -> void:
 		elif s == null:
 			inv.slots[slot.index] = _cursor_stack
 			_cursor_stack = null
-		elif s.item == _cursor_stack.item:
+		elif s.item == _cursor_stack.item and int(s.get("prefix", 0)) == int(_cursor_stack.get("prefix", 0)) and int(s.count) < inv.max_stack(s.item):
 			var room := inv.max_stack(s.item) - int(s.count)
 			var n := mini(room, int(_cursor_stack.count))
 			s.count += n
@@ -1044,7 +1108,18 @@ func _quick_move(slot: ItemSlot) -> void:
 	if shop_open and from == player.inventory:
 		sell(from, slot.index)
 		return
-	if _chest != null:
+	# Reforging, Shift-click swaps an item into the reforge slot.
+	if reforge_open and from == player.inventory and Prefixes.can_have(s.item):
+		from.slots[slot.index] = _reforge_inv.slots[0]
+		_reforge_inv.slots[0] = s
+		from.changed.emit()
+		_reforge_inv.changed.emit()
+		Audio.play("Grab", 0.5)
+		_refresh()
+		return
+	if from == _reforge_inv:
+		to = player.inventory
+	elif _chest != null:
 		to = player.inventory if from == _chest else _chest
 	elif from == player.accessories or from == player.armor or from == player.hook_slot:
 		to = player.inventory
@@ -1053,8 +1128,8 @@ func _quick_move(slot: ItemSlot) -> void:
 		return
 	else:
 		return
-	var left := to.add(s.item, s.count)
-	from.slots[slot.index] = null if left == 0 else Inventory.stack(s.item, left)
+	var left := to.add_stack(s)
+	from.slots[slot.index] = null if left == 0 else Inventory.stack(s.item, left, int(s.get("prefix", 0)))
 	from.changed.emit()
 	Audio.play("Grab", 0.5)
 	_refresh()
@@ -1075,6 +1150,8 @@ static func slot_accepts(accept: String, item: String) -> bool:
 		return def.get("type") == "accessory"
 	if accept == "hook":
 		return def.get("type") == "hook"
+	if accept == "reforge":
+		return Prefixes.can_have(item)
 	if accept != "":
 		return def.get("type") == "armor" and def.get("slot") == accept
 	return true
@@ -1130,20 +1207,42 @@ static func tooltip_position(mouse: Vector2, box: Vector2, area: Vector2) -> Vec
 
 func show_tooltip(stack, slot: ItemSlot = null) -> void:
 	if stack == null and slot != null and slot.tooltip_empty != "" and inventory_open:
-		_tooltip_label.text = slot.tooltip_empty
-		_tooltip.visible = true
+		_set_tooltip(slot.tooltip_empty)
 		return
 	if stack == null or not inventory_open:
 		_tooltip.visible = false
 		return
-	_tooltip_label.text = item_tooltip(Data.item(stack.item), stack.count)
+	var def := Data.item_of(stack)
 	# Prices while a shop is open: what it costs, or what you'd get for it.
+	var price := ""
 	if shop_open and slot != null:
 		if slot.inventory == _shop_inv:
-			_tooltip_label.text += "\nBuy price: " + Inventory.money_text(Data.value(stack.item))
+			price = "Buy price: " + Inventory.money_text(Data.value(stack.item))
 		elif slot.inventory == player.inventory:
-			var v := sell_price(stack.item) * int(stack.count)
-			_tooltip_label.text += "\n" + ("Sell price: " + Inventory.money_text(v) if v > 0 else "No value")
+			var v := sell_price(stack.item, int(stack.get("prefix", 0))) * int(stack.count)
+			price = "Sell price: " + Inventory.money_text(v) if v > 0 else "No value"
+	_set_tooltip(item_tooltip(def, stack.count), Prefixes.tooltip_lines(def), price)
+
+
+## Terraria's colours for a prefix's good and bad tooltip lines.
+const PREFIX_GOOD := Color8(120, 190, 120)
+const PREFIX_BAD := Color8(190, 120, 120)
+
+
+## Shows the tooltip: its text, then prefix lines ([text, good]) and a price.
+func _set_tooltip(text: String, mods := [], extra := "") -> void:
+	_tooltip_label.text = text
+	for c in _tooltip_mods.get_children():
+		_tooltip_mods.remove_child(c)
+		c.queue_free()
+	for m in mods:
+		var l := Label.new()
+		l.text = m[0]
+		l.add_theme_font_size_override("font_size", 20)
+		l.add_theme_color_override("font_color", PREFIX_GOOD if m[1] else PREFIX_BAD)
+		_tooltip_mods.add_child(l)
+	_tooltip_extra.text = extra
+	_tooltip_extra.visible = extra != ""
 	_tooltip.visible = true
 	_tooltip.reset_size()
 
@@ -1158,9 +1257,32 @@ static func item_tooltip(def: Dictionary, count := 1) -> String:
 	elif def.get("type") == "ammo":
 		lines.append("%d ranged damage" % def.damage)
 		lines.append("Ammo")
+	var weapon: bool = def.get("type") in ["melee", "ranged", "magic", "tool", "thrown"] and def.has("damage")
+	if weapon:
+		# Your chance with this weapon (Terraria's: its crit plus yours).
+		var crit := 4.0 + float(def.get("crit", 0))
+		if Game.current != null and Game.current.player != null:
+			crit = Game.current.player.crit_chance(def) * 100.0
+		lines.append("%d%% critical strike chance" % roundi(crit))
 	if def.has("use_time") and def.get("type") in ["melee", "ranged", "magic", "tool", "thrown"]:
-		var t: int = def.use_time
-		lines.append(["Insanely fast", "Very fast", "Fast", "Average", "Slow", "Very slow"][clampi((t - 8) / 8, 0, 5)] + " speed")
+		# Terraria's words for its use time (useAnimation), in ticks.
+		var t := int(def.get("use_animation", def.use_time))
+		var words := [[8, "Insanely fast"], [20, "Very fast"], [25, "Fast"], [30, "Average"], [35, "Slow"], [45, "Very slow"], [55, "Extremely slow"]]
+		var word := "Snail"
+		for w in words:
+			if t <= w[0]:
+				word = w[1]
+				break
+		lines.append(word + " speed")
+	if weapon:
+		var kb := float(def.get("knockback", 0))
+		var kb_words := [[1.5, "Extremely weak"], [3.0, "Very weak"], [4.0, "Weak"], [6.0, "Average"], [7.0, "Strong"], [9.0, "Very strong"], [11.0, "Extremely strong"]]
+		var kb_word := "Insane"
+		for w in kb_words:
+			if kb <= w[0]:
+				kb_word = w[1]
+				break
+		lines.append("No knockback" if kb == 0.0 else kb_word + " knockback")
 	if def.has("pick"):
 		lines.append("%d%% pickaxe power" % def.pick)
 	if def.has("axe"):
@@ -1242,7 +1364,8 @@ func craft(r: Dictionary) -> void:
 	for ing in r.ingredients:
 		player.inventory.remove_spec(ing, int(r.ingredients[ing]))
 	if _cursor_stack == null:
-		_cursor_stack = Inventory.stack(r.result, r.count)
+		# Crafted one at a time, it rolls a prefix (Terraria's Recipe.Create).
+		_cursor_stack = Inventory.stack(r.result, r.count, Prefixes.roll(Data.item(r.result)) if r.count == 1 else 0)
 	else:
 		_cursor_stack.count += r.count
 	Audio.play("Grab")
@@ -1255,16 +1378,15 @@ func recipe_tooltip(r: Dictionary) -> void:
 		var names: Array = Array(ing.split("|")).map(func(n): return Data.item(n).get("name", n))
 		lines.append("  %d %s" % [r.ingredients[ing], "Any Wood" if ing == Data.ANY_WOOD else " or ".join(names)])
 	for st in r.get("stations", [r.station] if r.has("station") else []):
-		lines.append("  at a %s" % (st.replace("_", " ").capitalize() if st != "bottles" else "Placed Bottle"))
-	_tooltip_label.text = "\n".join(lines)
-	_tooltip.visible = true
-	_tooltip.reset_size()
+		if st in ["water", "honey", "lava"]:
+			lines.append("  by %s" % st.capitalize())
+		else:
+			lines.append("  at a %s" % (st.replace("_", " ").capitalize() if st != "bottles" else "Placed Bottle"))
+	_set_tooltip("\n".join(lines))
 
 
 func show_text_tooltip(text: String) -> void:
-	_tooltip_label.text = text
-	_tooltip.visible = true
-	_tooltip.reset_size()
+	_set_tooltip(text)
 
 
 func hide_tooltip() -> void:
@@ -1424,6 +1546,8 @@ func _build_town_ui() -> void:
 		sl.inventory = _shop_inv
 		_shop_slots.append(sl)
 
+	_build_reforge_panel()
+
 	# Housing: who lives where, and checking the room you're in.
 	_housing_button.text = "Housing"
 	_housing_button.visible = false
@@ -1452,7 +1576,7 @@ func _build_town_ui() -> void:
 
 
 ## Starts talking to a town NPC (right-click): what they say, and buttons.
-func open_chat(npc: NPC) -> void:
+func open_chat(npc: NPC, line := "") -> void:
 	if paused or sign_open or not player.alive:
 		return
 	if inventory_open:
@@ -1462,8 +1586,9 @@ func open_chat(npc: NPC) -> void:
 	chat_npc = npc
 	npc.talking = true
 	_chat_title.text = npc.title()
-	_chat_text.text = npc.talk_line()
+	_chat_text.text = line if line != "" else npc.talk_line()
 	for c in _chat_buttons.get_children():
+		_chat_buttons.remove_child(c)
 		c.queue_free()
 	var buttons := []
 	var town_def: Dictionary = npc.def.get("town", {})
@@ -1494,6 +1619,8 @@ func chat_button(name: String) -> void:
 	match name:
 		"Shop":
 			open_shop()
+		"Reforge":
+			open_reforge()
 		"Help":
 			_chat_text.text = chat_npc.next_help()
 		"Heal":
@@ -1517,11 +1644,138 @@ func close_chat() -> void:
 		chat_npc.talking = false
 	chat_npc = null
 	_chat.visible = false
-	if shop_open:
+	if shop_open or reforge_open:
 		close_inventory()
 	elif not inventory_open:
 		_set_mouse_free(false)
 		Audio.play("Menu_Close")
+
+
+## Terraria's coin colours (Colors.CoinPlatinum...), largest first.
+const COIN_COLORS := [Color8(220, 220, 198), Color8(224, 201, 92), Color8(181, 192, 193), Color8(246, 138, 96)]
+
+
+func _build_reforge_panel() -> void:
+	# Where the shop opens, below the inventory.
+	_reforge_panel.position = ORIGIN + Vector2(0, 5 * (SLOT + GAP) + 24)
+	_reforge_panel.visible = false
+	_reforge_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_reforge_panel)
+	_label(_reforge_panel, "Reforge", Vector2(0, 0))
+	_reforge_money.position = Vector2(110, 3)
+	_reforge_money.add_theme_font_size_override("font_size", 18)
+	_reforge_money.modulate = Color(1.0, 0.9, 0.5)
+	_reforge_panel.add_child(_reforge_money)
+	_reforge_slot = _slot(_reforge_panel, 0, Vector2(0, 28))
+	_reforge_slot.inventory = _reforge_inv
+	_reforge_slot.accept = "reforge"
+	_reforge_cost.position = Vector2(SLOT + 14, 28)
+	_reforge_cost.add_theme_constant_override("separation", 8)
+	_reforge_cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reforge_panel.add_child(_reforge_cost)
+	_reforge_button.texture_normal = Assets.texture("Images/UI/Reforge_0")
+	_reforge_button.texture_hover = Assets.texture("Images/UI/Reforge_1")
+	_reforge_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_reforge_button.position = Vector2(SLOT + 20, 28 + 30)
+	_reforge_button.pressed.connect(reforge)
+	_reforge_button.mouse_entered.connect(func(): show_text_tooltip("Reforge"))
+	_reforge_button.mouse_exited.connect(func():
+		_reforge_cooldown = 0.0
+		hide_tooltip())
+	_reforge_panel.add_child(_reforge_button)
+	_reforge_inv.changed.connect(_refresh_reforge)
+
+
+## The Goblin Tinkerer's Reforge button: the reforge slot opens with your
+## inventory, where his shop would.
+func open_reforge() -> void:
+	if chat_npc == null:
+		return
+	var npc := chat_npc
+	_chat.visible = false
+	_open_inventory()
+	chat_npc = npc
+	reforge_open = true
+	_reforge_panel.visible = true
+	_refresh_reforge()
+
+
+## What reforging the item in the slot costs: a third of its value (with its
+## prefix), at least a copper (Main.DrawInventory's reforge price).
+func reforge_cost() -> int:
+	var s = _reforge_inv.slots[0]
+	if s == null:
+		return 0
+	return maxi(1, Prefixes.value(s.item, int(s.get("prefix", 0))) * int(s.count) / 3)
+
+
+## Pays and rerolls the item's prefix (Main.ReforgeItemInReforgeSlot): its new
+## name pops up, with Terraria's sound, or the best-reforge one when it got
+## the most valuable prefix it can have. False if there's nothing to reforge
+## or you can't afford it.
+func reforge() -> bool:
+	var s = _reforge_inv.slots[0]
+	if s == null or _reforge_cooldown > 0.0 or not player.inventory.pay(reforge_cost()):
+		return false
+	var def := Data.item(s.item)
+	var pre := Prefixes.roll(def, Prefixes.REFORGE)
+	_reforge_inv.slots[0] = Inventory.stack(s.item, int(s.count), pre)
+	pickup(s.item, int(s.count), pre)
+	if Prefixes.multipliers(def, pre).get("value", 0.0) == Prefixes.best_value(def):
+		Audio.play("Custom/best_reforge", 1.0, 0.1)
+		_reforge_cooldown = 1.0
+	else:
+		Audio.play("Item_37")
+	_reforge_inv.changed.emit()
+	_refresh()
+	return true
+
+
+func _refresh_reforge() -> void:
+	_reforge_slot.queue_redraw()
+	_reforge_money.text = "Your money: " + Inventory.money_text(player.inventory.money()) if player != null else ""
+	for c in _reforge_cost.get_children():
+		_reforge_cost.remove_child(c)
+		c.queue_free()
+	var s = _reforge_inv.slots[0]
+	_reforge_button.visible = s != null
+	if s == null:
+		_label(_reforge_cost, "Place an item here to reforge", Vector2.ZERO, 20)
+		return
+	_label(_reforge_cost, "Cost:", Vector2.ZERO, 20)
+	var amount := reforge_cost()
+	for k in Inventory.COINS.size():
+		var n := amount / Inventory.COIN_VALUES[k]
+		amount -= n * Inventory.COIN_VALUES[k]
+		if n > 0:
+			var l := _label(_reforge_cost, "%d %s" % [n, ["platinum", "gold", "silver", "copper"][k]], Vector2.ZERO, 20)
+			l.add_theme_color_override("font_color", COIN_COLORS[k])
+
+
+## Before saving: what's on the cursor or in the reforge slot goes into your
+## inventory, so it's saved (Terraria's SaveTemporaryItemSlotContents).
+func stow_temporary_items() -> void:
+	for s in [_cursor_stack, _reforge_inv.slots[0]]:
+		if s != null and player.inventory.add_stack(s) == 0:
+			if s == _cursor_stack:
+				_cursor_stack = null
+			else:
+				_reforge_inv.slots[0] = null
+	_refresh_reforge()
+	_refresh()
+
+
+## Ends reforging: what's in the slot goes back into your inventory (or onto
+## the ground).
+func _close_reforge() -> void:
+	reforge_open = false
+	_reforge_panel.visible = false
+	var s = _reforge_inv.slots[0]
+	if s != null:
+		_reforge_inv.slots[0] = null
+		var left := player.inventory.add_stack(s)
+		if left > 0:
+			Game.current.spawn_item(s.item, left, player.center() + player.forward(), Vector3.ZERO, 0.0, int(s.get("prefix", 0)))
 
 
 ## Walking away (or the NPC gone) ends the chat.
@@ -1566,19 +1820,20 @@ func _refresh_shop() -> void:
 		sl.queue_redraw()
 
 
-## A fifth of the item's value, like Terraria's (coins aren't sold).
-static func sell_price(item: String) -> int:
+## A fifth of the item's value (with its prefix), like Terraria's (coins
+## aren't sold).
+static func sell_price(item: String, prefix := 0) -> int:
 	if item in Inventory.COINS:
 		return 0
-	return Data.value(item) / 5
+	return Prefixes.value(item, prefix) / 5
 
 
 ## Sells the stack in `inv`'s slot `index` to the open shop.
 func sell(inv: Inventory, index: int) -> bool:
 	var s = inv.slots[index]
-	if s == null or sell_price(s.item) <= 0:
+	if s == null or sell_price(s.item, int(s.get("prefix", 0))) <= 0:
 		return false
-	player.inventory.add_money(sell_price(s.item) * int(s.count))
+	player.inventory.add_money(sell_price(s.item, int(s.get("prefix", 0))) * int(s.count))
 	inv.slots[index] = null
 	inv.changed.emit()
 	Audio.play("Coins")
@@ -1591,7 +1846,7 @@ func sell(inv: Inventory, index: int) -> bool:
 ## the cursor holds (click the shop with it).
 func _shop_clicked(slot: ItemSlot, _button: int) -> void:
 	if _cursor_stack != null:
-		var price := sell_price(_cursor_stack.item) * int(_cursor_stack.count)
+		var price := sell_price(_cursor_stack.item, int(_cursor_stack.get("prefix", 0))) * int(_cursor_stack.count)
 		if price > 0:
 			player.inventory.add_money(price)
 			_cursor_stack = null

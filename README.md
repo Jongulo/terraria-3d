@@ -140,6 +140,8 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 - **North-west / north / north-east:** a small Snow, Desert and Jungle patch.
 - **South-east, down the shaft past the tower:** a mud cavern with the Glowing Mushroom biome grown
   in it (mushroom grass, giant and small glowing mushrooms, vines; its music and enemies).
+- **North-east, down the shaft in the Jungle:** a bee hive (the world generator's, smaller): hive
+  blocks round chambers of honey, and the larva on its stand at the bottom of the shaft.
 - **North of the trees:** the forest's plants and debris: a meadow with one of each, a sunflower
   patch, a pond with lily pads and cattails, and a grassy ledge with vines under it.
 - **East of the forest garden:** a furnished wooden house (door, table with a candle, chair, bed,
@@ -649,7 +651,7 @@ tools/terraria_gore.py  each enemy's gores and blood, read from Terraria's NPC.H
 rust/voxel_core/      Rust GDExtension: world storage, Terraria-style flood-fill lighting,
                       world generation, meshing (smooth light + AO), raycasts, AABB physics, saves
 game/data/            blocks.json, items.json (metal tiers expand into tools/weapons/armor),
-                      npcs.json, loot.json
+                      npcs.json, loot.json, prefixes.json
 game/scripts/         GDScript gameplay: game.gd (session), player/, entities/, ui/hud.gd, world/
 game/shaders/         voxel, cutout, billboard sprite, canopy and highlight shaders
 game/tests/           render_test (screenshots) and game_test (scripted end-to-end session)
@@ -870,6 +872,39 @@ music (surface and underground) and enemies:
   Shroomerang 1 in 40). Its Hardmode enemies (Anomura Fungus, Fungi Bulb, Mushi Ladybug, Fungo
   Fish) and the Truffle wait for Hardmode.
 - **Mushroom cabins:** see the underground cabins.
+
+**Bee hives**, Terraria's Hives pass in 3D (rust `hives.rs`):
+
+- **Where:** Terraria's 1 + 5-7 hives (x maxTilesX / 4200) for each 640 x 640 blocks of the map,
+  all in the Jungle: from halfway between the surface and the cavern layer down to 100 tiles above
+  the Underworld, only where the ground round the spot (15 tiles) is three quarters mud and jungle
+  grass, not in another structure and not within 150 tiles of the world's evil. Each keeps its
+  100-tile box from the structures after it (cabins, shrines).
+- **Shape:** 2-4 steps of 2-4 tunnels from one point; a tunnel is 10-20 balls 12-20 tiles across,
+  drifting and turning: hollow inside 40% of a ball, hive blocks out to 75% (not where another ball
+  hollowed it), and a third of the hollow fills with honey, laid down settled at the bottom. A
+  honey cube (4 hive blocks a side round 2 of honey) in the shell off each step's end. The larva
+  stands on a 3 x 3 hive floor at the hive's end, above the honey. Terraria's tiles are 2/3 of a
+  block here.
+- **Honey patches:** up to 4 round each hive, 30-90 tiles out on jungle ground: a ball of honey
+  blocks (fewer further out) round a little pool of honey, mud under it.
+- **Honey**, a third liquid: it moves about half as often as lava (Terraria: every 11th update to
+  lava's 6th) and spreads like it. In it you sink slowly (gravity 0.1, at most 3 px a tick) and move
+  a quarter as far; it puts fire out; touching it makes you Honey (buff 48) for 30 s: a life a
+  second more, and natural healing ramping up three times as fast. Honey meeting water makes a
+  honey block where the honey was, meeting lava crispy honey where the lava was (water and lava
+  still make obsidian). An empty bucket scoops a Honey Bucket. Drawn with Terraria's Liquid_11,
+  nearly opaque (its 0.95), its falls with Waterfall_14.
+- **Blocks:** hive (Hive; in the Extractinator it gives a Honey Block, Terraria's mode 5), honey
+  block (sticky: against its side you can't move fast across it and slide slowly down, as in
+  Terraria's StickyMovement; you can still jump off), crispy honey, the larva (Tiles_231, animated)
+  and the hive wall (4 from a Hive at a work bench).
+- **Recipes:** Terraria's "near a liquid" ones now work: water, lava and honey within reach count as
+  crafting stations (Bottled Honey: a Bottle by honey, heals 80 and makes you Honey for 15 s). The
+  Campfire is a crafting station (the Honey Bucket: a Honey Block and an Empty Bucket); Crispy Honey
+  from a Honey Block at a Furnace.
+- **Not yet:** breaking the larva wakes Queen Bee in Terraria; she isn't in yet, so it only buzzes.
+  The Abeemination and the honey furniture (the Honey Dispenser) wait for her.
 
 - **Cacti:** drawn like Terraria's, one flat sprite facing you (a trunk with arms, put together from
   Tiles_80's pieces; Corruption and Crimson ones in their colours), walk-through. Each is a column
@@ -1269,6 +1304,63 @@ Cabin loot (Frozen and Sandstone Chests), with Terraria's stats:
   hand out to the hook. The hook slot (under the defense shield, with Terraria's hook silhouette;
   right-click a hook to put it there) holds the hook E throws, like Terraria's; with it empty, E
   throws the first hook in your inventory. It's saved with you.
+- **The Goblin Army and the Goblin Tinkerer,** Terraria's (Main.StartInvasion, AI_003 and
+  AI_008, the shop from the wiki):
+  - **Goblin Scouts** (Fighter, 80 life) wander the surface by day in the outer third of the world
+    (Terraria's outer sixths): 1 spawn in 15, 1 in 5 once you've smashed a Shadow Orb or Crimson
+    Heart and before the army is beaten. They always drop 1-2 Tattered Cloth; 10 of it and 5 Wood
+    make a **Goblin Battle Standard** at a Loom.
+  - **The army** comes with the Battle Standard, or at dawn (with an orb or heart smashed and 200 max
+    life: 1 in 3 until it's first beaten, then 1 in 30). "A goblin army is approaching from the
+    west!" (or east): it marches from that edge toward the spawn point a tile a tick, and while
+    you're within 187.5 tiles of it and no more than 67.5 under the surface its goblins spawn round
+    you, up to 10 at once, by Terraria's weights: Goblin Warriors (110 life, the toughest), Archers
+    (shoot arrows when they can see you), Peons, Thieves (the fastest) and Sorcerers, which every
+    10.8 s teleport onto the ground near you and cast three Chaos Balls that fly through blocks.
+    Its music plays and a progress bar with its icon shows how far it's beaten; 120 kills end it
+    ("A goblin army has been defeated!"). It's saved with the world. Goblins drop Spiky Balls (1-5,
+    half the time) and, 1 in 200, a **Harpoon** (shoots its head out on a chain, reeling back when
+    you let go, a hit, or 1000 px out; it pierces 3).
+  - **The Goblin Tinkerer:** once the army is beaten he turns up bound in the caverns (1 spawn in 20
+    there). Right-click to free him ("Thank you for freeing me, human..."): he's a town NPC, homeless
+    until a house is free. He sells Rocket Boots, the Ruler (a shortsword now, as in 1.4.5),
+    the Tinkerer's Workshop, the Grappling Hook, the Toolbelt and Spiky Balls, and reforges (below).
+    The test world's town has him from the start, in a seventh house.
+  - **The Tinkerer's Workshop** makes Terraria's combinations of what you have: Cloud and Blizzard in
+    a Balloon, Blue and White Horseshoe Balloons, Obsidian Horseshoe and Shield, Mana Regeneration
+    Band, Restoration Shield, Magic Cuffs, Tiger Climbing Gear, Spectre, Lightning, Frostspark and
+    Fairy Boots, Magma Skull, Molten Charm and the GPS (a Gold Watch, Depth Meter and Compass in one).
+  - **Rocket Boots** (and the boots made from them): let go of jump in the air and hold it again, and
+    they fly you up in 7 bursts of 10 ticks, refilled on the ground. **Toolbelt:** a tile more
+    reach placing blocks. **Magic Cuffs:** damage taken comes back as mana. The Band of Starpower,
+    Magic Cuffs and Mana Regeneration Band give 40 mana, as in 1.4.5, and life regeneration
+    accessories count as Terraria's (the Band of Regeneration half a life a second).
+- **Prefixes (modifiers),** Terraria's (`game/data/prefixes.json`, read from Item.Prefix,
+  TryGetPrefixStatMultipliersForItem, GetRollablePrefixes and the item sets in Terraria.exe; names
+  from its English text):
+  - Which items take which: swords, tools and other swung weapons (40, Legendary the best),
+    spears, flails, yoyos and boomerangs (the 14 universal ones), bows and guns (35, Unreal), magic
+    weapons (36, Mythical) and accessories (19: Warding's +4 defense, Arcane's +20 mana, Lucky's 4%
+    crit, Menacing's 4% damage, Quick's 4% movement speed, Violent's 4% melee speed). Thrown
+    weapons, hooks, armor, ammo and blocks take none.
+  - What they change: damage, use time, mana (rounded as Terraria rounds, in 32-bit floats with
+    halves to even), knockback, size (melee reach, and the sword in your hand), velocity (shoot
+    speed) and crit; the name ("Legendary Platinum Broadsword") and the value (times the square of
+    the prefix's value multiplier: a Legendary sword is worth over 3 times as much). A prefix that
+    wouldn't change a stat it changes (a Mythical staff whose mana it can't round lower,
+    knockback on a bow with none) can't be had.
+  - Where they come from: crafted one at a time, dropped by enemies and bosses, broken out of
+    tiles (the shrine's Enchanted Sword), smashed out of orbs and found in chests, each rolls one:
+    a quarter of the time none, and the bad ones (Broken, Shoddy, Slow, Annoying...) kept only 1
+    time in 3. Shop items have none.
+  - The tooltip shows the stats with the prefix in, then a line per change in Terraria's words,
+    green for good and red for bad ("+15% damage", "-20% knockback", "+4 defense"); weapons show
+    their crit chance, Terraria's speed words and their knockback in words.
+  - **Reforging:** the Goblin Tinkerer's Reforge button opens a slot by your inventory (Shift-click
+    puts an item in). The hammer rerolls the prefix (always one) for a third of the item's value,
+    with Terraria's sound, or its best-reforge sound when it lands the most valuable prefix the
+    item can have. Closing, the item comes back to your inventory. Saving, what's in the reforge
+    slot or on the cursor goes into your inventory first.
 - **Rope Coils:** 10 of a rope make its coil; thrown, it flies straight for half a second, then
   drops, and where it hits a block it lays 10 of its rope downward from there (on down from the
   bottom of a rope it hits), cutting plants. What it can't lay drops as rope, or as the coil if
@@ -1304,7 +1396,7 @@ Cabin loot (Frozen and Sandstone Chests), with Terraria's stats:
     minute. The **Depth Meter** (bats, 1 in 100) shows "123' Caverns" (feet from the surface, the
     layer), the **Compass** (Piranhas, 1 in 75) feet east or west of the world's middle (and here
     north or south), the **Radar** the enemies within 125 tiles.
-  - Not yet: the Goblin Tinkerer's combinations (no Tinkerer's Workshop), the Celestial Magnet (no
+  - Not yet: the Celestial Magnet (no
     mana stars to pull), the Bezoar (no poison), and those from enemies, chests and NPCs the game
     doesn't have.
 - **Furniture:** the Bast Statue (+5 defense, The Bast Defense, while one is within Terraria's
@@ -1357,7 +1449,7 @@ enemy's head once it is hurt, facing you; bosses get a bigger one. Town NPCs and
 have none. Settings → Interface → "Enemy health bars" turns them off.
 
 Not yet: the evil bosses (Eater of Worlds, Brain of Cthulhu), Devourers and Blood Crawlers,
-Giant Worms, the other town NPCs (Goblin Tinkerer, Clothier...), NPC happiness,
+Giant Worms, the other town NPCs (Clothier...), NPC happiness,
 other biomes and bosses; the ocean's palm
 trees, seashells and fishing; Granite and Marble caves, the Dungeon's
 enemies, traps and furniture, and the Underground Desert's open caverns.

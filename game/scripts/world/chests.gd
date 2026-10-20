@@ -50,8 +50,9 @@ func get_inventory(p: Vector3i) -> Inventory:
 			if game != null and p.y > game.surface_level - SURFACE_DEPTH and Data.loot.has(table + "_surface"):
 				table += "_surface"
 			var lava := game != null and p.y < game.lava_level()
+			# Each with a prefix rolled, as Terraria's AddBuriedChest does.
 			for drop in Game.roll_loot(table, lava):
-				inv.add(drop[0], drop[1])
+				inv.add(drop[0], drop[1], Prefixes.roll(Data.item(drop[0])))
 		_chests[k] = inv
 	return _chests[k]
 

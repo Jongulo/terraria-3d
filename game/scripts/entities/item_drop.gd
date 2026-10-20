@@ -10,6 +10,8 @@ const PICKUP_DELAY := 0.6
 
 var item := ""
 var count := 1
+## Its prefix (Prefixes), 0 for none.
+var prefix := 0
 var velocity := Vector3.ZERO
 var age := 0.0
 var sprite := EntitySprite.new()
@@ -18,9 +20,10 @@ var _bob := randf() * TAU
 var _anim := {}
 
 
-func setup(item_name: String, n: int) -> void:
+func setup(item_name: String, n: int, pre := 0) -> void:
 	item = item_name
 	count = n
+	prefix = pre
 	var id := Data.item_id(item_name)
 	var tex := Assets.item_texture(id)
 	var px := maxf(tex.get_width(), tex.get_height())
@@ -63,7 +66,8 @@ func _physics_process(delta: float) -> void:
 			game.spawn_dust(global_position, Color(1.0, 0.45, 0.1), 8)
 			queue_free()
 			return
-		var in_water := liquid.x == 1 and liquid.y > 0
+		# (Honey, like water, slows it.)
+		var in_water := (liquid.x == 1 or liquid.x == 3) and liquid.y > 0
 		velocity.x *= 0.8 if in_water else 0.9
 		velocity.z *= 0.8 if in_water else 0.9
 		velocity.y = maxf(velocity.y - (5.0 if in_water else 25.0) * delta, -1.0 if in_water else -20.0)
@@ -83,11 +87,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _pick_up(player) -> void:
-	var left: int = player.inventory.add(item, count)
+	var left: int = player.inventory.add(item, count, prefix)
 	var taken := count - left
 	if taken > 0:
 		Audio.play("Grab")
-		Game.current.hud.pickup(item, taken)
+		Game.current.hud.pickup(item, taken, prefix)
 	count = left
 	if count <= 0:
 		queue_free()

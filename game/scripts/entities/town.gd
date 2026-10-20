@@ -10,7 +10,7 @@ extends Node
 ## Seconds between housing checks (Terraria checks every few seconds too).
 const CHECK_INTERVAL := 4.0
 ## In the order they can move in.
-const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist"]
+const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer"]
 
 var game: Game
 ## Kind -> the NPC living here.
@@ -55,6 +55,8 @@ func wants_to_come(kind: String) -> bool:
 			return not game.defeated_bosses.is_empty()
 		"explosive":
 			return p.inventory.slots.any(func(s): return s != null and Data.item(s.item).has("explosive"))
+		"freed":
+			return false  # only once you've freed him (free_goblin)
 	return false
 
 
@@ -106,6 +108,15 @@ func move_in(kind: String, pos: Vector3, npc_name := "") -> NPC:
 	residents[kind] = npc
 	arrived[kind] = true
 	return npc
+
+
+## Freeing the Bound Goblin (Terraria's): he's the Goblin Tinkerer from now
+## on, homeless where he stood until a house is free (then he moves in, and
+## comes back like the others).
+func free_goblin(bound: NPC) -> NPC:
+	var at := bound.global_position
+	bound.queue_free()
+	return move_in("GoblinTinkerer", at)
 
 
 ## The world's evil ("corruption" or "crimson"), from its surface.
