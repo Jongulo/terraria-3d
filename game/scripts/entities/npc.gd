@@ -234,7 +234,7 @@ func _physics_process(delta: float) -> void:
 	var game := Game.current
 	var player = game.player
 	var to_player: Vector3 = player.global_position - global_position
-	if not boss and not def.get("persistent", false) and to_player.length() > DESPAWN_DISTANCE:
+	if not boss and not def.get("persistent", false) and not released and to_player.length() > DESPAWN_DISTANCE:
 		queue_free()
 		return
 
@@ -283,6 +283,14 @@ func _physics_process(delta: float) -> void:
 		"king_slime": _ai_king_slime(delta, game, player)
 		"dummy": _ai_dummy(delta)
 		"town": _ai_town(delta)
+		"critter_walk": _ai_critter_walk(delta)
+		"bird": _ai_bird(delta, player)
+		"firefly": _ai_drifter(delta, player, false)
+		"butterfly": _ai_drifter(delta, player, true)
+		"crawler": _ai_crawler(delta, false)
+		"snail": _ai_crawler(delta, true)
+		"duck": _ai_duck(delta, player)
+		"hopper": _ai_hopper(delta)
 
 	if on_fire > 0.0:
 		_burn_tick(delta, game)
@@ -305,10 +313,13 @@ func _physics_process(delta: float) -> void:
 	if not flying and not swimming:
 		var g := GRAVITY * (0.3 if liquid.y > 0 else 1.0)
 		velocity.y = maxf(velocity.y - g * delta, -3.5 if liquid.y > 0 else -MAX_FALL)
-	var r := game.world.move_aabb(global_position, half, velocity * delta, 1.05 if def.ai in ["fighter", "town"] else 0.0, false)
+	var step := 1.05 if def.ai in ["fighter", "town", "critter_walk", "duck"] and not flying else 0.0
+	var r := game.world.move_aabb(global_position, half, velocity * delta, step, false)
 	global_position = r.position
 	on_floor = r.on_floor
 	var blocked: Vector3i = r.blocked
+	if blocked != Vector3i.ZERO:
+		last_blocked = blocked
 	if flying or swimming:
 		# Fliers (and swimmers) bounce off terrain.
 		if blocked.x: velocity.x *= -0.5
@@ -360,11 +371,15 @@ func _update_sprite(delta: float, game) -> void:
 		if look_dir == Vector3.ZERO and Vector2(velocity.x, velocity.z).length() < 0.3 and not flying:
 			heading = game.player.global_position - global_position
 		sprite.face(turn_facing(heading, delta))
-	elif not flying or def.ai == "bat" or def.get("upright", false):
-		sprite.set_flip(velocity.dot(right) > 0.05)
+	elif not flying or def.ai == "bat" or def.get("upright", false) or is_critter():
+		if Vector2(velocity.x, velocity.z).length() > 0.05:
+			sprite.set_flip(velocity.dot(right) > 0.05)
 	_flash = maxf(0.0, _flash - delta * 6.0)
 	sprite.set_flash(_flash)
-	sprite.update_light(game.world, game.sky, center())
+	if glowing():
+		sprite.set_glow()
+	else:
+		sprite.update_light(game.world, game.sky, center())
 	if health_bar != null and _bar_shown != Vector2i(life, life_max):
 		_bar_shown = Vector2i(life, life_max)
 		health_bar.set_life(life, life_max)
@@ -901,6 +916,14 @@ func _ai_town(delta: float) -> void:
 		return
 	velocity.x = 0.0
 	velocity.z = 0.0
+	if def.get("floats", false):
+		# The Sleeping Angler: afloat, bobbing at the surface, snoozing
+		# (his two frames, 30 ticks each).
+		var l: Vector2i = Game.current.world.get_liquid(Vector3i((global_position + Vector3(0, 0.1, 0)).floor()))
+		if l.y > 0:
+			velocity.y = 1.2
+		sprite.set_frame(int(Time.get_ticks_msec() / 500) % 2)
+		return
 	sprite.set_frame(0)
 
 
@@ -1047,6 +1070,7 @@ const DIALOG := {
 	"old_man": {"day": [82, 83, 84], "night": [85, 86, 87, 88]},
 	"bound_goblin": {"any": [121]},
 	"goblin_tinkerer": {"any": [122, 123, 125, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]},
+	"sleeping_angler": {"any": [353, 354, 355]},
 }
 ## What the Goblin Tinkerer says when you free him.
 const FREED_LINE := 120
@@ -1058,6 +1082,8 @@ const GUIDE_HELP := [177, 178, 179, 183, 184, 185, 186, 187, 191, 192, 193, 195,
 ## What a town NPC says when you talk to them: one of Terraria's lines.
 func talk_line() -> String:
 	var game := Game.current
+	if def.get("talk", "") == "angler":
+		return angler_line()
 	var lines: Dictionary = DIALOG.get(def.get("talk", ""), {})
 	var pool: Array = lines.get("any", []).duplicate()
 	pool.append_array(lines.get("day" if game.sky.is_day else "night", []))
@@ -1088,12 +1114,40 @@ func next_help() -> String:
 	return "..."
 
 
+## The Angler's chat (NPC.GetChat): now and then how many quests you've
+## done for him, else asking you about today's fish, or once it's done his
+## chatter (and his prank on the Dryad).
+func angler_line() -> String:
+	var game := Game.current
+	var town: Dictionary = Assets.ids.get("names", {}).get("town", {})
+	var chatter := func(section: String) -> String:
+		var lines := []
+		for k in town.get(section, {}):
+			var t := fill(town[section][k])
+			if t != "":
+				lines.append(t)
+		return lines[randi() % lines.size()] if not lines.is_empty() else "..."
+	if randi() % 5 == 0 and game.player.angler_quests > 1:
+		return chatter.call("AnglerQuestChatter")
+	if not game.town.angler_done:
+		return dialog(randi_range(334, 337))
+	if game.town.residents.has("Dryad") and randi() % 5 == 0:
+		return dialog(347)
+	return chatter.call("AnglerChatter")
+
+
 ## Terraria's LegacyDialog line `n` with its {placeholders} filled in, or ""
 ## if it names someone who doesn't live here (or something this game lacks).
 static func dialog(n: int) -> String:
+	return fill(Assets.ids.get("names", {}).get("town", {}).get("LegacyDialog", {}).get(str(n), ""))
+
+
+## A line of Terraria's town text with its {placeholders} filled in, or ""
+## if it names someone who doesn't live here (or something this game lacks).
+static func fill(text: String) -> String:
 	var game := Game.current
-	var text: String = Assets.ids.get("names", {}).get("town", {}).get("LegacyDialog", {}).get(str(n), "")
 	text = text.replace("{InventoryKey}", "Tab").replace("{WorldName}", game.world_name)
+	text = text.replace("{AnglerCompletedQuestsCount}", str(game.player.angler_quests))
 	if "{WorldEvilStone}" in text:
 		text = text.replace("{WorldEvilStone}", "Crimstone" if game.town.world_evil() == "crimson" else "Ebonstone")
 	for kind in Town.ROSTER:
@@ -1873,6 +1927,8 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 		anim = float(int(def.frames) - 1)  # wobble back through the dummy's hit frames
 	game.floating_text(str(dmg), center() + Vector3(0, half.y * 0.6, 0), Color(1.0, 0.55, 0.1) if crit else Color(1.0, 0.65, 0.3), crit)
 	_knock_back(knockback, dir, dmg, crit)
+	if is_critter():
+		hurt_critter(dir)
 	Audio.play_at(def.get("hit_sound", "NPC_Hit_1"), center())
 	_last_hit_dir = dir
 	if life > 0:
@@ -2024,3 +2080,463 @@ func _die(game) -> void:
 		gib(game, g.get("gores", []))
 	game.on_npc_killed(self)
 	queue_free()
+
+
+# ------------------------------------------------------------------ critters
+
+## Terraria's critters (npcs.json "critter"): harmless, a Bug Net catches
+## them (Player._catch_critters). Their AIs are Terraria's, a tick at a time
+## in its px/tick (Terraria's 2D left/right is a heading on the ground here,
+## turned at random or away from you):
+##   critter_walk (aiStyle 7): stands about, then walks a while (200-500
+##     ticks) at its speed (1 px/tick, squirrels 1.5, frogs 0.5: 2 swimming),
+##     speeding up 0.07 a tick; hurt, it runs (1.5 px/tick, faster the more
+##     hurt); turns at walls.
+##   bird (24): sits till you come within 100 px (or it's hurt), then flies
+##     off away from you (6 px/tick up), at up to 3 px/tick (macaws 4),
+##     climbing while there's ground under it within 15 tiles (more within
+##     5) and sinking where there isn't, bouncing off walls.
+##   firefly (64), butterfly (65): drift toward a speed picked every 60-180
+##     (90-240) ticks: at random (0.05-1.5 px/tick; butterflies 0.26-3), or
+##     back toward you from far off; they keep low (over ground or liquid
+##     within 4 (3) tiles they rise, with no ground within 30 they sink).
+##     Butterflies flee enemies within 100 px and you within 150. Fireflies
+##     blink at night and underground (10-30 ticks lit every 30-180).
+##   crawler (66): worms and grubs crawl (0.2 px/tick; Grubby 0.25, Sluggy
+##     0.325, Buggy 0.4) for 600-1800 ticks, rest 300-900.
+##   snail (67): crawls on (0.3 px/tick, glowing ones 0.6); here along the
+##     ground, not up walls.
+##   duck (68 and 7): walks like a critter; on water it paddles at the
+##     surface (2 px/tick) and flies off when you come near, landing again
+##     after 300 ticks.
+##   hopper (1): the grasshopper hops like a slime, any which way.
+const CRITTER_TICK := 1.0 / 60.0
+## Terraria px -> blocks.
+const CRITTER_PX := 1.0 / 24.0
+var _crit_acc := 0.0
+var _crit_dir := Vector3.ZERO
+## Terraria's ai[0]/ai[1] for the drifters: the velocity it eases toward (px/tick, y up).
+var _crit_target := Vector3.ZERO
+var _crit_timer := 0.0
+var _crit_timer2 := 0.0
+var _crit_state := 0
+var _crit_settled := false
+## A drifter's size and colour are rolled (once, on its first tick).
+var _crit_rolled := false
+## The Butterfly's colour (0-7: the order of its items, Monarch first).
+var variant := -1
+## A firefly's blink (ticks left lit).
+var _glow := 0.0
+var _flee := 0.0
+var _flee_dir := Vector3.ZERO
+## What last stopped it (move_aabb's blocked) and its speed before (Terraria's collideX, oldVelocity).
+var last_blocked := Vector3i.ZERO
+## Released from your hands: it stays (Terraria's releaseOwner).
+var released := false
+var _crit_rng := RandomNumberGenerator.new()
+
+
+func is_critter() -> bool:
+	return def.get("critter", false)
+
+
+## What a Bug Net catches: its item (the Butterfly's by its colour).
+func catch_item() -> String:
+	if kind == "Butterfly" and variant >= 0:
+		return BUTTERFLIES[variant]
+	return def.get("catch", "")
+
+
+const BUTTERFLIES := ["MonarchButterfly", "PurpleEmperorButterfly", "RedAdmiralButterfly", "UlyssesButterfly",
+		"SulphurButterfly", "TreeNymphButterfly", "ZebraSwallowtailButterfly", "JuliaButterfly"]
+
+
+## The Butterfly's colour, by Terraria's odds (AI_065: Monarch 25%, Sulphur
+## 22%, Zebra Swallowtail 19%, Ulysses 15%, Julia 10%, Red Admiral 6%,
+## Purple Emperor 2%, Tree Nymph 1%).
+static func roll_butterfly(rng: RandomNumberGenerator) -> int:
+	var r := rng.randi_range(0, 99)
+	if r == 0:
+		return 5
+	if r < 3:
+		return 1
+	if r < 9:
+		return 2
+	if r < 19:
+		return 7
+	if r < 34:
+		return 3
+	if r < 53:
+		return 6
+	if r < 75:
+		return 4
+	return 0
+
+
+## Whether it's lit now (a blinking firefly; the glowing snails and others always).
+func glowing() -> bool:
+	if not def.has("light"):
+		return false
+	return def.ai != "firefly" or _glow > 3.0
+
+
+func hurt_critter(dir: Vector3) -> void:
+	# Hurt, a walker runs from the blow.
+	_flee = 300.0
+	_flee_dir = Vector3(dir.x, 0, dir.z).normalized() if Vector2(dir.x, dir.z).length() > 0.01 else -_crit_dir
+
+
+func _random_heading() -> Vector3:
+	var a := _crit_rng.randf() * TAU
+	return Vector3(cos(a), 0, sin(a))
+
+
+func _critter_ticks(delta: float) -> int:
+	_crit_acc += delta
+	var n := 0
+	while _crit_acc >= CRITTER_TICK:
+		_crit_acc -= CRITTER_TICK
+		n += 1
+	return n
+
+
+func _set_flat_velocity(v: Vector3) -> void:
+	velocity.x = v.x * PX_TICK
+	velocity.z = v.z * PX_TICK
+
+
+func _flat_px() -> Vector3:
+	return Vector3(velocity.x, 0, velocity.z) / PX_TICK
+
+
+func _ai_critter_walk(delta: float) -> void:
+	var game := Game.current
+	if _crit_dir == Vector3.ZERO:
+		_crit_dir = _random_heading()
+		_crit_timer = _crit_rng.randi_range(0, 300)
+	var wet := in_water(center())
+	for t in _critter_ticks(delta):
+		var speed := float(def.get("speed", 1.0))
+		var accel := 0.07
+		if wet and def.has("swim_speed"):
+			speed = float(def.swim_speed)
+			accel = 1.0
+		var dir := _crit_dir
+		var walking := _crit_state == 1
+		if _flee > 0.0:
+			_flee -= 1.0
+			speed = 1.5 + (1.0 - float(life) / life_max) * 0.9
+			accel = 0.1
+			dir = _flee_dir
+			walking = true
+		var flat := _flat_px()
+		if walking:
+			var along := flat.dot(dir)
+			if along < speed:
+				along = minf(along + accel, speed)
+			flat = dir * along
+		else:
+			var s := flat.length()
+			flat = flat.normalized() * maxf(0.0, s - 0.1) if s > 0.1 else Vector3.ZERO
+		_set_flat_velocity(flat)
+		_crit_timer -= 1.0
+		if _crit_timer <= 0.0:
+			if _crit_state == 0:
+				_crit_state = 1
+				_crit_timer = 200 + _crit_rng.randi_range(0, 299)
+				_crit_dir = _random_heading()
+			else:
+				_crit_state = 0
+				_crit_timer = 200 + _crit_rng.randi_range(0, 299)
+	# Walls it can't step up: turn round.
+	if (last_blocked.x or last_blocked.z) and _stuck > 0.15:
+		_crit_dir = -_crit_dir
+		_flee_dir = -_flee_dir
+		_stuck = 0.0
+	var moving := Vector2(velocity.x, velocity.z).length() > 0.1
+	_walk_frames(delta, moving)
+
+
+func _walk_frames(delta: float, moving: bool) -> void:
+	var wf: Array = def.get("walk_frames", [0, int(def.frames) - 1])
+	if not on_floor and not in_water(center()):
+		sprite.set_frame(int(wf[0]))
+	elif moving:
+		anim += delta * Vector2(velocity.x, velocity.z).length() * 4.0
+		sprite.set_frame(int(wf[0]) + int(anim) % (int(wf[1]) - int(wf[0]) + 1))
+	elif def.has("idle_frames"):
+		var idf: Array = def.idle_frames
+		anim += delta * 4.0
+		sprite.set_frame(int(idf[0]) + int(anim) % (int(idf[1]) - int(idf[0]) + 1))
+	else:
+		sprite.set_frame(int(def.get("idle_frame", 0)))
+
+
+## Liquid or a solid block within `tiles` below (Terraria's scans under a flier).
+func _ground_within(game, tiles: int, liquid_counts := true) -> bool:
+	var c := Vector3i(center().floor())
+	var blocks := int(ceil(tiles * 2.0 / 3.0))
+	for i in blocks:
+		var p := c - Vector3i(0, i, 0)
+		if game.world.is_solid(p) or (liquid_counts and game.world.get_liquid(p).y > 0):
+			return true
+	return false
+
+
+func _ai_bird(delta: float, player) -> void:
+	var game := Game.current
+	var near: bool = player.alive and absf(player.global_position.x - global_position.x) < half.x + 100.0 * CRITTER_PX + player.half.x \
+			and absf(player.global_position.z - global_position.z) < half.z + 100.0 * CRITTER_PX + player.half.z \
+			and absf(player.center().y - center().y) < 100.0 * CRITTER_PX + 1.2
+	var owl_wakes: bool = def.get("night", false) and game.sky.is_day
+	if _crit_state == 0:
+		flying = false
+		if near or life < life_max or owl_wakes or (not on_floor and velocity.y < -0.3 * PX_TICK):
+			# Takes off away from you (Terraria: TargetClosest, then turns round).
+			_crit_state = 1
+			var away: Vector3 = global_position - player.global_position
+			away.y = 0
+			_crit_dir = away.normalized() if away.length() > 0.01 else _random_heading()
+			velocity.y = 6.0 * PX_TICK
+		else:
+			if def.has("idle_frames"):
+				var idf: Array = def.idle_frames
+				anim += delta * 4.0
+				sprite.set_frame(int(idf[0]) + int(anim) % (int(idf[1]) - int(idf[0]) + 1))
+			else:
+				sprite.set_frame(int(def.get("sit_frame", 0)))
+			velocity.x = 0.0
+			velocity.z = 0.0
+			return
+	flying = true
+	var top := float(def.get("speed", 3.0))
+	for t in _critter_ticks(delta):
+		if last_blocked.x or last_blocked.z:
+			_crit_dir = -_crit_dir
+			_set_flat_velocity(_flat_px() * -0.5)
+			last_blocked = Vector3i.ZERO
+		var flat := _flat_px()
+		var along := flat.dot(_crit_dir)
+		var side := flat - _crit_dir * along
+		if along < top:
+			along += 0.1 if along >= 0.0 else 0.15
+		along = minf(along, top)
+		_set_flat_velocity(_crit_dir * along + side * 0.95)
+		var vy := velocity.y / PX_TICK
+		if not _ground_within(game, 15):
+			vy -= 0.05
+		else:
+			vy += 0.1
+		if _ground_within(game, 5):
+			vy += 0.2
+		vy = clampf(vy, -2.0, 4.0)
+		if in_water(center()):
+			vy = minf(vy + 0.5, 4.0)
+		velocity.y = vy * PX_TICK
+	anim += delta * 12.0
+	_fly_frame()
+
+
+func _ai_drifter(delta: float, player, butterfly: bool) -> void:
+	var game := Game.current
+	flying = true
+	if not _crit_rolled:
+		_crit_rolled = true
+		_crit_timer2 = 1.0
+		var s := _crit_rng.randf_range(0.75, 1.1)
+		sprite.scale *= s
+		if butterfly and kind == "Butterfly" and variant < 0:
+			variant = roll_butterfly(_crit_rng)
+	var ease := 60.0 if butterfly else 80.0
+	var night_or_deep: bool = not game.sky.is_day or global_position.y < game.surface_level - 7
+	for t in _critter_ticks(delta):
+		_crit_timer -= 1.0
+		if _crit_timer <= 0.0:
+			_crit_timer = _crit_rng.randi_range(90, 239) if butterfly else _crit_rng.randi_range(60, 179)
+			var to: Vector3 = player.global_position - global_position
+			var far := Vector2(to.x, to.z).length() / CRITTER_PX
+			if far > 700.0 and not _crit_settled:
+				var speed := _crit_rng.randf_range(0.5, 1.5)
+				if far > 1000.0:
+					speed = _crit_rng.randf_range(1.5, 2.0)
+				elif far > 850.0:
+					speed = _crit_rng.randf_range(1.0, 1.5)
+				var h := Vector3(to.x, 0, to.z).normalized() * _crit_rng.randi_range(100, 250)
+				var vy := float(_crit_rng.randi_range(-50, 50))
+				if global_position.y < player.global_position.y + 100.0 * CRITTER_PX:
+					vy += _crit_rng.randi_range(100, 250)
+				_crit_target = (h + Vector3(0, vy, 0)).normalized() * speed
+			else:
+				_crit_settled = true
+				var speed := _crit_rng.randf_range(0.26, 3.0) if butterfly else _crit_rng.randf_range(0.05, 1.5)
+				_crit_target = Vector3(_crit_rng.randi_range(-100, 100), _crit_rng.randi_range(-100, 100), _crit_rng.randi_range(-100, 100)).normalized() * speed
+		var v := velocity / PX_TICK
+		v = (v * (ease - 1.0) + _crit_target) / ease
+		# Keep low: over ground or liquid close below, rise; with none far below, sink.
+		if v.y < 0.0 and _ground_within(game, 3 if butterfly else 4):
+			_crit_target.y = absf(_crit_target.y)
+			v.y *= 0.9
+		if v.y > 0.0 and not _ground_within(game, 30, false):
+			_crit_target.y = -absf(_crit_target.y)
+			v.y *= 0.9
+		if last_blocked.x or last_blocked.z:
+			_crit_target.x = -_crit_target.x
+			_crit_target.z = -_crit_target.z
+			v.x *= -0.2
+			v.z *= -0.2
+			last_blocked = Vector3i.ZERO
+		if butterfly:
+			_crit_timer2 -= 1.0
+			if _crit_timer2 <= -14.0:
+				_crit_timer2 = 1.0
+				var away := Vector3.ZERO
+				var n := 0
+				for o in game.npcs():
+					if o != self and o.damage > 0 and not o.is_critter() and o.center().distance_to(center()) < 100.0 * CRITTER_PX:
+						away += (center() - o.center()).normalized()
+						n += 1
+				if player.alive and player.center().distance_to(center()) < 150.0 * CRITTER_PX:
+					away += (center() - player.center()).normalized()
+					n += 1
+				if n > 0:
+					v += away / n * 2.0
+					if v.length() > 16.0:
+						v = v.normalized() * 16.0
+		elif def.has("light"):
+			# Blinking: 10-30 ticks lit, every 30-180 (at night or underground).
+			if _glow > 0.0:
+				_glow -= 1.0
+			elif _crit_timer2 > 1.0:
+				_crit_timer2 -= 1.0
+			else:
+				_crit_timer2 = 1.0 + _crit_rng.randi_range(30, 179)
+				if night_or_deep:
+					_glow = _crit_rng.randi_range(10, 29)
+		velocity = v * PX_TICK
+	anim += delta * 10.0
+	var base := variant * 3 if kind == "Butterfly" and variant >= 0 else 0
+	var n_frames := 3 if butterfly else int(def.frames)
+	sprite.set_frame(base + int(anim) % n_frames)
+
+
+func _ai_crawler(delta: float, snail: bool) -> void:
+	if _crit_dir == Vector3.ZERO:
+		_crit_dir = _random_heading()
+		_crit_state = 1
+		_crit_timer = _crit_rng.randi_range(600, 1799)
+		if kind == "Snail":
+			sprite.scale *= _crit_rng.randf_range(0.8, 1.1)
+	var speed := float(def.get("speed", 0.2))
+	for t in _critter_ticks(delta):
+		if not snail:
+			_crit_timer -= 1.0
+			if _crit_timer <= 0.0:
+				_crit_state = 1 - _crit_state
+				_crit_timer = _crit_rng.randi_range(600, 1799) if _crit_state == 1 else _crit_rng.randi_range(300, 899)
+				if _crit_state == 1:
+					_crit_dir = _random_heading()
+		if on_floor:
+			if last_blocked.x or last_blocked.z:
+				_crit_dir = -_crit_dir
+				last_blocked = Vector3i.ZERO
+			_set_flat_velocity(_crit_dir * speed if snail or _crit_state == 1 else Vector3.ZERO)
+	var moving := Vector2(velocity.x, velocity.z).length() > 0.05
+	if moving:
+		anim += delta * 6.0
+	sprite.set_frame(int(anim) % int(def.frames))
+
+
+func _ai_duck(delta: float, player) -> void:
+	var game := Game.current
+	var wet := in_water(center()) or in_water(global_position + Vector3(0, 0.1, 0))
+	var near: bool = player.alive and Vector2(player.global_position.x - global_position.x, player.global_position.z - global_position.z).length() < 100.0 * CRITTER_PX + 0.8 \
+			and absf(player.center().y - center().y) < 100.0 * CRITTER_PX + 1.2
+	if _crit_state == 2:
+		# Flying off, landing again after 300 ticks (on the ground or water).
+		_crit_timer += delta * 60.0
+		if _crit_timer >= 300.0 and (on_floor or wet):
+			_crit_state = 0
+			_crit_timer = 0.0
+			flying = false
+		else:
+			_ai_bird_flight(delta, game)
+			anim += delta * 12.0
+			_fly_frame()
+			return
+	if wet:
+		flying = true
+		if near or life < life_max:
+			_crit_state = 2
+			_crit_timer = 0.0
+			var away: Vector3 = global_position - player.global_position
+			away.y = 0
+			_crit_dir = away.normalized() if away.length() > 0.01 else _random_heading()
+			velocity.y = 6.0 * PX_TICK
+			return
+		if _crit_dir == Vector3.ZERO:
+			_crit_dir = _random_heading()
+		for t in _critter_ticks(delta):
+			# Paddling (2 px/tick); turning back at the shore.
+			var ahead := Vector3i((center() + _crit_dir * (half.x + 0.35)).floor())
+			if game.world.is_solid(ahead) or game.world.get_liquid(ahead).y == 0 and game.world.get_liquid(ahead + Vector3i.DOWN).y == 0:
+				_crit_dir = -_crit_dir
+			var flat := (_flat_px() * 19.0 + _crit_dir * 2.0) / 20.0
+			_set_flat_velocity(flat)
+			# Bobbing at the surface: its feet just under the waterline.
+			var line := _waterline(game)
+			if not is_nan(line):
+				velocity.y = clampf((line - 0.25 - global_position.y) / CRITTER_TICK * 0.2, -3.0, 3.0)
+		anim += delta * 3.0
+		var wf: Array = def.get("walk_frames", [0, 0])
+		sprite.set_frame(int(wf[0]) + int(anim) % (int(wf[1]) - int(wf[0]) + 1))
+		return
+	flying = false
+	_ai_critter_walk(delta)
+
+
+func _waterline(game) -> float:
+	var c := Vector3i(global_position.floor())
+	for dy in [1, 0, -1]:
+		var p := c + Vector3i(0, dy, 0)
+		var l: Vector2i = game.world.get_liquid(p)
+		if l.y > 0:
+			var full: bool = game.world.get_liquid(p + Vector3i.UP).y > 0
+			return p.y + (1.0 if full else l.y / 63.0 * 0.94)
+	return NAN
+
+
+## A bird's flight (aiStyle 24's ai[0] = 1), shared with flying ducks.
+func _ai_bird_flight(delta: float, game) -> void:
+	flying = true
+	var top := float(def.get("speed", 3.0))
+	for t in _critter_ticks(delta):
+		if last_blocked.x or last_blocked.z:
+			_crit_dir = -_crit_dir
+			last_blocked = Vector3i.ZERO
+		var flat := _flat_px()
+		var along := minf(flat.dot(_crit_dir) + 0.1, top)
+		_set_flat_velocity(_crit_dir * along)
+		var vy := velocity.y / PX_TICK
+		vy += 0.1 if _ground_within(game, 15) else -0.05
+		if _ground_within(game, 5):
+			vy += 0.2
+		velocity.y = clampf(vy, -2.0, 4.0) * PX_TICK
+
+
+func _ai_hopper(delta: float) -> void:
+	var ticks := delta * 60.0
+	if on_floor and velocity.y <= 0.0:
+		var keep := pow(0.8, ticks)
+		velocity.x *= keep
+		velocity.z *= keep
+		sprite.set_frame(0)
+		ai_timer += delta
+		if ai_timer > 1.6:
+			ai_timer = randf_range(0.0, 0.5)
+			ai_count += 1
+			var dir := _random_heading()
+			var big := ai_count % 3 == 0
+			velocity += dir * (3.0 if big else 2.0) * PX_TICK
+			velocity.y = (8.0 if big else 6.0) * PX_TICK
+	else:
+		sprite.set_frame(1)

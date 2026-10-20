@@ -70,6 +70,7 @@ def npc_obj(type_id, net_id, life_max, w, h):
 class Interp:
     def __init__(self, asm):
         self.asm = asm
+        self.gold = [0] * 1000  # NPCID.Sets.IsGoldCritter (from npcs.json's "gold")
         self.mi = asm.type_methods("Terraria", "NPC")["HitEffect"]
         raw = asm.body(self.mi)
         raw = raw if isinstance(raw, (bytes, bytearray)) else raw[0]
@@ -239,7 +240,8 @@ class Interp:
         elif op in (0x7E, 0x7F):  # ldsfld, ldsflda
             n = self.name(arg)
             stack.append({"F:Main.dust": "dusts", "F:Main.gore": "gores", "F:Main.rand": "rand",
-                          "F:Main.npc": "npcs", "F:Main.player": "players", "F:Main.maxNPCs": 200}.get(n, 0))
+                          "F:Main.npc": "npcs", "F:Main.player": "players", "F:Main.maxNPCs": 200,
+                          "F:Sets.IsGoldCritter": self.gold}.get(n, 0))
         elif op == 0x80:
             stack.pop()
         elif op in (0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x8F):  # ldelem*, ldelema
@@ -395,6 +397,9 @@ def main():
     npcs = json.load(open(sys.argv[2]))
     ids = json.load(open(sys.argv[3]))["NPCID"]
     it = Interp(asm)
+    for name, d in npcs.items():
+        if isinstance(d, dict) and d.get("gold") and ids.get(name, -1) >= 0:
+            it.gold[ids[name]] = 1
     # The width/height of each NPC in Terraria px (positions are relative anyway).
     out = {}
     for name, d in npcs.items():

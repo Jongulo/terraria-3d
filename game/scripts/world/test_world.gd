@@ -12,7 +12,7 @@ const SPAWNER_INTERVAL := 3.0
 const SPAWNER_MAX_ALIVE := 3
 const CATEGORIES := [
 	["Weapons", ["melee", "ranged", "magic", "thrown"]],
-	["Tools", ["tool", "bucket", "tool_use", "hook"]],
+	["Tools", ["tool", "bucket", "tool_use", "hook", "fishing_pole"]],
 	["Ammo", ["ammo"]],
 	["Potions & Summons", ["consumable", "summon"]],
 	["Accessories", ["accessory"]],
@@ -32,12 +32,16 @@ const HELP := [
 	"Spawners: right-click spawns one, Shift+right-click toggles auto-spawn",
 	"North: every item in chests, crafting by spawn   East: enemy arena",
 	"West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower (rope and chain)",
+	"North-west of the water pool: the fishing pond (deep enough for full fishing power) with a dock",
+	"West of the gallery: the critter pen (a spawner for each critter; catch them with a Bug Net)",
+	"A fishing spot in every biome (signposted): Snow, Desert, Jungle (and honey), Corruption, Crimson,",
+	"  the ocean (far north), the Dungeon (west), lava, the mushroom cavern, underground (shaft by the house), the sky",
 	"North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson",
 	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
 	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon",
 	"South-east, down the shaft past the tower: the Glowing Mushroom biome",
 	"North-east, down the shaft in the Jungle: a bee hive (honey, honey blocks, the larva)",
-	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist and Goblin Tinkerer (right-click to talk)",
+	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist, Goblin Tinkerer and Angler (right-click to talk)",
 ]
 
 var game: Game
@@ -110,6 +114,9 @@ func build() -> void:
 	_build_arena(c)
 	_build_dummies(c)
 	_build_liquids(c)
+	_build_fishing(c)
+	_build_fishing_rooms(c)
+	_build_critter_pen(c)
 	_build_gallery(c)
 	_build_tower(c)
 	_build_dark_room(c)
@@ -132,6 +139,7 @@ func build() -> void:
 	_build_hive(c)
 	_build_dungeon(c)
 	game.world.generate_mushroom_biome(c + MUSHROOM, 26, 41, false)
+	_build_fishing_spots(c)
 	w.relight_all()
 	_blocks = PackedInt32Array()
 	_liquids = PackedInt32Array()
@@ -260,7 +268,9 @@ func _build_arena(c: Vector3i) -> void:
 				if (x + z) % 6 == 0:
 					_b(Vector3i(x, GROUND + ARENA_WALL + 1, z), "torch")
 	_label(Vector3(x0 - 1, GROUND + ARENA_WALL + 2, c.z + 0.5), "Enemy arena", 28)
-	var kinds: Array = Data.npcs.keys().filter(func(k): return not Data.npcs[k].get("invulnerable", false) and Data.npcs[k].get("spawner", true))
+	# (Critters have their pen: _build_critter_pen.)
+	var kinds: Array = Data.npcs.keys().filter(func(k): return not Data.npcs[k].get("invulnerable", false) and Data.npcs[k].get("spawner", true) \
+			and not Data.npcs[k].get("critter", false))
 	kinds.sort_custom(func(a, b): return Data.npcs[a].get("boss", false) == false and Data.npcs[b].get("boss", false))
 	# Columns of spawners down the arena's west side, 3 blocks apart.
 	var per_column := (z1 - z0 - 2) / 3
@@ -316,6 +326,174 @@ func _build_liquids(c: Vector3i) -> void:
 				_b(Vector3i(x, GROUND + 1, z), "gray_brick")
 	_box(Vector3i(lb.x + 3, GROUND + 1, la.z), Vector3i(lb.x + 4, GROUND + 2, la.z + 1), "obsidian")
 	_label(Vector3(c.x - 22.5, GROUND + 3, c.z + 10.5), "Lava pit", 22)
+
+
+## The fishing pond: big enough for full fishing power (Fishing: 300 tiles
+## of water, 134 cells in a slice; this one's 20 x 8 across), with a dock of
+## platforms along its south side to cast from.
+const FISHING := Vector3i(-48, 0, -26)
+const FISHING_SIZE := Vector3i(20, 8, 12)
+
+
+func _build_fishing(c: Vector3i) -> void:
+	var a := Vector3i(c.x + FISHING.x, GROUND - FISHING_SIZE.y + 1, c.z + FISHING.z)
+	var b := Vector3i(a.x + FISHING_SIZE.x - 1, GROUND, a.z + FISHING_SIZE.z - 1)
+	_box(Vector3i(a.x - 1, a.y - 1, a.z - 1), Vector3i(b.x + 1, GROUND, b.z + 1), "sand")
+	_box(a, b, "")
+	_liquid_box(a, b, 1)
+	for x in range(a.x, b.x + 1):
+		_b(Vector3i(x, GROUND + 1, b.z), "wood_platform")
+	for x in [a.x, a.x + 6, a.x + 12, b.x]:
+		_box(Vector3i(x, a.y, b.z), Vector3i(x, GROUND, b.z), "wood")
+	_label(Vector3((a.x + b.x) * 0.5 + 0.5, GROUND + 3.0, b.z + 0.5), "Fishing pond (full fishing power)", 22)
+
+
+## The critter pen: a glass house on the grass west of the gallery, a
+## spawner for each critter in rows down its west half, open grass in the
+## middle and a pond in its east end (ducks swim, fish live in it), a door
+## on its south side.
+const CRITTER_PEN := Vector3i(-56, 0, 34)
+const CRITTER_PEN_SIZE := Vector3i(34, 6, 22)
+
+
+func _build_critter_pen(c: Vector3i) -> void:
+	var a := Vector3i(c.x + CRITTER_PEN.x, GROUND, c.z + CRITTER_PEN.z)
+	var sz := CRITTER_PEN_SIZE
+	var b := a + Vector3i(sz.x - 1, sz.y, sz.z - 1)
+	_box(Vector3i(a.x, GROUND + 1, a.z), b, "glass")
+	_box(Vector3i(a.x + 1, GROUND + 1, a.z + 1), Vector3i(b.x - 1, b.y - 1, b.z - 1), "")
+	_box(Vector3i(a.x, GROUND, a.z), Vector3i(b.x, GROUND, b.z), "grass")
+	var door := Vector3i(a.x + 25, GROUND + 1, b.z)
+	_door(door, "wooden_door", 0)
+	# The pond: 5 x 16, 3 deep.
+	var pa := Vector3i(b.x - 5, GROUND - 2, a.z + 3)
+	var pb := Vector3i(b.x - 1, GROUND, a.z + 18)
+	_box(Vector3i(pa.x - 1, pa.y - 1, pa.z - 1), Vector3i(pb.x + 1, GROUND - 1, pb.z + 1), "dirt")
+	_box(pa, pb, "")
+	_liquid_box(pa, pb, 1)
+	var kinds: Array = Data.npcs.keys().filter(func(k): return Data.npcs[k].get("critter", false) and Data.npcs[k].get("spawner", true))
+	for i in kinds.size():
+		var pos := Vector3i(a.x + 2 + (i / 10) * 4, GROUND + 1, a.z + 2 + (i % 10) * 2)
+		_b(pos, "npc_spawner")
+		spawners[_key(pos)] = {"pos": pos, "kind": kinds[i], "auto": false, "timer": 0.0, "alive": []}
+	_label(Vector3(a.x + sz.x * 0.5, GROUND + sz.y + 1.5, b.z + 0.5), "Critter pen: catch them with a Bug Net", 24)
+
+
+## A fishing spot in every biome. Ponds in the world generator's patches
+## are dug after them (FISHING_SPOTS: where, half size, depth, liquid, lining,
+## cells of open air above; the biome counts round them as round the patch
+## centre). The ocean is a long strip along the far north (TestWorld.in_ocean
+## makes it the ocean: 80 x 14 cells across, more than Terraria's 1000 tiles).
+## The Dungeon's spot is a blue brick hall (its catches need Skeletron
+## beaten); the underground one a chamber down a shaft (north-east: the
+## Dungeon's maze fills the west underground); the sky's a cloud
+## basin above the islands, in the space layer.
+const OCEAN := Vector3i(-40, 0, -125)
+const OCEAN_SIZE := Vector3i(80, 14, 10)
+const DUNGEON_HALL := Vector3i(-48, 0, 18)
+const DUNGEON_HALL_SIZE := Vector3i(16, 7, 14)
+const UNDERGROUND := Vector3i(22, -39, -46)
+const UNDERGROUND_SIZE := Vector3i(18, 10, 14)
+const UNDERGROUND_SHAFT := Vector3i(36, 0, -40)
+const SKY_POND := Vector3i(16, 48, 0)
+const FISHING_SPOTS := [
+	# [name, centre of its surface (relative to the plaza, y from GROUND), half size, depth, liquid, lining, clear]
+	["Snow", Vector3i(-75, 0, -70), Vector2i(8, 4), 8, 1, "ice_block", 25],
+	["Desert", Vector3i(0, 0, -90), Vector2i(8, 4), 8, 1, "hardened_sand", 25],
+	["Jungle", Vector3i(75, 0, -70), Vector2i(8, 4), 8, 1, "mud", 25],
+	["Honey (Jungle)", Vector3i(75, 0, -84), Vector2i(4, 3), 10, 3, "hive", 25],
+	["Corruption", Vector3i(-81, 0, 58), Vector2i(8, 4), 8, 1, "ebonstone", 25],
+	["Crimson", Vector3i(69, 0, 58), Vector2i(8, 4), 8, 1, "crimstone", 25],
+	["Lava", Vector3i(-42, 0, -33), Vector2i(7, 3), 9, 2, "gray_brick", 0],
+	["Glowing Mushroom", Vector3i(56, -36, 18), Vector2i(8, 4), 8, 1, "mud", 0],
+	["Underground", Vector3i(31, -38, -39), Vector2i(8, 4), 8, 1, "stone", 0],
+	["Ocean", Vector3i(0, 0, -120), Vector2i(40, 4), 14, 1, "sand", 0],
+	["Dungeon", Vector3i(-40, 0, 25), Vector2i(6, 4), 11, 1, "blue_brick", 0],
+	["Sky", Vector3i(16, 48, 0), Vector2i(6, 4), 5, 1, "cloud", 0],
+]
+
+
+## What's built in the main pass for the spots: the Dungeon's hall, the
+## underground chamber and its shaft, the ocean's beach.
+func _build_fishing_rooms(c: Vector3i) -> void:
+	# The Dungeon's hall: blue brick, a door gap on the east side.
+	var h := c + DUNGEON_HALL
+	var hs := DUNGEON_HALL_SIZE
+	_box(Vector3i(h.x, GROUND, h.z), Vector3i(h.x + hs.x - 1, GROUND + hs.y, h.z + hs.z - 1), "blue_brick")
+	_box(Vector3i(h.x + 1, GROUND + 1, h.z + 1), Vector3i(h.x + hs.x - 2, GROUND + hs.y - 1, h.z + hs.z - 2), "")
+	_box(Vector3i(h.x + hs.x - 1, GROUND + 1, h.z + 6), Vector3i(h.x + hs.x - 1, GROUND + 2, h.z + 7), "")
+	for corner in [Vector3i(1, 1, 1), Vector3i(hs.x - 2, 1, 1), Vector3i(1, 1, hs.z - 2), Vector3i(hs.x - 2, 1, hs.z - 2)]:
+		_b(Vector3i(h.x, GROUND, h.z) + corner, "torch")
+	# The underground chamber, lit, and a shaft with platforms down to it.
+	var u := c + UNDERGROUND
+	var us := UNDERGROUND_SIZE
+	_box(Vector3i(u.x, u.y + 1, u.z), Vector3i(u.x + us.x - 1, u.y + us.y, u.z + us.z - 1), "")
+	for corner in [Vector3i(0, 1, 0), Vector3i(us.x - 1, 1, 0), Vector3i(0, 1, us.z - 1), Vector3i(us.x - 1, 1, us.z - 1)]:
+		_b(u + corner, "torch")
+	var s := c + UNDERGROUND_SHAFT
+	_box(Vector3i(s.x - 1, u.y + 1, s.z - 1), Vector3i(s.x + 1, GROUND, s.z + 1), "")
+	for y in range(u.y + 4, GROUND, 4):
+		_box(Vector3i(s.x - 1, y, s.z - 1), Vector3i(s.x + 1, y, s.z + 1), "wood_platform")
+	_box(Vector3i(s.x - 2, GROUND, s.z - 2), Vector3i(s.x + 2, GROUND, s.z - 2), "gray_brick")
+	_label(Vector3(s.x + 0.5, GROUND + 3, s.z + 0.5), "Underground fishing below", 22)
+	# The beach round the ocean strip.
+	var o := c + OCEAN
+	_box(Vector3i(o.x - 3, GROUND, o.z - 2), Vector3i(o.x + OCEAN_SIZE.x + 2, GROUND, o.z + OCEAN_SIZE.z + 2), "sand")
+	_label(Vector3(o.x + OCEAN_SIZE.x * 0.5, GROUND + 3, o.z + OCEAN_SIZE.z + 2.5), "The ocean (fishing, ocean music and enemies)", 24)
+
+
+func _build_fishing_spots(c: Vector3i) -> void:
+	# The sky pond's basin hangs in the air, a cloud walk round it.
+	var sp := Vector3i(c.x + SKY_POND.x, GROUND + SKY_POND.y, c.z + SKY_POND.z)
+	_blocks = PackedInt32Array()
+	_box(sp + Vector3i(-9, 0, -7), sp + Vector3i(9, 0, 7), "cloud")
+	game.world.set_blocks_raw(_blocks)
+	for spot in FISHING_SPOTS:
+		var at: Vector3i = spot[1]
+		var top := Vector3i(c.x + at.x, GROUND + at.y, c.z + at.z)
+		_dig_pond(top, spot[2], spot[3], spot[4], spot[5], spot[6])
+		_label(Vector3(top) + Vector3(0.5, 2.6, spot[2].y + 2.5), "Fishing: " + spot[0], 20)
+	_blocks = PackedInt32Array()
+	_liquids = PackedInt32Array()
+
+
+## A pond dug after the world generator's passes: `top` its surface's middle
+## cell, `half` its half width (x) and length (z), `depth` deep, full of
+## `liquid`, lined with `lining`; `clear` cells of air above it and its rim
+## (trees, cacti and plants cleared off).
+func _dig_pond(top: Vector3i, half: Vector2i, depth: int, liquid: int, lining: String, clear: int) -> void:
+	_blocks = PackedInt32Array()
+	_liquids = PackedInt32Array()
+	var a := Vector3i(top.x - half.x, top.y - depth + 1, top.z - half.y)
+	var b := Vector3i(top.x + half.x, top.y, top.z + half.y)
+	_box(Vector3i(a.x - 1, a.y - 1, a.z - 1), Vector3i(b.x + 1, top.y, b.z + 1), lining)
+	_box(a, b, "")
+	if clear > 0:
+		_box(Vector3i(a.x - 2, top.y + 1, a.z - 2), Vector3i(b.x + 2, top.y + clear, b.z + 2), "")
+	_liquid_box(a, b, liquid)
+	game.world.set_blocks_raw(_blocks)
+	game.world.set_liquids_raw(_liquids)
+	# Plants left over the water and its rim (a cave's mushrooms) go too.
+	for x in range(a.x - 1, b.x + 2):
+		for z in range(a.z - 1, b.z + 2):
+			var above := Vector3i(x, top.y + 1, z)
+			var id := game.world.get_block(above)
+			if id != 0 and not Data.block(id).get("solid", true):
+				game.world.set_block(above, 0)
+			game.world.remove_decorations_at(above)
+	if clear > 0:
+		for x in range(a.x - 2, b.x + 3):
+			for z in range(a.z - 2, b.z + 3):
+				for y in range(top.y, top.y + clear + 1):
+					game.world.remove_decorations_at(Vector3i(x, y, z))
+
+
+## The test world's ocean (Game.in_ocean): the strip along the far north and its beach.
+func in_ocean(pos: Vector3) -> bool:
+	var c := Vector3i(SIZE.x / 2, GROUND + 1, SIZE.z / 2)
+	var o := c + OCEAN
+	return pos.x >= o.x - 3 and pos.x < o.x + OCEAN_SIZE.x + 3 and pos.z >= o.z - 2 and pos.z < o.z + OCEAN_SIZE.z + 3 \
+			and pos.y > GROUND - OCEAN_SIZE.y - 4 and pos.y < GROUND + 30
 
 
 ## The block gallery: rows of GALLERY_ROW blocks, 2 apart, from GALLERY_Z
@@ -625,7 +803,7 @@ func _build_hammered(c: Vector3i) -> void:
 ## East of the arena: a row of houses for the town NPCs, each a valid home
 ## (door, light, table, chair), with a resident in each (see activate).
 const TOWN := Vector3i(52, 0, -24)
-const TOWN_HOUSES := 7
+const TOWN_HOUSES := 8
 
 
 ## The north-west corner (at ground + 1) of town house `i`.
@@ -674,6 +852,11 @@ func give_loadout(p: Player) -> void:
 		p.inventory.slots[i] = Inventory.stack(hotbar[i], p.inventory.max_stack(hotbar[i]))
 	for item in ["WoodenArrow", "UnholyArrow", "MusketBall", "EmptyBucket", "LavaBucket", "SuspiciousLookingEye", "DirtBlock", "StoneBlock", "Wood"]:
 		p.inventory.add(item, p.inventory.max_stack(item))
+	# Fishing gear (the fishing pond is north-west of the water pool) and a
+	# Bug Net (the critter pen is west of the gallery).
+	p.inventory.add("BugNet", 1)
+	p.inventory.add("ReinforcedFishingPole", 1)
+	p.inventory.add("MasterBait", 99)
 	p.inventory.add_money(50 * 10000)  # 50 gold, for the town's shops
 	p.accessories.slots.fill(null)
 	for i in 3:

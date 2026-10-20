@@ -238,13 +238,15 @@ def extract_names(data):
 # copy; the sections kept from each such localization file.
 TOWN_PROBES = [
     ("TownNPCHousingFailureReasons", "RoomIsTooBig", "This room is too big",
-     ["TownNPCHousingFailureReasons", "HousingText", "DryadSpecialText", "GuideHelpText"]),
+     ["TownNPCHousingFailureReasons", "HousingText", "DryadSpecialText", "GuideHelpText",
+      "AnglerQuestText", "AnglerQuestChatter", "AnglerChatter"]),
     ("LegacyDialog", "4", "Sword beats paper! Get one today.", ["LegacyDialog"]),
 ]
 
 
 def extract_town_text(data):
-    """Town NPC names (<NPC>Names), chat lines (LegacyDialog), housing messages."""
+    """Town NPC names (<NPC>Names), chat lines (LegacyDialog), housing messages,
+    the Angler's quests (AnglerQuestText) and chatter."""
     out = {}
     for section, key, english, keep in TOWN_PROBES:
         pos = 0

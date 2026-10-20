@@ -1134,7 +1134,7 @@ func _add_item(name: String, def: Dictionary) -> void:
 	if d.id == 0:
 		push_warning("unknown Terraria item " + name)
 	d["name"] = Assets.item_name(name)
-	d["max_stack"] = d.get("max_stack", 1 if d.get("type", "material") in ["melee", "ranged", "magic", "tool", "accessory", "armor"] else 9999)
+	d["max_stack"] = d.get("max_stack", 1 if d.get("type", "material") in ["melee", "ranged", "magic", "tool", "accessory", "armor", "fishing_pole", "pet"] else 9999)
 	# Terraria's autoReuse: tools, buckets and blocks keep going while held;
 	# weapons and consumables take a fresh click each time.
 	d["auto_reuse"] = d.get("auto_reuse", d.get("type", "material") in ["tool", "bucket", "block"])

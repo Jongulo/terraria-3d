@@ -32,6 +32,8 @@ var _chat := PanelContainer.new()
 var _chat_title := Label.new()
 var _chat_text := Label.new()
 var _chat_buttons := HBoxContainer.new()
+## The item in the chat's corner (Terraria's npcChatCornerItem: the Angler's fish).
+var _chat_item := TextureRect.new()
 var shop_open := false
 var _shop_panel := Control.new()
 var _shop_inv := Inventory.new(40)
@@ -745,7 +747,37 @@ func info_text() -> String:
 					and int(npc.def.get("life", 0)) > 5 and npc.center().distance_to(player.center()) < RADAR_RANGE:
 				n += 1
 		lines.append("No enemies nearby" if n == 0 else "1 enemy nearby!" if n == 1 else "%d enemies nearby!" % n)
+	if info.has("weather"):
+		lines.append(weather_text())
+	if info.has("moon"):
+		lines.append(MOON_PHASES[game.sky.moon_phase % 8])
+	if info.has("fishing"):
+		# The Fisherman's Pocket Guide: what the bobber's last check said, or
+		# with none out, your fishing power.
+		if player.bobbers().is_empty():
+			player.fishing_info = "%d Fishing Power" % Fishing.conditions(player, game.sky).level
+		lines.append(player.fishing_info)
 	return "\n".join(lines)
+
+
+## The Sextant: the moon's phase (Terraria's GameUI text, by Main.moonPhase).
+const MOON_PHASES := ["Full Moon", "Waning Gibbous", "Third Quarter", "Waning Crescent", "New Moon", "Waxing Crescent",
+		"First Quarter", "Waxing Gibbous"]
+
+
+## The Weather Radio (Terraria's): the clouds (its numClouds out of 200:
+## here today's cloudiness) and the wind in mph (windSpeedCurrent x 50; a
+## west wind blows toward +x). There's no rain here.
+func weather_text() -> String:
+	var sky := Game.current.sky
+	var clouds := sky.cloudiness * 200.0
+	var text := "Mostly Cloudy" if clouds > 90 else "Cloudy" if clouds > 55 else "Partly Cloudy" if clouds > 15 else "Clear"
+	var mph := int(sky.wind * 50.0)
+	if mph < 0:
+		text += " (%d mph E)" % -mph
+	elif mph > 0:
+		text += " (%d mph W)" % mph
+	return text
 
 
 ## The Depth Meter: feet under (or over) the surface from your feet, and the
@@ -1063,6 +1095,10 @@ func slot_clicked(slot: ItemSlot, button: int) -> void:
 	if Input.is_key_pressed(KEY_SHIFT) and button == MOUSE_BUTTON_LEFT and s != null:
 		_quick_move(slot)
 		return
+	# Right-clicking a crate or an oyster opens it (Terraria's TryOpenContainer).
+	if button == MOUSE_BUTTON_RIGHT and s != null and _cursor_stack == null and Data.item(s.item).has("open"):
+		open_container(inv, slot.index)
+		return
 	# Right-clicking armor, an accessory or a hook puts it on, like Terraria.
 	if button == MOUSE_BUTTON_RIGHT and s != null and _cursor_stack == null and slot.accept == "" \
 			and Data.item(s.item).get("type") in ["armor", "accessory", "hook"]:
@@ -1099,6 +1135,23 @@ func slot_clicked(slot: ItemSlot, button: int) -> void:
 	Audio.play("Grab", 0.5)
 	inv.changed.emit()
 	_refresh()
+
+
+## Opens one crate or oyster from a slot: its loot (Crates.open) goes into
+## your inventory, what doesn't fit drops at your feet.
+func open_container(inv: Inventory, i: int) -> void:
+	var s = inv.slots[i]
+	var loot := Crates.open(s.item, _open_rng)
+	inv.consume_slot(i)
+	for l in loot:
+		var left: int = player.inventory.add(l[0], l[1], Prefixes.roll(Data.item(l[0])) if l[1] == 1 else 0)
+		if left > 0:
+			Game.current.spawn_item(l[0], left, player.center())
+	Audio.play("Grab")
+	_refresh()
+
+
+var _open_rng := RandomNumberGenerator.new()
 
 
 func _quick_move(slot: ItemSlot) -> void:
@@ -1283,6 +1336,10 @@ static func item_tooltip(def: Dictionary, count := 1) -> String:
 				kb_word = w[1]
 				break
 		lines.append("No knockback" if kb == 0.0 else kb_word + " knockback")
+	if def.has("fishing_power"):
+		lines.append("%d%% fishing power" % def.fishing_power)
+	if def.has("bait"):
+		lines.append("%d%% bait power" % def.bait)
 	if def.has("pick"):
 		lines.append("%d%% pickaxe power" % def.pick)
 	if def.has("axe"):
@@ -1306,6 +1363,9 @@ static func item_tooltip(def: Dictionary, count := 1) -> String:
 		if def.get("type") == "armor" or def.has("defense"):
 			lines.append("%d defense" % int(def.get("defense", 0)))
 		lines.append("Equipable")
+	if def.get("quest", false):
+		lines.append("Quest Item")
+		lines.append(Assets.item_tooltip(def.get("internal", "")))
 	if def.has("tooltip"):
 		lines.append(def.tooltip)
 	elif def.get("type") in ["accessory", "armor"] and Assets.item_tooltip(def.get("internal", "")) != "":
@@ -1522,7 +1582,16 @@ func _build_town_ui() -> void:
 	box.add_theme_constant_override("separation", 6)
 	_chat.add_child(box)
 	_chat_title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
-	box.add_child(_chat_title)
+	var title_row := HBoxContainer.new()
+	_chat_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(_chat_title)
+	_chat_item.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_chat_item.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_chat_item.custom_minimum_size = Vector2(52, 52)
+	_chat_item.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_chat_item.visible = false
+	title_row.add_child(_chat_item)
+	box.add_child(title_row)
 	_chat_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_chat_text.custom_minimum_size.x = 440
 	_chat_text.add_theme_font_size_override("font_size", 20)
@@ -1587,6 +1656,7 @@ func open_chat(npc: NPC, line := "") -> void:
 	npc.talking = true
 	_chat_title.text = npc.title()
 	_chat_text.text = line if line != "" else npc.talk_line()
+	_chat_item.visible = false
 	for c in _chat_buttons.get_children():
 		_chat_buttons.remove_child(c)
 		c.queue_free()
@@ -1623,6 +1693,15 @@ func chat_button(name: String) -> void:
 			open_reforge()
 		"Help":
 			_chat_text.text = chat_npc.next_help()
+		"Quest":
+			var town := Game.current.town
+			var fish := town.angler_quest
+			var was_done := town.angler_done
+			_chat_text.text = town.angler_quest_chat()
+			# The fish he wants, in the corner (not once it's handed in).
+			_chat_item.visible = not was_done and not town.angler_done and fish != ""
+			if _chat_item.visible:
+				_chat_item.texture = Assets.item_texture(Data.item_id(fish))
 		"Heal":
 			_chat_text.text = Game.current.town.nurse_heal()
 		"Status":

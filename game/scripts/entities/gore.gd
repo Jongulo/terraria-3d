@@ -13,6 +13,7 @@ const LIFE := 600
 const FADE := 255
 const MAX_SPEED := 32.0  # px/tick
 
+var gore_id := 0  # its Gore_<n>
 var velocity := Vector3.ZERO  # px/tick, y up
 var spin := 0.0
 var _sprite := EntitySprite.new()
@@ -25,6 +26,7 @@ var _accum := 0.0
 ## `id`: its Gore_<n> sprite; `px`: blocks per sprite pixel (the enemy's own,
 ## so it's the size it was on the enemy).
 func setup(id: int, px: float) -> void:
+	gore_id = id
 	var tex := Assets.texture("Images/Gore_%d" % id)
 	var w := float(tex.get_width()) * px
 	var h := float(tex.get_height()) * px

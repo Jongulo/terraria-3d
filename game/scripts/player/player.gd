@@ -102,6 +102,13 @@ var input_enabled := true
 var potion_sickness := 0.0
 ## The Honey buff (seconds left): better natural healing.
 var honey_time := 0.0
+## Potions' buffs (BuffID name -> seconds left): Fishing, Sonar, Crate.
+var timed_buffs := {}
+## Quests done for the Angler (Terraria's anglerQuestsFinished).
+var angler_quests := 0
+## What the bobber's last bite check found (Terraria's displayedFishingInfo,
+## shown by the Fisherman's Pocket Guide): "12 Fishing Power", "Not Enough Water!".
+var fishing_info := ""
 var respawn_timer := 0.0
 ## Liquid around the body / at the eyes: 0 none, 1 water, 2 lava.
 var in_liquid := 0
@@ -476,6 +483,7 @@ func _physics_process(delta: float) -> void:
 	_liquid_effects(delta)
 	_immune = maxf(0.0, _immune - delta)
 	potion_sickness = maxf(0.0, potion_sickness - delta)
+	_tick_buffs(delta)
 	_use_timer = maxf(0.0, _use_timer - delta)
 	_swing_shot_cd = maxf(0.0, _swing_shot_cd - delta)
 	_update_bast(delta, game)
@@ -597,6 +605,8 @@ func _move(delta: float, game) -> void:
 	var jump := input_enabled and Input.is_action_pressed("jump")
 	var jump_speed := BALLOON_JUMP_SPEED if has_effect("jump_boost") else JUMP_SPEED
 	var jump_ticks := BALLOON_JUMP_TICKS if has_effect("jump_boost") else JUMP_TICKS
+	# The Frog Leg: Terraria's jumpSpeedBoost (px a tick on top of jumpSpeed).
+	jump_speed += stat("jump_speed_boost") * 2.5
 	if webbed:
 		jump_speed /= 5.0
 		jump_ticks /= 10
@@ -700,8 +710,10 @@ func _move(delta: float, game) -> void:
 			if has_effect("no_fall_damage") or Data.block(game.world.get_block(below)).get("fall_safe", false):
 				fall = 0.0
 			var tiles := int(fall * 1.5)
-			if tiles > SAFE_FALL_TILES:
-				hurt((tiles - SAFE_FALL_TILES) * 10, Vector3.ZERO, true)
+			# The Frog Leg's extraFall: tiles more before a fall hurts.
+			var safe := SAFE_FALL_TILES + int(stat("extra_fall"))
+			if tiles > safe:
+				hurt((tiles - safe) * 10, Vector3.ZERO, true)
 		elif velocity.y > 0.0:
 			_jump_ticks = 0  # a bumped head ends the jump
 		velocity.y = 0.0
@@ -1165,6 +1177,78 @@ func _shoot_harpoon(def: Dictionary) -> bool:
 	return true
 
 
+## A Bug Net's swing (Player.ItemCheck_CatchCritters): critters it sweeps
+## through are caught, their item yours (NPC.CatchNPC). The Underworld's
+## (lava bait) burn you instead, unless it's a Golden or Fireproof Bug Net:
+## 1 damage and On Fire! for 5 s.
+func _catch_critters(def: Dictionary) -> bool:
+	var game := Game.current
+	var reach := 2.4 * float(def.get("scale", 1.0))
+	var cone := cos(deg_to_rad(65.0))
+	var origin := camera.global_position
+	var fwd := forward()
+	for npc in game.npcs():
+		if not npc.is_critter() or npc.is_queued_for_deletion():
+			continue
+		var c: Vector3 = npc.center()
+		var ray_point := origin + fwd * maxf((c - origin).dot(fwd), 0.0)
+		var bottom: float = npc.global_position.y
+		var aim := Vector3(c.x, clampf(ray_point.y, bottom, bottom + npc.half.y), c.z)
+		var to := aim - origin
+		if to.length() - npc.half.x >= reach or to.normalized().dot(fwd) <= cone:
+			continue
+		if npc.def.get("lava_bait", false) and not def.get("lava_safe", false):
+			hurt(1, c, true)
+			on_fire = maxf(on_fire, 5.0)
+			continue
+		game.spawn_item(npc.catch_item(), 1, center())
+		npc.queue_free()
+	Audio.play("Item_1", 0.6)
+	return true
+
+
+## Using a critter's item lets it go where you aim (Player.ItemCheck_ReleaseCritter:
+## within reach, not inside a block).
+func _release(def: Dictionary) -> bool:
+	var game := Game.current
+	var at: Vector3
+	if not target.is_empty():
+		var cell: Vector3i = target.block + target.normal
+		if game.world.is_solid(cell):
+			return false
+		at = Vector3(cell) + Vector3(0.5, 0.05, 0.5)
+	else:
+		at = camera.global_position + forward() * minf(reach(), 3.0)
+		if game.world.is_solid(Vector3i(at.floor())):
+			return false
+	var npc: NPC = game.spawn_npc(def.release, at)
+	npc.released = true
+	if def.has("variant"):
+		npc.variant = int(def.variant)
+	_use_up(selected)
+	return true
+
+
+## A fishing pole: casts its bobber where you look, or with it out, reels it
+## in (Terraria's ItemCheck_PullFishingBobbers: no new cast while one's out).
+func _fish(def: Dictionary) -> bool:
+	var out := bobbers()
+	if out.is_empty():
+		var b := Bobber.new()
+		b.setup(self, def, forward())
+		Game.current.entities.add_child(b)
+		b.global_position = camera.global_position + forward() * 0.6
+	else:
+		for b in out:
+			b.reel()
+	Audio.play(def.get("sound", "Item_1"), 0.6)
+	return true
+
+
+func bobbers() -> Array:
+	return get_tree().get_nodes_in_group("bobbers").filter(func(b): return b.player == self and not b.is_queued_for_deletion())
+
+
 ## A Rope Coil thrown where you look (shootSpeed 10).
 func _throw_rope_coil(def: Dictionary) -> bool:
 	var game := Game.current
@@ -1452,7 +1536,21 @@ func buffs() -> Array:
 		out.append([68, "Suffocation", INF])
 	if honey_time > 0.0:
 		out.append([48, "Honey", honey_time])
+	for b in timed_buffs:
+		out.append([int(Assets.ids.BuffID.get(b, 0)), Assets.ids.names.buffs.get(b, b), timed_buffs[b]])
 	return out
+
+
+## Whether a potion's buff (BuffID name) is on.
+func has_buff(b: String) -> bool:
+	return timed_buffs.get(b, 0.0) > 0.0
+
+
+func _tick_buffs(delta: float) -> void:
+	for b in timed_buffs.keys():
+		timed_buffs[b] -= delta
+		if timed_buffs[b] <= 0.0:
+			timed_buffs.erase(b)
 
 
 func _regen(delta: float) -> void:
@@ -1557,8 +1655,13 @@ func use_item() -> void:
 			# Snowballs: ammo you can throw too.
 			if def.get("thrown_too", false):
 				used = _throw(def)
+		"critter":
+			used = _release(def)
+			duration = 10.0 / 60.0
 		"tool_use":
-			if def.has("rope_snake"):
+			if def.get("bug_net", false):
+				used = _catch_critters(def)
+			elif def.has("rope_snake"):
 				used = _summon_rope_snake(def)
 			elif def.has("rope_coil"):
 				used = _throw_rope_coil(def)
@@ -1568,6 +1671,8 @@ func use_item() -> void:
 				used = true
 		"hook":
 			used = fire_hook(def)
+		"fishing_pole":
+			used = _fish(def)
 		_:
 			duration = 0.25
 	if used:
@@ -1949,6 +2054,8 @@ func _throw(def: Dictionary) -> bool:
 			weapon_damage(def), float(def.knockback), float(def.get("gravity", 10.0)), 18.0, 0.45, true, crit_chance(def))
 	pr.gravity_delay = float(def.get("gravity_delay", 0.0))
 	pr.drag = float(def.get("drag", 0.0))
+	# Through this many enemies (Terraria's penetrate: the Frost Daggerfish's 3).
+	pr.penetrate = int(def.get("pierce", pr.penetrate))
 	if def.has("explosive"):
 		# A lit bomb: lobbed a little upward, heavier, with its fuse burning.
 		pr.explosive = def.explosive
@@ -2136,6 +2243,9 @@ func _consume(def: Dictionary) -> bool:
 		mana_max += int(def.max_mana)
 		mana = mana_max
 		Audio.play("MaxMana")
+	elif def.has("buff"):
+		# A buff potion: its buff for its time (drinking another restarts it).
+		timed_buffs[def.buff[0]] = float(def.buff[1])
 	else:
 		return false
 	Audio.play(def.get("sound", "Item_3"))
@@ -2175,12 +2285,17 @@ func _use_bucket(def: Dictionary) -> bool:
 	var game := Game.current
 	var w := game.world
 	var liquid := int(def.get("liquid", 0))
+	# A sponge soaks up its liquid and stays a sponge (the Super Absorbant
+	# Sponge: water; the Honey and Lava Absorbant ones).
+	var sponge := int(def.get("sponge", 0))
 	if liquid == 0:
 		var hit: Dictionary = w.raycast_liquid(camera.global_position, forward(), REACH)
 		if hit.is_empty() or int(hit.liquid) == 0:
 			return false
 		var cell: Vector3i = hit.block
 		var t: int = w.get_liquid(cell).x
+		if sponge != 0 and t != sponge:
+			return false
 		# Like Terraria, gather a bucketful from the surrounding cells, not just one.
 		var cells: Array[Vector3i] = [cell]
 		for dy in [0, 1, -1]:
@@ -2203,7 +2318,8 @@ func _use_bucket(def: Dictionary) -> bool:
 			var take := mini(need, l.y)
 			w.set_liquid(c, t, l.y - take)
 			need -= take
-		_swap_held({LIQ_WATER: "WaterBucket", LIQ_LAVA: "LavaBucket", LIQ_HONEY: "HoneyBucket"}[t])
+		if sponge == 0:
+			_swap_held({LIQ_WATER: "WaterBucket", LIQ_LAVA: "LavaBucket", LIQ_HONEY: "HoneyBucket"}[t])
 	else:
 		if target.is_empty():
 			return false
@@ -2218,7 +2334,9 @@ func _use_bucket(def: Dictionary) -> bool:
 		if w.get_block(cell) != 0:
 			w.set_block(cell, 0)
 		w.set_liquid(cell, liquid, 63)
-		_swap_held("EmptyBucket")
+		# A Bottomless Bucket never runs out.
+		if not def.get("endless", false):
+			_swap_held("EmptyBucket")
 	Audio.play("Splash_*", 0.6)
 	return true
 
@@ -2270,6 +2388,11 @@ func _interact() -> void:
 		# Untied, he's the Goblin Tinkerer.
 		var freed: NPC = Game.current.town.free_goblin(npc)
 		Game.current.hud.open_chat(freed, NPC.dialog(NPC.FREED_LINE))
+		return
+	if npc != null and npc.kind == "SleepingAngler":
+		# Woken, he's the Angler (Terraria's: one of his thank-you lines).
+		var angler: NPC = Game.current.town.wake_angler(npc)
+		Game.current.hud.open_chat(angler, NPC.dialog(randi_range(353, 355)))
 		return
 	if npc != null:
 		Game.current.hud.open_chat(npc)
@@ -2393,6 +2516,7 @@ func _respawn() -> void:
 	lava_time = stat("lava_time")
 	on_fire = 0.0
 	honey_time = 0.0
+	timed_buffs.clear()
 	life = life_max
 	mana = mana_max
 	velocity = Vector3.ZERO
@@ -2416,6 +2540,7 @@ func save_state() -> Dictionary:
 		"pos": [global_position.x, global_position.y, global_position.z],
 		"yaw": _yaw, "pitch": _pitch, "selected": selected,
 		"bed": [bed.x, bed.y, bed.z],
+		"angler_quests": angler_quests,
 	}
 
 
@@ -2436,4 +2561,5 @@ func load_state(d: Dictionary) -> void:
 	selected = int(d.get("selected", 0))
 	var b: Array = d.get("bed", [])
 	bed = Vector3i(int(b[0]), int(b[1]), int(b[2])) if b.size() == 3 else NO_BED
+	angler_quests = int(d.get("angler_quests", 0))
 	stats_changed.emit()

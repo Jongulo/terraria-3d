@@ -412,6 +412,10 @@ func _run() -> void:
 	await _goblin_checks(c)
 	await _prefix_checks(c)
 	await _hive_checks(c)
+	await _fishing_checks(c)
+	await _fishing_spot_checks(c)
+	await _angler_checks(c)
+	await _critter_checks(c)
 	await _furniture_checks(c)
 	await _hammer_checks(c)
 	await _furniture2_checks(c)
@@ -504,7 +508,7 @@ func _run() -> void:
 	var town_after := {}
 	for kind in game.town.residents:
 		town_after[kind] = [game.town.residents[kind].display_name, game.town.residents[kind].home_key]
-	check(town_after == town_before and town_after.size() == 7, "the town's residents come back with their names and homes (%s)" % [town_after])
+	check(town_after == town_before and town_after.size() == 8, "the town's residents come back with their names and homes (%s)" % [town_after])
 	check(game.sign_text(c + TestWorld.HOUSE_SIGN) == "Signs keep what you write.", "signs keep their text after loading (%s)" % game.sign_text(c + TestWorld.HOUSE_SIGN))
 	var shaped_after := c + Vector3i(-4, 0, 12)
 	check(game.world.get_shape(shaped_after) == Game.SHAPE_HALF, "hammered shapes come back after loading (%d)" % game.world.get_shape(shaped_after))
@@ -557,7 +561,8 @@ func _mushroom_checks(c: Vector3i) -> void:
 			"glowing mushrooms are scattered off their blocks' middles and turned, the same each time")
 	check(caps.size() >= 1 and counts.mushroom_trunk >= 3, "giant glowing mushrooms: stems under their caps (%d)" % caps.size())
 	# It glows blue, it's the biome you're in (its music), its enemies.
-	var floor_at := m + Vector3i(0, -3, 0)
+	# (Off the fishing spot's pond in its middle.)
+	var floor_at := m + Vector3i(0, -3, 8)
 	while not w.is_solid(floor_at + Vector3i.DOWN) and floor_at.y > m.y - 10:
 		floor_at += Vector3i.DOWN
 	var light: Color = w.get_light(Vector3(floor_at) + Vector3(0.5, 0.5, 0.5))
@@ -846,6 +851,8 @@ func _door_checks(c: Vector3i) -> void:
 			"an open door can be walked through")
 	check(box.get_center().x > gate.x + 0.5 and box.size.y == 2.0, "it swings away from the player (panel x %.2f)" % box.get_center().x)
 	await frames(20)  # (its model rebuilt and swung open)
+	await get_tree().create_timer(Doors.SWING_TIME * 2.0).timeout  # (the swing runs on the clock)
+	await frames(2)
 	var drawn := AABB()
 	for nodes in game.block_models._by_chunk.values():
 		for n in nodes:
@@ -976,6 +983,10 @@ func _cut_checks(c: Vector3i) -> void:
 	check(w.get_block(base + Vector3i(0, 0, -2)) == id.call("tall_grass"), "grass behind a wall isn't cut")
 	# Projectiles: the player's arrow cuts the grass it flies through, an
 	# enemy's doesn't.
+	# (A critter in the way would stop the arrow, as in Terraria.)
+	for n in game.npcs():
+		if n.is_critter():
+			n.queue_free()
 	for z in range(-8, -2):
 		w.set_block(base + Vector3i(3, 0, z), id.call("tall_grass"))
 		w.set_block(base + Vector3i(-3, 0, z), id.call("tall_grass"))
@@ -983,7 +994,7 @@ func _cut_checks(c: Vector3i) -> void:
 	game.spawn_projectile("WoodenArrowFriendly", Vector3(base) + Vector3(-2.5, 0.5, -2.2), Vector3(0, 0, -20), 5, 0.0, 0.0, 0.0, 0.5, false)
 	for i in 30:
 		await get_tree().physics_frame
-	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(3, 0, z)) == 0), "your arrow cuts the grass it flies through")
+	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(3, 0, z)) == 0), "your arrow cuts the grass it flies through (left at z %s; about: %s)" % [range(-8, -2).filter(func(z): return w.get_block(base + Vector3i(3, 0, z)) != 0), game.npcs().filter(func(n): return n.global_position.distance_to(Vector3(base)) < 12.0).map(func(n): return n.kind)])
 	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(-3, 0, z)) == id.call("tall_grass")), "an enemy's doesn't")
 	p.inventory.slots[9] = null
 	p.select(held)
@@ -1553,11 +1564,13 @@ func _goblin_checks(c: Vector3i) -> void:
 	for g in goblins.slice(0, 3):
 		g.hit(9999, 0.0, Vector3.ZERO, 0.0)
 	await frames(2)
-	check(inv.size == left - 3 and absf(game.hud._invasion_bar.value - inv.progress() * 100.0) < 0.01, "each kill brings it closer to defeat (%d left)" % inv.size)
+	# (Any other that's died meanwhile, in the lava pond or such, counts too.)
+	var dead := goblins.filter(func(g): return not is_instance_valid(g) or g.is_queued_for_deletion()).size()
+	check(dead >= 3 and inv.size == left - dead and absf(game.hud._invasion_bar.value - inv.progress() * 100.0) < 0.01, "each kill brings it closer to defeat (%d left)" % inv.size)
 	var saved := inv.save_state()
 	inv.load_state({})
 	inv.load_state(saved)
-	check(inv.active and inv.size == left - 3, "it's saved with the world, part beaten")
+	check(inv.active and inv.size == left - dead, "it's saved with the world, part beaten")
 	inv.size = 1
 	var last := game.spawn_npc("GoblinWarrior", p.global_position + Vector3(4, 0, 0))
 	last.hit(9999, 0.0, Vector3.ZERO, 0.0)
@@ -1580,7 +1593,9 @@ func _goblin_checks(c: Vector3i) -> void:
 		for e in game.entities.get_children():
 			if e is Projectile and e.kind == "ChaosBall" and not e.friendly and not balls.has(e):
 				balls.append(e)
-	check(moved and sorc.global_position.distance_to(p.global_position) < 20.0, "the Goblin Sorcerer teleports near you after 150 ticks")
+	# (Anywhere within 13.3 blocks each way and 8 up or down: 21 at most.)
+	check(moved and sorc.global_position.distance_to(p.global_position) < 21.5,
+			"the Goblin Sorcerer teleports near you after 150 ticks (%.1f blocks off; life %d, cast timer %.0f)" % [sorc.global_position.distance_to(p.global_position), sorc.life, sorc._cast_t])
 	check(balls.size() >= 1, "then casts a Chaos Ball at you (%d)" % balls.size())
 	sorc.queue_free()
 	for b in balls:
@@ -1877,6 +1892,750 @@ func _hive_checks(c: Vector3i) -> void:
 ## names and stats rounded as Terraria rounds them, what they add to you, the
 ## tooltip lines, rolling on crafting, drops and in chests, keeping them
 ## through the inventory, drops and saves, and the Goblin Tinkerer's reforge.
+func _fishing_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var hud := game.hud
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var kept_acc := p.accessories.slots.duplicate(true)
+	var held := p.selected
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var recipe := func(result: String) -> Dictionary:
+		for r in Data.recipes:
+			if r.result == result:
+				return r
+		return {}
+	check(Fishing.rules().size() > 150 and Fishing.rules()[-1].items == ["Bass"], "Terraria's catch table is loaded (%d rules, Bass last)" % Fishing.rules().size())
+	check(recipe.call("WoodFishingPole").get("station") == "work_bench" and recipe.call("WoodFishingPole").ingredients.values() == [8]
+			and recipe.call("ReinforcedFishingPole").ingredients.has("IronBar|LeadBar") and recipe.call("FisherofSouls").ingredients == {"DemoniteBar": 8}
+			and recipe.call("AnglerTackleBag").get("station") == "tinkerers_workshop",
+			"fishing recipes are Terraria's (Wooden Fishing Pole: 8 wood at a work bench, ...)")
+
+	# Fishing power: pole + bait + skill, times the hour and the moon.
+	check(is_equal_approx(Fishing.power_multiplier(true, 3000.0, 0), Fishing.f32(Fishing.f32(1.3) * Fishing.f32(1.1)))
+			and is_equal_approx(Fishing.power_multiplier(true, 27000.0, 4), Fishing.f32(Fishing.f32(0.8) * Fishing.f32(0.9)))
+			and Fishing.power_multiplier(true, 10000.0, 2) == 1.0, "fishing power is up at dawn and full moon, down at noon and new moon")
+	p.inventory.slots.fill(null)
+	p.inventory.slots[0] = Inventory.stack("ReinforcedFishingPole", 1)
+	p.inventory.slots[5] = Inventory.stack("MasterBait", 20)
+	p.inventory.slots[6] = Inventory.stack("Worm", 5)
+	p.accessories.slots.fill(null)
+	p.accessories.slots[0] = Inventory.stack("AnglerEarring", 1)
+	p.accessories.slots[1] = Inventory.stack("HighTestFishingLine", 1)
+	p.select(0)
+	var sky := game.sky
+	var kept_sky := [sky.is_day, sky.time, sky.moon_phase]
+	sky.is_day = true
+	sky.time = 10000.0
+	sky.moon_phase = 2
+	var cond := Fishing.conditions(p, sky)
+	check(cond.pole == "ReinforcedFishingPole" and cond.bait == "MasterBait" and cond.level == 15 + 50 + 10,
+			"fishing power: Reinforced Fishing Pole 15 + Master Bait 50 + Angler Earring 10 = %d" % cond.level)
+	check(Hud.item_tooltip(Data.item("ReinforcedFishingPole")).contains("15% fishing power")
+			and Hud.item_tooltip(Data.item("MasterBait")).contains("50% bait power"), "tooltips show fishing and bait power")
+
+	# The ponds: the fishing pond is big enough, the water pool isn't quite.
+	var fa := Vector3i(c.x + TestWorld.FISHING.x, TestWorld.GROUND, c.z + TestWorld.FISHING.z)
+	var mid := Vector3(fa.x + 10.5, TestWorld.GROUND + 0.9, fa.z + 5.5)
+	var pond := Fishing.pond(w, mid)
+	var pool := Fishing.pond(w, Vector3(c.x - 21.5, TestWorld.GROUND + 0.9, c.z - 3.5))
+	check(pond.tiles == 360 and not pond.lava and not pond.honey, "the fishing pond: 20 x 8 cells across, 360 tiles of water (%d)" % pond.tiles)
+	check(pool.tiles == int(66 * 2.25), "the water pool: 11 x 6 cells, %d tiles (less than 300: less power)" % pool.tiles)
+	var r := Fishing.check(game, p, Vector3(c.x - 21.5, TestWorld.GROUND + 0.9, c.z - 3.5), rng)
+	check(r.info == "%d (-51%%) Fishing Power" % r.level and r.level == int(75 * 148 / 300.0), "in the small pool: %s" % r.info)
+	r = Fishing.check(game, p, mid, rng)
+	check(r.info == "75 Fishing Power" and r.level == 75, "in the fishing pond: %s" % r.info)
+	# A puddle: not enough water.
+	var puddle := c + Vector3i(-40, 20, 40)
+	for x in range(-1, 2):
+		for z in range(-1, 2):
+			w.set_block(puddle + Vector3i(x, -1, z), Data.block_id("glass"))
+			w.set_liquid(puddle + Vector3i(x, 0, z), Player.LIQ_WATER, 63)
+	r = Fishing.check(game, p, Vector3(puddle) + Vector3(0.5, 0.9, 0.5), rng)
+	check(r.catch == "" and r.info == "Not Enough Water!", "a puddle: %s" % r.info)
+
+	# What bites in the forest pond: mostly Bass, crates now and then. (The
+	# Angler's fish aside: his quest is off for this.)
+	game.biome = ""
+	var kept_done := game.town.angler_done
+	game.town.angler_done = true
+	var counts := {}
+	for i in 3000:
+		r = Fishing.check(game, p, mid, rng)
+		counts[r.catch] = int(counts.get(r.catch, 0)) + 1
+	var crates := 0
+	for k in counts:
+		if k.ends_with("Crate"):
+			crates += counts[k]
+	var allowed := ["", "Bass", "WoodenCrate", "IronCrate", "GoldenCrate", "FrogLeg", "BalloonPufferfish", "ZephyrFish", "BombFish"]
+	check(counts.keys().all(func(k): return k in allowed) and counts.get("Bass", 0) > 1000 and crates > 100 and crates < 500 and counts.get("", 0) > 300,
+			"surface pond catches: %s" % [counts])
+	# The jungle, the snow, the corruption: their own fish.
+	for biome in [["jungle", ["NeonTetra", "DoubleCod"]], ["snow", ["AtlanticCod", "FrostMinnow"]], ["corruption", ["Ebonkoi"]], ["crimson", ["CrimsonTigerfish", "Hemopiranha"]]]:
+		game.biome = biome[0]
+		var seen := {}
+		for i in 600:
+			r = Fishing.check(game, p, mid, rng)
+			seen[r.catch] = true
+		check(biome[1].all(func(f): return seen.has(f)), "fishing in the %s: %s" % [biome[0], seen.keys()])
+	game.biome = ""
+	game.town.angler_done = kept_done
+	# Rules straight from the table: the ocean, honey, lava (with lava gear), junk.
+	var ctx := func(extra: Dictionary) -> Dictionary:
+		var d := {"EarlyMode": true, "Height1": true, "HeightUnder2": true, "HeightAboveAnd1": true, "Height1And2": true, "DidNotUseCombatBook": true,
+				"common": true, "uncommon": false, "rare": false, "veryrare": false, "legendary": false, "crate": false}
+		d.merge(extra, true)
+		return d
+	var seen_in := func(extra: Dictionary) -> Dictionary:
+		var seen := {}
+		for i in 400:
+			seen[Fishing.roll_catch(ctx.call(extra), rng)] = true
+		return seen
+	check(seen_in.call({"Ocean": true, "Beach": true}).has("Tuna") and seen_in.call({"Ocean": true, "Beach": true, "Crate": true, "rare": true}).has("OceanCrate"),
+			"the ocean: Tuna, Ocean Crates...")
+	check(seen_in.call({"InHoney": true, "uncommon": true}).keys().all(func(k): return k in ["Honeyfin", ""]), "honey: only Honeyfin")
+	check(seen_in.call({"InLava": true}).keys() == [""] and seen_in.call({"InLava": true, "CanFishInLava": true, "rare": true}).has("Obsidifish"),
+			"lava: nothing without lava gear, Obsidifish with it")
+	check(seen_in.call({"Junk": true}).keys().all(func(k): return k in ["OldShoe", "FishingSeaweed", "TinCan", "JojaCola"]), "junk: Old Shoes, Seaweed, Tin Cans")
+	# Stacks of Bomb Fish and Frost Daggerfish.
+	var bombs := Fishing.catch_count("BombFish", 75, rng)
+	var daggers := Fishing.catch_count("FrostDaggerfish", 75, rng)
+	check(bombs >= 3 and bombs <= 10 and daggers >= 16 and daggers <= 54, "Bomb Fish come %d at a time, Frost Daggerfish %d" % [bombs, daggers])
+	# Bait: Master Bait is used up 1 time in 1 + 50/6 (less with a Tackle Box), junk never uses it.
+	var used := 0
+	var used_box := 0
+	for i in 20000:
+		used += int(Fishing.bait_used("MasterBait", "Bass", false, rng))
+		used_box += int(Fishing.bait_used("MasterBait", "Bass", true, rng))
+	check(absf(used / 20000.0 - 6.0 / 56.0) < 0.01 and used_box < used and not Fishing.bait_used("Worm", "OldShoe", false, rng),
+			"Master Bait is used up %.3f of the time (%.3f with a Tackle Box); junk never uses bait" % [used / 20000.0, used_box / 20000.0])
+
+	# Casting from the dock: the bobber flies out and floats on the pond.
+	p.global_position = Vector3(fa.x + 10.5, TestWorld.GROUND + 2.0, fa.z + 11.5)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(0.0, -0.35)
+	await frames(5)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(p.bobbers().size() == 1, "using a fishing pole casts its bobber")
+	var bob: Bobber = p.bobbers()[0] if p.bobbers().size() > 0 else null
+	# (Rising back up, its speed passes 0 for a tick: settled for good takes a while.)
+	var floated := false
+	for i in 240:
+		await frames(1)
+		if bob != null and bob.settled and absf(bob.velocity.y) < 0.001 and bob.global_position.y > TestWorld.GROUND + 0.9:
+			floated = true
+			break
+	check(floated and bob.wet and absf(bob.global_position.y - (TestWorld.GROUND + 0.94)) < 0.1 and bob.global_position.z < fa.z + 11.0,
+			"it lands in the pond and floats at the surface (%s)" % (bob.global_position if bob else null))
+	# A bite: reeling in brings the fish home.
+	var bass_before := p.inventory.count_of("Bass")
+	var bait_before := p.inventory.count_of("MasterBait")
+	bob.timer = 0.0
+	bob.catch_item = "Bass"
+	bob.catch_bait = "MasterBait"
+	bob.catch_level = 75
+	bob.bite = -200.0
+	var lowest := bob.global_position.y
+	var dips := 0
+	var was_down := false
+	for i in 120:
+		await frames(1)
+		lowest = minf(lowest, bob.global_position.y)
+		var down := bob.global_position.y < TestWorld.GROUND + 0.94 - 0.05
+		if down and not was_down:
+			dips += 1
+		was_down = down
+	check(lowest < TestWorld.GROUND + 0.94 - 0.1 and dips >= 2, "a bite pulls the bobber under, again and again (%d dips, down to %.2f)" % [dips, lowest])
+	# (Two seconds of it: the fish has got away; another bites.)
+	bob.catch_item = "Bass"
+	bob.catch_bait = "MasterBait"
+	bob.bite = -200.0
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	for i in 120:
+		await frames(1)
+		if not is_instance_valid(bob) and p.inventory.count_of("Bass") > bass_before:
+			break
+	check(not is_instance_valid(bob) and p.inventory.count_of("Bass") == bass_before + 1 and p.inventory.count_of("MasterBait") >= bait_before - 1,
+			"reeled in during a bite, the bobber comes back with a Bass (%d)" % p.inventory.count_of("Bass"))
+	# Switching away from the pole takes the bobber in.
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(10)
+	p.select(5)
+	await frames(3)
+	check(p.bobbers().is_empty(), "switching items takes the bobber in")
+	p.select(0)
+	# A real wait: a bite comes in time (the dawn's power, a full moon).
+	sky.time = 1000.0
+	sky.moon_phase = 0
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	var bit := false
+	for i in 60 * 40:
+		await frames(1)
+		var b: Array = p.bobbers()
+		if not b.is_empty() and b[0].bite < 0.0:
+			bit = true
+			break
+	check(bit, "left in the pond, something bites (%s)" % p.fishing_info)
+	p.accessories.slots[2] = Inventory.stack("FishermansGuide", 1)
+	check(hud.info_text().contains("Fishing Power"), "the Fisherman's Pocket Guide shows it: %s" % hud.info_text())
+	p.select(5)
+	await frames(3)
+	sky.is_day = kept_sky[0]
+	sky.time = kept_sky[1]
+	sky.moon_phase = kept_sky[2]
+
+	# Crates and oysters: right click to open.
+	var loot_of := func(crate: String, n: int) -> Dictionary:
+		var got := {}
+		for i in n:
+			for l in Crates.open(crate, rng):
+				got[l[0]] = int(got.get(l[0], 0)) + l[1]
+		return got
+	var wooden: Dictionary = loot_of.call("WoodenCrate", 300)
+	check(wooden.has("ApprenticeBait") and wooden.has("CopperOre") and (wooden.has("SilverCoin") or wooden.has("GoldCoin")) and wooden.has("LesserHealingPotion"),
+			"Wooden Crates: bait, ore, coins, potions (%s)" % [wooden.keys()])
+	var golden: Dictionary = loot_of.call("GoldenCrate", 200)
+	check(golden.has("LifeCrystal") and golden.get("MasterBait", 0) > 300, "Golden Crates: Life Crystals, Master Bait (%d)" % golden.get("MasterBait", 0))
+	var jungle: Dictionary = loot_of.call("JungleFishingCrate", 200)
+	check(["AnkletoftheWind", "Boomstick", "FeralClaws", "StaffofRegrowth", "FiberglassFishingPole"].all(func(k): return jungle.has(k)),
+			"Jungle Crates: the Ivy Chest's treasures (%s)" % [jungle.keys()])
+	var oysters: Dictionary = loot_of.call("Oyster", 400)
+	var pearls: int = oysters.get("WhitePearl", 0) + oysters.get("BlackPearl", 0) + oysters.get("PinkPearl", 0)
+	check(oysters.get("ShuckedOyster", 0) == 400 and pearls > 60 and pearls < 140, "an oyster: a Shucked Oyster, a pearl 1 time in 4 (%d)" % pearls)
+	p.inventory.slots.fill(null)
+	p.inventory.slots[20] = Inventory.stack("IronCrate", 10)
+	hud._open_inventory()
+	hud._cursor_stack = null
+	# (Its rarest finds aren't in this game: now and then one has nothing in it.)
+	var clicks := 0
+	var items_now := []
+	while clicks < 9 and items_now.size() < 2:
+		hud.slot_clicked(hud._slots[20], MOUSE_BUTTON_RIGHT)
+		clicks += 1
+		items_now = p.inventory.slots.filter(func(s): return s != null)
+	check(p.inventory.slots[20] != null and p.inventory.slots[20].count == 10 - clicks and items_now.size() >= 2,
+			"right-clicking an Iron Crate opens one (%s)" % [items_now.map(func(s): return s.item)])
+	hud.close_inventory()
+
+	# The Frog Leg: a faster jump.
+	p.accessories.slots.fill(null)
+	p.accessories.slots[0] = Inventory.stack("FrogLeg", 1)
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	Input.action_press("jump")
+	await frames(2)
+	var vy := p.velocity.y
+	Input.action_release("jump")
+	await frames(30)
+	# (A tick of gravity in: 1 block a second off.)
+	check(vy > Player.JUMP_SPEED + 4.0 - 1.1, "the Frog Leg jumps faster: 1.6 px a tick more (%.2f vs %.2f)" % [vy, Player.JUMP_SPEED])
+
+	p.inventory.slots = kept_slots
+	p.accessories.slots = kept_acc
+	p.inventory.changed.emit()
+	p.accessories.changed.emit()
+	p.select(held)
+
+
+## The test world's fishing spots: each in its biome (and height), deep
+## enough for full power, with its biome's fish biting.
+func _fishing_spot_checks(c: Vector3i) -> void:
+	var p := game.player
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var kept_pos := p.global_position
+	var held := p.selected
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	p.inventory.slots.fill(null)
+	p.inventory.slots[0] = Inventory.stack("HotlineFishingHook", 1)
+	p.inventory.slots[1] = Inventory.stack("MasterBait", 99)
+	p.select(0)
+	var kept_bosses := game.defeated_bosses.duplicate()
+	game.defeated_bosses["SkeletronHead"] = true
+	var kept_quest := game.town.angler_quest
+	game.town.angler_quest = ""
+	var expect := {
+		"Snow": ["snow", 1, "AtlanticCod"], "Desert": ["desert", 1, "Flounder"], "Jungle": ["jungle", 1, "NeonTetra"],
+		"Honey (Jungle)": ["jungle", 1, "Honeyfin"], "Corruption": ["corruption", 1, "Ebonkoi"], "Crimson": ["crimson", 1, "CrimsonTigerfish"],
+		"Lava": ["", 1, "Obsidifish"], "Glowing Mushroom": ["mushroom", 2, "ArmoredCavefish"], "Underground": ["", 2, "ArmoredCavefish"],
+		"Ocean": ["ocean", 1, "Tuna"], "Dungeon": ["dungeon", 1, "DungeonFishingCrate"], "Sky": ["", 0, "Damselfish"],
+	}
+	check(TestWorld.FISHING_SPOTS.size() == expect.size(), "a fishing spot in every biome: %s" % [TestWorld.FISHING_SPOTS.map(func(s): return s[0])])
+	for spot in TestWorld.FISHING_SPOTS:
+		var at: Vector3i = spot[1]
+		var top := Vector3(c.x + at.x + 0.5, TestWorld.GROUND + at.y + 0.9, c.z + at.z + 0.5)
+		var rim := Vector3(top.x, top.y + 0.2, top.z + spot[2].y + 1.5)
+		p.global_position = rim
+		game.biome = game.detect_biome(rim)
+		var pond := Fishing.pond(game.world, top)
+		var r := Fishing.check(game, p, top, rng)
+		var seen := {}
+		for i in 600:
+			seen[Fishing.check(game, p, top, rng).catch] = true
+		var e: Array = expect.get(spot[0], ["?", -1, "?"])
+		check(game.biome == e[0] and Fishing.height_level(game, top.y) == e[1] and not r.info.contains("%") and seen.has(e[2]),
+				"fishing spot %s: %s, height %d, %d tiles (%s), %s bites (%s)" % [spot[0], game.biome, Fishing.height_level(game, top.y), pond.tiles, r.info, e[2], seen.keys()])
+	check(game.in_ocean(Vector3(c.x + 0.5, TestWorld.GROUND + 1, c.z - 119.5)) and not game.in_ocean(Vector3(c.x, TestWorld.GROUND + 1, c.z)),
+			"the test world's ocean strip is the ocean (and the plaza isn't)")
+	game.defeated_bosses = kept_bosses
+	game.town.angler_quest = kept_quest
+	game.biome = ""
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.select(held)
+	p.global_position = kept_pos
+
+
+## The Angler: in the test town; his quests (today's fish, handing it in,
+## the rewards, a new one at dawn), his chat; the Sleeping Angler at the
+## ocean, woken; the potions, buckets and info accessories he gives.
+func _angler_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var hud := game.hud
+	var town := game.town
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var kept_acc := p.accessories.slots.duplicate(true)
+	var kept_pos := p.global_position
+	var kept_quests := p.angler_quests
+	var held := p.selected
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var angler: NPC = town.residents.get("Angler")
+	check(angler != null and angler.home_key != "" and angler.title().ends_with(" the Angler") and angler.display_name in Assets.ids.names.town.AnglerNames,
+			"the Angler lives in the test town (%s)" % (angler.title() if angler else "none"))
+	check(town.angler_quest in AnglerQuests.FISH and not town.angler_quest in AnglerQuests.HARDMODE_FISH, "he wants a fish today: %s" % town.angler_quest)
+	var picks := {}
+	for i in 2000:
+		picks[AnglerQuests.pick(false, false, rng)] = true
+	check(picks.size() >= 25 and not picks.keys().any(func(f): return f in AnglerQuests.HARDMODE_FISH or f in AnglerQuests.SKY_FISH or f == "BloodyManowar"),
+			"his fish: %d kinds before Hardmode in a Corruption world with no boss beaten (no Hardmode, sky or Crimson fish)" % picks.size())
+	check(AnglerQuests.pick(true, true, rng) != "EaterofPlankton" and _fish_fit_crimson(), "fish fit the world (no Corruption fish in a Crimson world)")
+	# Talking: his lines, and the Quest button (by him: walk off and the chat closes).
+	p.global_position = angler.global_position + Vector3(1.0, 0.2, 0.0)
+	p.velocity = Vector3.ZERO
+	hud.open_chat(angler)
+	await frames(2)
+	check(hud._chat_text.text != "" and hud._chat_text.text != "..." and hud._chat_buttons.get_children().any(func(b): return b.text == "Quest"),
+			"he talks (%s) and has a Quest button" % hud._chat_text.text.left(50))
+	town.angler_quest = "Mudfish"
+	town.angler_done = false
+	p.inventory.slots.fill(null)
+	hud.chat_button("Quest")
+	var quest_text: String = Assets.ids.names.town.AnglerQuestText.Quest_Mudfish
+	check(hud._chat_text.text == quest_text and hud._chat_item.visible, "Quest: what he wants, his fish in the corner (%s)" % hud._chat_text.text.left(60))
+	# The quest fish bites (in the Jungle), once, and only while it's his fish.
+	var spot: Array = TestWorld.FISHING_SPOTS.filter(func(s): return s[0] == "Jungle")[0]
+	var top := Vector3(c.x + spot[1].x + 0.5, TestWorld.GROUND + 0.9, c.z + spot[1].z + 0.5)
+	game.biome = "jungle"
+	p.inventory.slots[0] = Inventory.stack("GoldenFishingRod", 1)
+	p.inventory.slots[1] = Inventory.stack("MasterBait", 99)
+	p.select(0)
+	var caught := 0
+	for i in 1000:
+		if Fishing.check(game, p, top, rng).catch == "Mudfish":
+			caught += 1
+	check(caught > 20, "today's fish bites where Terraria has it: %d Mudfish in 1000 jungle bites" % caught)
+	p.inventory.add("Mudfish", 1)
+	caught = 0
+	for i in 1000:
+		if Fishing.check(game, p, top, rng).catch == "Mudfish":
+			caught += 1
+	check(caught == 0, "not once you've one")
+	check(Hud.item_tooltip(Data.item("Mudfish")).contains("Quest Item") and Hud.item_tooltip(Data.item("Mudfish")).contains("Caught in Jungle"), "a quest fish's tooltip says where it's caught")
+	town.angler_quest = "Batfish"
+	p.inventory.slots[2] = null
+	caught = 0
+	for i in 1000:
+		if Fishing.check(game, p, top, rng).catch == "Mudfish":
+			caught += 1
+	check(caught == 0, "and not when it isn't his fish today")
+	# Handing it in: his rewards; done for the day.
+	town.angler_quest = "Mudfish"
+	p.inventory.add("Mudfish", 1)
+	p.angler_quests = 9
+	var money := p.inventory.money()
+	hud.chat_button("Quest")
+	check(p.inventory.count_of("Mudfish") == 0 and p.angler_quests == 10 and town.angler_done and p.inventory.count_of("AnglerHat") == 1
+			and p.inventory.money() > money and hud._chat_text.text in Assets.ids.names.town.AnglerQuestText.values() and not hud._chat_item.visible,
+			"handed in, the 10th quest: the Angler Hat and money (%s)" % hud._chat_text.text.left(40))
+	hud.chat_button("Quest")
+	var no_quest: Array = Assets.ids.names.town.AnglerQuestText.keys().filter(func(k): return k.begins_with("NoQuest_")).map(func(k): return NPC.fill(Assets.ids.names.town.AnglerQuestText[k]))
+	check(hud._chat_text.text in no_quest, "then nothing more today (%s)" % hud._chat_text.text.left(40))
+	hud.close_chat()
+	# His rewards: milestones, else an accessory you haven't got, or potions.
+	var got := {}
+	for i in 400:
+		for r in AnglerQuests.rewards(3, "Batfish", [], rng):
+			got[r[0]] = true
+	check(got.has("FishingPotion") and got.has("HighTestFishingLine") and (got.has("SilverCoin") or got.has("GoldCoin")) and got.has("ApprenticeBait"),
+			"rewards: potions, the fishing accessories, money and bait (%s)" % [got.keys()])
+	var owned := AnglerQuests.ACCESSORIES.filter(func(a): return a != "Sextant")
+	var accs := {}
+	for i in 600:
+		for r in AnglerQuests.rewards(3, "Batfish", owned + ["AnglerTackleBag"], rng):
+			if r[0] in AnglerQuests.ACCESSORIES:
+				accs[r[0]] = true
+	check(accs.keys() == ["Sextant"], "while you lack some of his accessories, only those (%s)" % [accs.keys()])
+	check(AnglerQuests.rewards(30, "Batfish", [], rng)[0][0] == "GoldenFishingRod", "the 30th quest: the Golden Fishing Rod")
+	# A new day, a new fish.
+	game.sky.dawn.emit()
+	check(not town.angler_done and town.angler_quest in AnglerQuests.FISH, "at dawn he wants a new fish (%s)" % town.angler_quest)
+
+	# The Sleeping Angler: afloat at the ocean; woken, he's the Angler.
+	town.residents.erase("Angler")
+	town.arrived.erase("Angler")
+	var ocean_top := Vector3(c.x + 0.5, TestWorld.GROUND + 0.95, c.z - 119.5)
+	p.global_position = ocean_top + Vector3(0, 3, 6)
+	p.velocity = Vector3.ZERO
+	game.biome = "ocean"
+	# The spawner: a spawn in the ocean's water is him. (Enemies about would
+	# fill its cap.)
+	for n in game.npcs():
+		if not n.def.ai in ["town", "dummy"]:
+			n.queue_free()
+	await frames(1)
+	for i in 40:
+		game.spawner.spawn_tick()
+		if game.npcs().any(func(n): return n.kind == "SleepingAngler"):
+			break
+		# (A tick that finds no spot for him spawns an enemy; those would fill the cap.)
+		for n in game.npcs():
+			if not n.def.ai in ["town", "dummy"] and not n.is_queued_for_deletion():
+				n.queue_free()
+		await frames(1)
+	var sleeping: Array = game.npcs().filter(func(n): return n.kind == "SleepingAngler")
+	check(sleeping.size() == 1, "in the ocean the Sleeping Angler turns up, asleep on the water")
+	var sl: NPC = sleeping[0] if not sleeping.is_empty() else game.spawn_npc("SleepingAngler", ocean_top)
+	sl.global_position = ocean_top + Vector3(0, -1.5, 0)
+	await frames(90)
+	var surf := TestWorld.GROUND + 0.94
+	check(absf(sl.global_position.y - surf) < 0.5, "he floats at the surface (%.2f, surface %.2f)" % [sl.global_position.y, surf])
+	var woke: NPC = town.wake_angler(sl)
+	hud.open_chat(woke, NPC.dialog(353))
+	await frames(2)
+	check(town.residents.has("Angler") and town.arrived.has("Angler") and hud._chat_text.text.begins_with("Thanks, I guess"), "woken, he's the Angler: \"%s\"" % hud._chat_text.text.left(40))
+	hud.close_chat()
+	woke.queue_free()
+	town.residents["Angler"] = angler
+	game.biome = ""
+
+	# His potions: the Fishing Potion's 15 power, the Crate Potion's crates.
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.inventory.slots.fill(null)
+	p.inventory.slots[0] = Inventory.stack("ReinforcedFishingPole", 1)
+	p.inventory.slots[1] = Inventory.stack("MasterBait", 9)
+	p.inventory.slots[2] = Inventory.stack("FishingPotion", 1)
+	p.select(0)
+	var before: int = Fishing.conditions(p, game.sky).skill
+	p.select(2)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	p.select(0)
+	check(p.has_buff("Fishing") and Fishing.conditions(p, game.sky).skill == before + 15 and p.buffs().any(func(b): return b[1] == "Fishing"),
+			"the Fishing Potion: +15 fishing power for 8 minutes")
+	var crates := [0, 0]
+	for i in 4000:
+		crates[0] += int(Fishing.roll_rarity(50, false, rng).crate)
+		crates[1] += int(Fishing.roll_rarity(50, true, rng).crate)
+	check(absf(crates[0] / 4000.0 - 0.1) < 0.02 and absf(crates[1] / 4000.0 - 0.25) < 0.03, "crates 1 in 10, 1 in 4 with a Crate Potion (%d, %d of 4000)" % crates)
+	p.timed_buffs.clear()
+	# Bottomless buckets and sponges.
+	var pit := c + Vector3i(40, 30, 40)
+	for x in range(-2, 3):
+		for z in range(-2, 3):
+			w.set_block(pit + Vector3i(x, -1, z), Data.block_id("glass"))
+	p.global_position = Vector3(pit) + Vector3(0.5, 3.0, 0.5)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(0.0, -PI / 2.0 + 0.01)
+	p.god_mode = true
+	await frames(30)
+	p.inventory.slots[3] = Inventory.stack("BottomlessBucket", 1)
+	p.select(3)
+	await frames(2)
+	p._use_timer = 0.0
+	p.use_item()
+	var poured := w.get_liquid(pit).x == Player.LIQ_WATER
+	check(poured and p.inventory.slots[3] != null and p.inventory.slots[3].item == "BottomlessBucket", "the Bottomless Bucket pours water and stays full")
+	p.inventory.slots[3] = Inventory.stack("SuperAbsorbantSponge", 1)
+	await frames(2)
+	p._use_timer = 0.0
+	p.use_item()
+	check(w.get_liquid(pit).y == 0 and p.inventory.slots[3].item == "SuperAbsorbantSponge", "the Super Absorbant Sponge soaks it up and stays a sponge")
+	p.god_mode = false
+	# The Sextant and Weather Radio.
+	p.accessories.slots.fill(null)
+	p.accessories.slots[0] = Inventory.stack("Sextant", 1)
+	p.accessories.slots[1] = Inventory.stack("WeatherRadio", 1)
+	game.sky.moon_phase = 0
+	var info := hud.info_text()
+	check(info.contains("Full Moon") and (info.contains("Clear") or info.contains("Cloudy")), "the Sextant and Weather Radio: %s" % info.replace("\n", " / "))
+	check(Data.item("FishHook").get("type") == "hook" and Data.item("FishHook").hook.latched == 2, "the Fish Hook is a grappling hook (two hooks)")
+
+	p.angler_quests = kept_quests
+	p.inventory.slots = kept_slots
+	p.accessories.slots = kept_acc
+	p.inventory.changed.emit()
+	p.accessories.changed.emit()
+	p.select(held)
+	p.global_position = kept_pos
+
+
+func _fish_fit_crimson() -> bool:
+	for i in 300:
+		var f := AnglerQuests.pick(true, false, RandomNumberGenerator.new())
+		if f in ["EaterofPlankton", "InfectedScabbardfish"]:
+			return false
+	return true
+
+
+## Critters: the pen's spawners, their AIs (walking, flying off, drifting,
+## crawling, swimming), the Bug Net and letting them go, plants letting out
+## bait, the spawner's critter rules.
+func _critter_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var tw := game.test_world
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var kept_pos := p.global_position
+	var held := p.selected
+	var god := p.god_mode
+	p.god_mode = true
+	var critters: Array = Data.npcs.keys().filter(func(k): return Data.npcs[k].get("critter", false))
+	var pen_kinds := {}
+	for sp in tw.spawners.values():
+		if Data.npcs[sp.kind].get("critter", false):
+			pen_kinds[sp.kind] = true
+	check(critters.size() >= 45 and critters.all(func(k): return pen_kinds.has(k) and Data.items.has(Data.npcs[k].catch)),
+			"%d critters, each with a spawner in the pen and an item to catch" % critters.size())
+	check(Data.npcs.Merchant.town.shop.has("BugNet"), "the Merchant sells the Bug Net")
+	var a := Vector3(c.x + TestWorld.CRITTER_PEN.x, TestWorld.GROUND + 1, c.z + TestWorld.CRITTER_PEN.z)
+	var spot := a + Vector3(8.5, 0, 11.5)
+	var clear := func() -> void:
+		for n in game.npcs():
+			if n.is_critter():
+				n.queue_free()
+		await frames(1)
+	await clear.call()
+	p.global_position = a + Vector3(20.5, 0, 3.5)
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	# A bunny potters about on the ground.
+	var bunny: NPC = game.spawn_npc("Bunny", spot)
+	bunny._crit_state = 1
+	bunny._crit_dir = Vector3.RIGHT  # (else its first tick picks a heading and a new timer)
+	bunny._crit_timer = 300
+	# (How far it walks, not where it ends: it turns at the pen's walls.)
+	var walked := 0.0
+	var last := bunny.global_position
+	for i in 240:
+		await frames(1)
+		if is_instance_valid(bunny):
+			walked += Vector2(bunny.global_position.x - last.x, bunny.global_position.z - last.z).length()
+			last = bunny.global_position
+	check(is_instance_valid(bunny) and bunny.on_floor and walked > 3.0, "a bunny walks about (%.1f blocks in 4 s)" % walked)
+	# A bird sits, and flies off when you come near.
+	var bird: NPC = game.spawn_npc("Bird", spot + Vector3(-4, 0, 0))
+	await frames(30)
+	var sat := bird._crit_state == 0 and bird.on_floor
+	p.global_position = bird.global_position + Vector3(2.0, 0, 0)
+	await frames(60)
+	check(sat and bird._crit_state == 1 and bird.global_position.y > spot.y + 0.5 and bird.global_position.x < spot.x - 4.0,
+			"a bird sits till you come near, then flies off away from you (%s)" % bird.global_position)
+	# Butterflies flutter; each is one of eight colours, caught as its own item.
+	var fly: NPC = game.spawn_npc("Butterfly", spot + Vector3(0, 1.5, 0))
+	await frames(2)
+	var fly_scale := fly.sprite.scale
+	await frames(120)
+	check(is_instance_valid(fly) and fly.sprite.scale.is_equal_approx(fly_scale) and fly_scale.x > 0.3,
+			"it keeps the size it's born with (%s, then %s)" % [fly_scale, fly.sprite.scale if is_instance_valid(fly) else null])
+	check(is_instance_valid(fly) and fly.variant >= 0 and fly.variant < 8 and fly.catch_item() == NPC.BUTTERFLIES[fly.variant]
+			and fly.global_position.y > spot.y + 0.3, "a butterfly flutters about (%s, %.1f up)" % [fly.catch_item(), fly.global_position.y - spot.y])
+	var colours := {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2
+	for i in 4000:
+		var v := NPC.roll_butterfly(rng)
+		colours[v] = int(colours.get(v, 0)) + 1
+	check(absf(colours[0] / 4000.0 - 0.25) < 0.03 and absf(colours[5] / 4000.0 - 0.01) < 0.01, "Terraria's odds of colours: Monarch 25%%, Tree Nymph 1%% (%s)" % [colours])
+	# A worm crawls (0.2 px a tick: half a block a second).
+	# (Out by the door, clear of the spawners.)
+	var worm: NPC = game.spawn_npc("Worm", a + Vector3(19.5, 0, 2.5))
+	worm._crit_dir = Vector3.RIGHT
+	worm._crit_state = 1
+	worm._crit_timer = 999
+	await frames(60)
+	var ws := worm.global_position
+	await frames(120)
+	var crawled := worm.global_position.distance_to(ws)
+	check(crawled > 0.7 and crawled < 1.3, "a worm crawls 0.2 px a tick (%.2f blocks in 2 s)" % crawled)
+	# A duck on the pond paddles at the surface, and flies off when you come near.
+	var pond := Vector3(a.x + TestWorld.CRITTER_PEN_SIZE.x - 3.5, TestWorld.GROUND + 0.8, a.z + 10.5)
+	p.global_position = a + Vector3(10.5, 0, 18.5)
+	var duck: NPC = game.spawn_npc("Duck", pond)
+	await frames(120)
+	var surf := TestWorld.GROUND + 0.94
+	check(is_instance_valid(duck) and duck._crit_state != 2 and absf(duck.global_position.y - (surf - 0.25)) < 0.4, "a duck paddles on the pond (%.2f, surface %.2f)" % [duck.global_position.y, surf])
+	p.global_position = duck.global_position + Vector3(-2.0, 0.2, 0)
+	await frames(30)
+	check(duck._crit_state == 2 and duck.global_position.y > surf + 0.3, "and flies off when you come near (%.2f)" % duck.global_position.y)
+	var fish: NPC = game.spawn_npc("Goldfish", pond + Vector3(0, -1.5, 4))
+	await frames(180)
+	check(is_instance_valid(fish) and fish.in_water(fish.center()), "a goldfish swims in the pond")
+	# Catching: the Bug Net's swing catches the critter it sweeps through.
+	await clear.call()
+	p.global_position = a + Vector3(12.5, 0, 14.5)
+	p.look_at_yaw_pitch(0.0, -0.4)
+	await frames(5)
+	var target := game.spawn_npc("Bunny", p.global_position + p.forward().slide(Vector3.UP).normalized() * 1.6)
+	target._crit_state = 0
+	target._crit_timer = 999
+	p.inventory.slots.fill(null)
+	p.inventory.slots[0] = Inventory.stack("BugNet", 1)
+	p.select(0)
+	await frames(2)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(90)
+	check(not is_instance_valid(target) and p.inventory.count_of("Bunny") == 1, "the Bug Net catches the bunny: a Bunny in your inventory")
+	# Letting it go: used, the Bunny is back where you aim.
+	var slot := -1
+	for i in p.inventory.slots.size():
+		if p.inventory.slots[i] != null and p.inventory.slots[i].item == "Bunny":
+			slot = i
+	p.select(slot)
+	await frames(3)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(5)
+	check(p.inventory.count_of("Bunny") == 0 and game.npcs().any(func(n): return n.kind == "Bunny" and n.released), "used, the Bunny goes free where you aim")
+	# The Underworld's critters burn a plain Bug Net's owner; the Golden one is fine.
+	await clear.call()
+	p.god_mode = false
+	var hp := p.life
+	var snail := game.spawn_npc("MagmaSnail", p.global_position + p.forward().slide(Vector3.UP).normalized() * 1.4)
+	p.select(0)
+	p._immune = 0.0
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(3)
+	check(is_instance_valid(snail) and p.on_fire > 0.0 and p.life < hp, "a plain Bug Net can't hold a Magma Snail: it burns you")
+	p.on_fire = 0.0
+	p.god_mode = true
+	p.inventory.slots[0] = Inventory.stack("GoldenBugNet", 1)
+	await frames(30)
+	# (It crawls on: back in front of you.)
+	snail.global_position = p.global_position + p.forward().slide(Vector3.UP).normalized() * 1.4
+	snail.velocity = Vector3.ZERO
+	await frames(1)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(90)
+	check(not is_instance_valid(snail) and p.inventory.count_of("MagmaSnail") == 1 and p.on_fire == 0.0, "the Golden Bug Net catches it safely")
+	check(int(Data.item("Worm").bait) == 25 and int(Data.item("TreeNymphButterfly").bait) == 50 and int(Data.item("GoldWorm").bait) == 50,
+			"critters are bait (Worm 25, Tree Nymph 50, Gold Worm 50)")
+	# Broken grass now and then lets out a worm or a grasshopper; jungle plants grubs.
+	await clear.call()
+	var grass_def := Data.block(Data.block_id("tall_grass"))
+	var jungle_def := Data.block(Data.block_id("jungle_plants"))
+	var out := {}
+	var at := Vector3i(a + Vector3(6, 0, 6))
+	for i in 6000:
+		game._drop_bait(at, grass_def)
+		game._drop_bait(at, jungle_def)
+		for n in game.npcs():
+			if n.is_critter() and not n.is_queued_for_deletion():
+				out[n.kind] = int(out.get(n.kind, 0)) + 1
+				n.free()
+	var worms: int = out.get("Worm", 0) + out.get("GoldWorm", 0)
+	var hoppers: int = out.get("Grasshopper", 0) + out.get("GoldGrasshopper", 0)
+	var grubs: int = out.get("Grubby", 0) + out.get("Sluggy", 0) + out.get("Buggy", 0)
+	check(int(grass_def.tile_id) == 3 and worms > 5 and worms < 35 and hoppers > 35 and hoppers < 90 and grubs > 35 and grubs < 90,
+			"broken plants let out bait: %d worms, %d grasshoppers (6000 grass), %d grubs (6000 jungle plants)" % [worms, hoppers, grubs])
+	# The spawner's critters (its rules for a spot on land): by day on grass
+	# (at noon: the mornings are the birds'), at night, underground, on snow.
+	var sp := game.spawner
+	var picks := func(ground: String, depth: String, night: bool, tries: int, y := 0.0) -> Dictionary:
+		var got := {}
+		var where := Vector3(c.x, TestWorld.GROUND + 1 + y, c.z)
+		for i in tries:
+			for k in sp.pick_critters(game, where, ground, depth, night):
+				got[k[0]] = int(got.get(k[0], 0)) + 1
+		return got
+	game.biome = ""
+	var kept_time := game.sky.time
+	game.sky.time = 30000.0
+	var kept_bf: int = sp.butterfly_chance
+	sp.butterfly_chance = 999999
+	var day: Dictionary = picks.call("grass", "surface", false, 3000)
+	check(day.get("Bunny", 0) > 80 and day.get("Squirrel", 0) + day.get("SquirrelRed", 0) > 30 and not day.has("Worm") and not day.has("Bird"),
+			"by day on grass: bunnies, squirrels (%s)" % [day])
+	game.sky.time = 6000.0
+	var morning: Dictionary = picks.call("grass", "surface", false, 3000)
+	check(morning.get("Bird", 0) + morning.get("BirdBlue", 0) + morning.get("BirdRed", 0) > 300, "in the morning birds (%s)" % [morning])
+	sp.butterfly_chance = 1
+	game.sky.time = 30000.0
+	var bf: Dictionary = picks.call("grass", "surface", false, 600)
+	check(bf.get("Butterfly", 0) > 30 and not bf.has("Bunny"), "on a butterfly day: butterflies (%s)" % [bf])
+	sp.butterfly_chance = kept_bf
+	game.sky.time = kept_time
+	var kept_ff: int = sp.firefly_chance
+	sp.firefly_chance = 1
+	var night: Dictionary = picks.call("grass", "surface", true, 200)
+	sp.firefly_chance = kept_ff
+	check(night.has("Firefly") and not night.has("Bunny"), "at night: fireflies (%s)" % [night])
+	var deep: Dictionary = picks.call("stone", "underground", false, 2000, -30.0)
+	check(deep.has("Worm") and deep.has("Mouse") and not deep.has("Bunny"), "underground: worms, mice (%s)" % [deep])
+	var snowy: Dictionary = picks.call("snow_block", "surface", false, 3000)
+	check(snowy.has("Penguin") and snowy.has("PenguinBlack") and not snowy.has("Bunny"), "on snow: penguins (%s)" % [snowy.keys()])
+	check(picks.call("mushroom_grass", "underground", false, 600, -30.0).has("GlowingSnail"), "on mushroom grass: glowing snails")
+	check(game.npcs().filter(func(n): return n.def.ai != "town" and not n.is_critter()).size() <= game.npcs().size(), "critters don't count toward the enemy cap")
+	await clear.call()
+	# Killed, they break up as in Terraria's HitEffect: a bunny into its two
+	# pieces and blood, a butterfly into its own dust, gold ones into gold.
+	var gores := func() -> Array: return game.entities.get_children().filter(func(e): return e is Gore)
+	for e in gores.call():
+		e.queue_free()
+	await frames(1)
+	var deaths := {"Bunny": [[76, 77], [5]], "Butterfly": [[], [199]], "GoldBunny": [[], [232, 233]]}
+	for k in deaths:
+		var critter: NPC = game.spawn_npc(k, spot)
+		await frames(2)
+		var dust_from := game.dust.count()
+		critter.hit(9999, 0.0, Vector3.RIGHT, 0.0)
+		var made: Array = gores.call().map(func(e): return e.gore_id)
+		made.sort()
+		var kinds := {}
+		for i in range(dust_from, game.dust.count()):
+			kinds[game.dust._type[i]] = true
+		check(made == deaths[k][0] and game.dust.count() - dust_from >= 6 and kinds.keys().all(func(t): return t in deaths[k][1]),
+				"a killed %s leaves gores %s and dust %s" % [k, made, kinds.keys()])
+		for e in gores.call():
+			e.queue_free()
+		await frames(1)
+
+	p.god_mode = god
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.select(held)
+	p.global_position = kept_pos
+
+
 func _prefix_checks(c: Vector3i) -> void:
 	var p := game.player
 	var hud := game.hud
@@ -2818,10 +3577,12 @@ func _armor_checks(c: Vector3i) -> void:
 		var d := Data.item(n)
 		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n))
 		var in_set: bool = Data.loot.values().any(func(t): return t is Dictionary and t.get("sets", []).any(func(e): return n in e[0]))
-		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set
+		# (The Angler's armor: his rewards for the 10th, 15th and 20th quests.)
+		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set \
+				or n in AnglerQuests.MILESTONES.values()
 		if not d.get("slot") in Data.ARMOR_SLOTS or Assets.armor_texture(d.slot, n) == null or d.id == 0 or not sources:
 			bad.append(n)
-	check(armor_items.size() >= 50 and bad.is_empty(), "%d armor pieces, each with its equip sprite and a recipe, chest or enemy drop (bad: %s)" % [armor_items.size(), bad])
+	check(armor_items.size() >= 50 and bad.is_empty(), "%d armor pieces, each with its equip sprite and a recipe, chest, enemy drop or Angler reward (bad: %s)" % [armor_items.size(), bad])
 	var sets_ok := Data.armor_sets.all(func(a): return Data.item(a.head).get("slot") == "head" and Data.item(a.body).get("slot") == "body" \
 			and Data.item(a.legs).get("slot") == "legs" and Hud.set_bonus_text(a) != "")
 	check(Data.armor_sets.size() >= 18 and sets_ok, "%d armor sets, each one head, body and legs, with Terraria's set bonus text" % Data.armor_sets.size())
@@ -3006,8 +3767,8 @@ func _town_checks(c: Vector3i) -> void:
 	check(Inventory.money_text(12345) == "1 gold 23 silver 45 copper", "money in Terraria's words (%s)" % Inventory.money_text(12345))
 	check(Data.value("Torch") == 50 and Data.value("CopperPickaxe") > 0, "items have values (Copper Pickaxe from its bars: %d)" % Data.value("CopperPickaxe"))
 
-	# The test town: seven residents, each at home.
-	check(town.residents.size() == 7 and ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer"].all(func(k): return town.residents.has(k)), "the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist and Goblin Tinkerer live in the test town")
+	# The test town: eight residents, each at home.
+	check(town.residents.size() == 8 and ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer", "Angler"].all(func(k): return town.residents.has(k)), "the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist, Goblin Tinkerer and Angler live in the test town")
 	var guide: NPC = town.residents.Guide
 	var names: Array = Assets.ids.names.town.GuideNames
 	check(guide.display_name in names and guide.title() == guide.display_name + " the Guide", "named from Terraria's list: %s" % guide.title())
@@ -3817,7 +4578,10 @@ func _terragrim_checks(c: Vector3i) -> void:
 	p.use_item()
 	check(p.slash_out(), "using the Terragrim starts slashing")
 	await frames(3)
-	check(not p.viewmodel.item_node().visible and p.carried_light().r >= 0.8, "it's out of your hand and shines while you slash")
+	# (The viewmodel hides it in its _process, which runs after process_frame.)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(not p.viewmodel.item_node().visible and p.carried_light().r >= 0.8, "it's out of your hand and shines while you slash (shown %s, light %s, slashing %s)" % [p.viewmodel.item_node().visible, p.carried_light(), p.slash_out()])
 	dummy._hits.clear()
 	for i in 60:
 		await get_tree().physics_frame

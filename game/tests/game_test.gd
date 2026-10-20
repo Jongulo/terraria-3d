@@ -22,9 +22,10 @@ func check(cond: bool, what: String) -> void:
 		failures.append(what)
 
 
+## Waits `n` physics ticks (headless, drawn frames can come several to a tick).
 func frames(n: int) -> void:
 	for i in n:
-		await get_tree().process_frame
+		await get_tree().physics_frame
 
 
 func shot(name: String) -> void:
@@ -277,7 +278,7 @@ func _run() -> void:
 			"the Spear reaches as far as Terraria's (%.2f, then %.2f)" % [p.spear.reach_at(21.0 / 60.0), p.spear.reach_at(31.0 / 60.0)])
 	await frames(40)
 	check(far_slime.life < far_life, "speared a slime 4 blocks off (%d -> %d)" % [far_life, far_slime.life])
-	check(not p.spear_thrusting() and p.spear_out(), "the thrust ends, the spear still in your hand")
+	check(not p.spear_thrusting() and p.spear_out(), "the thrust ends, the spear still in your hand (thrusting %s, out %s, time %s)" % [p.spear_thrusting(), p.spear_out(), game.sky.time])
 	far_slime.queue_free()
 	p.inventory.add("ThunderSpear", 1)
 	p.select(p.inventory.slots.find(p.inventory.slots.filter(func(s): return s != null and s.item == "ThunderSpear")[0]))

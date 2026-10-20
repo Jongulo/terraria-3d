@@ -142,6 +142,19 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
   in it (mushroom grass, giant and small glowing mushrooms, vines; its music and enemies).
 - **North-east, down the shaft in the Jungle:** a bee hive (the world generator's, smaller): hive
   blocks round chambers of honey, and the larva on its stand at the bottom of the shaft.
+- **North-west of the water pool:** the fishing pond, 20 x 8 cells across (full fishing power),
+  with a dock of platforms along its south side. The loadout has a Reinforced Fishing Pole and
+  Master Bait.
+- **A fishing spot in every biome** (signposted "Fishing: ..."), each deep enough for full power:
+  ponds dug into the Snow, Desert, Jungle, Corruption and Crimson patches, a honey pond in the
+  Jungle, a lava pond by the fishing pond, a pond in the mushroom cavern's floor, an underground
+  chamber down a shaft by the house (north-east: the Dungeon's maze fills the west underground), a
+  blue brick Dungeon hall (its catches need Skeletron beaten), a cloud basin in the sky above the
+  islands, and the ocean: a long strip along the far north that counts as the ocean (its music,
+  enemies and fish; Terraria needs 1000 tiles of it).
+- **The Angler** lives in the town's 8th house.
+- **West of the gallery:** the critter pen, a glass house with a spawner for each critter, open
+  grass and a pond (ducks, goldfish). The loadout has a Bug Net.
 - **North of the trees:** the forest's plants and debris: a meadow with one of each, a sunflower
   patch, a pond with lily pads and cattails, and a grassy ledge with vines under it.
 - **East of the forest garden:** a furnished wooden house (door, table with a candle, chair, bed,
@@ -273,6 +286,7 @@ Enemies gib as in Terraria. Each one's gores and blood come from Terraria's own 
 - **Blood:** a hit sprays blood dust in proportion to the damage, and a death sprays 50.
   - Slimes and jellyfish leave no gore, only their own slime dust in their colour.
   - Eaters of Souls and Hornets bleed their own colours; skeletons throw bone dust.
+  - Critters come apart the same way (see Critters below).
 
 Enemy knockback works as in Terraria (`NPC.StrikeNPC_Inner`), in its own pixels and ticks.
 - **The push:** the weapon's knockback is multiplied by the enemy's own knockback resistance
@@ -905,6 +919,97 @@ music (surface and underground) and enemies:
   from a Honey Block at a Furnace.
 - **Not yet:** breaking the larva wakes Queen Bee in Terraria; she isn't in yet, so it only buzzes.
   The Abeemination and the honey furniture (the Honey Dispenser) wait for her.
+
+**Fishing**, Terraria 1.4.5's (`scripts/items/fishing.gd`, `entities/bobber.gd`, `items/crates.gd`):
+
+- **Casting:** use a fishing pole to cast its bobber where you look; use it again to reel in (no
+  second cast while one is out); switching items takes it in. The bobber is Terraria's aiStyle 61:
+  it flies and falls, floats at the surface of any liquid, and resting there counts toward a bite
+  check (faster with more fishing power). A bite bobs it under for a few seconds; reel in then.
+  The line (each pole's colour) runs from the pole's tip to the bobber.
+- **Fishing power:** pole + bait + fishing skill (the Angler Earring's 10), times
+  Terraria's hour and moon factors (dawn and dusk 1.3x, midday and midnight 0.8x, full moon 1.1x,
+  new moon 0.9x). The bait is the first in your inventory.
+- **The pond:** Terraria measures it in 2D (the bobber's row, then each column down). Here that's
+  done in the vertical slices through the bobber along x and z (rust `fishing.rs`), the bigger one
+  counting, each cell 2.25 tiles. Under 75 tiles nothing bites; under 300 the power drops in
+  proportion (less needed high in the sky).
+- **Catches:** Terraria's catch table, read from Terraria.exe by `tools/terraria_fishing.py` into
+  `data/fishing.json`: the rarity rolls (common to legendary, from fishing power), crates (1 in
+  10), junk in small ponds at low power, then rules by liquid (honey: Honeyfin; lava: only with lava
+  gear), biome (jungle, snow, corruption, crimson, desert, ocean, dungeon after Skeletron, the sky)
+  and height. Bass in a plain forest pond. Catches not in this game skip their rule.
+- **Reeling in a bite** may use the bait (1 in 1 + power/6; less with a Tackle Box; never on junk;
+  a Gold Worm 1 in 20). One time in 7 the line snaps, unless you wear a High Test Fishing Line.
+  Bomb Fish and Frost Daggerfish come in stacks that grow with fishing power.
+- **Crates and oysters:** right-click one in the inventory to open it: Terraria's OpenFishingCrate
+  roll for roll (Wooden, Iron, Golden and the biome crates; no Hardmode loot). Loot not in this
+  game is left out.
+- **Items:** every pre-Hardmode pole (Wooden: 8 wood at a work bench; Reinforced: 8 iron or lead
+  bars; Fisher of Souls / Fleshcatcher: demonite / crimtane bars), bait (Apprentice, Journeyman,
+  Master; the critters as bait items), the fish, junk, crates, the fishing accessories (High Test
+  Fishing Line, Angler Earring, Tackle Box, Angler Tackle Bag, Lavaproof Fishing Hook, Fisherman's
+  Pocket Guide: it shows your fishing power, or what the last bite check said), the
+  Frog Leg (faster jump, more fall resistance), the Balloon Pufferfish, Rockfish, Reaver Shark and
+  Purple Clubberfish.
+- **Not yet:** cooked fish and the alchemy fish potions (no Well Fed or alchemy yet), Blood Moon
+  catches, chum, luck and rain.
+
+**Critters**, Terraria's (npcs.json "critter", their AIs in `entities/npc.gd`, spawning in
+`entities/spawner.gd`):
+
+- **Who:** bunnies, squirrels, mice, frogs, penguins, scorpions, turtles, ducks, grebes and seagulls,
+  birds (Bird, Blue Jay, Cardinal, owls, macaws, cockatiels), fireflies and lightning bugs,
+  butterflies (eight colours, Terraria's odds), worms, grubs (Grubby, Sluggy, Buggy), snails,
+  glowing snails, goldfish and pupfish, grasshoppers, the Underworld's Hell Butterflies, Lavaflies
+  and Magma Snails, and the gold critters (1 in 400).
+- **How they move:** Terraria's AI styles, tick for tick: walkers stand about and wander (and run
+  when hurt), birds sit till you come within 100 px then fly off away from you, fireflies and
+  butterflies drift low over the ground (fireflies blink at night and underground, butterflies flee
+  you and enemies), worms and grubs crawl and rest, snails crawl on (here along the ground, not up
+  walls), ducks paddle on water and fly off when you come near, grasshoppers hop, goldfish only
+  wander. Harmless, 5 life, and they don't take enemies' places.
+- **Where:** Terraria's spawn rules: by day on grass bunnies and squirrels (butterflies on butterfly
+  days, birds in the mornings), penguins on snow, scorpions on sand, macaws and frogs in the Jungle;
+  at night fireflies (their odds rolled each dawn, some nights none); ducks, turtles and grebes on
+  surface water, goldfish in it; worms, mice and snails underground; glowing snails on mushroom
+  grass. In Terraria the Underworld's come only near town NPCs; here they come now and then there.
+- **Plants:** breaking grass now and then lets out a worm (1 in 400) or a grasshopper (1 in 100;
+  tall grass twice as often), jungle plants grubs, ash plants Underworld critters (Terraria's
+  KillTile_DropBait).
+- **Catching:** swing a Bug Net (the Merchant sells it) through a critter for its item, the bait
+  for fishing (Worm 25, Tree Nymph 50, Gold Worm 50...). The Underworld's burn you through a plain
+  Bug Net (1 damage, On Fire!); the Golden and Fireproof ones catch them. Use a critter's item to
+  let it go where you aim.
+- **Killed:** they gib like enemies (their gores and dust are in `npc_gore.json` too). Bunnies,
+  squirrels, birds, ducks, turtles and the like break into their pieces and bleed. Fireflies,
+  butterflies, worms and grasshoppers burst into their own coloured dust, and snails into dust
+  plus their shell. Gold critters burst into gold sparkles (`NPCID.Sets.IsGoldCritter`: 10 a hit,
+  20 when killed).
+- **Not yet:** cages and terrariums, critter statues, dragonflies, ladybugs, water striders, the
+  Truffle Worm, and town critters (pets).
+
+**The Angler**, Terraria's (`scripts/items/angler_quests.gd`, `entities/town.gd`):
+
+- **Finding him:** till he's woken, a spawn in the ocean's water is the Sleeping Angler, asleep and
+  afloat on the surface. Talk to him and he's the Angler (one of his thank-you lines); he moves into
+  a free house like the others.
+- **His quest:** each dawn he wants one of his 41 fish (Terraria's AnglerQuestSwap: not the
+  Hardmode ones, nor the other evil's, nor the sky's till a boss is beaten). The Quest button tells
+  you what and where (Terraria's quest texts, the fish in the chat's corner). That fish then bites
+  where Terraria's catch table has it, till you've one. Hand it in for his rewards (Terraria's
+  GetAnglerReward, roll for roll: the Angler Hat, Vest and Pants at the 10th, 15th and 20th quests, the
+  Bottomless Bucket at the 25th, the Golden Fishing Rod at the 30th; else now and then the Fish Hook,
+  a Bottomless Bucket or Super Absorbant Sponge, or one of his accessories you haven't got - High
+  Test Fishing Line, Angler Earring, Tackle Box, Fisherman's Pocket Guide, Weather Radio, Sextant,
+  Fishing Bobber - or Fishing, Sonar or Crate Potions; and money, maybe bait). Then he's done for
+  the day. His chat is Terraria's (his chatter, his quest count, his prank on the Dryad).
+- **His rewards:** the potions (Fishing: +15 fishing power, Sonar: what's biting shows over the
+  bobber, Crate: crates 1 in 4), the Bottomless Water/Honey/Lava Buckets (never run out) and the
+  Absorbant Sponges (soak up their liquid without filling), the Fish Hook (a two-hook grappling
+  hook), the Weather Radio (the clouds and the wind) and the Sextant (the moon's phase).
+- **Not yet:** Hardmode quests and rewards; rewards this game hasn't got (the Fuzzy Carrot,
+  the Golden Bug Net, vanity, decorations) are left out.
 
 - **Cacti:** drawn like Terraria's, one flat sprite facing you (a trunk with arms, put together from
   Tiles_80's pieces; Corruption and Crimson ones in their colours), walk-through. Each is a column

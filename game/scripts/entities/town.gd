@@ -10,13 +10,18 @@ extends Node
 ## Seconds between housing checks (Terraria checks every few seconds too).
 const CHECK_INTERVAL := 4.0
 ## In the order they can move in.
-const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer"]
+const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer", "Angler"]
 
 var game: Game
 ## Kind -> the NPC living here.
 var residents := {}
 ## Kinds that have moved in before.
 var arrived := {}
+## The Angler's quest: today's fish (AnglerQuests.pick) and whether it's
+## been handed in today (Terraria's anglerQuestFinished).
+var angler_quest := ""
+var angler_done := false
+var _angler_rng := RandomNumberGenerator.new()
 var _timer := 1.0
 
 
@@ -57,6 +62,8 @@ func wants_to_come(kind: String) -> bool:
 			return p.inventory.slots.any(func(s): return s != null and Data.item(s.item).has("explosive"))
 		"freed":
 			return false  # only once you've freed him (free_goblin)
+		"woken":
+			return false  # only once you've woken him (wake_angler)
 	return false
 
 
@@ -117,6 +124,65 @@ func free_goblin(bound: NPC) -> NPC:
 	var at := bound.global_position
 	bound.queue_free()
 	return move_in("GoblinTinkerer", at)
+
+
+## Waking the Sleeping Angler (Terraria's: talking to him saves him): he's
+## the Angler from now on, homeless where he floated until a house is free.
+func wake_angler(sleeping: NPC) -> NPC:
+	var at := sleeping.global_position
+	sleeping.queue_free()
+	if angler_quest == "":
+		new_angler_quest()
+	return move_in("Angler", at)
+
+
+## Main.AnglerQuestSwap: a new fish for today (at dawn, and in a new world).
+func new_angler_quest() -> void:
+	angler_quest = AnglerQuests.pick(world_evil() == "crimson", not game.defeated_bosses.is_empty(), _angler_rng)
+	angler_done = false
+
+
+## Today's quest fish if it can bite (Projectile.FishingCheck_ProbeForQuestFish):
+## the Angler lives here, it isn't handed in yet and you haven't one on you.
+func quest_fish(player) -> String:
+	if angler_quest == "" or angler_done or not residents.has("Angler") or player.inventory.count_of(angler_quest) > 0:
+		return ""
+	return angler_quest
+
+
+## The Angler's Quest button (Main.NPCChatText_DoAnglerQuest): hands in
+## today's fish if you've caught it (his rewards go in your inventory),
+## else tells you what he wants. Returns what he says.
+func angler_quest_chat() -> String:
+	var p = game.player
+	var text: Dictionary = Assets.ids.get("names", {}).get("town", {}).get("AnglerQuestText", {})
+	var pick := func(prefix: String) -> String:
+		var lines := []
+		for k in text:
+			if k.begins_with(prefix):
+				var t := NPC.fill(text[k])
+				if t != "":
+					lines.append(t)
+		return lines[randi() % lines.size()] if not lines.is_empty() else "..."
+	if angler_quest == "":
+		new_angler_quest()
+	if not angler_done and p.inventory.remove(angler_quest, 1):
+		p.angler_quests += 1
+		var owned := []
+		for inv in [p.inventory, p.armor, p.accessories]:
+			for s in inv.slots:
+				if s != null:
+					owned.append(s.item)
+		for r in AnglerQuests.rewards(p.angler_quests, angler_quest, owned, _angler_rng):
+			var left: int = p.inventory.add(r[0], r[1], Prefixes.roll(Data.item(r[0])) if r[1] == 1 else 0)
+			if left > 0:
+				game.spawn_item(r[0], left, p.center())
+		angler_done = true
+		Audio.play("Coin_*")
+		return pick.call("TurnIn_")
+	if angler_done:
+		return pick.call("NoQuest_")
+	return NPC.fill(text.get("Quest_" + angler_quest, "..."))
 
 
 ## The world's evil ("corruption" or "crimson"), from its surface.
@@ -219,7 +285,7 @@ func save_state() -> Dictionary:
 		var p := n.global_position
 		list.append({"kind": kind, "name": n.display_name, "pos": [p.x, p.y, p.z], "home": n.home_key,
 				"spot": [n.home_spot.x, n.home_spot.y, n.home_spot.z]})
-	return {"residents": list, "arrived": arrived.keys()}
+	return {"residents": list, "arrived": arrived.keys(), "angler_quest": angler_quest, "angler_done": angler_done}
 
 
 func load_state(d: Dictionary) -> void:
@@ -231,3 +297,5 @@ func load_state(d: Dictionary) -> void:
 		npc.home_spot = Vector3i(int(s[0]), int(s[1]), int(s[2]))
 	for k in d.get("arrived", []):
 		arrived[k] = true
+	angler_quest = d.get("angler_quest", "")
+	angler_done = d.get("angler_done", false)

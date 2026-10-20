@@ -13,6 +13,11 @@ func _physics_process(delta: float) -> void:
 	if _timer > 0.0:
 		return
 	_timer = INTERVAL
+	spawn_tick()
+
+
+## One spawn attempt near the player (once a second).
+func spawn_tick() -> void:
 	var game := Game.current
 	var player: Player = game.player
 	if not player.alive:
@@ -28,6 +33,10 @@ func _physics_process(delta: float) -> void:
 			if at != null:
 				game.spawn_npc(g, at)
 		return
+	# Critters have their own spawns (spawn_critter) and don't count here.
+	# (None in the Dungeon: Terraria's Dungeon spawns are its own.)
+	if not game.boss_alive() and not game.invasion.near(player.global_position) and game.biome != "dungeon":
+		spawn_critter(game, player, depth, night)
 	var cap := 4
 	if depth == "space":
 		cap = 3
@@ -37,7 +46,7 @@ func _physics_process(delta: float) -> void:
 		cap = 7
 	if game.boss_alive():
 		cap = 2
-	if game.npcs().filter(func(n): return n.def.ai != "town").size() >= cap:
+	if game.npcs().filter(func(n): return n.def.ai != "town" and not n.is_critter()).size() >= cap:
 		return
 	if randf() > 0.45:
 		return
@@ -49,6 +58,17 @@ func _physics_process(delta: float) -> void:
 				and not game.npcs().any(func(n): return n.kind == "DungeonGuardian"):
 			game.spawn_npc("DungeonGuardian", p + Vector3(randf_range(-1, 1), 0.6, randf_range(-1, 1)).normalized() * 40.0)
 		return
+	# The Sleeping Angler (Terraria's SpawnAnNPC): till he's woken, a spawn
+	# in the ocean's water is him, asleep on the surface (one at a time).
+	if game.biome == "ocean" and depth == "surface" and not game.town.arrived.has("Angler") \
+			and not game.npcs().any(func(n): return n.kind == "SleepingAngler"):
+		var spot = _find_water_spot(game, player.global_position, [1.0, 1.0])
+		if spot != null:
+			var top := Vector3i(spot.floor())
+			while game.world.get_liquid(top + Vector3i.UP).y > 0:
+				top.y += 1
+			game.spawn_npc("SleepingAngler", Vector3(top) + Vector3(0.5, 0.95, 0.5))
+			return
 	var table := _table(depth, night, game.biome)
 	var kind: String = _pick(table)
 	# Goblin Scouts by day on the outer sixths of the surface (here the outer
@@ -70,6 +90,181 @@ func _physics_process(delta: float) -> void:
 
 
 const INVASION_CAP := 10
+## Critters about you at most (they don't take enemies' places).
+const CRITTER_CAP := 6
+const CRITTER_RANGE := 60.0
+## Terraria's goldCritterChance: 1 in 400 is gold.
+const GOLD_CHANCE := 400
+## The world's odds for butterflies and fireflies (Terraria's
+## NPC.setFireFlyChance, rolled each dawn): fireflies 1 in fireFlyChance at
+## night on grass, each with another 1 in fireFlyMultiple on each side;
+## butterflies 1 in butterflyChance by day (some days none).
+var firefly_chance := 20
+var firefly_multiple := 10
+var butterfly_chance := 10
+var _rng := RandomNumberGenerator.new()
+
+
+func _ready() -> void:
+	_rng.randomize()
+	roll_critter_odds()
+
+
+## NPC.setFireFlyChance.
+func roll_critter_odds() -> void:
+	if _rng.randi_range(0, 8) == 0:
+		firefly_chance = _rng.randi_range(5, 9)
+		firefly_multiple = _rng.randi_range(3, 7)
+	elif _rng.randi_range(0, 2) == 0:
+		firefly_chance = 999999
+		firefly_multiple = 999999
+	else:
+		firefly_chance = _rng.randi_range(10, 59)
+		firefly_multiple = _rng.randi_range(6, 29)
+	butterfly_chance = 999999 if _rng.randi_range(0, 2) == 0 else _rng.randi_range(1, 20)
+	if _rng.randi_range(0, 4) == 0:
+		butterfly_chance = 999999
+
+
+func _one_in(n: int) -> bool:
+	return _rng.randi_range(0, maxi(n, 1) - 1) == 0
+
+
+## A gold one 1 in 400 (Terraria's RollLuck(goldCritterChance)).
+func _gold(normal: String, gold: String) -> String:
+	return gold if _one_in(GOLD_CHANCE) else normal
+
+
+## Terraria's critter spawns (Spawner.SpawnAnNPC's): by day on the surface
+## bunnies, squirrels, butterflies (on butterfly days), birds in the morning,
+## penguins on snow, scorpions on sand, macaws and frogs in the Jungle; at
+## night fireflies on grass; ducks (and turtles, grebes) on surface water,
+## goldfish in it; worms, mice and snails underground; glowing snails on
+## mushroom grass; the Underworld's Hell Butterflies, Lavaflies and Magma
+## Snails. Gold ones 1 in 400.
+func spawn_critter(game, player, depth: String, night: bool) -> void:
+	var p: Vector3 = player.global_position
+	var near := 0
+	var birds := 0
+	for n in game.npcs():
+		if n.is_critter() and n.global_position.distance_to(p) < CRITTER_RANGE:
+			near += 1
+			if n.def.ai == "bird":
+				birds += 1
+	if near >= CRITTER_CAP:
+		return
+	var w: VoxelWorld = game.world
+	if depth == "surface" and _one_in(4):
+		var spot = _find_water_spot(game, p, [0.6, 0.6])
+		if spot != null:
+			var top := Vector3i(spot.floor())
+			while w.get_liquid(top + Vector3i.UP).y > 0:
+				top.y += 1
+			var bottom := Vector3i(spot.floor())
+			while bottom.y > 0 and not w.is_solid(bottom):
+				bottom.y -= 1
+			var under: String = Data.block(w.get_block(bottom)).get("name", "")
+			if not night and not _one_in(3) and not game.in_ocean(spot):
+				var kind := "Duck" if _one_in(2) else "DuckWhite"
+				if under == "mud" or under == "jungle_grass":
+					kind = "TurtleJungle"
+				elif under == "sand":
+					kind = "Grebe"
+				elif _one_in(5):
+					kind = "Turtle"
+				game.spawn_npc(kind, Vector3(top) + Vector3(0.5, 0.75, 0.5))
+			elif not game.in_ocean(spot):
+				game.spawn_npc("Pupfish" if under == "sand" else _gold("Goldfish", "GoldGoldfish"), spot)
+			return
+	var under_ground: bool = depth in ["underground", "caverns"]
+	var at = _find_spot(game, p, under_ground, false)
+	if at == null:
+		return
+	var ground: String = Data.block(w.get_block(Vector3i(at.floor()) + Vector3i.DOWN)).get("name", "")
+	for c in pick_critters(game, at, ground, depth, night, birds):
+		game.spawn_npc(c[0], c[1])
+
+
+## Which critters come at `at`, on `ground` (a block name): [[kind, where], ...]
+## (the rules of spawn_critter for a spot on land).
+func pick_critters(game, at: Vector3, ground: String, depth: String, night: bool, birds := 0) -> Array:
+	var out := []
+	var biome: String = game.biome
+	var grass: bool = ground in ["grass", "hallowed_grass"]
+	if at.y < game.underworld_level:
+		if _one_in(10):
+			if _one_in(3):
+				out.append(["MagmaSnail", at])
+			elif not night:
+				out.append(["HellButterfly", at + Vector3(0, 1.5, 0)])
+			else:
+				out.append_array(_group("Lavafly", at + Vector3(0, 1.5, 0), firefly_multiple))
+		return out
+	if ground == "mushroom_grass":
+		if _one_in(6):
+			out.append(["GlowingSnail", at])
+		return out
+	if depth in ["underground", "caverns"]:
+		if biome in ["snow", "crimson", "corruption", "jungle"]:
+			return out
+		if _one_in(8):
+			out.append([_gold("Worm", "GoldWorm"), at])
+		elif _one_in(13):
+			out.append([_gold("Mouse", "GoldMouse"), at])
+		elif _one_in(13) and at.y > (game.cavern_level + game.underworld_level) * 0.5:
+			out.append(["Snail", at])
+		return out
+	if depth != "surface":
+		return out
+	if night:
+		if grass and _one_in(firefly_chance):
+			out.append_array(_group("LightningBug" if ground == "hallowed_grass" else "Firefly", at + Vector3(0, 1.0, 0), firefly_multiple))
+		return out
+	if ground in ["snow_block", "ice_block"]:
+		if _one_in(15):
+			out.append(["Penguin" if _one_in(2) else "PenguinBlack", at])
+	elif grass:
+		if _one_in(15):
+			if _one_in(butterfly_chance):
+				out.append([_gold("Butterfly", "GoldButterfly"), at + Vector3(0, 1.0, 0)])
+				for side in [-1, 1]:
+					if _one_in(4):
+						out.append(["Butterfly", at + Vector3(side * 0.67, 1.0, 0)])
+			elif _one_in(GOLD_CHANCE):
+				out.append(["GoldBunny", at])
+			elif _one_in(GOLD_CHANCE):
+				out.append(["SquirrelGold", at])
+			elif _one_in(3):
+				out.append(["Squirrel" if _one_in(2) else "SquirrelRed", at])
+			else:
+				out.append(["Bunny", at])
+		elif game.sky.time < 18000.0 and _one_in(4) and birds < 6:
+			out.append([_bird(), at])
+	elif ground == "sand" and not game.in_ocean(at) and _one_in(12):
+		out.append(["ScorpionBlack" if _one_in(2) else "Scorpion", at])
+	elif ground == "jungle_grass" and _one_in(7):
+		if game.sky.time < 43200.0 and not _one_in(3):
+			out.append([["ScarletMacaw", "BlueMacaw", "Toucan", "YellowCockatiel", "GrayCockatiel"][_rng.randi_range(0, 4)], at])
+		else:
+			out.append([_gold("Frog", "GoldFrog"), at])
+	return out
+
+
+## Terraria's birds: gold 1 in 400, else a Blue Jay or a Cardinal 1 in 4 each, a Bird.
+func _bird() -> String:
+	var r := _rng.randi_range(0, 3)
+	if _one_in(GOLD_CHANCE):
+		return "GoldBird"
+	return "BirdBlue" if r == 0 else "BirdRed" if r == 1 else "Bird"
+
+
+## One, and another 1 in `multiple` on each side, above and below (fireflies).
+func _group(kind: String, at: Vector3, multiple: int) -> Array:
+	var out := [[kind, at]]
+	for off in [Vector3(-0.67, 0, 0), Vector3(0.67, 0, 0), Vector3(0, 0.67, 0), Vector3(0, -0.67, 0)]:
+		if _one_in(multiple):
+			out.append([kind, at + off])
+	return out
 
 
 ## Out in the world's outer third (Terraria's outer sixths of its width).

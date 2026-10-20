@@ -3,6 +3,7 @@
 
 pub mod cabins;
 pub mod dungeon;
+pub mod fishing;
 pub mod hives;
 pub mod liquid;
 pub mod lod;
@@ -399,6 +400,22 @@ impl VoxelWorld {
         let ids = hives::Ids::new(&w);
         let p = hives::hive_at(&mut w, &mut worldgen::Rng::new(seed as u64), &ids, &l, (at.x, at.y, at.z), true, scale as f64).unwrap_or((0, 0, 0));
         Vector3i::new(p.0, p.1, p.2)
+    }
+
+    /// How much liquid a bobber at `p` sits in (Terraria's fishing pond
+    /// measure, fishing::pond) through the vertical slices along x and z:
+    /// {x, z: liquid cells, lava, honey}. Counting stops at `cap` cells.
+    #[func]
+    fn fishing_pond(&self, p: Vector3i, cap: i32) -> VarDictionary {
+        let w = self.world();
+        let a = fishing::pond(&w, p.x, p.y, p.z, true, cap);
+        let b = fishing::pond(&w, p.x, p.y, p.z, false, cap);
+        let mut d = VarDictionary::new();
+        d.set("x", a.cells);
+        d.set("z", b.cells);
+        d.set("lava", a.lava || b.lava);
+        d.set("honey", a.honey || b.honey);
+        d
     }
 
     /// A Glowing Mushroom biome at `at`, its grass and mushrooms within

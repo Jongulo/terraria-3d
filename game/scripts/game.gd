@@ -292,6 +292,9 @@ func _begin_play() -> void:
 		town.start_new()
 	if test_world:
 		test_world.activate()
+	# The Angler's fish for today (a new world has one from the start).
+	if town.angler_quest == "":
+		town.new_angler_quest()
 	player.input_enabled = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	message("Welcome to %s!" % world_name, Color(0.6, 0.9, 1.0))
@@ -454,6 +457,8 @@ func biome_music(b: String, under: bool) -> String:
 
 
 func in_ocean(pos: Vector3) -> bool:
+	if test_world != null:
+		return test_world.in_ocean(pos)
 	if not has_ocean or pos.y < sea_level - ocean_depth - 8.0 or pos.y > space_level():
 		return false
 	return world.coast_inland(floori(pos.x), floori(pos.z)) < ocean_width + beach_width * 0.6
@@ -692,6 +697,9 @@ func curse_old_man(old_man: NPC) -> void:
 func _on_dawn() -> void:
 	_spawn_old_man()
 	invasion.dawn()
+	# A new day, a new fish for the Angler (Main.AnglerQuestSwap).
+	town.new_angler_quest()
+	spawner.roll_critter_odds()
 
 
 ## Terraria: at dusk a strong enough player may be visited by the Eye of Cthulhu.
@@ -972,6 +980,7 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 	world.set_block(p, 0)
 	block_rotations.erase(Chests.key(p))
 	signs.erase(Chests.key(p))
+	_drop_bait(p, b)
 	for n in [Vector3i.LEFT, Vector3i.RIGHT, Vector3i.FORWARD, Vector3i.BACK, Vector3i.DOWN]:
 		if waterfalls.has_fall(p + n, Waterfalls.dir_index(n)):
 			waterfalls.remove_fall(p + n)
@@ -1169,6 +1178,61 @@ func _orb_smashed(c: Vector3, b: Dictionary) -> void:
 ## "rare_drop" [item, n] 1 time in n (the sword in stone's Terragrim, 1 in 30;
 ## a glowing mushroom's Mushroom Grass Seeds, 1 in 40); with "drop_chance" its
 ## drop only that often (the glowing mushrooms: half the time), else nothing.
+## Terraria's WorldGen.KillTile_DropBait: grass and plants broken now and
+## then let out a critter: a worm (1 in 400 from grass, 1 in 200 from tall
+## grass) or a grasshopper (1 in 100, 1 in 50); jungle plants grubs (Grubby,
+## 1 in 4 a Sluggy, 1 in 12 a Buggy: 1 in 100 from jungle plants, 1 in 50
+## from tall ones, 1 in 312 from vines, 1 in 12 from big ones); ash plants
+## a Hell Butterfly or a Lavafly (1 in 100). Not past 5 worms or grasshoppers
+## or 8 grubs or lava critters at once; a worm is gold 1 in 400.
+func _drop_bait(p: Vector3i, b: Dictionary) -> void:
+	var tile := int(b.get("tile_id", -1))
+	var worm := 0
+	var hopper := 0
+	var grub := 0
+	var lava := 0
+	match tile:
+		3:
+			worm = 400
+			hopper = 100
+		73:
+			worm = 200
+			hopper = 50
+		61:
+			grub = 80
+		74:
+			grub = 40
+		62:
+			grub = 250
+		233:
+			grub = 10
+		637:
+			lava = 100
+		_:
+			return
+	var count := func(kinds: Array) -> int:
+		return npcs().filter(func(n): return n.kind in kinds).size()
+	var at := Vector3(p) + Vector3(0.5, 0.1, 0.5)
+	if worm > 0 and count.call(["Worm", "GoldWorm"]) < 5 and randi() % worm == 0:
+		_pop_critter("GoldWorm" if randi() % Spawner.GOLD_CHANCE == 0 else "Worm", at)
+	if hopper > 0 and count.call(["Grasshopper", "GoldGrasshopper"]) < 5 and randi() % hopper == 0:
+		_pop_critter("GoldGrasshopper" if randi() % Spawner.GOLD_CHANCE == 0 else "Grasshopper", at)
+	if grub > 0 and count.call(["Grubby", "Sluggy", "Buggy"]) < 8 and randi() % int(grub * 1.25) == 0:
+		var kind := "Sluggy" if randi() % 4 == 0 else "Grubby"
+		if randi() % 12 == 0:
+			kind = "Buggy"
+		_pop_critter(kind, at)
+	if lava > 0 and count.call(["HellButterfly", "Lavafly"]) < 8 and randi() % lava == 0:
+		_pop_critter("HellButterfly" if randi() % 2 == 0 else "Lavafly", at)
+
+
+## A critter jumping out of a broken plant (2.2-5 px/tick up, up to 2.5 aside).
+func _pop_critter(kind: String, at: Vector3) -> void:
+	var npc := spawn_npc(kind, at)
+	var a := randf() * TAU
+	npc.velocity = Vector3(cos(a), 0, sin(a)) * randf_range(0.0, 2.5) * NPC.PX_TICK + Vector3(0, randf_range(2.2, 5.0) * NPC.PX_TICK, 0)
+
+
 func block_drop(b: Dictionary) -> String:
 	if b.has("gem") and randf() < 0.1:
 		return b.gem

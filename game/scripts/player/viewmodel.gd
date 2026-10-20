@@ -17,12 +17,12 @@ const CONFIG_PATH := "res://data/viewmodel.json"
 ## Where the right hand rests, relative to the camera (default).
 const HAND_POS := Vector3(0.26, -0.29, -0.42)
 const EQUIP_TIME := 0.18
-const KINDS := ["sword", "pickaxe", "axe", "shortsword", "spear", "gun", "bow", "staff", "item"]
+const KINDS := ["sword", "pickaxe", "axe", "shortsword", "spear", "gun", "bow", "staff", "fishing", "item"]
 ## Base size per kind: [pixels per metre-ish divisor, min, max] for the longest sprite side.
 const SIZES := {
 	"sword": [64.0, 0.3, 0.62], "pickaxe": [64.0, 0.3, 0.62], "axe": [64.0, 0.3, 0.62],
 	"shortsword": [64.0, 0.3, 0.62], "staff": [64.0, 0.3, 0.62], "spear": [56.0, 0.4, 0.8],
-	"gun": [70.0, 0.22, 0.5], "bow": [70.0, 0.22, 0.5], "item": [90.0, 0.18, 0.3],
+	"gun": [70.0, 0.22, 0.5], "bow": [70.0, 0.22, 0.5], "fishing": [64.0, 0.3, 0.45], "item": [90.0, 0.18, 0.3],
 }
 
 ## {"hand": [x,y,z], "kinds": {kind: grip}, "items": {internal name: grip}}
@@ -96,6 +96,8 @@ static func kind_of(def: Dictionary) -> String:
 			return "bow" if def.get("ammo") == "WoodenArrow" else "gun"
 		"magic":
 			return "staff"
+		"fishing_pole":
+			return "fishing"
 		_:
 			return "item"
 
@@ -136,6 +138,13 @@ static func default_grip(kind: String) -> Dictionary:
 			offset = Vector3(-0.02, 0.1, 0.0)
 		"staff":
 			dir = Vector3(-0.3, 0.5, -0.8)
+		"fishing":
+			# Held out low on the right, the tip forward and up over the water
+			# (seen from its back: a thin sprite can't show its face with the
+			# tip pointing away).
+			dir = Vector3(-0.15, 0.55, -0.82)
+			face = Vector3(1.0, 0.0, 0.2)
+			offset = Vector3(0.02, -0.06, 0.0)
 		_:
 			tip_axis = Vector3(0, 1, 0)
 			dir = Vector3(0.05, 1.0, 0.15)
@@ -236,6 +245,12 @@ func item_node() -> MeshInstance3D:
 
 func hand_node() -> Node3D:
 	return _hand
+
+
+## Where a pixel of the held item's sprite (image coordinates) is in the
+## world (a fishing line leaves the pole's tip).
+func item_point(px: Vector2) -> Vector3:
+	return _item.global_transform * Vector3(px.x, _item_px.y - px.y, 0.0)
 
 
 func _process(delta: float) -> void:
