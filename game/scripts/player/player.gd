@@ -1565,10 +1565,14 @@ func _tick_buffs(delta: float) -> void:
 
 func _regen(delta: float) -> void:
 	# Honey: natural healing ramps up three times as fast (lifeRegenTime +2
-	# a tick).
-	_since_hurt += delta * (3.0 if honey_time > 0.0 else 1.0)
+	# a tick); the Crimson set twice as fast (+1), and heals half again as
+	# much (Terraria's crimsonRegen).
+	var crimson := has_effect("crimson_regen")
+	_since_hurt += delta * (1.0 + (2.0 if honey_time > 0.0 else 0.0) + (1.0 if crimson else 0.0))
 	# Terraria's natural regen ramps up the longer you avoid damage.
 	var rate := (0.5 if _since_hurt > 8.0 else 0.0) + (1.0 if _since_hurt > 20.0 else 0.0)
+	if crimson:
+		rate *= 1.5
 	# Terraria's lifeRegen from what you wear: half a life a second each (the
 	# Band of Regeneration's 1, the Mana Regeneration Band's 2).
 	rate += stat("regen") * 0.5
@@ -2287,6 +2291,10 @@ func _summon(def: Dictionary) -> bool:
 		"corruption":
 			# Terraria: Worm Food works only in the Corruption (and does nothing elsewhere).
 			if game.biome != "corruption":
+				return false
+		"crimson":
+			# Terraria: the Bloody Spine works only in the Crimson.
+			if game.biome != "crimson":
 				return false
 		"jungle":
 			# Terraria: the Abeemination works only in the Jungle.

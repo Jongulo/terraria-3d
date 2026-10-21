@@ -143,7 +143,7 @@ func _physics_process(delta: float) -> void:
 		var best: NPC = null
 		var best_d := 25.0
 		for npc in game.npcs():
-			if npc.def.ai in ["town", "dummy"] or npc.untouchable:
+			if npc.def.ai in ["town", "dummy"] or npc.untouchable or npc.dont_take_damage:
 				continue
 			var dd: float = npc.center().distance_to(global_position)
 			if dd < best_d:
@@ -279,7 +279,7 @@ func _explosive_step(delta: float, game) -> void:
 			velocity.z *= keep
 		if explosive.get("contact", false):
 			for npc in game.npcs():
-				if not npc.def.get("invulnerable", false) and npc.overlaps_point(global_position, 0.3):
+				if not npc.def.get("invulnerable", false) and not npc.dont_take_damage and npc.overlaps_point(global_position, 0.3):
 					life = 0.0
 	# A Spiky Ball (Terraria's aiStyle 14): no blast; rolling or lying still,
 	# it hurts each enemy that touches it once, `pierce` of them in all.

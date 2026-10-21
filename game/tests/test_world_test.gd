@@ -414,6 +414,7 @@ func _run() -> void:
 	await _prefix_checks(c)
 	await _hive_checks(c)
 	await _queen_bee_checks(c)
+	await _brain_checks(c)
 	await _fishing_checks(c)
 	await _fishing_spot_checks(c)
 	await _angler_checks(c)
@@ -1885,6 +1886,248 @@ func _queen_bee_checks(c: Vector3i) -> void:
 				and last_message() == "Queen Bee has been defeated!", "killed she breaks in 6 and drops Bottled Honey, Bee Wax and more (%s)" % [drops])
 		game.defeated_bosses.erase("QueenBee")
 	await clear.call()
+	p.god_mode = god
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.select(held)
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	game.biome = ""
+	await frames(5)
+
+
+## The Brain of Cthulhu: the Bloody Spine and the third Crimson Heart, its
+## Creepers (its shield, the boss bar), its teleports, shedding its outer
+## brain, its second form, leaving out of the Crimson and far off, its loot.
+func _brain_checks(c: Vector3i) -> void:
+	var p := game.player
+	var god := p.god_mode
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var held := p.selected
+	p.god_mode = true
+	var bd: Dictionary = Data.npcs.BrainofCthulhu
+	var cd: Dictionary = Data.npcs.Creeper
+	check(int(bd.life) == 1250 and int(bd.damage) == 30 and int(bd.defense) == 14 and bd.boss and int(cd.life) == 100 and int(cd.damage) == 20
+			and int(cd.defense) == 10, "the Brain of Cthulhu: Terraria's 1250 life, 30 damage, 14 defense; its Creepers 100 life, 20 damage, 10 defense")
+	var recipe: Array = Data.recipes.filter(func(r): return r.result == "BloodySpine")
+	check(recipe.size() == 1 and recipe[0].ingredients == {"ViciousPowder": 30, "Vertebrae": 15},
+			"the Bloody Spine: 30 Vicious Powder and 15 Vertebrae (%s)" % [recipe[0].ingredients if recipe.size() > 0 else null])
+	var clear := func() -> void:
+		for n in game.npcs():
+			if n.boss or n.kind == "Creeper":
+				n.queue_free()
+		for e in game.entities.get_children():
+			if e is Projectile or e is Gore or e is ItemDrop:
+				e.queue_free()
+		await frames(2)
+	var creepers := func() -> Array:
+		return game.npcs().filter(func(n): return n.kind == "Creeper" and not n.is_queued_for_deletion())
+	var plaza := Vector3(c) + Vector3(0.5, 0, 12.5)
+	p.global_position = plaza
+	p.velocity = Vector3.ZERO
+	await frames(20)
+	game.biome = game.detect_biome(plaza)
+	p.inventory.slots[9] = Inventory.stack("BloodySpine", 2)
+	p.select(9)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	check(not game.boss_alive() and p.inventory.slots[9].count == 2, "out of the Crimson the Bloody Spine does nothing")
+	var spot: Array = TestWorld.FISHING_SPOTS.filter(func(x): return x[0] == "Crimson")[0]
+	var crimson := Vector3(c.x + spot[1].x + 0.5, TestWorld.GROUND + 1, c.z + spot[1].z + spot[2].y + 2.5)
+	p.global_position = crimson
+	await frames(30)
+	game.biome = game.detect_biome(crimson)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	var b: NPC = game.boss()
+	check(game.biome == "crimson" and b != null and b.kind == "BrainofCthulhu" and p.inventory.slots[9].count == 1
+			and last_message() == "Brain of Cthulhu has awoken!", "in the Crimson it brings the Brain of Cthulhu (%s, %s)" % [game.biome, last_message()])
+	await frames(5)
+	check(Audio._current_track == "Boss3", "with Terraria's Boss 3 music (%s)" % Audio._current_track)
+	if b == null:
+		await clear.call()
+		return
+	var bar: Dictionary = game.boss_status()
+	check(creepers.call().size() == 20 and bar.life == 3250 and bar.max == 3250,
+			"it brings 20 Creepers, and the boss bar counts their life with its own (%d, %s)" % [creepers.call().size(), bar])
+	check(b.head_icon() == 23 and (b.sprite.get("material_overlay") != null or (b.sprite is NPCModel and b.sprite._mi.material_overlay != null)),
+			"its head icon is NPC_Head_Boss_23, and it's seen through blocks")
+	var life0 := b.life
+	b.hit(500, 0.0, Vector3.FORWARD, 0.0)
+	check(b.dont_take_damage and b.life == life0 and b._br_frame < 4, "while it has Creepers it can't be hurt, in its outer brain")
+	# Its first form drifts at you at 1 px a tick; now and then it fades out
+	# (5 a tick), comes back 12-40 tiles off you on each axis and fades in.
+	b.global_position = p.global_position + Vector3(0, 4, 12)
+	await frames(30)
+	var drift: float = b.velocity.length() / NPC.PX_TICK
+	b._br_count = 9999.0
+	await frames(2)
+	var fading: bool = b._br == 1.0 and b._br_alpha > 0.0 and b._br_alpha <= 10.0
+	var from := b.center()
+	for i in 80:
+		await frames(1)
+		if b._br == 2.0:
+			break
+	var off: Vector3 = (b.center() - p.center()) * NPC.BR_PX
+	var tiles := Vector2(Vector2(off.x, off.z).length(), absf(off.y)) / 16.0
+	check(absf(drift - 1.0) < 0.05 and fading and b._br == 2.0 and b.center().distance_to(from) > 3.0 and tiles.x > 11.0 and tiles.x < 41.0
+			and tiles.y > 11.0 and tiles.y < 41.0 and not game.world.is_solid(Vector3i(b.center().floor())),
+			"it drifts at you (%.2f px a tick), fades out and comes back 12-40 tiles off you across and up or down (%.1f, %.1f)" % [drift, tiles.x, tiles.y])
+	# Creepers circle it, and now and then charge at you (8 px a tick) till hit.
+	var cr: NPC = creepers.call()[0]
+	b.global_position = p.global_position + Vector3(0, 4, 12)
+	b._br = 0.0
+	b._br_alpha = 0.0
+	await frames(120)
+	var near: int = creepers.call().filter(func(n): return n.center().distance_to(b.center()) < 300.0 / NPC.BR_PX).size()
+	cr.ai_state = 1
+	cr.velocity = (p.center() - cr.center()).normalized() * 8.0 * NPC.PX_TICK
+	await frames(3)
+	var charge: float = cr.velocity.length() / NPC.PX_TICK
+	var charging: bool = cr.ai_state == 1
+	cr.hit(1, 0.0, Vector3.FORWARD, 0.0)
+	await frames(2)
+	check(near >= 15 and charging and absf(charge - 8.0) < 0.1 and cr.ai_state == 0,
+			"its Creepers circle it (%d near), charge at you at 8 px a tick and go back when hit" % near)
+	# Its Creepers killed: tissue and ore, its outer brain bursts off, and
+	# it comes at you; now it can be hurt.
+	await frames(2)
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	b.global_position = p.global_position + Vector3(0, 4, 14)
+	for n in creepers.call():
+		n.hit(99999, 0.0, Vector3.FORWARD, 0.0)
+	await frames(2)
+	var drops := {}
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			drops[e.item] = int(drops.get(e.item, 0)) + e.count
+	check(drops.get("TissueSample", 0) >= 10 and drops.get("CrimtaneOre", 0) >= 25 and game.boss_status().life == 1250 and game.boss_status().max == 3250,
+			"killed, Creepers drop Tissue Samples and Crimtane Ore (2 in 3 each), and the bar falls (%s)" % [drops])
+	b._br = 0.0
+	b._br_alpha = 0.0
+	await frames(3)
+	var gores: Array = game.entities.get_children().filter(func(e): return e is Gore and e.gore_id >= 392 and e.gore_id <= 395)
+	check(b._br_shed and b._br < 0.0 and not b.dont_take_damage and gores.size() == 4,
+			"with its Creepers gone it sheds its outer brain (Terraria's gores 392-395) and can be hurt")
+	await frames(10)
+	check(b._br_frame >= 4 and b._br_frame <= 7, "in its second form's frames (%d)" % b._br_frame)
+	life0 = b.life
+	b.hit(100, 0.0, Vector3.FORWARD, 0.0)
+	check(b.life < life0, "now it's hurt (%d -> %d)" % [life0, b.life])
+	# Its second form: easing toward 8 px a tick at you; fading out and in
+	# fast (25 a tick) to 10-12 tiles off you.
+	b._br = -1.0
+	b._br_count = -9999.0
+	b.global_position = p.global_position + Vector3(0, 40, -90)
+	b.velocity = Vector3.ZERO
+	await frames(150)
+	var dash: float = b.velocity.length() / NPC.PX_TICK
+	b._br_count = 9999.0
+	await frames(2)
+	var fast: bool = b._br == -2.0 and b._br_alpha >= 25.0 and b._br_alpha <= 50.0
+	for i in 30:
+		await frames(1)
+		if b._br == -3.0:
+			break
+	off = (b.center() - p.center()) * NPC.BR_PX
+	tiles = Vector2(Vector2(off.x, off.z).length(), absf(off.y)) / 16.0
+	check(dash > 7.0 and dash <= 8.0 and fast and b._br == -3.0 and tiles.x > 9.5 and tiles.x < 12.5 and tiles.y > 9.5 and tiles.y < 12.5,
+			"then it comes at you (%.2f px a tick, toward 8) and blinks to 10-12 tiles off you, fading 25 a tick (%.1f, %.1f)" % [dash, tiles.x, tiles.y])
+	# Out of the Crimson it stops and sinks away, faster after a second.
+	b.process_mode = Node.PROCESS_MODE_DISABLED
+	b.velocity = Vector3.ZERO
+	for i in 60:
+		b._brain_tick(game, p, false)
+	var sink0: float = b.velocity.y / NPC.PX_TICK
+	for i in 30:
+		b._brain_tick(game, p, false)
+	var sink1: float = b.velocity.y / NPC.PX_TICK
+	check(b._br == 2.0 and sink0 >= -1.01 and sink1 < -5.0 and b._br_away == 90.0,
+			"out of the Crimson it stops and, after a second, sinks away ever faster (%.1f, %.1f px a tick)" % [sink0, sink1])
+	b._br_away = 0.0
+	b.process_mode = Node.PROCESS_MODE_INHERIT
+	# Far off (6000 px across plus up and down) it's gone.
+	b.global_position = p.global_position + Vector3(6100.0 / NPC.BR_PX, 0, 0)
+	await frames(2)
+	check(not is_instance_valid(b) or b.is_queued_for_deletion(), "6000 px off it's gone (%s)" % last_message())
+	await clear.call()
+	# The third Crimson Heart smashed wakes it.
+	var orbs := game.orbs_broken
+	game.orbs_broken = 2
+	game._orb_smashed(p.global_position + Vector3(0, 1, -3), Data.block(Data.block_id("crimson_heart")))
+	await frames(2)
+	b = game.boss()
+	check(b != null and b.kind == "BrainofCthulhu", "the third Crimson Heart smashed wakes it")
+	game.orbs_broken = orbs
+	if b != null:
+		# Killed: its gores, Crimtane Ore, potions and money.
+		for e in game.entities.get_children():
+			if e is ItemDrop:
+				e.queue_free()
+		for n in creepers.call():
+			n.queue_free()
+		await frames(2)
+		b._br = -1.0
+		b.dont_take_damage = false
+		b.global_position = p.global_position + Vector3(0, 2, -8)
+		await frames(1)
+		b.hit(99999, 0.0, Vector3.FORWARD, 0.0)
+		await frames(2)
+		drops = {}
+		for e in game.entities.get_children():
+			if e is ItemDrop:
+				drops[e.item] = int(drops.get(e.item, 0)) + e.count
+		var pieces := game.entities.get_children().filter(func(e): return e is Gore and e.gore_id >= 396 and e.gore_id <= 401).size()
+		check(pieces == 6 and drops.get("CrimtaneOre", 0) >= 40 and drops.get("LesserHealingPotion", 0) >= 5 and game.defeated_bosses.has("BrainofCthulhu")
+				and last_message() == "Brain of Cthulhu has been defeated!", "killed it breaks in 6 and drops 40-90 Crimtane Ore, potions and more (%s)" % [drops])
+		game.defeated_bosses.erase("BrainofCthulhu")
+	await clear.call()
+	# What Crimtane and Tissue Samples make: Terraria's recipes and stats; the
+	# Crimson set (3% damage a piece; its bonus, faster natural healing).
+	var has_recipe := func(result: String, want: Dictionary) -> bool:
+		return Data.recipes.any(func(r): return r.result == result and r.ingredients == want and r.station == "iron_anvil")
+	check(has_recipe.call("DeathbringerPickaxe", {"CrimtaneBar": 12, "TissueSample": 6}) and has_recipe.call("BloodButcherer", {"CrimtaneBar": 10})
+			and has_recipe.call("TendonBow", {"CrimtaneBar": 8}) and has_recipe.call("FleshGrinder", {"CrimtaneBar": 10, "TissueSample": 5})
+			and has_recipe.call("CrimsonHelmet", {"CrimtaneBar": 15, "TissueSample": 10}) and has_recipe.call("CrimsonScalemail", {"CrimtaneBar": 25, "TissueSample": 20})
+			and has_recipe.call("CrimsonGreaves", {"CrimtaneBar": 20, "TissueSample": 15}),
+			"the Deathbringer Pickaxe, Blood Butcherer, Tendon Bow, Flesh Grinder and Crimson armor have Terraria's recipes")
+	check(int(Data.item("DeathbringerPickaxe").pick) == 70 and int(Data.item("BloodButcherer").damage) == 22 and int(Data.item("TendonBow").damage) == 19
+			and int(Data.item("FleshGrinder").hammer) == 55, "the Deathbringer Pickaxe mines at 70% (Dungeon bricks need 65), the Blood Butcherer hits for 22, the Tendon Bow 19")
+	var kept_armor := p.armor.slots.duplicate(true)
+	var kept_acc := p.accessories.slots.duplicate(true)
+	for i in p.accessories.slots.size():
+		p.accessories.slots[i] = null
+	p.armor.slots = [Inventory.stack("CrimsonHelmet", 1), Inventory.stack("CrimsonScalemail", 1), Inventory.stack("CrimsonGreaves", 1)]
+	var worn: Dictionary = p.armor_set()
+	check(p.defense() == 19 and worn.get("text", "") == "Crimson" and Assets.set_bonus_text("Crimson") == "Greatly increased life regen"
+			and p.weapon_damage(Data.item("BloodButcherer")) == 24, "Crimson armor: 19 defense, 9% more damage, its set bonus \"Greatly increased life regen\"")
+	var healed := func(seconds: int) -> int:
+		p.life = 100
+		p._regen_acc = 0.0
+		p._since_hurt = 30.0
+		for i in seconds:
+			p._regen(1.0)
+		return p.life - 100
+	var with_set: int = healed.call(4)
+	p._since_hurt = 0.0
+	p._regen(4.5)
+	var ramp_set: float = p._since_hurt
+	p.armor.slots = [null, null, null]
+	var without: int = healed.call(4)
+	p._since_hurt = 0.0
+	p._regen(4.5)
+	var ramp: float = p._since_hurt
+	check(with_set == 9 and without == 6 and absf(ramp_set - 9.0) < 0.01 and absf(ramp - 4.5) < 0.01,
+			"its set bonus: natural healing builds twice as fast and heals half again as much (%d vs %d life in 4 s)" % [with_set, without])
+	p.armor.slots = kept_armor
+	p.accessories.slots = kept_acc
+	p.life = p.life_max
 	p.god_mode = god
 	p.inventory.slots = kept_slots
 	p.inventory.changed.emit()

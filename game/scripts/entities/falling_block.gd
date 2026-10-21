@@ -91,6 +91,6 @@ func _hurt_what_it_hits(game: Game) -> void:
 		_hit[p] = true
 		p.hurt(DAMAGE, center)
 	for npc in game.npcs():
-		if not _hit.has(npc) and not npc.def.get("invulnerable", false) and npc.overlaps_point(center, 0.5):
+		if not _hit.has(npc) and not npc.def.get("invulnerable", false) and not npc.dont_take_damage and npc.overlaps_point(center, 0.5):
 			_hit[npc] = true
 			npc.hit(DAMAGE, KNOCKBACK, Vector3(0, -1, 0), 0.0)

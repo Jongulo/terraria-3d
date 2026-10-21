@@ -221,7 +221,7 @@ func _check_hits(game) -> void:
 	for npc in game.npcs():
 		if _cooldowns.has(npc) or npc.def.ai == "town":
 			continue
-		if npc.def.get("invulnerable", false) and npc.def.ai != "dummy":
+		if npc.dont_take_damage or (npc.def.get("invulnerable", false) and npc.def.ai != "dummy"):
 			continue
 		var touched := false
 		for s in hit_spots():

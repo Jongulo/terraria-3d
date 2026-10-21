@@ -107,7 +107,7 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = mix(c.rgb * 0.6, xray_color.rgb, 0.45);
-	ALPHA = xray_color.a;
+	ALPHA = xray_color.a * fade;
 }
 #else
 	vec3 sun = vec3(light.a * sky_light) * sky_color;

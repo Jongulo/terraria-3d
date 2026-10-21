@@ -68,7 +68,7 @@ func _physics_process(delta: float) -> void:
 
 func _check_hits(game) -> void:
 	for npc in game.npcs():
-		if _hit.has(npc) or npc.def.ai == "town" or npc.def.get("invulnerable", false):
+		if _hit.has(npc) or npc.def.ai == "town" or npc.def.get("invulnerable", false) or npc.dont_take_damage:
 			continue
 		if npc.overlaps_point(global_position, RADIUS):
 			_hit[npc] = true

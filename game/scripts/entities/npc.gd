@@ -40,6 +40,11 @@ var anim := 0.0
 var _flash := 0.0
 ## Can't be hit and hits nothing (King Slime between teleports).
 var untouchable := false
+## Can't be hurt: weapons pass through it, though it still hurts you
+## (Terraria's dontTakeDamage: the Brain of Cthulhu while it has Creepers).
+var dont_take_damage := false
+## Hit since its AI last looked (Terraria's justHit).
+var _just_hit := false
 ## Seconds of Terraria's On Fire! left (the Sunfury, the Flaming Mace): 4 life
 ## a second, taken (and shown) 1 at a time.
 var on_fire := 0.0
@@ -128,7 +133,7 @@ static func look(kind_name: String) -> Dictionary:
 	var s: float = sc.scale
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
-	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee"]
+	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper"]
 	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
@@ -252,12 +257,16 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 
-	if def.ai in ["skeletron", "skeletron_hand", "queen_bee"]:
+	if def.ai in ["skeletron", "skeletron_hand", "queen_bee", "brain", "creeper"]:
 		# Through the blocks (Terraria's noTileCollide), like the worms.
 		if def.ai == "skeletron":
 			_ai_skeletron(delta, game, player)
 		elif def.ai == "queen_bee":
 			_ai_queen_bee(delta, game, player)
+		elif def.ai == "brain":
+			_ai_brain(delta, game, player)
+		elif def.ai == "creeper":
+			_ai_creeper(delta, game, player)
 		else:
 			_ai_skeletron_hand(delta, game, player)
 		if is_queued_for_deletion():
@@ -1925,6 +1934,225 @@ func _ai_bee(delta: float, player) -> void:
 	_fly_frame()
 
 
+# ------------------------------------------------------------ brain of cthulhu
+
+## Terraria's px for the Brain of Cthulhu's distances (24 a block, like its sprites).
+const BR_PX := 24.0
+
+## The Brain's ai[0] (what it's doing: 0 drifting, 1 fading out, 2 fading in;
+## once it has shed its outer brain -1 coming at you, -2 fading out, -3 in),
+## localAI[1] (ticks toward its next teleport), localAI[2] (its outer brain
+## shed), localAI[3] (ticks you've been out of the Crimson); where it's
+## teleporting to; how faded it is (Terraria's alpha, 0-255); its frame.
+## A Creeper's Brain.
+var _br := 0.0
+var _br_count := 0.0
+var _br_shed := false
+var _br_away := 0.0
+var _br_to := Vector3.ZERO
+var _br_alpha := 0.0
+var _br_frame := 0
+var _br_frame_t := 0
+var _brain: NPC = null
+
+
+## Terraria's Brain of Cthulhu (aiStyle 54), a tick at a time in its px/tick
+## (its 2D left/right is any way round you on the ground here). It brings 20
+## Creepers and can't be hurt while any are left: it drifts at you at 1 px a
+## tick and, every 120-420 ticks, fades out (5 alpha a tick), comes back 12-40
+## tiles off you across and up or down (on ahead if you're going that way;
+## out of the blocks, where it can see you) and fades in. With the Creepers
+## gone it sheds its outer brain and comes at you (easing 1/51 a tick toward
+## 8 px/tick), fading out and in fast (25 a tick) every 60-180 ticks, to 10-12
+## tiles off you. Out of the Crimson (or with you dead) it stops and sinks
+## away, faster after a second; 6000 px off (across, plus up or down) it's
+## gone. (Expert mode's illusions and the Creepers' homing aren't here: no
+## Expert mode.)
+func _ai_brain(delta: float, game, player) -> void:
+	# The test world counts as its Crimson, as for the Eater of Worlds.
+	var home: bool = player.alive and (game.biome == "crimson" or game.test_world != null)
+	for t in _critter_ticks(delta):
+		_brain_tick(game, player, home)
+		if is_queued_for_deletion():
+			return
+		# Terraria's frames: a step every 7 ticks, 0-3 in its outer brain,
+		# 4-7 once that's shed.
+		_br_frame_t += 1
+		if _br_frame_t > 6:
+			_br_frame_t = 0
+			_br_frame += 1
+		if _br < 0.0 or _br_shed:
+			if _br_frame < 4 or _br_frame > 7:
+				_br_frame = 4
+		elif _br_frame > 3:
+			_br_frame = 0
+	sprite.set_frame(_br_frame)
+	if sprite.has_method("set_fade"):
+		sprite.set_fade(1.0 - _br_alpha / 255.0)
+
+
+func _brain_tick(game, player, home: bool) -> void:
+	if ai_count == 0:
+		# Its Creepers, all round it (within its width across, its height up
+		# and down), flung off at up to 3 px/tick.
+		ai_count = 1
+		dont_take_damage = true
+		var w := half.x * 2.0
+		for i in 20:
+			var at := center() + Vector3(randf_range(-w, w), randf_range(-half.y, half.y), randf_range(-w, w))
+			var creeper: NPC = game.spawn_npc("Creeper", at - Vector3(0, 0.625, 0))
+			if creeper != null:
+				creeper._brain = self
+				creeper.velocity = Vector3(randi_range(-30, 30), randi_range(-30, 30), randi_range(-30, 30)) * 0.1 * PX_TICK
+	var to: Vector3 = (player.center() - center()) * BR_PX
+	if Vector2(to.x, to.z).length() + absf(to.y) > 6000.0:
+		game.on_boss_despawned(self)
+		queue_free()
+		return
+	var v := velocity / PX_TICK
+	if _br < 0.0:
+		if not _br_shed:
+			_br_shed = true
+			_brain_shed(game)
+		dont_take_damage = false
+		v = (v * 50.0 + to.normalized() * 8.0) / 51.0
+		match int(_br):
+			-1:
+				_br_count += 1.0
+				if _just_hit:
+					_br_count -= randi() % 5
+				if _br_count >= float(60 + randi() % 120):
+					_br_count = 0.0
+					_br_to = _brain_spot(game, player, 10, 12, false)
+					_br = -2.0
+			-2:
+				v *= 0.9
+				_br_alpha += 25.0
+				if _br_alpha >= 255.0:
+					_br_alpha = 255.0
+					_brain_teleport()
+					_br = -3.0
+			-3:
+				_br_alpha -= 25.0
+				if _br_alpha <= 0.0:
+					_br_alpha = 0.0
+					_br = -1.0
+	else:
+		v = to if to.length() < 1.0 else to.normalized()
+		match int(_br):
+			0:
+				if not game.npcs().any(func(n): return n.kind == "Creeper" and n._brain == self and not n.is_queued_for_deletion()):
+					# Its Creepers are gone: its second form.
+					_br = -1.0
+					_br_count = 0.0
+					_br_alpha = 0.0
+				_br_count += 1.0
+				if _br_count >= float(120 + randi() % 300):
+					_br_count = 0.0
+					_br_to = _brain_spot(game, player, 12, 40, true)
+					_br = 1.0
+			1:
+				_br_alpha += 5.0
+				if _br_alpha >= 255.0:
+					_br_alpha = 255.0
+					_brain_teleport()
+					_br = 2.0
+			2:
+				_br_alpha -= 5.0
+				if _br_alpha <= 0.0:
+					_br_alpha = 0.0
+					_br = 0.0
+	if not home:
+		# You've left the Crimson (or died): it stops what it's doing and,
+		# after a second, sinks away ever faster.
+		_br_away = minf(_br_away + 1.0, 120.0)
+		if _br_away > 60.0:
+			v.y -= (_br_away - 60.0) * 0.25
+		_br = 2.0
+		_br_alpha = 10.0
+	elif _br_away > 0.0:
+		_br_away -= 1.0
+	velocity = v * PX_TICK
+	_just_hit = false
+
+
+## Where it teleports to (Terraria's search): lo-hi tiles off you across (any
+## way round on the ground) and lo-hi up or down, on ahead by your speed (16
+## px for each px/tick) if that's the way you're going; not in a block, and
+## with `see` (its first form) where it can see you for the first 75 tries;
+## after 100 tries, wherever the last one was.
+func _brain_spot(game, player, lo: int, hi: int, see: bool) -> Vector3:
+	var pv: Vector3 = player.velocity / PX_TICK
+	var at: Vector3 = player.center()
+	for tries in range(1, 102):
+		var a := randf() * TAU
+		var off := Vector3(cos(a), 0, sin(a)) * randi_range(lo, hi) * 16.0
+		off.y = randi_range(lo, hi) * 16.0 * (1.0 if randi() % 2 == 0 else -1.0)
+		if pv.length() > 0.0 and pv.normalized().dot(off.normalized()) > 0.0:
+			off += off.normalized() * 16.0 * pv.length()
+		at = player.center() + off / BR_PX
+		if tries > 100:
+			break
+		if game.world.is_solid(Vector3i(at.floor())):
+			continue
+		if not see or tries > 75 or _qb_sees(game, at, player):
+			break
+	return at
+
+
+## Faded out: there now (its middle on the spot).
+func _brain_teleport() -> void:
+	global_position = _br_to - Vector3(0, half.y * 0.5, 0)
+	Audio.play_at("Item_8", center())
+
+
+## Its second form begins: its outer brain bursts off (Terraria's gores
+## 392-395, flung at up to 6 px/tick, and 20 blood dust), with a roar.
+func _brain_shed(game) -> void:
+	Audio.play_at("NPC_Hit_1", center())
+	var lk := look(kind)
+	var px: float = lk.sprite_size.y / float(lk.frame_h)
+	var r := func() -> float: return randi_range(-30, 30) * 0.2
+	for id in [392, 393, 394, 395]:
+		var gore := Gore.new()
+		gore.setup(id, px)
+		game.entities.add_child(gore)
+		gore.global_position = center() + Vector3(randf_range(-half.x, half.x), randf_range(-0.5, 0.5) * half.y, randf_range(-half.x, half.x))
+		gore.velocity = Vector3(r.call(), r.call(), r.call())
+	for i in 20:
+		game.dust.spawn(5, center() + Vector3(randf_range(-half.x, half.x), randf_range(-0.5, 0.5) * half.y, randf_range(-half.x, half.x)),
+				Vector3(r.call(), r.call(), r.call()))
+	Audio.play_at("Roar_0", center())
+
+
+## A Creeper (aiStyle 55): it circles its Brain, easing back to it (1/16 a
+## tick toward 8 px/tick) when more than 90 px off and speeding up (x1.05 a
+## tick, to 8) when near, and now and then (1 in 200 a tick) charges at you
+## at 8 px/tick, till it's hit or 700 px from its Brain. Without its Brain
+## it's gone.
+func _ai_creeper(delta: float, game, player) -> void:
+	for t in _critter_ticks(delta):
+		if _brain == null or not is_instance_valid(_brain) or _brain.is_queued_for_deletion() or _brain.life <= 0:
+			queue_free()
+			return
+		var v := velocity / PX_TICK
+		var to_brain := (_brain.center() - center()) * BR_PX
+		if ai_state == 0:
+			if to_brain.length() > 90.0:
+				v = (v * 15.0 + to_brain.normalized() * 8.0) / 16.0
+			else:
+				if absf(v.x) + absf(v.y) + absf(v.z) < 8.0:
+					v *= 1.05
+				if randi() % 200 == 0:
+					v = (player.center() - center()).normalized() * 8.0
+					ai_state = 1
+		elif to_brain.length() > 700.0 or _just_hit:
+			ai_state = 0
+		_just_hit = false
+		velocity = v * PX_TICK
+	sprite.set_frame(0)
+
+
 # ------------------------------------------------------------ skeletron
 
 ## Terraria's px for Skeletron's distances (24 a block, like its sprites).
@@ -2187,8 +2415,9 @@ func _place_bone(holder: Node3D, p: Vector3, dir: Vector3, cam: Camera3D) -> voi
 ## Terraria damage: defense halves, ±15% variance, 4% base crit doubles.
 ## `armor_pen` ignores that much of its defense (Terraria's armor penetration).
 func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, armor_pen := 0) -> void:
-	if untouchable:
+	if untouchable or dont_take_damage:
 		return
+	_just_hit = true
 	var game := Game.current
 	var crit := randf() < crit_chance
 	var dmg := maxi(1, int(round(base_damage * randf_range(0.85, 1.15) - maxi(0, defense - armor_pen) * 0.5)))

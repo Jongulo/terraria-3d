@@ -329,7 +329,7 @@ func _check_hits(game) -> void:
 	if state == State.SPIN and spin_ticks <= SPIN_WARMUP:
 		return
 	for npc in game.npcs():
-		if _cooldowns.has(npc) or npc.def.ai == "town" or (npc.def.get("invulnerable", false) and npc.def.ai != "dummy"):
+		if _cooldowns.has(npc) or npc.def.ai == "town" or npc.dont_take_damage or (npc.def.get("invulnerable", false) and npc.def.ai != "dummy"):
 			continue
 		if not (_spin_reaches(npc, game) if state == State.SPIN else npc.overlaps_box(global_position - Vector3(0, _half, 0), Vector3(_half, _half * 2.0, _half))):
 			continue

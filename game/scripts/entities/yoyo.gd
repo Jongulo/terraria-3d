@@ -138,7 +138,7 @@ func _check_hits(game) -> void:
 	if _hit_cd > 0.0:
 		return
 	for npc in game.npcs():
-		if npc.def.get("invulnerable", false) and npc.def.ai != "dummy":
+		if npc.dont_take_damage or (npc.def.get("invulnerable", false) and npc.def.ai != "dummy"):
 			continue
 		if not npc.overlaps_point(global_position, RADIUS):
 			continue

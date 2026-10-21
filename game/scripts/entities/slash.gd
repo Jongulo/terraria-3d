@@ -118,7 +118,7 @@ func _check_hits(game) -> void:
 		if _cooldowns[n] <= 0 or not is_instance_valid(n):
 			_cooldowns.erase(n)
 	for npc in game.npcs():
-		if _cooldowns.has(npc) or npc.def.ai == "town" or (npc.def.get("invulnerable", false) and npc.def.ai != "dummy"):
+		if _cooldowns.has(npc) or npc.def.ai == "town" or npc.dont_take_damage or (npc.def.get("invulnerable", false) and npc.def.ai != "dummy"):
 			continue
 		if not reaches(npc) or not _can_see(game, npc):
 			continue

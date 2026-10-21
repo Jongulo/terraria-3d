@@ -14,6 +14,8 @@ var _mi := MeshInstance3D.new()
 ## Fliers: which way their art points (Terraria's sprite_angle; 0: down).
 var _art_forward := Vector3.LEFT
 var _tilts := false
+var _fade := 1.0
+var _xray := false
 static var XRAY := _xray_material()
 
 
@@ -75,6 +77,16 @@ func set_tint(c: Color) -> void:
 	_mi.set_instance_shader_parameter("tint", c)
 
 
+## 1: whole; less fades it out, dithered (the Brain of Cthulhu teleporting);
+## its see-through silhouette goes once it's half gone.
+func set_fade(v: float) -> void:
+	if v == _fade:
+		return
+	_fade = v
+	_mi.set_instance_shader_parameter("fade", v)
+	_mi.material_overlay = XRAY if _xray and v >= 0.5 else null
+
+
 func set_flash(v: float) -> void:
 	_mi.set_instance_shader_parameter("flash", v)
 
@@ -82,7 +94,8 @@ func set_flash(v: float) -> void:
 ## Seen through whatever's in front of it (bosses), as a tinted silhouette
 ## where it's hidden.
 func set_xray(on: bool) -> void:
-	_mi.material_overlay = XRAY if on else null
+	_xray = on
+	_mi.material_overlay = XRAY if on and _fade >= 0.5 else null
 
 
 ## Billboard-only calls: a model faces its heading instead.

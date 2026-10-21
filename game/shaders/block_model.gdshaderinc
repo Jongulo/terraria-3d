@@ -23,6 +23,8 @@ instance uniform vec4 light = vec4(1.0);
 // and the white flash of a hit, per enemy.
 instance uniform vec4 tint = vec4(1.0);
 instance uniform float flash = 0.0;
+// Below 1 fades it out, dithered (as billboard.gdshaderinc's fade).
+instance uniform float fade = 1.0;
 #endif
 #ifdef NPC_GLASS
 // How opaque a see-through model is (npc_model_glass.gdshader).
@@ -98,6 +100,9 @@ void fragment() {
 	ALBEDO = c.rgb * COLOR.rgb * l * l;
 #ifdef NPC_MODEL
 	ALBEDO = mix(ALBEDO * tint.rgb, vec3(1.0), flash);
+	if (fade < 1.0 && fract(sin(dot(floor(FRAGCOORD.xy), vec2(12.9898, 78.233))) * 43758.5453) > fade) {
+		discard;
+	}
 #endif
 #ifdef NPC_GLASS
 	ALPHA = glass;

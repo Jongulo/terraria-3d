@@ -808,7 +808,7 @@ throwing (Terraria's tile cutting: anything swung that does damage, tools too, c
 flowers, plants, vines, cobwebs, herbs and pots in its swing that no wall hides, and your
 arrows, bullets, bolts, shurikens, boomerangs, yoyos and spears cut what they pass through;
 not plants in a clay pot, and not sunflowers, rocks or life crystals); Slimes, Zombies, Demon Eyes, Cave Bats, Skeletons; the Eye of Cthulhu with both
-phases and Servants; the Eater of Worlds; King Slime; context music and SFX; save/load with autosave.
+phases and Servants; the Eater of Worlds and the Brain of Cthulhu; King Slime; context music and SFX; save/load with autosave.
 
 Long, thin projectiles (arrows, bullets, the Blood Rain Bow's drops, Glacier Fang icicles) point
 along their flight in 3D: the sprite's length lies along the way they fly, turned round it to face
@@ -976,6 +976,34 @@ and a Bottled Honey), and she comes for you to her own music.
   Honey Comb (1 in 3); Nectar, the Queen of Bees painting and the Honeyed Goggles.
 - **The test world:** spawners for her and her bees in the enemy arena (her fury is 2 there), and
   the hive's larva.
+
+**The Brain of Cthulhu**, Terraria's (aiStyle 54, its Creepers aiStyle 55, in their px and ticks;
+`entities/npc.gd`, Brain of Cthulhu section). Smash a third Crimson Heart, or use a Bloody Spine in
+the Crimson (30 Vicious Powder and 15 Vertebrae at a Demon or Crimson Altar), and it comes for you
+to Terraria's Boss 3 music.
+- **Body:** 1250 life, 30 damage, 14 defense, flying through blocks; 20 Creepers (100 life, 20
+  damage, 10 defense) come with it. The boss bar counts their life with its own (3250 in all).
+- **First form:** while any Creeper is left it can't be hurt (weapons pass through it). It drifts at
+  you at 1 px a tick. Every 120-420 ticks it fades out (5 alpha a tick), comes back 12-40 tiles off
+  you across and 12-40 up or down (further on ahead if you're moving that way; out of the blocks,
+  where it can see you) and fades back in.
+- **Creepers:** they circle it, easing back when more than 90 px off. Now and then (1 in 200 a
+  tick) one charges at you at 8 px a tick until it's hit or 700 px from the Brain. Each has a 2 in 3
+  chance of 2-5 Tissue Samples and of 5-12 Crimtane Ore.
+- **Second form:** with the Creepers gone its outer brain bursts off (Terraria's gores 392-395) and
+  it comes at you, easing toward 8 px a tick, now open to hits. Every 60-180 ticks it fades out and
+  in fast (25 a tick) to 10-12 tiles off you.
+- **Leaving:** out of the Crimson (or with you dead) it stops and sinks away, faster after a second.
+  6000 px off it's gone.
+- **Drops:** 40-90 Crimtane Ore, 5-15 Lesser Healing Potions, 5 gold, the Brain of Cthulhu Mask (1
+  in 7), the Bone Rattle (1 in 20; its pet isn't in yet), and its gores and dust.
+- **Not here:** Expert mode's illusions (it has no Expert mode), and its trophy.
+- **What Crimtane makes** (Terraria's recipes and stats): the Deathbringer Pickaxe (70% pickaxe
+  power, enough for Dungeon bricks and Hellstone), the Blood Butcherer, the Tendon Bow, the Flesh
+  Grinder, and the Crimson armor (6 / 7 / 6 defense, 3% more damage each). Its set bonus is
+  "Greatly increased life regen": natural healing builds up twice as fast and heals half again as
+  much (Terraria's crimsonRegen). Not yet: the Blood Butcherer's bleeding blades (as Light's Bane's
+  shadow slash).
 
 **Keeping bosses in sight.** Bosses fly through blocks, and in Terraria's 2D view NPCs are drawn in
 front of the tiles, so you never lose one. Here:
@@ -1221,9 +1249,8 @@ Furniture: Terraria's early house furniture and the crafting chain behind it.
 - **Recipes are Terraria's own:** every recipe is read from your Terraria.exe
   (`tools/terraria_recipes.py`, run by `extract_assets.sh`), so amounts, stations and "any Wood" /
   "Iron or Lead Bar" are exactly Terraria's. An item is craftable here when everything its Terraria
-  recipe takes exists in this game. Two stand-ins remain until their parts exist: the Nightmare
-  Pickaxe (without Shadow Scales, from the Eater of Worlds) and Hellstone Bars (at a furnace, not a
-  Hellforge). Like Terraria, the Candle, Candelabra and chandeliers take one metal each (Terraria has
+  recipe takes exists in this game. One stand-in remains until its parts exist: Hellstone Bars
+  (at a furnace, not a Hellforge). Like Terraria, the Candle, Candelabra and chandeliers take one metal each (Terraria has
   separate Platinum, Tin... versions, not in this game yet), and the plain Work Bench and Wooden
   Table take plain Wood.
 - **Supporting recipes:** Chain is 15 from 1 Iron or Lead Bar at an anvil, Glass is 2 Sand at a
@@ -1621,8 +1648,7 @@ Enemy health bars: Terraria's bar (HealthBar1/2, green through yellow to red) fl
 enemy's head once it is hurt, facing you; bosses get a bigger one. Town NPCs and target dummies
 have none. Settings → Interface → "Enemy health bars" turns them off.
 
-Not yet: the evil bosses (Eater of Worlds, Brain of Cthulhu), Devourers and Blood Crawlers,
+Not yet: Devourers and Blood Crawlers,
 Giant Worms, the other town NPCs (Clothier...), NPC happiness,
-other biomes and bosses; the ocean's palm
-trees, seashells and fishing; Granite and Marble caves, the Dungeon's
+other biomes and bosses; the ocean's seashells; Granite and Marble caves, the Dungeon's
 enemies, traps and furniture, and the Underground Desert's open caverns.

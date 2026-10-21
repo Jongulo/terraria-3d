@@ -81,7 +81,7 @@ func _physics_process(delta: float) -> void:
 func _hits(game) -> void:
 	var now := _age
 	for npc in game.npcs():
-		if npc.def.ai == "town":
+		if npc.def.ai == "town" or npc.dont_take_damage:
 			continue
 		if now - float(_hit_at.get(npc, -1.0)) < HIT_COOLDOWN or not npc.overlaps_point(global_position, 0.3):
 			continue

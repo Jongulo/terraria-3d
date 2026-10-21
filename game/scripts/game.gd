@@ -625,6 +625,15 @@ func boss_status() -> Dictionary:
 	if b == null:
 		return {}
 	var group: String = b.def.get("boss_group", "")
+	var adds: Array = b.def.get("bar_adds", [])
+	if not adds.is_empty():
+		# Its minions' life counts too, out of all of theirs at full
+		# (Terraria's BrainOfCthuluBigProgressBar: the Creepers).
+		var life := maxi(b.life, 0)
+		for npc in npcs():
+			if npc.kind == adds[0] and not npc.is_queued_for_deletion():
+				life += maxi(npc.life, 0)
+		return {"name": Assets.npc_name(b.kind), "life": life, "max": b.life_max + int(Data.npcs[adds[0]].life) * int(adds[1])}
 	if group == "":
 		return {"name": Assets.npc_name(b.kind), "life": maxi(b.life, 0), "max": b.life_max}
 	var total := 0
@@ -912,7 +921,7 @@ func explode(pos: Vector3, damage: int, knockback: float, ex: Dictionary) -> voi
 		spawn_dust(pos + off, [Color(1.0, 0.6, 0.15), Color(1.0, 0.85, 0.4), Color(0.4, 0.4, 0.4)][i % 3], 16)
 	for npc in npcs():
 		var to: Vector3 = npc.center() - pos
-		if to.length() < r + npc.half.x and not npc.def.get("invulnerable", false):
+		if to.length() < r + npc.half.x and not npc.def.get("invulnerable", false) and not npc.dont_take_damage:
 			npc.hit(damage, knockback, to.normalized(), 0.04)
 	if ex.get("self", true) and player.alive and player.center().distance_to(pos) < r + 0.5:
 		player.hurt(damage, pos)
@@ -1165,12 +1174,9 @@ func _orb_smashed(c: Vector3, b: Dictionary) -> void:
 		2:
 			message("Screams echo around you...", Color(0.6, 0.45, 1.0))
 		0:
-			# Terraria: the third orb wakes the Eater of Worlds (a Crimson
-			# Heart's Brain of Cthulhu isn't in yet).
-			if table == "shadow_orb":
-				summon_boss("EaterofWorldsHead")
-			else:
-				message("Something stirs deep in the world... (its boss is not in this version yet)", Color(0.6, 0.45, 1.0))
+			# Terraria: the third orb wakes the Eater of Worlds, the third
+			# heart the Brain of Cthulhu.
+			summon_boss("EaterofWorldsHead" if table == "shadow_orb" else "BrainofCthulhu")
 
 
 ## What breaking a block drops: its "drop", or for a gem tree's trunk its gem
