@@ -1391,6 +1391,21 @@ The surface, like Terraria's (its TerrainPass; `rust/voxel_core/src/terrain.rs`)
     path of 10 points 5-10 apart, a tunnel under a bridge of dirt in its side view. Here a dirt
     ridge is heaped along a winding path the same length, with a walkable tunnel (4-5 across, its
     floor at the ground) bored through it; grass covers it and vines hang in its mouths.
+- **Lakes** (Terraria's Lakes pass, SonOfLakinater; `rust/voxel_core/src/surface.rs`): 3-6 per 640 x
+  640 blocks on open, fairly flat ground, away from the mountains, beaches, spawn and each other. Each
+  is dug as Terraria digs one: a basin 15-30 strong (1.3 times that 1 in 5) sinking over 30-60
+  steps, wide and shallow at first and rounder as it goes down, its banks cut back in a slope, any
+  cave it opens into sealed off round it, and flooded to the lowest point of its rim (so it never
+  spills down a slope). Pond plants grow in it as in the ponds.
+- **Stone and ore on the grass** (its SurfaceOreAndStone pass): stone patches (1-7 per 640 x 640
+  blocks, twice over), the ground turned to stone along a short run down from the grass with rubble
+  on it; and ore patches (5-10, 100 apart), the world's first-tier ore (its second 1 in 3) showing at
+  the surface over a vein 8-12 deep.
+- **Forests** (its Trees pass): groves of tall trees (Terraria's GrowEpicTree, 20-30 tall; here
+  18-28) 25-50 blocks round, 0.003 of its width of them per 640 x 640 blocks, twice over (about a
+  quarter of the forest); elsewhere trees wherever there's room, thicker in places and thinner in
+  others, from dense woods to open meadows. No two trunks within 2 blocks (Terraria leaves two
+  columns between), and none on a lake's floor.
 
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a

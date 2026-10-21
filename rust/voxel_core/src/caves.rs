@@ -30,6 +30,9 @@ pub enum Op {
     Dig,
     /// Fill the empty ones with this block.
     Add(u16),
+    /// Turn the solid ground ones (not liquid, not the cells `keep` says to
+    /// keep) into this block.
+    Paint(u16),
 }
 
 /// Terraria's TileRunner in 3D. From `pos`, `steps` times: covers a ball
@@ -64,7 +67,7 @@ pub fn runner(w: &mut World, rng: &mut Rng, pos: (f32, f32, f32), strength: f32,
 
 /// One of a runner's balls: radius `r`, each cell's reach jittered by up to
 /// 15% (Terraria's ragged edges).
-fn ball(w: &mut World, rng: &mut Rng, c: (f32, f32, f32), r: f32, op: Op, keep: &dyn Fn(i32, i32, i32, u16) -> bool) {
+pub fn ball(w: &mut World, rng: &mut Rng, c: (f32, f32, f32), r: f32, op: Op, keep: &dyn Fn(i32, i32, i32, u16) -> bool) {
     let n = r.ceil() as i32 + 1;
     let (cx, cy, cz) = (c.0.floor() as i32, c.1.floor() as i32, c.2.floor() as i32);
     for y in (cy - n).max(1)..=(cy + n).min(w.sy - 2) {
@@ -87,6 +90,12 @@ fn ball(w: &mut World, rng: &mut Rng, c: (f32, f32, f32), r: f32, op: Op, keep: 
                             w.blocks[i] = id;
                         }
                     }
+                    Op::Paint(id) => {
+                        let b = w.blocks[i];
+                        if b != 0 && w.liquid[i] == 0 && w.is_solid(x, y, z) && !keep(x, y, z, b) {
+                            w.blocks[i] = id;
+                        }
+                    }
                 }
             }
         }
@@ -94,20 +103,20 @@ fn ball(w: &mut World, rng: &mut Rng, c: (f32, f32, f32), r: f32, op: Op, keep: 
 }
 
 /// A heading on the ground at random (a unit vector, x and z).
-fn heading(rng: &mut Rng) -> (f32, f32) {
+pub fn heading(rng: &mut Rng) -> (f32, f32) {
     let a = rng.range(0, 6283) as f32 / 1000.0;
     (a.cos(), a.sin())
 }
 
 /// How many of a thing Terraria puts `per_4200` of in a small world (4200
 /// wide), for this world: per 640 x 640 blocks of map, twice over.
-fn count(w: &World, per_4200: f32) -> usize {
+pub fn count(w: &World, per_4200: f32) -> usize {
     (per_4200 * 2.0 * (w.sx * w.sz) as f32 / (640.0 * 640.0)).round() as usize
 }
 
 /// Where a surface feature may start: inland of the beach by 20, and not in
 /// the middle of the world (Terraria keeps them out of its middle 10-20%).
-fn site_ok(w: &World, coast: &Coast, x: i32, z: i32, middle: f32) -> bool {
+pub fn site_ok(w: &World, coast: &Coast, x: i32, z: i32, middle: f32) -> bool {
     let inland = coast.inland(x, z);
     let (mx, mz) = ((x - w.sx / 2) as f32, (z - w.sz / 2) as f32);
     inland > coast.ocean.width + coast.ocean.beach + 20.0 && (mx * mx + mz * mz).sqrt() > w.sx.min(w.sz) as f32 * middle

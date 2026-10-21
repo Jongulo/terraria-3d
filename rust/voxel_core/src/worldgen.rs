@@ -1737,6 +1737,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         let peaks = terrain.mountain_peaks(&heights, sx, sz);
         crate::caves::mountain_caves(w, &mut crng, &peaks, &keep);
         crate::caves::surface_caves(w, &mut crng, &coast, &keep);
+        // Terraria's lakes (surface.rs), away from the mountains.
+        crate::surface::lakes(w, &mut crng, &coast, &peaks, &|b| ground.contains(&b), ids.dirt);
     }
 
     // Surface ponds in hollows (before plants, which would let them leak).
@@ -1794,6 +1796,16 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             }
         }
     }
+    // Terraria's stone and ore patches on the grass (surface.rs; its
+    // SurfaceOreAndStone pass), on their own random numbers.
+    {
+        let mut prng = Rng::new(seed as u64 ^ 0x0e5_5707e);
+        let plant: Vec<bool> = w.defs.iter().map(|d| !d.solid).collect();
+        let is_plant = |b: u16| b != 0 && plant.get(b as usize).copied().unwrap_or(false);
+        let rocks = (w.id_of("small_rocks"), w.id_of("large_rocks"));
+        crate::surface::stone_patches(w, &mut prng, &coast, ids.grass, ids.stone, rocks, &is_plant);
+        crate::surface::ore_patches(w, &mut prng, &coast, ids.grass, (ids.ores[0].0, ids.ores[1].0), &is_plant);
+    }
     // Sunflowers grow in patches, like Terraria's.
     if flora.sunflower != 0 {
         for _ in 0..(area / 2500.0) as usize {
@@ -1814,23 +1826,34 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     set_progress(0.65);
 
-    // Pass 3: trees on a jittered grid, each forest zone with its leaves.
+    // Pass 3: trees, Terraria's way (surface.rs Forest): groves of tall trees
+    // (its GrowEpicTree, 20-30 tall; here 18-28), and elsewhere trees
+    // wherever there's room, thicker in places and thinner in others; never
+    // two trunks within 2 (Terraria leaves two columns between). Each forest
+    // zone with its leaves.
     let tops = TreeTops::new(seed, sx);
     if ids.trunk != 0 {
-        let cell = 7;
+        let mut trng = Rng::new(seed as u64 ^ 0x7ee5_f0e5);
+        let forest = crate::surface::Forest::new(seed, w, &mut trng);
+        let cell = 5;
         for gz in 0..sz / cell {
             for gx in 0..sx / cell {
-                if !rng.chance(0.55) {
+                let x = gx * cell + trng.range(1, cell - 1);
+                let z = gz * cell + trng.range(1, cell - 1);
+                let (chance, grove) = forest.at(x as f32, z as f32);
+                if !trng.chance(chance) {
                     continue;
                 }
-                let x = gx * cell + rng.range(1, cell - 1);
-                let z = gz * cell + rng.range(1, cell - 1);
                 let y = w.surface_y(x, z);
-                if y < 0 || w.get(x, y, z) != ids.grass {
+                // (Not on a lake's or pond's grassy floor.)
+                if y < 0 || w.get(x, y, z) != ids.grass || w.liquid_at(x, y + 1, z).1 > 0 {
                     continue;
                 }
-                let height = rng.range(6, 15);
-                if y + height + 4 >= sy {
+                let height = if grove { trng.range(18, 29) } else { trng.range(6, 15) };
+                if y + height + 4 >= sy || (1..=height + 3).any(|k| w.get(x, y + k, z) != 0 && w.is_solid(x, y + k, z)) {
+                    continue;
+                }
+                if (-2..=2).any(|dx: i32| (-2..=2).any(|dz: i32| w.get(x + dx, y + 1, z + dz) == ids.trunk || w.get(x + dx, y + 2, z + dz) == ids.trunk)) {
                     continue;
                 }
                 for k in 1..=height {
@@ -1840,7 +1863,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
                 w.decorations.push(Decoration {
                     kind: "tree_top".into(),
                     pos: (x, y + height + 1, z),
-                    style: tops.forest(x, z, rng.range(0, 3)),
+                    style: tops.forest(x, z, trng.range(0, 3)),
                 });
             }
         }
@@ -2288,7 +2311,8 @@ pub fn biome_patch(w: &mut World, rng: &mut Rng, center: (i32, i32), radius: i32
             let shape = if biome == BIOME_JUNGLE { d.powi(3) } else { d * d };
             let bottom = lowest + ((ground - lowest) as f32 * shape) as i32;
             let sand_depth = 8 + (6.0 * (1.0 - d)) as i32;
-            for y in bottom.max(1)..(ground + 26).min(w.sy) {
+            // (Up past the tallest trees: the groves' are 28.)
+            for y in bottom.max(1)..(ground + 34).min(w.sy) {
                 let i = w.idx(x, y, z);
                 let b = w.blocks[i];
                 if b == 0 {
@@ -2388,7 +2412,7 @@ pub fn biome_patch(w: &mut World, rng: &mut Rng, center: (i32, i32), radius: i32
                 continue;
             }
             let top = w.surface_y(x, z);
-            if top <= 0 || top + 20 >= w.sy || w.get(x, top + 1, z) != 0 {
+            if top <= 0 || top + 20 >= w.sy || w.get(x, top + 1, z) != 0 || w.liquid_at(x, top + 1, z).1 > 0 {
                 continue;
             }
             let ground = w.get(x, top, z);
@@ -3543,6 +3567,33 @@ mod tests {
             assert!(y < l.surface_base - 9 && y > l.underworld_top, "underground, above the Underworld (y {y})");
             assert!(w.surface_y(x, z) > y + 5, "under the ground");
         }
+    }
+
+    #[test]
+    fn surface_trees_stand_on_their_ground() {
+        // Every forest, snow or jungle tree on the surface: an unbroken trunk
+        // from its canopy down to grass (or snow, or jungle grass), never a
+        // canopy floating on a stub or a trunk on the desert's sand.
+        let w = gen_world_sized(7, 0, (768, 384, 768));
+        let l = layers(w.sy);
+        let trunks: Vec<u16> = ["tree_trunk", "boreal_trunk", "mahogany_trunk"].iter().map(|n| w.id_of(n)).collect();
+        let grounds: Vec<u16> = ["grass", "snow_block", "jungle_grass", "corrupt_grass", "crimson_grass"].iter().map(|n| w.id_of(n)).filter(|&i| i != 0).collect();
+        let mut bad = Vec::new();
+        let mut n = 0;
+        for d in w.decorations.iter().filter(|d| d.kind == "tree_top" && is_forest_canopy(d.style) && d.pos.1 > l.surface_base - 12 && d.pos.1 < l.space_top) {
+            let (x, z) = (d.pos.0, d.pos.2);
+            let mut y = d.pos.1 - 1;
+            let mut h = 0;
+            while trunks.contains(&w.get(x, y, z)) {
+                h += 1;
+                y -= 1;
+            }
+            n += 1;
+            if h < 4 || !grounds.contains(&w.get(x, y, z)) {
+                bad.push((d.pos, h, w.def(w.get(x, y, z)).name.clone()));
+            }
+        }
+        assert!(n > 100 && bad.is_empty(), "{} of {n}: {:?}", bad.len(), &bad[..bad.len().min(8)]);
     }
 
     #[test]

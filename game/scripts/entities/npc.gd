@@ -1382,8 +1382,11 @@ func _teleport_near(player) -> void:
 	for i in 60:
 		var x := pc.x + randf_range(-13.3, 13.3)
 		var z := pc.z + randf_range(-13.3, 13.3)
-		var y0 := floori(pc.y) + randi_range(-8, 8)
-		var cell := Vector3i(floori(x), y0, floori(z))
+		# Down the column from 8 over you to 8 under for the ground (as
+		# Terraria scans down for its floor).
+		var cell := Vector3i(floori(x), floori(pc.y) + 8, floori(z))
+		while cell.y > floori(pc.y) - 8 and not w.is_solid(cell):
+			cell.y -= 1
 		if not w.is_solid(cell) or w.get_liquid(cell + Vector3i.UP).x == 2:
 			continue
 		var clear := true

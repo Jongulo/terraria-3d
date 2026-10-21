@@ -4285,14 +4285,16 @@ func _town_checks(c: Vector3i) -> void:
 	await frames(40)
 
 	# Arrivals: with the Merchant gone and his house free, 50 silver brings him back.
+	# (The money goes first: the town checks its homes now and then, and with
+	# 50 silver on you he'd be straight back.)
+	var money := p.inventory.money()
+	p.inventory.pay(money)
 	var merchant: NPC = town.residents.Merchant
 	town.residents.erase("Merchant")
 	town.arrived.erase("Merchant")
 	merchant.queue_free()
 	await frames(2)
 	p.global_position = Vector3(TestWorld.town_house(c, 1)) + Vector3(-4, 0, 3)
-	var money := p.inventory.money()
-	p.inventory.pay(money)
 	town.update_housing()
 	check(not town.residents.has("Merchant"), "no money, no Merchant")
 	p.inventory.add_money(money)

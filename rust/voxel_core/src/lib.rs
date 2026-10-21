@@ -14,6 +14,7 @@ pub mod physics;
 pub mod save;
 pub mod shrines;
 pub mod shrink;
+pub mod surface;
 pub mod terrain;
 pub mod world;
 pub mod worldgen;

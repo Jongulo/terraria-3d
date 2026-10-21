@@ -226,9 +226,17 @@ func _run() -> void:
 		if n.is_critter():
 			n.queue_free()
 	await aim(-0.6)
+	# (Nor anyone else: the Guide or a slime wandering into the spot.)
+	var place_at: Vector3i = p.target.get("block", Vector3i(-1, -1, -1)) + p.target.get("normal", Vector3i.ZERO)
+	for n in game.npcs():
+		if n.overlaps_box(Vector3(place_at) + Vector3(0.5, 0, 0.5), Vector3(0.5, 1.0, 0.5)):
+			n.global_position += Vector3(8, 0, 8)
 	var before := p.inventory.count_of("DirtBlock")
 	await use(1)
-	check(p.inventory.count_of("DirtBlock") == before - 1, "placed a block")
+	var aimed: Dictionary = p.target
+	var at: Vector3i = aimed.get("block", Vector3i(-1, -1, -1)) + aimed.get("normal", Vector3i.ZERO)
+	check(p.inventory.count_of("DirtBlock") == before - 1, "placed a block (aimed at %s, the spot holds %s, an NPC there: %s)"
+			% [Data.block(game.world.get_block(aimed.get("block", Vector3i(-1, -1, -1)))).get("name", "?"), Data.block(game.world.get_block(at)).get("name", "air"), game.any_npc_in_block(at)])
 
 	# Crafting: wood -> work bench (by hand).
 	p.inventory.add("Wood", 30)
