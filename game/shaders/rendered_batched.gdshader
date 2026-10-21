@@ -12,9 +12,12 @@
 // straight above. With one row (shots straight on only, as placeables have)
 // it's Doom's way instead: the quad stands upright, turning round the model's
 // vertical only. Lit like the other block models: each block's light in
-// INSTANCE_CUSTOM.
+// INSTANCE_CUSTOM. The sun's optional shadows (sun_shadow.gdshaderinc): in
+// the shadow pass it shows the shot the sun sees; it takes its shade from one
+// look-up beside it toward the sun (its shots don't line up with the shadow
+// map's texel for texel).
 shader_type spatial;
-render_mode unshaded, cull_disabled;
+render_mode ambient_light_disabled, specular_disabled, cull_disabled;
 
 uniform sampler2D atlas : source_color, filter_nearest, repeat_disable;
 uniform int yaws = 16;
@@ -29,7 +32,10 @@ uniform vec3 sky_color : source_color = vec3(1.0);
 varying vec4 v_light;
 varying vec3 v_world;
 varying float v_push;
+varying vec3 v_origin;
+varying float v_reach;
 #include "res://shaders/player_light.gdshaderinc"
+#include "res://shaders/sun_shadow.gdshaderinc"
 
 void vertex() {
 	v_light = INSTANCE_CUSTOM;
@@ -37,6 +43,11 @@ void vertex() {
 	float s = length(MODEL_MATRIX[0].xyz);
 	vec3 origin = (MODEL_MATRIX * vec4(center, 1.0)).xyz;
 	vec3 to_cam = CAMERA_POSITION_WORLD - origin;
+	if (PROJECTION_MATRIX[3][3] > 0.5) {
+		to_cam = sun_dir * 1000.0;  // the sun's shadow pass
+	}
+	v_origin = origin;
+	v_reach = radius * s;
 	// The shot: the nearest row by pitch, column by yaw (model space).
 	vec3 d = normalize(inverse(turn) * to_cam);
 	bool upright = rows == 1;
@@ -79,9 +90,11 @@ void fragment() {
 	if (c.a < 0.5) {
 		discard;
 	}
-	vec3 l = max(max(v_light.rgb, vec3(v_light.a * sky_light) * sky_color), extra_light(v_world));
 	// Premultiplied shots (crisp: their colour), lit as the block models are.
-	ALBEDO = c.rgb / c.a * l * l;
+	SUN_SHADOW_COLOUR(c.rgb / c.a, max(v_light.rgb, extra_light(v_world)), vec3(v_light.a * sky_light) * sky_color, 0.0);
+	if (sun_shadows) {
+		LIGHT_VERTEX = (VIEW_MATRIX * vec4(v_origin + sun_dir * (v_reach + 0.1), 1.0)).xyz;
+	}
 	vec4 clip = PROJECTION_MATRIX * vec4(VERTEX + normalize(-VERTEX) * v_push, 1.0);
 	DEPTH = clip.z / clip.w;
 }

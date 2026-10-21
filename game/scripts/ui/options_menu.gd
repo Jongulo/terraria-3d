@@ -36,6 +36,7 @@ func _ready() -> void:
 	box.add_child(tabs)
 	tabs.add_child(_general_tab())
 	tabs.add_child(_interface_tab())
+	tabs.add_child(_shaders_tab())
 	tabs.add_child(_audio_tab())
 	tabs.add_child(_controls_tab())
 
@@ -143,6 +144,20 @@ func _interface_tab() -> Control:
 					c.set_value_no_signal(1.0))
 	page.add_child(reset)
 	_checkbox(page, "Enemy health bars", "enemy_health_bars")
+	return page
+
+
+func _shaders_tab() -> Control:
+	var page := _page("Shaders")
+	_checkbox(page, "Sun and moon shadows", "shadows")
+	var hint := Label.new()
+	hint.text = "Real-time shadows, their edges along the blocks' pixels."
+	hint.add_theme_font_size_override("font_size", 18)
+	hint.modulate = Color(1, 1, 1, 0.7)
+	page.add_child(hint)
+	_slider(page, "Shadow distance", "shadow_distance", 32.0, 160.0, 8.0, func(x): return "%d blocks" % int(x))
+	_slider(page, "Shadow detail", "shadow_detail", 1.0, 3.0, 1.0, func(x): return ["Low", "Medium", "High"][clampi(int(x) - 1, 0, 2)])
+	_slider(page, "Shadow darkness", "shadow_shade", 0.0, 0.9, 0.05, func(x): return "%d%%" % roundi((1.0 - x) * 100.0))
 	return page
 
 

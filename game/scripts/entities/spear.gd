@@ -189,7 +189,7 @@ func _place(game) -> void:
 	var swing := Transform3D(Basis(cam.basis.x, -deg_to_rad(55.0) * pow(1.0 - _equip, 2.0)), Vector3.ZERO)
 	swing = Transform3D(Basis(), cam.origin) * swing * Transform3D(Basis(), -cam.origin)
 	global_transform = swing * Transform3D(basis, tp - basis * Vector3(0.0, _size.y, 0.0))
-	_mesh.set_instance_shader_parameter("light", game.world.get_light(mid))
+	_mesh.set_instance_shader_parameter("entity_light", game.world.get_light(mid))
 	var m: ShaderMaterial = _mesh.material_override
 	var clip := swing * Plane(dir, hd)
 	m.set_shader_parameter("clip_plane", Vector4(clip.normal.x, clip.normal.y, clip.normal.z, clip.d))

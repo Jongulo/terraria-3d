@@ -52,7 +52,7 @@ func _poll() -> void:
 	_shots = MultiMeshInstance3D.new()
 	_shots.multimesh = mm
 	_shots.material_override = BlockModels.rendered_material(block_id, frame)
-	_shots.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_shots.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_shots.extra_cull_margin = 4.0
 	add_child(_shots)
 	_sprite.queue_free()

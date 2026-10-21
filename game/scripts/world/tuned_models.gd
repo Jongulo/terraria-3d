@@ -640,6 +640,7 @@ static func one_color_arrays(source: Array, textured: bool, tex: Image, px: floa
 	var corners := _corners(s)
 	var verts := PackedVector3Array()
 	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
 	for c: Vector3i in vx.cells:
 		var faces: PackedColorArray = vx.cells[c]
 		var own := primary(faces).srgb_to_linear()
@@ -652,12 +653,14 @@ static func one_color_arrays(source: Array, textured: bool, tex: Image, px: floa
 			for k in [0, 1, 2, 0, 2, 3]:
 				verts.append(p + q[k])
 				colors.append(Color(col.r, col.g, col.b))
+				uvs.append(BlockModelMesh.FACE_UVS[k])
 	if verts.is_empty():
 		return []
 	var out := []
 	out.resize(Mesh.ARRAY_MAX)
 	out[Mesh.ARRAY_VERTEX] = verts
 	out[Mesh.ARRAY_COLOR] = colors
+	out[Mesh.ARRAY_TEX_UV] = uvs
 	return out
 
 
@@ -701,6 +704,7 @@ static func arrays(m: Dictionary, frame: int, px: float, o := {}, lo := Vector3i
 	var sz := size.x * size.y
 	var verts := PackedVector3Array()
 	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
 	for z in range(lo.z, hi.z):
 		for y in range(lo.y, hi.y):
 			for x in range(lo.x, hi.x):
@@ -733,12 +737,14 @@ static func arrays(m: Dictionary, frame: int, px: float, o := {}, lo := Vector3i
 					for k in [0, 1, 2, 0, 2, 3]:
 						verts.append(p + q[k])
 						colors.append(Color(c.r, c.g, c.b))
+						uvs.append(BlockModelMesh.FACE_UVS[k])
 	if verts.is_empty():
 		return []
 	var out := []
 	out.resize(Mesh.ARRAY_MAX)
 	out[Mesh.ARRAY_VERTEX] = verts
 	out[Mesh.ARRAY_COLOR] = colors
+	out[Mesh.ARRAY_TEX_UV] = uvs
 	return out
 
 

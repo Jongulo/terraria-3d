@@ -19,7 +19,7 @@ func setup(tex: Texture2D, frame_count: int, size: Vector2, centred := false, sp
 		quad.center_offset = Vector3(0, 0.5, 0)
 	mesh = quad
 	scale = Vector3(size.x, size.y, 1.0)
-	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_mat = ShaderMaterial.new()
 	_mat.shader = _shader()
 	_param("sprite", tex)
@@ -101,14 +101,14 @@ func set_axis(dir: Vector3) -> void:
 
 
 func update_light(world: VoxelWorld, sky: SkySystem, at: Vector3) -> void:
-	_mat.set_shader_parameter("light", world.get_light(at))
+	_mat.set_shader_parameter("entity_light", world.get_light(at))
 	_mat.set_shader_parameter("sky_light", sky.sky_light)
 	_mat.set_shader_parameter("sky_color", sky.sky_tint)
 
 
 ## Lit by nothing but itself (a glowing star): full brightness.
 func set_glow() -> void:
-	_mat.set_shader_parameter("light", Color(1, 1, 1, 0))
+	_mat.set_shader_parameter("entity_light", Color(1, 1, 1, 0))
 	_mat.set_shader_parameter("sky_light", 0.0)
 
 

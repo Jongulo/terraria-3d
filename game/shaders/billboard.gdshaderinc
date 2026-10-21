@@ -7,9 +7,13 @@ uniform int frame = 0;
 // Fraction of each frame cut off at the bottom (sheets with guide lines).
 uniform float trim_bottom = 0.0;
 uniform bool flip = false;
+// The sheet's texture pixels per art pixel (Terraria's NPC, item, projectile
+// and gore sheets are drawn at 2x): the sun's shadow is looked up once per
+// art pixel.
+uniform int art_scale = 2;
 uniform vec4 tint : source_color = vec4(1.0);
 // Light at the entity (r, g, b, sun) and the global sun brightness.
-uniform vec4 light = vec4(1.0);
+uniform vec4 entity_light = vec4(1.0);
 uniform float sky_light = 1.0;
 uniform vec3 sky_color : source_color = vec3(1.0);
 uniform float flash = 0.0;
@@ -50,11 +54,25 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 uniform vec4 xray_color : source_color = vec4(1.0, 0.8, 0.35, 0.6);
 #endif
 #include "res://shaders/player_light.gdshaderinc"
+#ifndef XRAY
+// The sun's optional shadows: cast as its outline facing the sun (in the
+// shadow pass it turns to the sun), taken at the matching texel of that
+// sun-facing copy, so it never shades itself.
+#include "res://shaders/sun_shadow.gdshaderinc"
+#else
+global uniform vec3 sun_dir;
+#endif
+varying vec3 v_origin;
+varying vec3 v_right;
 
 void vertex() {
 	vec3 cam = INV_VIEW_MATRIX[3].xyz;
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	vec3 to_cam = cam - origin;
+	// The sun's shadow pass (orthographic): turned to the sun.
+	if (PROJECTION_MATRIX[3][3] > 0.5) {
+		to_cam = sun_dir * 1000.0;
+	}
 	vec3 fwd = spherical ? normalize(to_cam) : normalize(vec3(to_cam.x, 0.0, to_cam.z));
 	vec3 up = spherical ? INV_VIEW_MATRIX[1].xyz : vec3(0.0, 1.0, 0.0);
 	vec3 right = normalize(cross(up, fwd));
@@ -82,6 +100,8 @@ void vertex() {
 	v = vec2(v.x * cr - v.y * sr, v.x * sr + v.y * cr);
 	vec3 world = origin + right * v.x + up * v.y;
 	POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
+	v_origin = origin;
+	v_right = right;
 	float u = flip ? 1.0 - UV.x : UV.x;
 	UV = vec2(u, (UV.y * (1.0 - trim_bottom) + float(frame)) / float(frames));
 	UV = region.xy + UV * region.zw;
@@ -110,10 +130,22 @@ void fragment() {
 	ALPHA = xray_color.a * fade;
 }
 #else
-	vec3 sun = vec3(light.a * sky_light) * sky_color;
-	vec3 l = max(max(light.rgb, sun), extra_light(NODE_POSITION_WORLD));
-	l = max(l * l, vec3(0.04));
-	ALBEDO = mix(c.rgb * l, vec3(1.0), flash);
+	vec3 sun = vec3(entity_light.a * sky_light) * sky_color;
+	SUN_SHADOW_COLOUR(c.rgb * (1.0 - flash), max(entity_light.rgb, extra_light(NODE_POSITION_WORLD)), sun, 0.04);
+	EMISSION += vec3(flash);
+	if (sun_shadows) {
+		vec3 at;
+		if (spherical || dot(axis, axis) > 1e-8) {
+			// (Turned every which way: one look-up, beside it toward the sun.)
+			at = v_origin + sun_dir * 0.5;
+		} else {
+			vec3 rel = (INV_VIEW_MATRIX * vec4(sun_snap_uv(VERTEX, UV, vec2(textureSize(sprite, 0)) / float(max(art_scale, 1))), 1.0)).xyz - v_origin;
+			vec3 fl = normalize(vec3(sun_dir.x, 0.0, sun_dir.z));
+			vec3 rl = normalize(cross(vec3(0.0, 1.0, 0.0), fl));
+			at = v_origin + rl * dot(rel, v_right) + vec3(0.0, rel.y, 0.0) + sun_dir * 0.1;
+		}
+		LIGHT_VERTEX = (VIEW_MATRIX * vec4(at, 1.0)).xyz;
+	}
 	ALPHA = c.a;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	if (fade < 1.0 && fract(sin(dot(floor(FRAGCOORD.xy), vec2(12.9898, 78.233))) * 43758.5453) > fade) {

@@ -74,6 +74,7 @@ func _instance(style: int, far := false) -> MultiMeshInstance3D:
 			mat = ShaderMaterial.new()
 			mat.shader = preload("res://shaders/block_model_batched.gdshader")
 			mat.set_shader_parameter("sprite", ImageTexture.create_from_image(d.sprite))
+			mat.set_shader_parameter("art_scale", int(d.get("art_scale", 1)))
 			mat.set_shader_parameter("textured", built.textured)
 			mat.set_shader_parameter("billboard", method == "billboard")
 			# In front of the billboard trunk, whose top it overlaps (no z-fighting).
@@ -86,7 +87,7 @@ func _instance(style: int, far := false) -> MultiMeshInstance3D:
 		var mi := MultiMeshInstance3D.new()
 		mi.multimesh = mm
 		mi.material_override = mat
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		if method == "rendered":
 			mi.extra_cull_margin = 4.0  # the quad is moved and grown in the shader
 		add_child(mi)

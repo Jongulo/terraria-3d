@@ -396,6 +396,36 @@ func _run() -> void:
 	game.sky.is_day = was_day
 	game.sky.time = was_time
 	game.starfall.process_mode = Node.PROCESS_MODE_INHERIT
+	# Optional sun shadows (Settings → Shaders): off by default, no light; on,
+	# a shadowed directional light along the sun, the shaders told, with the
+	# blocks and models casting; voxel models' faces carry UVs for the
+	# per-voxel look-up.
+	var ss := game.sun_shadows
+	Settings.set_value("shadows", false)
+	await frames(2)
+	check(not bool(Settings.DEFAULTS.shadows) and ss._light == null and not ss.active,
+			"sun shadows are off by default, and off there's no light (no shadow pass)")
+	Settings.set_value("shadows", true)
+	Settings.set_value("shadow_distance", 96.0)
+	await frames(2)
+	var sl := ss._light
+	var chunk_casts := game.renderer._chunks.values().any(func(m): return m != null and m.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+	check(sl != null and sl.shadow_enabled and is_equal_approx(sl.directional_shadow_max_distance, 96.0) and ss.active
+			and (-sl.global_basis.z).dot(-game.sky.sun_direction()) > 0.99999 - SunShadows.SUN_STEP and chunk_casts,
+			"turned on: a shadowed light shining from the sun, the shaders told, the terrain casting (%s, %s, %s)"
+			% [sl != null, ss.active, chunk_casts])
+	var texels: Image = Data.layer_texels.get_image()
+	var grass := int(Data.block(Data.block_id("grass")).tex_top)
+	check(is_equal_approx(texels.get_pixel(grass % Data.LAYER_TEXELS_WIDTH, grass / Data.LAYER_TEXELS_WIDTH).r, 16.0),
+			"looked up per art pixel: a grass top is 16 art pixels across (%.1f)" % texels.get_pixel(grass % Data.LAYER_TEXELS_WIDTH, grass / Data.LAYER_TEXELS_WIDTH).r)
+	var voxel_arrays: Array = BlockModelMesh.voxel_arrays({Vector3i(0, 0, 0): Color.RED}, Image.create(1, 1, false, Image.FORMAT_RGBA8), 0.1)
+	var uvs: PackedVector2Array = voxel_arrays[Mesh.ARRAY_TEX_UV]
+	check(uvs.size() == 36 and uvs[0] == Vector2(0, 0) and uvs[2] == Vector2(1, 1), "a voxel model's faces carry 0-1 UVs (for the shadow's per-voxel look-up)")
+	Settings.set_value("shadows", false)
+	await frames(2)
+	check(not is_instance_valid(sl) or sl.is_queued_for_deletion(), "turned off again, the light is gone")
+	check(not ss.active, "and the shaders draw as before")
+	Settings.set_value("shadow_distance", 64.0)
 	# Far terrain (LOD): every chunk column within the far view is drawn once,
 	# by the full-detail chunks or exactly one far tile, and the tiles load.
 	var lod := game.lod

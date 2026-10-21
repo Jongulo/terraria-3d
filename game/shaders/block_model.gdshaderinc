@@ -4,10 +4,16 @@
 // meshes (hull, lathe) carry each voxel's colour in COLOR. Lit like blocks:
 // per-instance voxel light at the block plus sunlight. With `billboard`, the
 // mesh turns around its vertical axis to face the camera (tree canopies drawn
-// as one MultiMesh, where every instance needs its own facing).
+// as one MultiMesh, where every instance needs its own facing). They take the
+// sun's optional shadows (sun_shadow.gdshaderinc), looked up per texel of the
+// sprite (textured meshes) or per voxel face (voxel meshes, whose faces carry
+// UVs 0-1 for it).
 
 uniform sampler2D sprite : source_color, filter_nearest, repeat_disable;
 uniform bool textured = false;
+// The sprite's texture pixels per art pixel (Terraria's art is drawn at 2x):
+// the sun's shadow is looked up once per art pixel.
+uniform int art_scale = 1;
 uniform float sky_light = 1.0;
 uniform vec3 sky_color : source_color = vec3(1.0);
 #ifdef BATCHED
@@ -16,7 +22,7 @@ uniform vec3 sky_color : source_color = vec3(1.0);
 // instance uniform buffer for every node whose shader declares one, and a big
 // world's batches would run it out.
 #else
-instance uniform vec4 light = vec4(1.0);
+instance uniform vec4 entity_light = vec4(1.0);
 #endif
 #ifdef NPC_MODEL
 // Enemies drawn as 3D models (npc_model.gdshader): Terraria's recolour (slimes)
@@ -48,7 +54,13 @@ uniform float lod_near = -1.0;
 uniform float lod_far = 1.0e9;
 varying vec4 v_light;
 varying vec3 v_world;
+// Billboards: where the instance stands and which way it faced.
+varying vec3 v_origin;
+varying vec3 v_right;
+varying vec3 v_fwd;
 #include "res://shaders/player_light.gdshaderinc"
+#define SUN_FACES
+#include "res://shaders/sun_shadow.gdshaderinc"
 
 void vertex() {
 	float lod_d = distance(MODEL_MATRIX[3].xz, lod_center);
@@ -56,11 +68,16 @@ void vertex() {
 #ifdef BATCHED
 	v_light = INSTANCE_CUSTOM;
 #else
-	v_light = light;
+	v_light = entity_light;
 #endif
 	if (billboard) {
 		vec3 origin = MODEL_MATRIX[3].xyz;
 		vec3 to_cam = CAMERA_POSITION_WORLD - origin;
+		// The sun's shadow pass (orthographic): toward the sun, so its shadow
+		// is its outline as the sun sees it.
+		if (PROJECTION_MATRIX[3][3] > 0.5) {
+			to_cam = sun_dir;
+		}
 		to_cam.y = 0.0;
 		vec3 fwd = length(to_cam) > 0.001 ? normalize(to_cam) : vec3(0.0, 0.0, 1.0);
 		vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
@@ -72,6 +89,9 @@ void vertex() {
 		vec3 world = origin + (right * VERTEX.x + vec3(0.0, VERTEX.y, 0.0) + fwd * VERTEX.z) * s + fwd * (billboard_offset + nudge);
 		POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
 		v_world = world;
+		v_origin = origin;
+		v_right = right;
+		v_fwd = fwd;
 	} else {
 		v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 		// Writing POSITION anywhere replaces Godot's default transform, so do it here too.
@@ -95,11 +115,27 @@ void fragment() {
 	if (clip_plane.xyz != vec3(0.0) && dot(v_world, clip_plane.xyz) < clip_plane.w) {
 		discard;
 	}
-	vec3 l = max(max(v_light.rgb, vec3(v_light.a * sky_light) * sky_color), extra_light(v_world));
-	// As dark as the blocks around it in the dark (voxel_common's light, no floor).
-	ALBEDO = c.rgb * COLOR.rgb * l * l;
+	vec3 col = c.rgb * COLOR.rgb;
 #ifdef NPC_MODEL
-	ALBEDO = mix(ALBEDO * tint.rgb, vec3(1.0), flash);
+	col *= tint.rgb * (1.0 - flash);
+#endif
+	// As dark as the blocks around it in the dark (voxel_common's light, no floor).
+	SUN_SHADOW_COLOUR(col, max(v_light.rgb, extra_light(v_world)), vec3(v_light.a * sky_light) * sky_color, 0.0);
+	if (sun_shadows) {
+		vec3 at = sun_snap_uv(VERTEX, UV, textured ? vec2(textureSize(sprite, 0)) / float(max(art_scale, 1)) : vec2(1.0));
+		if (billboard) {
+			// Looked up on the copy of it that faces the sun (the one in the
+			// shadow map), a little toward the sun, so it doesn't shade itself.
+			vec3 rel = (INV_VIEW_MATRIX * vec4(at, 1.0)).xyz - v_origin;
+			vec3 fl = normalize(vec3(sun_dir.x, 0.0, sun_dir.z));
+			vec3 rl = normalize(cross(vec3(0.0, 1.0, 0.0), fl));
+			vec3 w = v_origin + rl * dot(rel, v_right) + vec3(0.0, rel.y, 0.0) + fl * dot(rel, v_fwd) + sun_dir * 0.1;
+			at = (VIEW_MATRIX * vec4(w, 1.0)).xyz;
+		}
+		LIGHT_VERTEX = at;
+	}
+#ifdef NPC_MODEL
+	EMISSION += vec3(flash);
 	if (fade < 1.0 && fract(sin(dot(floor(FRAGCOORD.xy), vec2(12.9898, 78.233))) * 43758.5453) > fade) {
 		discard;
 	}

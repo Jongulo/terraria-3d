@@ -49,9 +49,11 @@ func setup(voxel_world: VoxelWorld) -> void:
 	opaque_material = ShaderMaterial.new()
 	opaque_material.shader = load("res://shaders/voxel.gdshader")
 	opaque_material.set_shader_parameter("block_textures", Data.block_textures)
+	opaque_material.set_shader_parameter("layer_texels", Data.layer_texels)
 	cutout_material = ShaderMaterial.new()
 	cutout_material.shader = load("res://shaders/voxel_cutout.gdshader")
 	cutout_material.set_shader_parameter("block_textures", Data.block_textures)
+	cutout_material.set_shader_parameter("layer_texels", Data.layer_texels)
 	water_material = ShaderMaterial.new()
 	water_material.shader = load("res://shaders/liquid_water.gdshader")
 	water_material.set_shader_parameter("liquid_tex", Assets.texture("Images/Liquid_0"))
@@ -208,7 +210,7 @@ func _apply(c: Vector3i, surfaces: Array) -> void:
 			mesh.surface_set_material(mesh.get_surface_count() - 1, materials[i])
 	if mi == null:
 		mi = MeshInstance3D.new()
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		mi.position = Vector3(c * CHUNK)
 		add_child(mi)
 		_chunks[c] = mi

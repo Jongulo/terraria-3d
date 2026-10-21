@@ -738,7 +738,7 @@ func _show_frame() -> void:
 				if not _chunk_nodes.has(ch):
 					var mi := MeshInstance3D.new()
 					mi.material_override = _material
-					mi.set_instance_shader_parameter("light", Color(1, 1, 1, 1))
+					mi.set_instance_shader_parameter("entity_light", Color(1, 1, 1, 1))
 					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 					_model_root.add_child(mi)
 					_chunk_nodes[ch] = mi

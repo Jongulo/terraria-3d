@@ -111,6 +111,7 @@ static func get_art(s: Dictionary) -> Dictionary:
 		var m := ShaderMaterial.new()
 		m.shader = preload("res://shaders/block_model_batched.gdshader")
 		m.set_shader_parameter("sprite", ImageTexture.create_from_image(b.image))
+		m.set_shader_parameter("art_scale", PixelArt.detect_scale(b.image).x)
 		m.set_shader_parameter("textured", true)
 		m.set_shader_parameter("billboard", true)
 		b["material"] = m

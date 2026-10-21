@@ -30,7 +30,7 @@ func setup(kind_name: String, m: String) -> void:
 	method = m
 	frames = int(NPC.look(kind).frames)
 	NPCModels.prebuild(kind, m)
-	_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(_mi)
 	var d: Dictionary = Data.npcs[kind]
 	var lk := NPC.look(kind)
@@ -112,7 +112,7 @@ func set_trim_bottom(_px: float, _frame_height: float) -> void:
 
 
 func update_light(world: VoxelWorld, sky: SkySystem, at: Vector3) -> void:
-	_mi.set_instance_shader_parameter("light", world.get_light(at))
+	_mi.set_instance_shader_parameter("entity_light", world.get_light(at))
 	var mat := _mi.material_override as ShaderMaterial
 	if mat:
 		mat.set_shader_parameter("sky_light", sky.sky_light)
@@ -121,4 +121,4 @@ func update_light(world: VoxelWorld, sky: SkySystem, at: Vector3) -> void:
 
 ## Full daylight, with no world to ask (the NPC picker).
 func set_full_light() -> void:
-	_mi.set_instance_shader_parameter("light", Color(1, 1, 1, 1))
+	_mi.set_instance_shader_parameter("entity_light", Color(1, 1, 1, 1))

@@ -47,6 +47,12 @@ static var _cache := {}
 
 
 ## Forgets built meshes (after sprites were rebuilt).
+## A voxel face's corners' UVs (in the order of its quad's corners): the
+## voxel meshes are untextured, so these only tell the shader where in the
+## face it is (it looks up the sun's shadow at the face's middle).
+const FACE_UVS := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+
+
 static func clear_cache() -> void:
 	_cache.clear()
 
@@ -526,6 +532,7 @@ static func _voxels(img: Image, px: float, method: String, o := {}, side_view :=
 					var col: Color = base.srgb_to_linear() * float(f[2]) * factor
 					for i in [0, 1, 2, 0, 2, 3]:
 						st.set_color(Color(col.r, col.g, col.b))
+						st.set_uv(FACE_UVS[i])
 						st.add_vertex(p + f[1][i])
 	return st.commit()
 
@@ -658,6 +665,7 @@ static func voxel_arrays(vox: Dictionary, img: Image, px: float, o := {}, plain_
 			var c: Color = base.srgb_to_linear() * float(f[2]) * factor
 			for i in [0, 1, 2, 0, 2, 3]:
 				st.set_color(Color(c.r, c.g, c.b))
+				st.set_uv(FACE_UVS[i])
 				st.add_vertex(p + f[1][i])
 	if vox.is_empty():
 		return []

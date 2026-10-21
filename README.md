@@ -69,7 +69,7 @@ tracking files it already tracks, hence the second check.)
 Defaults below; every action except Escape can be rebound under **Settings → Controls**
 (title screen or pause menu). Bindings follow physical key positions, so WASD stays in
 place on any keyboard layout, and the menu shows your layout's labels. Settings also has
-mouse sensitivity, invert Y, field of view, view distance, far view, **UI scale (50–200%)** and volumes.
+mouse sensitivity, invert Y, field of view, view distance, far view, **UI scale (50–200%)**, volumes and optional shaders.
 
 Better Grass (like OptiFine's, Fancy): a grass block's side shows the grass top when the block
 beside it, one step down, is the same grass, so grassy hillsides are green all the way down their
@@ -94,6 +94,31 @@ canopies. Placeables more than 2 chunks away with a heavy 3D method (hull, hull 
 flat) are drawn as their crossed sprite, and switch back as you walk up. On a 1024-block world, view distance 6 with
 far view 48 ran at about 210 FPS where view distance 12 alone ran at 15 (a quarter of the chunks and
 draw calls), while seeing four times as far.
+
+Optional shaders (**Settings → Shaders**, off by default):
+- **Sun and moon shadows:** real-time shadows from the sun by day and the moon by night (a
+  directional light with a shadow map; `world/sun_shadows.gd`, `shaders/sun_shadow.gdshaderinc`).
+  Blocks, plants, trees and their canopies, furniture and other placeables, NPCs, items and
+  projectiles cast them; blocks, block models, NPC models and sprites receive them.
+- **Pixel-aligned:** the shadow is looked up once per art pixel of the surface's own texture, at
+  its middle (LIGHT_VERTEX), so a shadow's edge steps along the texture's pixels instead of cutting
+  across them. Terraria's art is drawn at 2x and the block textures are upscaled, so each block
+  texture layer records its art pixels across a block (`Data.layer_texels`: 16 for a plain block,
+  8 for a face of one tile); block models use their sprite's art scale, sprites Terraria's 2x, and
+  voxel models look it up once per voxel face.
+- **The light model is unchanged:** a shadow cuts only the sunlight, to `Shadow darkness` of it (50%
+  by default), so a torch still lights the shade and caves (no sunlight) are as before.
+- **Steady:** a face turned away from the sun (blocks, plants, models) is simply in its own
+  shadow, never tested against the shadow map, so there's no shadow acne to shimmer as you move.
+  The shadow map's splits aren't blended (no grey part-shadowed pixels where they meet), and the
+  light turns with the sun in steps of a quarter of a degree (about every 1.5 seconds by day), so
+  shadows hold still between steps instead of creeping pixel by pixel.
+- **Sprites:** in the shadow pass a sprite turns to the sun, so its shadow is its outline as the sun
+  sees it, and its own shade is looked up on that sun-facing copy, so it never shades itself.
+  Pre-rendered placeables take one shade for the whole model.
+- **Settings:** shadow distance (32-160 blocks, 64 by default), detail (a 2048, 4096 or 8192
+  shadow map) and darkness. Off, there's no light and no shadow pass, and everything is drawn
+  exactly as before (the shaders put their colour out as emission, with no light to add).
 
 | Key | Action |
 | --- | --- |

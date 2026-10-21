@@ -331,6 +331,7 @@ static func material(kind: String, frame: int, textured: bool, glass := 1.0) -> 
 		var mat := ShaderMaterial.new()
 		mat.shader = preload("res://shaders/npc_model_glass.gdshader") if glass < 1.0 else preload("res://shaders/npc_model.gdshader")
 		mat.set_shader_parameter("sprite", texture(kind, frame))
+		mat.set_shader_parameter("art_scale", 2)  # Terraria's sheets: 2x art
 		mat.set_shader_parameter("textured", textured)
 		if glass < 1.0:
 			mat.set_shader_parameter("glass", glass)

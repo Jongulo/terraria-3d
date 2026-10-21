@@ -45,6 +45,12 @@ var biome_blocks := {}
 ## CatBast), as buff -> PackedInt32Array.
 var near_buff_ids := {}
 var block_textures: Texture2DArray
+## Each block texture layer's art pixels across a block (Terraria's art is
+## drawn at 2x, and the layers are upscaled to LAYER_SIZE): the shaders look
+## the sun's shadow up once per art pixel (shaders/sun_shadow.gdshaderinc).
+## One float a layer, in a row (an RF texture, LAYER_TEXELS_WIDTH wide).
+var layer_texels: ImageTexture
+const LAYER_TEXELS_WIDTH := 256
 ## Block name -> chosen placeable method (only blocks that differ from their default).
 var placeable_methods := {}
 ## Block name -> extruded settings that differ from the defaults
@@ -161,6 +167,7 @@ func _load_blocks() -> void:
 	var defs: Array = _read_json("res://data/blocks.json").get("blocks", [])
 	load_placeables()
 	var layers: Array[Image] = []
+	var texels := PackedFloat32Array()
 	blocks = [{"name": "air", "render": 0}]
 	for def in defs:
 		var d: Dictionary = def.duplicate()
@@ -203,8 +210,13 @@ func _load_blocks() -> void:
 				for v in variants:
 					if render == 1:
 						layers.append(_cube_layer(face, v))
+						# Its tiles' art pixels, per_face of them across.
+						var tile := _stitch(face, face.frames[0])
+						texels.append(float(int(face.get("per_face", TILES_PER_FACE)) * tile.get_width()) / PixelArt.detect_scale(tile).x)
 					else:
-						layers.append(_crop_layer(face, face.frames[v % face.frames.size()], false))
+						var frame: Array = face.frames[v % face.frames.size()]
+						layers.append(_crop_layer(face, frame, false))
+						texels.append(float(_pixels_per_block(face)) / PixelArt.detect_scale(_stitch(face, frame)).x)
 			if face_name == "side" and render != 1:
 				# The original sprite and its world pixel size, for block models,
 				# plus the sprite at its art resolution (voxel models use that).
@@ -251,6 +263,9 @@ func _load_blocks() -> void:
 		img.generate_mipmaps()
 	block_textures = Texture2DArray.new()
 	block_textures.create_from_images(layers)
+	var rows := maxi(1, ceili(float(texels.size()) / LAYER_TEXELS_WIDTH))
+	texels.resize(rows * LAYER_TEXELS_WIDTH)
+	layer_texels = ImageTexture.create_from_image(Image.create_from_data(LAYER_TEXELS_WIDTH, rows, false, Image.FORMAT_RF, texels.to_byte_array()))
 
 
 ## A sprite block's sprites (one per variant) and the sizes derived from them.

@@ -48,3 +48,15 @@ hell_light={
 "type": "vec3",
 "value": Vector3(0, 0, 0)
 }
+sun_shadows={
+"type": "bool",
+"value": false
+}
+sun_shade={
+"type": "float",
+"value": 0.5
+}
+sun_dir={
+"type": "vec3",
+"value": Vector3(0, 1, 0)
+}

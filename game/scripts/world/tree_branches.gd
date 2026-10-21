@@ -110,6 +110,7 @@ static func get_art(sheet: String, trunk_sheet: String, b: Dictionary) -> Dictio
 		var m := ShaderMaterial.new()
 		m.shader = preload("res://shaders/block_model_batched.gdshader")
 		m.set_shader_parameter("sprite", ImageTexture.create_from_image(img))
+		m.set_shader_parameter("art_scale", PixelArt.detect_scale(img).x)
 		m.set_shader_parameter("textured", true)
 		m.set_shader_parameter("toward_camera", NEARER)
 		_cache[key] = {"mesh": card(w, h), "material": m, "size": Vector2(w, h)}

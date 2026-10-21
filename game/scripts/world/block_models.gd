@@ -343,7 +343,7 @@ func _mesh_batch(block_id: int, mesh: ArrayMesh, textured: bool, items: Array, k
 	var mi := MultiMeshInstance3D.new()
 	mi.multimesh = mm
 	mi.material_override = batched_material(block_id, textured, frame)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	return mi
 
 
@@ -368,7 +368,7 @@ func _billboard_batch(block_id: int, variant: int, positions: Array, keys: Array
 	var mi := MultiMeshInstance3D.new()
 	mi.multimesh = mm
 	mi.material_override = billboard_material(block_id, variant, frame)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	return mi
 
 
@@ -395,7 +395,7 @@ func _rendered_batch(block_id: int, items: Array, keys: Array, frame := 0) -> Mu
 	var mi := MultiMeshInstance3D.new()
 	mi.multimesh = mm
 	mi.material_override = rendered_material(block_id, frame)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	# The quad is moved to the model's middle and grown in the shader.
 	mi.extra_cull_margin = 4.0
 	return mi
@@ -475,7 +475,7 @@ func _branch_batches(cells: Array) -> Array:
 		var mi := MultiMeshInstance3D.new()
 		mi.multimesh = mm
 		mi.material_override = arts[k].material
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		out.append(mi)
 	return out
 
@@ -522,7 +522,7 @@ func _palm_batches(cells: Array, keys: Array) -> Array:
 		var mi := MultiMeshInstance3D.new()
 		mi.multimesh = mm
 		mi.material_override = billboard_material(key.x, key.y)
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		out.append(mi)
 	return out
 
@@ -557,7 +557,7 @@ func _cactus_batches(bases: Array, keys: Array) -> Array:
 		var mi := MultiMeshInstance3D.new()
 		mi.multimesh = mm
 		mi.material_override = art.material
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		out.append(mi)
 	return out
 
@@ -582,6 +582,7 @@ static func billboard_material(block_id: int, variant: int, frame := 0) -> Shade
 		var m := ShaderMaterial.new()
 		m.shader = preload("res://shaders/block_model_batched.gdshader")
 		m.set_shader_parameter("sprite", ImageTexture.create_from_image(sprites[variant % sprites.size()]))
+		m.set_shader_parameter("art_scale", int(d.get("art_scale", 1)))
 		m.set_shader_parameter("textured", true)
 		m.set_shader_parameter("billboard", true)
 		_shared_materials[key] = m
@@ -618,7 +619,7 @@ static func make_model(block_id: int, method: String, rotation_index := 0, mater
 	var model := model_mesh(block_id, method, rotation_index, frame)
 	var mi := MeshInstance3D.new()
 	mi.mesh = model.mesh
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	mi.material_override = material_for(block_id, model.textured, materials, frame)
 	mi.rotation.y = int(model.turn) * PI * 0.5
 	return mi
@@ -708,7 +709,7 @@ static func _wall_model(block_id: int, method: String, rotation_index: int, mate
 	var model := model_mesh(block_id, method, rotation_index, frame)
 	var mi := MeshInstance3D.new()
 	mi.mesh = model.mesh
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	mi.material_override = material_for(block_id, model.textured, materials, frame)
 	return mi
 
@@ -742,6 +743,7 @@ static func material_for(block_id: int, textured: bool, cache := {}, frame := 0)
 		var m := ShaderMaterial.new()
 		m.shader = preload("res://shaders/block_model.gdshader")
 		m.set_shader_parameter("sprite", frame_texture(block_id, frame))
+		m.set_shader_parameter("art_scale", int(Data.block(block_id).get("art_scale", 1)))
 		m.set_shader_parameter("textured", textured)
 		store[key] = m
 	return store[key]
@@ -756,6 +758,7 @@ static func batched_material(block_id: int, textured: bool, frame := 0) -> Shade
 		m.shader = preload("res://shaders/block_model_batched.gdshader")
 		var d := Data.block(block_id)
 		m.set_shader_parameter("sprite", ImageTexture.create_from_image(d.anim_sprites[frame] if frame > 0 else d.sprite))
+		m.set_shader_parameter("art_scale", int(d.get("art_scale", 1)))
 		m.set_shader_parameter("textured", textured)
 		_shared_materials[key] = m
 	return _shared_materials[key]

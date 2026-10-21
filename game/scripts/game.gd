@@ -57,6 +57,8 @@ const BIOME_RADIUS := 24
 const BIOME_THRESHOLD := 400
 const EVIL_SKY := {"corruption": Color(0.34, 0.26, 0.5), "crimson": Color(0.5, 0.15, 0.13)}
 var sky := SkySystem.new()
+## The sun's and moon's real-time shadows (optional: Settings → Shaders).
+var sun_shadows := SunShadows.new()
 var player := Player.new()
 var hud: Hud
 var entities := Node3D.new()
@@ -109,6 +111,8 @@ func start(params: Dictionary) -> void:
 	world_name = params.get("name", "World")
 	_save_path = params.get("path", SAVE_DIR + world_name.validate_filename() + ".twld")
 	add_child(sky)
+	sun_shadows.sky = sky
+	add_child(sun_shadows)
 	add_child(renderer)
 	town.game = self
 	add_child(town)

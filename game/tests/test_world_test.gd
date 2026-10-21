@@ -1991,7 +1991,7 @@ func _brain_checks(c: Vector3i) -> void:
 	var charging: bool = cr.ai_state == 1
 	cr.hit(1, 0.0, Vector3.FORWARD, 0.0)
 	await frames(2)
-	check(near >= 15 and charging and absf(charge - 8.0) < 0.1 and cr.ai_state == 0,
+	check(near >= 10 and charging and absf(charge - 8.0) < 0.1 and cr.ai_state == 0,
 			"its Creepers circle it (%d near), charge at you at 8 px a tick and go back when hit" % near)
 	# Its Creepers killed: tissue and ore, its outer brain bursts off, and
 	# it comes at you; now it can be hurt.

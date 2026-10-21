@@ -249,7 +249,7 @@ static func _shot(parent: Node, mesh: ArrayMesh, mat: Material, center: Vector3,
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
-	mi.set_instance_shader_parameter("light", Color(1, 1, 1, 1))
+	mi.set_instance_shader_parameter("entity_light", Color(1, 1, 1, 1))
 	vp.add_child(mi)
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL

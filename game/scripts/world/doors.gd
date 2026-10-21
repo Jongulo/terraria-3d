@@ -287,7 +287,7 @@ static func make_node(block_id: int, state: int, key := "") -> Node3D:
 	mi.name = "Panel"
 	mi.mesh = mesh(block_id, hinge(state))
 	mi.material_override = material(block_id, hinge(state))
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	mi.position.x = -hinge_x(state)
 	pivot.add_child(mi)
 	if key != "" and _swings.has(key):
@@ -310,7 +310,7 @@ static func animate(root: Node3D) -> void:
 
 
 static func set_light(root: Node3D, light: Color) -> void:
-	(root.get_node("Pivot/Panel") as MeshInstance3D).set_instance_shader_parameter("light", light)
+	(root.get_node("Pivot/Panel") as MeshInstance3D).set_instance_shader_parameter("entity_light", light)
 
 
 ## The art for a door block and hinge side, cropped to the door: Terraria's
