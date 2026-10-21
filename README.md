@@ -1358,6 +1358,40 @@ whatever 3D method the platform uses), and you walk up its steps; set them one u
 with flat platforms for landings. Like any platform, you jump up through a stair from below and drop
 through it holding Down. Stairs are saved with the world.
 
+The surface, like Terraria's (its TerrainPass; `rust/voxel_core/src/terrain.rs`):
+- **Terraria's way:** it walks across its world a column at a time, in stretches of 5-40 columns,
+  each one feature: a plateau (nearly flat, and up to 6 times longer), a hill or dale (about 1.3
+  tiles up or down a column) or a mountain or valley (about 2; none near spawn, whose middle is
+  flat). Each starts where the last left off, so its surface is long flats at different levels
+  joined by straight slopes.
+- **Here:** the map is split into regions about 64 blocks apart, of many sizes (plateaus larger),
+  their borders warped. Each region is one of those features at its own level: the land's broad
+  rise and fall plus the feature's step up or down. Between regions the ground ramps from one
+  level to the other at the steeper feature's slope (at least 14 blocks across). Inside a region a
+  hill rises to a dome and a valley or dale sinks to a hollow; a mountain is a massif, broad
+  shoulders with one to three peaks round its middle, cones at Terraria's mountain slope (1.6-2
+  blocks a block) that merge into ridges, rounded only at the tips. The middle of the world (2.5%
+  of its width round spawn) is flat, with no mountains or valleys within 10%. On a Small world
+  about 40% of the land is flat and 20% steep (the old rolling noise: 23% and 27%), between 9
+  below the surface line and 5 below the Space layer.
+- **The dirt layer:** like Terraria's, dirt reaches far down from the grass (16 blocks, give or
+  take 10, more under the heights), with stone through it (its Rocks In Dirt, more of it deeper),
+  so hillsides and cave mouths are dirt and grass with stone showing; stone (with dirt in it)
+  below.
+- **Caves and tunnels from the surface** (`rust/voxel_core/src/caves.rs`), dug with a port of
+  Terraria's TileRunner (a ball that wanders, shrinking from its strength to nothing over its
+  steps). Terraria's counts per world width go per 640 x 640 blocks of map, twice over:
+  - **Surface caves** (its SurfaceCaves pass): holes going down from the ground, many small ones
+    (3-6 strong, 5-50 steps), fewer larger (10-15, 50-130), a few huge ones (12-25, 150-500, with two
+    more from the same mouth), and straight shafts (7-12, 150-250). None near the beaches or spawn.
+  - **Mountain caves** (its MountainCaveOpenings): every mountain gets a tunnel from inside it, a
+    little under its top, out through its side (CaveOpenater: 7-12 across, a little uphill, until it
+    breaks out), and a cave winding down into it from there (Cavinator).
+  - **Surface tunnels** (its Tunnels pass): Terraria heaps dirt 11-16 tiles over the ground along a
+    path of 10 points 5-10 apart, a tunnel under a bridge of dirt in its side view. Here a dirt
+    ridge is heaped along a winding path the same length, with a walkable tunnel (4-5 across, its
+    floor at the ground) bored through it; grass covers it and vines hang in its mouths.
+
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a
 Skyware house, a sky lake, or nothing. Houses follow Terraria's: a blue Sunplate shell with gold

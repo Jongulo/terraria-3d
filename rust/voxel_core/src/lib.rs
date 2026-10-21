@@ -2,6 +2,7 @@
 //! modules; this file converts types and manages threads.
 
 pub mod cabins;
+pub mod caves;
 pub mod dungeon;
 pub mod fishing;
 pub mod hives;
@@ -13,6 +14,7 @@ pub mod physics;
 pub mod save;
 pub mod shrines;
 pub mod shrink;
+pub mod terrain;
 pub mod world;
 pub mod worldgen;
 

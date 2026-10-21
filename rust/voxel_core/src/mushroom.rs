@@ -354,16 +354,17 @@ fn spread_grass(w: &mut World, rng: &mut Rng, ids: &Ids, l: &Layers, regions: &[
             }
             let exposed = SIDES.iter().any(|&(ex, ey, ez)| open(w, x + ex, y + ey, z + ez));
             let i = w.idx(x, y, z);
-            w.blocks[i] = if exposed { ids.grass } else { ids.mud };
+            w.blocks[i] = if exposed && y < l.surface_base { ids.grass } else { ids.mud };
         }
     }
-    // Now and then mud within 20 turns to mushroom grass (inside the ground).
+    // Now and then mud within 20 turns to mushroom grass (inside the ground,
+    // below the surface line).
     for &(gx, gy, gz) in &grown {
         if rng.range(0, 4) != 0 {
             continue;
         }
         let (x, y, z) = (gx + rng.range(-20, 21), gy + rng.range(-20, 21), gz + rng.range(-20, 21));
-        if w.get(x, y, z) == ids.mud {
+        if y < l.surface_base && w.get(x, y, z) == ids.mud {
             let i = w.idx(x, y, z);
             w.blocks[i] = ids.grass;
         }

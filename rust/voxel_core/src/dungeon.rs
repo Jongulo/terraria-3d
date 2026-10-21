@@ -671,7 +671,11 @@ impl<'a> Gen<'a> {
         let p0 = self.pos;
         let mut dir: P;
         let mut v: V;
+        // (Not straight back the way the last hall came, unless that's all
+        // there is: after this many tries it goes anyway.)
+        let mut tries_left = 50;
         loop {
+            tries_left -= 1;
             let up = self.way_open(p0, UP, steps).0;
             let (down, at_bottom) = self.way_open(p0, DOWN, steps);
             let across: Vec<P> = ACROSS.iter().copied().filter(|&d| self.way_open(p0, d, steps).0).collect();
@@ -726,7 +730,7 @@ impl<'a> Gen<'a> {
                     steps /= 2;
                 }
             }
-            if self.last_hall != (-dir.0, -dir.1, -dir.2) {
+            if self.last_hall != (-dir.0, -dir.1, -dir.2) || tries_left <= 0 {
                 break;
             }
             strength = strength0;

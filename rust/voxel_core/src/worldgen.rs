@@ -16,15 +16,11 @@ pub struct Layers {
     pub cavern_top: i32,
     pub surface_base: i32,
     /// Where Terraria's Space layer (the floating islands, harpies) begins:
-    /// above the highest mountain (surface_base + HILLS + MOUNTAINS = +35), so
+    /// above the highest mountain (the terrain keeps 5 below it: +37), so
     /// standing on a peak is never "in Space".
     pub space_top: i32,
 }
 
-/// Terrain height above surface_base: rolling hills (+-HILLS) and mountain
-/// chains (up to +MOUNTAINS).
-const HILLS: f32 = 9.0;
-const MOUNTAINS: f32 = 26.0;
 pub const SPACE_ABOVE_SURFACE: i32 = 42;
 
 pub fn layers(sy: i32) -> Layers {
@@ -312,7 +308,9 @@ pub fn gem_trees(w: &mut World, seed: i32, l: &Layers) -> usize {
                     let clear_above = (1..=h + GEM_TOP_ROOM).all(|k| w.get(x, y + k, z) == 0 && w.liquid_at(x, y + k, z).1 == 0);
                     let room_round = (1..=3).all(|k| [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().all(|&(dx, dz)| w.get(x + dx, y + k, z + dz) == 0));
                     let alone = (-2..=2).all(|dx: i32| (-2..=2).all(|dz: i32| !trunks.contains(&w.get(x + dx, y + 1, z + dz))));
-                    if clear_above && room_round && alone && !near_fall(x, y, z) {
+                    let top = y + h + GEM_TOP_ROOM;
+                    let in_structure = w.structures.iter().any(|&(lo, hi)| x >= lo.0 - 2 && x <= hi.0 + 2 && z >= lo.2 - 2 && z <= hi.2 + 2 && top >= lo.1 && y <= hi.1);
+                    if clear_above && room_round && alone && !in_structure && !near_fall(x, y, z) {
                         for k in 1..=h {
                             let i = w.idx(x, y + k, z);
                             w.blocks[i] = trunks[gem];
@@ -1582,13 +1580,17 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         chest: w.id_of("chest"),
     };
 
-    let n_height = noise(seed, 0.006, 4);
-    let n_mount = {
-        let mut n = noise(seed + 1, 0.0035, 3);
-        n.set_fractal_type(Some(FractalType::Ridged));
-        n
-    };
+    // The surface: Terraria's plateaus, hills, dales, mountains and valleys
+    // (terrain.rs).
+    let terrain = crate::terrain::Terrain::new(seed, &l, sx, sz);
+    let heights = terrain.heights(sx, sz);
     let n_dirt_depth = noise(seed + 2, 0.03, 1);
+    // Terraria's dirt layer: dirt from the surface down to its rock layer,
+    // which wanders far below it (deeper under mountains, which Terraria
+    // heaps up out of dirt), with stone in it (its Rocks In Dirt: more of it
+    // the deeper), stone below with dirt in it (Dirt In Rocks).
+    let n_rock_depth = noise(seed + 8, 0.008, 2);
+    let n_rocks = noise(seed + 9, 0.07, 2);
     let n_cave_a = noise(seed + 3, 0.018, 2);
     let n_cave_b = noise(seed + 4, 0.018, 2);
     let n_cavern = noise(seed + 5, 0.022, 3);
@@ -1611,10 +1613,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             let x = (ci as i32) % sx;
             let z = (ci as i32) / sx;
             let (fx, fz) = (x as f32, z as f32);
-            // Ridged noise gives mountain chains; smoothstep rounds off the peaks.
-            let m = ((n_mount.get_noise_2d(fx, fz) - 0.1) / 0.9).clamp(0.0, 1.0);
-            let mountains = m * m * (3.0 - 2.0 * m);
-            let mut h = l.surface_base as f32 + n_height.get_noise_2d(fx, fz) * HILLS + mountains * MOUNTAINS;
+            let mut h = heights[ci];
             // The coast: a beach sloping down to just above the sea, then a sea
             // floor deepening toward the edge. No tunnels break into it.
             let inland = coast.inland(x, z);
@@ -1630,6 +1629,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             let coastal = inland < sea.width + sea.beach + 12.0;
             let h = h.min(sy as f32 - 12.0) as i32;
             let dirt_depth = 5 + (n_dirt_depth.get_noise_2d(fx, fz) * 3.0) as i32;
+            let rock_depth = 16.0 + n_rock_depth.get_noise_2d(fx, fz) * 10.0 + (h - l.surface_base - 6).max(0) as f32 * 0.6;
+            let rock_line = h - rock_depth as i32;
             let entrance = n_entrance.get_noise_2d(fx, fz) > 0.72;
             // Sandy and muddy surface patches.
             let biome = n_biome.get_noise_2d(fx, fz);
@@ -1642,6 +1643,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
                         ids.sand
                     } else if y > h - dirt_depth {
                         if biome > 0.55 { ids.sand } else if biome < -0.6 { ids.mud } else { ids.dirt }
+                    } else if y > rock_line {
+                        let deep = (h - y) as f32 / rock_depth;
+                        if n_rocks.get_noise_3d(fx, fy * 1.2, fz) > 0.5 - 0.45 * deep { ids.stone } else { ids.dirt }
                     } else {
                         ids.stone
                     };
@@ -1719,6 +1723,20 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
                 y -= 1;
             }
         }
+    }
+
+    // Terraria's surface tunnels, mountain caves and surface caves (caves.rs),
+    // on their own random numbers so the passes after them come out as
+    // before.
+    {
+        let mut crng = Rng::new(seed as u64 ^ 0x5ca7_e5ca);
+        // (Nothing dug near the coast: the sea floor stays whole.)
+        let keep = |x: i32, _y: i32, z: i32, _b: u16| coast.inland(x, z) < sea.width + sea.beach + 4.0;
+        let ground = [ids.dirt, ids.stone, ids.clay];
+        crate::caves::tunnels(w, &mut crng, &coast, &l, ids.dirt, &|b| ground.contains(&b), &keep);
+        let peaks = terrain.mountain_peaks(&heights, sx, sz);
+        crate::caves::mountain_caves(w, &mut crng, &peaks, &keep);
+        crate::caves::surface_caves(w, &mut crng, &coast, &keep);
     }
 
     // Surface ponds in hollows (before plants, which would let them leak).
@@ -2043,7 +2061,6 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             add_fall(w, &mut rng, LIQ_LAVA, (x, y, z), 4);
         }
     }
-    gem_trees(w, seed, &l);
     vanity_trees(w, seed, ids.grass);
     ash_forest(w, seed, &l);
     living_trees(w, seed, ids.grass, ids.chest);
@@ -2057,6 +2074,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     if let Some((x, y, z, door)) = dungeon {
         crate::dungeon::dungeon(w, seed as u64, &l, (x, y, z), door, dungeon_brick, 1.0);
     }
+    // Gem trees after the Dungeon and the hives, as Terraria grows them late
+    // (its Speleothems And Gem Trees pass), and out of them.
+    gem_trees(w, seed, &l);
     // Pass 7: underground cabins, after the liquids and the trees as in
     // Terraria (its Buried Chests pass). Terraria's CaveHouseCount is 35-40 in
     // a small world, scaled with its area; its worlds are a 2D slice, so here
@@ -3382,7 +3402,9 @@ mod tests {
             assert!(d.style % 10 < 3);
         }
         // No palms inland, no forest trees on the sand.
-        assert!(w.decorations.iter().filter(|d| d.kind == "tree_top" && (is_forest_canopy(d.style) || d.style / 10 == SAKURA_CANOPY || d.style / 10 == WILLOW_CANOPY))
+        // (On the ground: floating islands may drift over the beach.)
+        let space = layers(w.sy).space_top;
+        assert!(w.decorations.iter().filter(|d| d.kind == "tree_top" && d.pos.1 < space && (is_forest_canopy(d.style) || d.style / 10 == SAKURA_CANOPY || d.style / 10 == WILLOW_CANOPY))
             .all(|d| coast.inland(d.pos.0, d.pos.2) > coast.ocean.width + coast.ocean.beach * 0.5));
     }
 
@@ -3521,6 +3543,36 @@ mod tests {
             assert!(y < l.surface_base - 9 && y > l.underworld_top, "underground, above the Underworld (y {y})");
             assert!(w.surface_y(x, z) > y + 5, "under the ground");
         }
+    }
+
+    #[test]
+    fn thick_dirt_layer_with_rocks() {
+        // Terraria's dirt layer: under the grass, dirt (with stone in it, more
+        // of it deeper) for tens of blocks; stone (with dirt in it) below.
+        let w = gen_world(7);
+        let (dirt, stone, grass) = (w.id_of("dirt"), w.id_of("stone"), w.id_of("grass"));
+        let share = |lo: i32, hi: i32| {
+            let (mut d, mut s, mut n) = (0, 0, 0);
+            for z in (40..w.sz - 40).step_by(3) {
+                for x in (40..w.sx - 40).step_by(3) {
+                    let top = w.surface_y(x, z);
+                    if top < 0 || w.get(x, top, z) != grass {
+                        continue;
+                    }
+                    for y in (top - hi)..(top - lo) {
+                        let b = w.get(x, y, z);
+                        d += (b == dirt) as i32;
+                        s += (b == stone) as i32;
+                        n += 1;
+                    }
+                }
+            }
+            (d as f32 / n as f32, s as f32 / n as f32)
+        };
+        let (d1, s1) = share(6, 12);
+        let (d2, s2) = share(45, 60);
+        assert!(d1 > 0.5 && s1 > 0.03, "just under the grass: dirt {d1:.2}, stone {s1:.2}");
+        assert!(s2 > 0.5 && d2 > 0.02, "deeper: stone {s2:.2}, dirt {d2:.2}");
     }
 
     #[test]
