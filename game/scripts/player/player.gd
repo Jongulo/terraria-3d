@@ -55,6 +55,8 @@ const DROWN_DPS := 20.0
 const LAVA_DAMAGE := 50
 const ON_FIRE_TIME := 7.0
 const ON_FIRE_DPS := 4.0
+## Poisoned (stingers): lifeRegen -4.
+const POISON_DPS := 2.0
 ## Buried in sand, silt or slush (Terraria's Suffocation: lifeRegen -40).
 const SUFFOCATION_DPS := 20.0
 
@@ -115,6 +117,8 @@ var in_liquid := 0
 var head_liquid := 0
 var breath := BREATH_MAX
 var on_fire := 0.0
+## Poisoned's seconds left.
+var poisoned := 0.0
 ## Test-world cheats: no damage / free flight (jump rises, Shift sinks).
 var god_mode := false
 var flying := false
@@ -1422,6 +1426,7 @@ func _liquid_effects(delta: float) -> void:
 	if invulnerable():
 		breath = BREATH_MAX
 		on_fire = 0.0
+		poisoned = 0.0
 		mana = mana_max
 		return
 	# The Diving Helmet: breath lasts six times as long (breathCD 7 -> 42
@@ -1456,6 +1461,9 @@ func _liquid_effects(delta: float) -> void:
 	if on_fire > 0.0:
 		on_fire = maxf(0.0, on_fire - delta)
 		dot += ON_FIRE_DPS
+	if poisoned > 0.0:
+		poisoned = maxf(0.0, poisoned - delta)
+		dot += POISON_DPS
 	suffocating = buried()
 	if suffocating:
 		dot += SUFFOCATION_DPS
@@ -1526,6 +1534,8 @@ func buffs() -> Array:
 	var out := []
 	if on_fire > 0.0:
 		out.append([24, "On Fire!", on_fire])
+	if poisoned > 0.0:
+		out.append([20, "Poisoned", poisoned])
 	if potion_sickness > 0.0:
 		out.append([21, "Potion Sickness", potion_sickness])
 	if sharpened:
@@ -1565,6 +1575,11 @@ func _regen(delta: float) -> void:
 	# And a life a second more (lifeRegen +2).
 	if honey_time > 0.0:
 		rate += 1.0
+	# On fire or poisoned, no healing, and it starts over (lifeRegen 0,
+	# lifeRegenTime 0).
+	if on_fire > 0.0 or poisoned > 0.0:
+		rate = 0.0
+		_since_hurt = 0.0
 	if life < life_max and rate > 0.0:
 		_regen_acc += rate * delta
 		if _regen_acc >= 1.0:
@@ -2273,6 +2288,10 @@ func _summon(def: Dictionary) -> bool:
 			# Terraria: Worm Food works only in the Corruption (and does nothing elsewhere).
 			if game.biome != "corruption":
 				return false
+		"jungle":
+			# Terraria: the Abeemination works only in the Jungle.
+			if game.biome != "jungle":
+				return false
 	if game.boss_alive():
 		return false
 	game.summon_boss(def.summons)
@@ -2435,6 +2454,12 @@ func heal(amount: int) -> void:
 
 ## Terraria player damage: defense halves it, then 0.67 s of immunity.
 ## `attacker` (an NPC touching you) takes the Cactus set's thorns damage.
+## Poisons you for `seconds` (the longer of it and what's left).
+func poison(seconds: float) -> void:
+	if alive and not invulnerable():
+		poisoned = maxf(poisoned, seconds)
+
+
 func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null) -> void:
 	if not alive or invulnerable() or (_immune > 0.0 and not ignore_immunity):
 		return
@@ -2515,6 +2540,7 @@ func _respawn() -> void:
 	breath = BREATH_MAX
 	lava_time = stat("lava_time")
 	on_fire = 0.0
+	poisoned = 0.0
 	honey_time = 0.0
 	timed_buffs.clear()
 	life = life_max

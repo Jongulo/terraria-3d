@@ -128,7 +128,7 @@ static func look(kind_name: String) -> Dictionary:
 	var s: float = sc.scale
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
-	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm"]
+	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee"]
 	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
@@ -172,13 +172,18 @@ static func image_path(kind_name: String) -> String:
 ## (bottom on the ground; fliers' middle where the billboard's middle was).
 static func make_look(kind_name: String, lk: Dictionary) -> Node3D:
 	var m := NPCModels.method(kind_name)
+	var d: Dictionary = Data.npcs[kind_name]
+	# Bosses (and their bees, hands...) show through the blocks in front of them.
+	var xray: bool = d.get("boss", false) or d.get("xray", false)
 	if m == "rendered":
 		var r := RenderedSprite.new()
 		r.setup_rendered(kind_name)
+		r.set_xray(xray)
 		return r
 	if m == "billboard":
 		var s := EntitySprite.new()
 		apply_look(s, lk)
+		s.set_xray(xray)
 		return s
 	var model := NPCModel.new()
 	model.setup(kind_name, m)
@@ -186,6 +191,7 @@ static func make_look(kind_name: String, lk: Dictionary) -> Node3D:
 		model.position.y = lk.sprite_y - NPCModels.frames_of(kind_name).size.y * 0.5
 	if lk.has("tint"):
 		model.set_tint(lk.tint)
+	model.set_xray(xray)
 	return model
 
 
@@ -218,6 +224,14 @@ func center() -> Vector3:
 	return global_position + Vector3(0, half.y * 0.5, 0)
 
 
+## Its Terraria boss head icon (NPC.GetBossHeadTextureIndex: the Eye of
+## Cthulhu's mouth once it has turned), or -1.
+func head_icon() -> int:
+	if kind == "EyeofCthulhu" and ai_state >= 10:
+		return 1
+	return int(def.get("head_icon", -1))
+
+
 func overlaps_point(p: Vector3, radius: float) -> bool:
 	var pos := global_position
 	return absf(p.x - pos.x) < half.x + radius and absf(p.z - pos.z) < half.z + radius \
@@ -238,10 +252,12 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 
-	if def.ai in ["skeletron", "skeletron_hand"]:
+	if def.ai in ["skeletron", "skeletron_hand", "queen_bee"]:
 		# Through the blocks (Terraria's noTileCollide), like the worms.
 		if def.ai == "skeletron":
 			_ai_skeletron(delta, game, player)
+		elif def.ai == "queen_bee":
+			_ai_queen_bee(delta, game, player)
 		else:
 			_ai_skeletron_hand(delta, game, player)
 		if is_queued_for_deletion():
@@ -291,6 +307,7 @@ func _physics_process(delta: float) -> void:
 		"snail": _ai_crawler(delta, true)
 		"duck": _ai_duck(delta, player)
 		"hopper": _ai_hopper(delta)
+		"bee": _ai_bee(delta, player)
 
 	if on_fire > 0.0:
 		_burn_tick(delta, game)
@@ -372,7 +389,9 @@ func _update_sprite(delta: float, game) -> void:
 			heading = game.player.global_position - global_position
 		sprite.face(turn_facing(heading, delta))
 	elif not flying or def.ai == "bat" or def.get("upright", false) or is_critter():
-		if Vector2(velocity.x, velocity.z).length() > 0.05:
+		if look_dir != Vector3.ZERO and def.ai == "queen_bee":
+			sprite.set_flip(look_dir.dot(right) > 0.0)
+		elif Vector2(velocity.x, velocity.z).length() > 0.05:
 			sprite.set_flip(velocity.dot(right) > 0.05)
 	_flash = maxf(0.0, _flash - delta * 6.0)
 	sprite.set_flash(_flash)
@@ -1648,6 +1667,264 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 					game.spawn_dust(center(), Color(0.6, 0.0, 0.0), 6)
 
 
+# ------------------------------------------------------------ queen bee
+
+## Terraria's px for the Queen Bee's distances (24 a block, like its sprites).
+const QB_PX := 24.0
+## Where her bees and stingers come out: 0.8 of the way down her (0.3 of
+## her height below her middle).
+const QB_MOUTH := 0.3
+
+## The Queen Bee's ai[0..2] (her attack, and counters in it) and localAI[0]
+## (charging: her dash frames).
+var _qb := [0.0, 0.0, 0.0]
+var _qb_dash := false
+var _qb_frame := 4
+var _qb_count := 0
+var _qb_timer := 0.0
+
+
+## Terraria's Queen Bee (aiStyle 43), a tick at a time in its px/tick. Its 2D
+## left and right are the line between you on the ground here; up and down
+## are up and down. She picks her attacks in turn (never the same twice):
+##   0 charging: lines up level with you (within 20 px), keeping 300-600 px
+##     off, then dashes at you at 12 px/tick until she's 600 past you (or 900
+##     above or below), slows and goes again; 2 + fury dashes.
+##   2 then 1, bees: flies to 200 px over your head, then hovers near you,
+##     a bee (or small bee) out of her every 40 ticks, 6 of them.
+##   3 stingers: flies to 300 px over your head and, while above you, shoots
+##     a stinger at you every 40 ticks (8 px/tick, 22 damage, poisoning one
+##     time in three), for 800 ticks.
+## Her fury (above the surface, out of the Jungle: 1 each) makes all of it
+## faster. 3000 px off, she flies back to you; with you dead she leaves.
+func _ai_queen_bee(delta: float, game, player) -> void:
+	for t in _critter_ticks(delta):
+		_queen_bee_tick(game, player)
+		if is_queued_for_deletion():
+			return
+		# Terraria's frames: 0-3 charging, 4-11 otherwise, 5 ticks each.
+		_qb_count += 1
+		if _qb_count > 4:
+			_qb_count = 0
+			_qb_frame += 1
+		if _qb_dash:
+			if _qb_frame >= 4:
+				_qb_frame = 0
+		elif _qb_frame < 4 or _qb_frame >= 12:
+			_qb_frame = 4
+	sprite.set_frame(_qb_frame)
+
+
+## Collision.CanHit: a clear line from `from` to you.
+func _qb_sees(game, from: Vector3, player) -> bool:
+	var to: Vector3 = player.center() - from
+	if to.length() < 0.05:
+		return not game.world.is_solid(Vector3i(from.floor()))
+	return game.world.raycast(from, to.normalized(), to.length()).is_empty()
+
+
+func _queen_bee_tick(game, player) -> void:
+	var fury := 0.0
+	if game.spawner._depth(global_position.y, game) in ["surface", "space"]:
+		fury += 1.0
+	if game.biome != "jungle":
+		fury += 1.0
+	var v := velocity / PX_TICK
+	var to: Vector3 = player.center() - center()
+	var dist := to.length() * QB_PX
+	var flat := Vector3(to.x, 0, to.z)
+	var d := flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
+	look_dir = flat
+	if _qb[0] != 5.0 and dist > 3000.0:
+		_qb[0] = 4.0
+	if not player.alive:
+		_qb[0] = 5.0
+	var mouth := center() + d * (randi() % 20) / QB_PX - Vector3(0, half.y * QB_MOUTH, 0)
+	match int(_qb[0]):
+		5:
+			# You're dead: off she goes, away from the middle of the world.
+			var size: Vector3i = game.world.get_size()
+			var away := Vector3(global_position.x - size.x * 0.5, 0, global_position.z - size.z * 0.5)
+			away = away.normalized() if away.length() > 0.01 else Vector3.RIGHT
+			v.y *= 0.98
+			if Vector3(v.x, 0, v.z).dot(away) < 0.0:
+				v.x *= 0.98
+				v.z *= 0.98
+			v += away * 0.08
+			look_dir = Vector3(v.x, 0, v.z)
+			_qb_timer += 1.0
+			if _qb_timer > 180.0:
+				game.on_boss_despawned(self)
+				queue_free()
+				return
+		-1:
+			var next: float = _qb[1]
+			while next == _qb[1]:
+				next = [0.0, 2.0, 3.0][randi() % 3]
+			_qb = [next, 0.0, 0.0]
+		0:
+			if _qb[1] > 2.0 * (2.0 + fury) and fmod(_qb[1], 2.0) == 0.0:
+				_qb = [-1.0, 0.0, 0.0]
+			elif fmod(_qb[1], 2.0) == 0.0:
+				# Lining up: level with you, then the dash.
+				if absf(to.y) * QB_PX < 20.0 + 20.0 * fury:
+					_qb_dash = true
+					_qb[1] += 1.0
+					_qb[2] = 0.0
+					v = to.normalized() * (12.0 + 7.0 * fury)
+					Audio.play_at("Zombie_125", center())
+				else:
+					_qb_dash = false
+					var cap := 12.0 + 3.0 * fury
+					var accel := 0.15 + 0.5 * fury
+					v.y = clampf(v.y - accel if to.y < 0.0 else v.y + accel, -cap, cap)
+					var along := Vector3(v.x, 0, v.z).dot(d)
+					var side := Vector3(v.x, 0, v.z) - d * along
+					var across := flat.length() * QB_PX
+					if across > 600.0:
+						along += 0.15
+					elif across < 300.0:
+						along -= 0.15
+					else:
+						along *= 0.8
+					along = clampf(along, -16.0, 16.0)
+					v = d * along + side * 0.8 + Vector3(0, v.y, 0)
+			else:
+				# Dashing, till she's well past you.
+				var limit := 600.0 - 100.0 * fury
+				var stop := false
+				if Vector3(v.x, 0, v.z).dot(-flat) > 0.0 and flat.length() * QB_PX > limit:
+					stop = true
+				if absf(to.y) * QB_PX > limit * 1.5:
+					stop = true
+				if stop:
+					_qb[2] = 1.0
+					if fury > 0.0:
+						v *= 0.5
+				if _qb[2] == 1.0:
+					_qb_dash = false
+					v *= 0.9
+					if fury > 0.0:
+						v *= 0.7
+					if Vector3(v.x, 0, v.z).length() + absf(v.y) < 0.1:
+						_qb[2] = 0.0
+						_qb[1] += 1.0
+				else:
+					_qb_dash = true
+					look_dir = Vector3(v.x, 0, v.z)
+		2:
+			# Up over your head.
+			var off: Vector3 = (player.center() + Vector3(0, 200.0 / QB_PX, 0) - center()) * QB_PX
+			if off.length() < 200.0:
+				_qb[0] = 1.0
+				_qb[1] = 0.0
+			else:
+				v = Vector3(_home_axis(v.x, off.x, 0.07), _home_axis(v.y, off.y, 0.07), _home_axis(v.z, off.z, 0.07))
+		1:
+			# Bees.
+			_qb_dash = false
+			_qb[1] += 1.0
+			var spawn := false
+			if _qb[1] > float(int(40.0 - 18.0 * fury)):
+				_qb[1] = 0.0
+				_qb[2] += 1.0
+				spawn = true
+			if spawn and _qb_sees(game, mouth, player):
+				Audio.play_at("NPC_Hit_1", center())
+				var bee: NPC = game.spawn_npc("Bee" if randi() % 2 == 0 else "BeeSmall", mouth)
+				if bee != null:
+					bee.velocity = to.normalized() * 5.0 * PX_TICK
+			if dist > 400.0 or not _qb_sees(game, mouth + Vector3(0, 30.0 / QB_PX, 0), player):
+				var off: Vector3 = (player.center() - mouth) * QB_PX
+				v = Vector3(_home_axis(v.x, off.x, 0.1), _home_axis(v.y, off.y, 0.1), _home_axis(v.z, off.z, 0.1))
+			else:
+				v *= 0.9
+			if _qb[2] > 5.0:
+				_qb = [-1.0, 1.0, 0.0]
+		3:
+			# Stingers, from up over your head.
+			_qb_dash = false
+			var a := 0.05 + 0.2 * fury
+			var off: Vector3 = (player.center() + Vector3(0, 300.0 / QB_PX, 0) - center()) * QB_PX
+			_qb[1] += 1.0
+			var every := int(40.0 - 5.0 * fury)
+			if fmod(_qb[1], float(every)) == float(every - 1) and global_position.y > player.global_position.y + player.half.y \
+					and _qb_sees(game, mouth, player):
+				Audio.play_at("Item_17", center())
+				var sx := maxi(1, int(80.0 - 39.0 * fury))
+				var sy := maxi(1, int(40.0 - 19.0 * fury))
+				var aim: Vector3 = (player.center() - mouth) * QB_PX + Vector3(randi_range(-sx, sx), randi_range(-sy, sy), randi_range(-sx, sx))
+				var shot: Projectile = game.spawn_projectile("QueenBeeStinger", mouth, aim.normalized() * (8.0 + 7.0 * fury) * PX_TICK, 22, 0.0, 0.0, 0.0, 0.5, false)
+				shot.life = 5.0
+			if not _qb_sees(game, mouth + Vector3(0, 30.0 / QB_PX, 0), player):
+				var near: Vector3 = (player.center() - mouth) * QB_PX
+				var k := 0.5 if fury > 0.0 else 0.1
+				v = Vector3(_home_axis(v.x, near.x, k), _home_axis(v.y, near.y, k), _home_axis(v.z, near.z, k))
+			elif off.length() > 100.0:
+				v = Vector3(_qb_axis(v.x, off.x, a), _qb_axis(v.y, off.y, a), _qb_axis(v.z, off.z, a))
+			if _qb[1] > float(every) * (20.0 - 5.0 * fury):
+				_qb = [-1.0, 3.0, 0.0]
+		4:
+			# Far off: straight back to you.
+			_qb_dash = true
+			v = (v * 14.0 + to.normalized() * 14.0) / 15.0
+			look_dir = Vector3(v.x, 0, v.z)
+			if dist < 2000.0:
+				_qb[0] = -1.0
+				_qb_dash = false
+	velocity = v * PX_TICK
+
+
+## Her stinger-phase steering: toward `want` by `a`, twice that more while
+## still moving the other way.
+static func _qb_axis(v: float, want: float, a: float) -> float:
+	if v < want:
+		v += a
+		if v < 0.0 and want > 0.0:
+			v += a * 2.0
+	elif v > want:
+		v -= a
+		if v > 0.0 and want < 0.0:
+			v -= a * 2.0
+	return v
+
+
+## Terraria's bees (aiStyle 5, Bee and BeeSmall: the Queen Bee's): they home
+## in on you at up to 5 px/tick, wobbling, their pull growing over their
+## first 120 ticks (pushed off you at first, at no more than 6 px/tick).
+var _bee_t := 0.0
+var _bee_wobble := 0.0
+
+
+func _ai_bee(delta: float, player) -> void:
+	for t in _critter_ticks(delta):
+		var v := velocity / PX_TICK
+		_bee_t += 1.0
+		var ramp := (_bee_t - 60.0) / 60.0
+		if ramp > 1.0:
+			ramp = 1.0
+		else:
+			v = v.clamp(Vector3(-6, -6, -6), Vector3(6, 6, 6))
+		var a := 0.1 * ramp
+		var to: Vector3 = (player.center() - center()) * QB_PX
+		var want := to.normalized() * 5.0 if to.length() > 0.0 else v
+		if to.length() > 100.0:
+			# Its wobble (Terraria's ai[0]): up and down, and side to side.
+			_bee_wobble += 1.0
+			v.y += -0.023 if _bee_wobble > 0.0 else 0.023
+			var side := Vector3(-to.z, 0, to.x).normalized()
+			v += side * (0.023 if _bee_wobble < -100.0 or _bee_wobble > 100.0 else -0.023)
+			if _bee_wobble > 200.0:
+				_bee_wobble = -200.0
+		if not player.alive:
+			want = Vector3(to.x, 0, to.z).normalized() * 2.5 + Vector3(0, 2.5, 0)
+		v = Vector3(_home_axis(v.x, want.x, a), _home_axis(v.y, want.y, a), _home_axis(v.z, want.z, a))
+		velocity = v * PX_TICK
+	# Its wings: a frame every 3 ticks.
+	anim += delta * 20.0
+	_fly_frame()
+
+
 # ------------------------------------------------------------ skeletron
 
 ## Terraria's px for Skeletron's distances (24 a block, like its sprites).
@@ -2057,6 +2334,8 @@ func _blood_color() -> Color:
 
 
 func _die(game) -> void:
+	if is_queued_for_deletion():
+		return  # (killed twice in a tick: it counts once)
 	if def.ai == "worm":
 		_worm_unlink()
 	Audio.play_at(def.get("death_sound", "NPC_Killed_1"), center())
@@ -2064,9 +2343,11 @@ func _die(game) -> void:
 		if randf() < float(d[3]):
 			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	# One of these at most: the first that rolls (Skeletron's mask, hand, book).
+	# (A link can be one of several: the Queen Bee's bee hat, shirt or pants.)
 	for d in def.get("drops_chain", []):
 		if randf() < float(d[1]):
-			game.spawn_item(d[0], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
+			var item: String = d[0][randi() % d[0].size()] if d[0] is Array else d[0]
+			game.spawn_item(item, 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 			break
 	var one_of: Array = def.get("drops_one_of", [])
 	if not one_of.is_empty():

@@ -21,6 +21,10 @@ func _shader() -> Shader:
 	return preload("res://shaders/billboard_rendered.gdshader")
 
 
+func _xray_shader() -> Shader:
+	return preload("res://shaders/billboard_rendered_xray.gdshader")
+
+
 func setup_rendered(kind_name: String) -> void:
 	kind = kind_name
 	_look = NPC.look(kind)
@@ -79,10 +83,10 @@ func _process(_delta: float) -> void:
 	var turn := global_transform.basis.orthonormalized() * _orient
 	var to_cam := turn.inverse() * (cam.global_position - global_position)
 	var v := NPCRenders.pick(to_cam)
-	_mat.set_shader_parameter("sprite", _renders.atlases[clampi(_frame, 0, _renders.atlases.size() - 1)])
-	_mat.set_shader_parameter("region", Vector4(float(v.x) / NPCRenders.YAWS, float(v.y) / NPCRenders.PITCHES.size(),
+	_param("sprite", _renders.atlases[clampi(_frame, 0, _renders.atlases.size() - 1)])
+	_param("region", Vector4(float(v.x) / NPCRenders.YAWS, float(v.y) / NPCRenders.PITCHES.size(),
 			1.0 / NPCRenders.YAWS, 1.0 / NPCRenders.PITCHES.size()))
-	_mat.set_shader_parameter("rotation", NPCRenders.roll(turn * NPCRenders.view_up(v.x, v.y), cam.global_transform.basis))
+	_param("rotation", NPCRenders.roll(turn * NPCRenders.view_up(v.x, v.y), cam.global_transform.basis))
 
 
 ## Switches to the shots once they're made.
@@ -95,15 +99,15 @@ func _poll() -> void:
 	scale = Vector3(size, size, 1.0)
 	extra_cull_margin = size
 	(mesh as QuadMesh).center_offset = Vector3.ZERO
-	_mat.set_shader_parameter("frames", 1)
-	_mat.set_shader_parameter("frame", 0)
-	_mat.set_shader_parameter("trim_bottom", 0.0)
-	_mat.set_shader_parameter("flip", false)
-	_mat.set_shader_parameter("spherical", true)
-	_mat.set_shader_parameter("unpremultiply", true)
+	_param("frames", 1)
+	_param("frame", 0)
+	_param("trim_bottom", 0.0)
+	_param("flip", false)
+	_param("spherical", true)
+	_param("unpremultiply", true)
 	# To the front of the model (its radius, in the quad's half widths), so
 	# the ground under it doesn't cut it seen from above.
-	_mat.set_shader_parameter("push", r.radius / (size * 0.5))
+	_param("push", r.radius / (size * 0.5))
 	# Centred on the model's middle: where a centred sprite is, or (grounded)
 	# the middle's height above the feet.
 	position.y = _look.sprite_y if _look.centred else float(r.center.y)

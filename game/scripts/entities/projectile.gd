@@ -48,9 +48,11 @@ const BOMB_RADIUS := 0.18
 ## Projectiles whose sheet is an animation (frames stacked down it), drawn
 ## pointing right instead of up, or up and right (the Enchanted Beam: AI 27
 ## turns it its velocity's angle + 0.785); "styles": the frames are looks, one
-## picked at random and held (the Book of Skulls' three skulls).
+## picked at random and held (the Book of Skulls' three skulls); "long": laid
+## along its flight though not twice as long as it's wide (the stingers).
 const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3},
-		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true}}
+		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true},
+		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
@@ -61,14 +63,19 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## through (Terraria's penetrate); gravity in blocks/s^2 (the Aqua Scepter's
 ## stream, AI 12: 0.075 px a tick each of its 3 updates); hidden: no sprite,
 ## only its dust (Terraria draws them at alpha 255); glow: lit by itself
-## (the Magic Missile's light).
+## (the Magic Missile's light); xray: seen through blocks like the boss that
+## shot it (the Queen Bee's stingers).
 const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7},
 		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
 		"WaterStream": {"gravity": 50.6, "pierce": 5, "hidden": true, "dust": [33], "life": 2.0},
 		"MagicMissile": {"dust": [15], "glow": true, "life": 10.0},
 		"BookOfSkullsSkull": {"ghost": true, "home": 0.6, "pierce": 3, "life": 8.0},
-		"ChaosBall": {"ghost": true, "hidden": true, "dust": [27]}}
+		"ChaosBall": {"ghost": true, "hidden": true, "dust": [27]},
+		"Stinger": {"dust": [18]}, "QueenBeeStinger": {"dust": [147], "life": 5.0, "xray": true}}
+## Hostile shots that poison you one hit in three, for 10 s (Terraria's
+## StatusPlayer: the Hornet's and the Queen Bee's stingers).
+const POISONS := ["Stinger", "QueenBeeStinger"]
 ## Bounces left off blocks (Water Bolt).
 var bounces := 0
 ## The player steering it while they hold the button (a channelled spell:
@@ -103,12 +110,13 @@ func setup(proj: String, size := 0.5) -> void:
 	add_child(sprite)
 	# Long along the way it points: up the sheet, or across it for the ones
 	# drawn pointing right.
-	_axial = (aspect >= 2.0) if _turn == PI / 2.0 else (aspect <= 0.5 and _turn == PI)
+	_axial = (aspect >= 2.0) if _turn == PI / 2.0 else ((aspect <= 0.5 or sheet.get("long", false)) and _turn == PI)
 	if _axial:
 		# Its point along the axis: the sprite turned from pointing up (or right).
 		sprite.set_rotation_angle(PI - _turn)
 	var flight: Dictionary = FLIGHT.get(proj, {})
 	_flight = flight
+	sprite.set_xray(flight.get("xray", false))
 	bounces = int(flight.get("bounce", 0))
 	if flight.get("hidden", false):
 		sprite.visible = false
@@ -303,5 +311,7 @@ func _check_hits(game) -> bool:
 		var p = game.player
 		if p.alive and p.overlaps_point(global_position, 0.2):
 			p.hurt(damage, global_position)
+			if kind in POISONS and randi() % 3 == 0:
+				p.poison(10.0)
 			return true
 	return false

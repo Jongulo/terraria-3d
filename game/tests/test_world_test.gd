@@ -337,6 +337,7 @@ func _run() -> void:
 		p.accessories.slots[0] = Inventory.stack(accessory, 1) if accessory != "" else null
 		p.life = p.life_max
 		p._immune = 0.0
+		p.poisoned = 0.0  # (a hornet's stinger, earlier, may have poisoned you)
 		p.velocity = Vector3.ZERO
 		p.global_position = Vector3(spot) + Vector3(0.5, 20.0, 0.5)
 		p._fall_start = p.global_position.y
@@ -412,6 +413,7 @@ func _run() -> void:
 	await _goblin_checks(c)
 	await _prefix_checks(c)
 	await _hive_checks(c)
+	await _queen_bee_checks(c)
 	await _fishing_checks(c)
 	await _fishing_spot_checks(c)
 	await _angler_checks(c)
@@ -1565,12 +1567,12 @@ func _goblin_checks(c: Vector3i) -> void:
 		g.hit(9999, 0.0, Vector3.ZERO, 0.0)
 	await frames(2)
 	# (Any other that's died meanwhile, in the lava pond or such, counts too.)
-	var dead := goblins.filter(func(g): return not is_instance_valid(g) or g.is_queued_for_deletion()).size()
-	check(dead >= 3 and inv.size == left - dead and absf(game.hud._invasion_bar.value - inv.progress() * 100.0) < 0.01, "each kill brings it closer to defeat (%d left)" % inv.size)
+	var now := inv.size
+	check(now <= left - 3 and now >= left - 6 and absf(game.hud._invasion_bar.value - inv.progress() * 100.0) < 0.01, "each kill brings it closer to defeat (%d left)" % inv.size)
 	var saved := inv.save_state()
 	inv.load_state({})
 	inv.load_state(saved)
-	check(inv.active and inv.size == left - dead, "it's saved with the world, part beaten")
+	check(inv.active and inv.size == now, "it's saved with the world, part beaten")
 	inv.size = 1
 	var last := game.spawn_npc("GoblinWarrior", p.global_position + Vector3(4, 0, 0))
 	last.hit(9999, 0.0, Vector3.ZERO, 0.0)
@@ -1707,6 +1709,189 @@ func _goblin_checks(c: Vector3i) -> void:
 		game.town.residents.erase("GoblinTinkerer")
 		game.town.arrived.erase("GoblinTinkerer")
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	await frames(5)
+
+
+## The Queen Bee (Terraria's aiStyle 43): what brings her, her charges, bees
+## and stingers (and their poison), her fury out of the Jungle, her music,
+## leaving when you die, and what she drops.
+func _queen_bee_checks(c: Vector3i) -> void:
+	var p := game.player
+	var god := p.god_mode
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var held := p.selected
+	p.god_mode = true
+	var qd: Dictionary = Data.npcs.QueenBee
+	check(int(qd.life) == 3400 and int(qd.damage) == 30 and int(qd.defense) == 8 and qd.boss and Data.npcs.Bee.life == 20 and Data.npcs.BeeSmall.life == 10,
+			"the Queen Bee: Terraria's 3400 life, 30 damage, 8 defense; her bees 20 and 10 life")
+	var recipe: Array = Data.recipes.filter(func(r): return r.result == "Abeemination")
+	check(recipe.size() == 1 and recipe[0].ingredients == {"HoneyBlock": 5, "Stinger": 1, "Hive": 5, "BottledHoney": 1},
+			"the Abeemination: 5 Honey Blocks, a Stinger, 5 Hive and a Bottled Honey (%s)" % [recipe[0].ingredients if recipe.size() > 0 else null])
+	check(Data.block_id("hive") in Data.biome_blocks.jungle, "hive blocks count as the Jungle (Terraria's JungleTileCount)")
+	var clear := func() -> void:
+		for n in game.npcs():
+			if n.boss or n.def.ai == "bee":
+				n.queue_free()
+		for e in game.entities.get_children():
+			if e is Projectile or e is Gore or e is ItemDrop:
+				e.queue_free()
+		await frames(2)
+	var use := func() -> void:
+		p._use_timer = 0.0
+		p._use_released = true
+		p.use_item()
+		await frames(2)
+	var plaza := Vector3(c) + Vector3(0.5, 0, 12.5)
+	p.global_position = plaza
+	p.velocity = Vector3.ZERO
+	await frames(20)
+	p.inventory.slots[9] = Inventory.stack("Abeemination", 2)
+	p.select(9)
+	await use.call()
+	check(not game.boss_alive() and p.inventory.slots[9].count == 2, "out of the Jungle the Abeemination does nothing")
+	var spot: Array = TestWorld.FISHING_SPOTS.filter(func(x): return x[0] == "Jungle")[0]
+	var jungle := Vector3(c.x + spot[1].x + 0.5, TestWorld.GROUND + 1, c.z + spot[1].z + spot[2].y + 2.5)
+	p.global_position = jungle
+	await frames(30)
+	game.biome = game.detect_biome(jungle)
+	await use.call()
+	var qb: NPC = game.boss()
+	check(game.biome == "jungle" and qb != null and qb.kind == "QueenBee" and p.inventory.slots[9].count == 1 and last_message() == "Queen Bee has awoken!",
+			"in the Jungle it brings the Queen Bee (%s, %s)" % [game.biome, last_message()])
+	await frames(5)
+	check(Audio._current_track == "QueenBee", "her own music plays (%s)" % Audio._current_track)
+	# Seen through the blocks in front of her (Terraria draws NPCs in front of
+	# the tiles), with her bees and stingers; out of view, her head icon at
+	# the edge of the screen points to her.
+	var bee_look := NPC.make_look("Bee", NPC.look("Bee"))
+	check(qb != null and qb.sprite.get("material_overlay") != null or (qb.sprite is NPCModel and qb.sprite._mi.material_overlay != null),
+			"she's seen through blocks")
+	check(bee_look is NPCModel or bee_look.material_overlay != null, "and so are her bees")
+	bee_look.free()
+	if qb != null:
+		qb.process_mode = Node.PROCESS_MODE_DISABLED
+		qb.global_position = p.camera.global_position - p.forward() * 10.0
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var marks: Array = game.hud.boss_markers.marks
+		check(marks.size() == 1 and qb.head_icon() == 14 and absf(marks[0][2] - PI / 2.0) < 0.3,
+				"behind you, her head icon (NPC_Head_Boss_14) points to her from the bottom of the screen (%s)" % [marks])
+		qb.global_position = p.camera.global_position + p.forward() * 10.0
+		await get_tree().process_frame
+		await get_tree().process_frame
+		check(game.hud.boss_markers.marks.is_empty(), "in view, no marker")
+		qb.process_mode = Node.PROCESS_MODE_INHERIT
+	# Her dash: at the Jungle's surface (fury 1: out of the underground) 19
+	# px a tick; in the plaza (fury 2: out of the Jungle too) 26.
+	var dash_speed := func(at: Vector3) -> float:
+		qb._qb = [0.0, 0.0, 0.0]
+		qb.global_position = at + Vector3(-14, 0.0, -4)
+		qb.velocity = Vector3.ZERO
+		for i in 240:
+			await frames(1)
+			if qb._qb[1] == 1.0:
+				break
+		return qb.velocity.length() / NPC.PX_TICK
+	if qb != null:
+		var jungle_dash: float = await dash_speed.call(jungle)
+		p.global_position = plaza
+		await frames(20)
+		game.biome = game.detect_biome(plaza)
+		var plaza_dash: float = await dash_speed.call(plaza)
+		check(absf(jungle_dash - 19.0) < 0.1 and absf(plaza_dash - 26.0) < 0.1 and qb._qb_dash and qb._qb_frame < 4,
+				"she lines up level with you and dashes: 19 px a tick at the Jungle's surface, 26 out of it (%.1f, %.1f), in her charging frames" % [jungle_dash, plaza_dash])
+		var passed := 0.0
+		for i in 240:
+			await frames(1)
+			if qb._qb[2] == 1.0:
+				var off: Vector3 = qb.center() - p.center()
+				passed = Vector2(off.x, off.z).length() * NPC.QB_PX
+				break
+		check(passed > 400.0 and passed < 700.0, "and goes on till she's 400 px past you (fury 2: 600 less 100 a fury) (%.0f)" % passed)
+		# Bees: a bee (or small bee) every 4 ticks at fury 2 (40 less 18 a fury), 6 of them.
+		await clear.call()
+		qb = null
+		game.summon_boss("QueenBee")
+		qb = game.boss()
+		qb._qb = [1.0, 0.0, 0.0]
+		qb.global_position = p.global_position + Vector3(0, 4, -4)
+		qb.velocity = Vector3.ZERO
+		for i in 120:
+			await frames(1)
+			if qb._qb[0] != 1.0:
+				break
+		var bees := game.npcs().filter(func(n): return n.def.ai == "bee")
+		check(bees.size() == 6 and qb._qb[0] != 1.0, "she sends out 6 bees, then moves on (%d)" % bees.size())
+		for n in game.npcs():
+			if n.def.ai == "bee":
+				n.queue_free()
+		# (Launched at you at 5 px a tick, as she sends them: its pull starts
+		# out backwards, (age - 60) / 60, slowing it, then grows.)
+		var bee: NPC = game.spawn_npc("Bee", p.center() + Vector3(-4, 6, 6))
+		bee.velocity = (p.center() - bee.center()).normalized() * 5.0 * NPC.PX_TICK
+		await frames(240)
+		check(is_instance_valid(bee) and bee.center().distance_to(p.center()) < 4.0, "a bee homes in on you (%.1f blocks off)" % (bee.center().distance_to(p.center()) if is_instance_valid(bee) else -1.0))
+		# Stingers from above: one every 30 ticks at fury 2, 22 px a tick, 22 damage.
+		await clear.call()
+		game.summon_boss("QueenBee")
+		qb = game.boss()
+		qb._qb = [3.0, 0.0, 0.0]
+		qb.global_position = p.global_position + Vector3(0, 11, -3)
+		qb.velocity = Vector3.ZERO
+		var stinger: Projectile = null
+		for i in 60:
+			await frames(1)
+			for e in game.entities.get_children():
+				if e is Projectile and e.kind == "QueenBeeStinger":
+					stinger = e
+			if stinger != null:
+				break
+		check(stinger != null and not stinger.friendly and stinger.damage == 22 and absf(stinger.velocity.length() / NPC.PX_TICK - 22.0) < 0.1 and stinger._axial
+				and stinger.sprite.material_overlay != null,
+				"from over your head she shoots stingers at you (22 damage, 22 px a tick), pointing along their flight, seen through blocks")
+		# Poisoned: 2 life a second, no healing.
+		await clear.call()
+		p.god_mode = false
+		var life0 := p.life
+		p.poison(10.0)
+		await frames(61)
+		var lost := life0 - p.life
+		check(p.buffs().any(func(b): return b[1] == "Poisoned") and lost >= 1 and lost <= 3 and "QueenBeeStinger" in Projectile.POISONS,
+				"her stingers poison you: 2 life a second (%d lost)" % lost)
+		p.poisoned = 0.0
+		p.life = life0
+		p.god_mode = true
+		# You die: she flies off and is gone.
+		game.summon_boss("QueenBee")
+		qb = game.boss()
+		p.alive = false
+		await frames(200)
+		check(not is_instance_valid(qb) or qb.is_queued_for_deletion(), "with you dead she leaves")
+		p.alive = true
+		await clear.call()
+		# Killed: her gores, Bottled Honey, Bee Wax and money.
+		game.summon_boss("QueenBee")
+		qb = game.boss()
+		qb.global_position = p.global_position + Vector3(0, 2, -5)
+		await frames(2)
+		qb.hit(99999, 0.0, Vector3.FORWARD, 0.0)
+		await frames(2)
+		var drops := {}
+		for e in game.entities.get_children():
+			if e is ItemDrop:
+				drops[e.item] = int(drops.get(e.item, 0)) + e.count
+		var gores := game.entities.get_children().filter(func(e): return e is Gore).size()
+		check(gores == 6 and drops.get("BottledHoney", 0) >= 5 and drops.get("BeeWax", 0) >= 17 and game.defeated_bosses.has("QueenBee")
+				and last_message() == "Queen Bee has been defeated!", "killed she breaks in 6 and drops Bottled Honey, Bee Wax and more (%s)" % [drops])
+		game.defeated_bosses.erase("QueenBee")
+	await clear.call()
+	p.god_mode = god
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.select(held)
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	game.biome = ""
 	await frames(5)
 
 
@@ -1868,9 +2053,13 @@ func _hive_checks(c: Vector3i) -> void:
 	check(out.size() == 1 and out[0].item == "HoneyBlock" and p.inventory.slots[9].count == 2, "a Hive in the Extractinator gives a Honey Block")
 	w.set_block(ex + Vector3i(0, 0, -2), 0)
 
-	# Breaking the larva: its sounds, and Queen Bee would come (not in yet).
+	# Breaking the larva: the Queen Bee comes for you.
 	game.break_block(larva)
-	check(w.get_block(larva) == 0 and "Queen Bee" in last_message(), "breaking the larva: %s" % last_message())
+	check(w.get_block(larva) == 0 and game.boss() != null and game.boss().kind == "QueenBee" and last_message() == "Queen Bee has awoken!",
+			"breaking the larva brings the Queen Bee (%s)" % last_message())
+	for n in game.npcs():
+		if n.boss:
+			n.queue_free()
 
 	for x in range(-2, 3):
 		for z in range(-2, 3):
@@ -3575,7 +3764,7 @@ func _armor_checks(c: Vector3i) -> void:
 	var armor_items := Data.items.keys().filter(func(n): return Data.item(n).get("type") == "armor")
 	for n in armor_items:
 		var d := Data.item(n)
-		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n))
+		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n if x[0] is String else n in x[0]))
 		var in_set: bool = Data.loot.values().any(func(t): return t is Dictionary and t.get("sets", []).any(func(e): return n in e[0]))
 		# (The Angler's armor: his rewards for the 10th, 15th and 20th quests.)
 		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set \

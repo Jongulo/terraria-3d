@@ -1,5 +1,6 @@
 // Doom-style sprites (billboard.gdshader; billboard_rendered.gdshader with
-// DEPTH_PUSH for pre-rendered NPCs): see billboard.gdshader.
+// DEPTH_PUSH for pre-rendered NPCs; the _xray ones with XRAY: a boss seen
+// through the blocks in front of it): see billboard.gdshader.
 uniform sampler2D sprite : source_color, filter_nearest, repeat_disable;
 uniform int frames = 1;
 uniform int frame = 0;
@@ -40,6 +41,13 @@ uniform bool unpremultiply = false;
 // from above, the ground they stand on doesn't cut them).
 uniform float push = 0.0;
 varying float v_push;
+#endif
+#ifdef XRAY
+// Drawn over everything, but only where something nearer hides the sprite
+// (the scene's depth there is in front of its own): Terraria draws NPCs in
+// front of the tiles, so a boss in the blocks is never lost.
+uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
+uniform vec4 xray_color : source_color = vec4(1.0, 0.8, 0.35, 0.6);
 #endif
 #include "res://shaders/player_light.gdshaderinc"
 
@@ -85,6 +93,23 @@ void fragment() {
 		c.rgb /= c.a;
 	}
 	c *= tint;
+#ifdef XRAY
+	if (c.a < 0.5) {
+		discard;
+	}
+	float d = FRAGCOORD.z;
+#ifdef DEPTH_PUSH
+	vec4 pushed = PROJECTION_MATRIX * vec4(VERTEX + normalize(-VERTEX) * v_push, 1.0);
+	d = pushed.z / pushed.w;
+#endif
+	// (Reverse Z: nearer is larger.)
+	if (d >= textureLod(depth_tex, SCREEN_UV, 0.0).r - 1e-6) {
+		discard;
+	}
+	ALBEDO = mix(c.rgb * 0.6, xray_color.rgb, 0.45);
+	ALPHA = xray_color.a;
+}
+#else
 	vec3 sun = vec3(light.a * sky_light) * sky_color;
 	vec3 l = max(max(light.rgb, sun), extra_light(NODE_POSITION_WORLD));
 	l = max(l * l, vec3(0.04));
@@ -99,3 +124,4 @@ void fragment() {
 	DEPTH = clip.z / clip.w;
 #endif
 }
+#endif

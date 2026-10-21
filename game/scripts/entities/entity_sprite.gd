@@ -5,6 +5,8 @@ extends MeshInstance3D
 
 var frames := 1
 var _mat: ShaderMaterial
+## Its see-through pass (set_xray), or null.
+var _xray: ShaderMaterial = null
 
 
 ## `size` in world units. Grounded sprites have their origin at the bottom
@@ -20,9 +22,9 @@ func setup(tex: Texture2D, frame_count: int, size: Vector2, centred := false, sp
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_mat = ShaderMaterial.new()
 	_mat.shader = _shader()
-	_mat.set_shader_parameter("sprite", tex)
-	_mat.set_shader_parameter("frames", frame_count)
-	_mat.set_shader_parameter("spherical", spherical)
+	_param("sprite", tex)
+	_param("frames", frame_count)
+	_param("spherical", spherical)
 	material_override = _mat
 	# Billboarding happens in the vertex shader; keep the culling box generous.
 	extra_cull_margin = maxf(size.x, size.y)
@@ -33,40 +35,69 @@ func _shader() -> Shader:
 	return preload("res://shaders/billboard.gdshader")
 
 
+func _xray_shader() -> Shader:
+	return preload("res://shaders/billboard_xray.gdshader")
+
+
+## Sets a shader parameter on the sprite and its see-through pass.
+func _param(name: String, value) -> void:
+	_mat.set_shader_parameter(name, value)
+	if _xray != null:
+		_xray.set_shader_parameter(name, value)
+
+
+## Seen through whatever's in front of it (bosses: Terraria draws NPCs in
+## front of the tiles), dimmed and tinted where it's hidden.
+func set_xray(on: bool) -> void:
+	if on == (_xray != null):
+		return
+	if not on:
+		_xray = null
+		material_overlay = null
+		return
+	_xray = ShaderMaterial.new()
+	_xray.shader = _xray_shader()
+	for u in _mat.shader.get_shader_uniform_list():
+		var v = _mat.get_shader_parameter(u.name)
+		if v != null:
+			_xray.set_shader_parameter(u.name, v)
+	material_overlay = _xray
+
+
 ## Cuts `px` pixels off the bottom of every frame (of `frame_height` pixels).
 func set_trim_bottom(px: float, frame_height: float) -> void:
-	_mat.set_shader_parameter("trim_bottom", px / frame_height)
+	_param("trim_bottom", px / frame_height)
 
 
 func set_frame(f: int) -> void:
-	_mat.set_shader_parameter("frame", clampi(f, 0, frames - 1))
+	_param("frame", clampi(f, 0, frames - 1))
 
 
 func set_flip(f: bool) -> void:
-	_mat.set_shader_parameter("flip", f)
+	_param("flip", f)
 
 
 func set_tint(c: Color) -> void:
-	_mat.set_shader_parameter("tint", c)
+	_param("tint", c)
 
 
 func set_flash(v: float) -> void:
-	_mat.set_shader_parameter("flash", v)
+	_param("flash", v)
 
 
 ## 1: whole; less fades it out (Terraria's gore alpha).
 func set_fade(v: float) -> void:
-	_mat.set_shader_parameter("fade", v)
+	_param("fade", v)
 
 
 func set_rotation_angle(a: float) -> void:
-	_mat.set_shader_parameter("rotation", a)
+	_param("rotation", a)
 
 
 ## Lays the sprite's up along world direction `dir` (turned round it to face
 ## the camera), so it points that way in 3D; Vector3.ZERO: a plain billboard.
 func set_axis(dir: Vector3) -> void:
-	_mat.set_shader_parameter("axis", dir.normalized() if dir.length_squared() > 1e-8 else Vector3.ZERO)
+	_param("axis", dir.normalized() if dir.length_squared() > 1e-8 else Vector3.ZERO)
 
 
 func update_light(world: VoxelWorld, sky: SkySystem, at: Vector3) -> void:

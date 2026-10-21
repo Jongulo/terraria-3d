@@ -14,6 +14,13 @@ var _mi := MeshInstance3D.new()
 ## Fliers: which way their art points (Terraria's sprite_angle; 0: down).
 var _art_forward := Vector3.LEFT
 var _tilts := false
+static var XRAY := _xray_material()
+
+
+static func _xray_material() -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = preload("res://shaders/npc_model_xray.gdshader")
+	return m
 
 
 func setup(kind_name: String, m: String) -> void:
@@ -70,6 +77,12 @@ func set_tint(c: Color) -> void:
 
 func set_flash(v: float) -> void:
 	_mi.set_instance_shader_parameter("flash", v)
+
+
+## Seen through whatever's in front of it (bosses), as a tinted silhouette
+## where it's hidden.
+func set_xray(on: bool) -> void:
+	_mi.material_overlay = XRAY if on else null
 
 
 ## Billboard-only calls: a model faces its heading instead.

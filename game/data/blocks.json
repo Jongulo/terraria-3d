@@ -872,7 +872,7 @@
 		{"name": "web_rope", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "drop": "WebRope", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_366", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}},
 		{"name": "chain", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "tink", "drop": "Chain", "rope": true, "floats": true, "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_214", "tile": [16, 16], "tiles": [1, 2], "frames": [[90, 0]]}}},
 		{"name": "tinkerers_workshop", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "drop": "TinkerersWorkshop", "station": true, "default_method": "extruded", "tex": {"all": {"sheet": "Tiles_114", "tiles": [3, 2], "frames": [[0, 0]]}}},
-		{"name": "hive", "tex": {"all": {"sheet": "Tiles_225", "frames": [[18,18],[36,18],[54,18]]}}, "drop": "Hive", "sound": "dig"},
+		{"name": "hive", "biome": "jungle", "tex": {"all": {"sheet": "Tiles_225", "frames": [[18,18],[36,18],[54,18]]}}, "drop": "Hive", "sound": "dig"},
 		{"name": "honey_block", "tex": {"all": {"sheet": "Tiles_229", "frames": [[18,18],[36,18],[54,18]]}}, "honey_sticky": true, "drop": "HoneyBlock", "sound": "dig"},
 		{"name": "crispy_honey_block", "tex": {"all": {"sheet": "Tiles_230", "frames": [[18,18],[36,18],[54,18]]}}, "drop": "CrispyHoneyBlock", "sound": "dig"},
 		{"name": "larva", "render": "cross", "default_method": "billboard", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "on_break": "larva", "anim": {"frames": 7, "stride": 54, "ticks": 17}, "tex": {"all": {"sheet": "Tiles_231", "tiles": [3, 3], "frames": [[0, 0]]}}},

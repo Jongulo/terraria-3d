@@ -505,7 +505,7 @@ func space_level() -> float:
 
 func _update_music(pos: Vector3) -> void:
 	if boss_alive():
-		Audio.set_music("Boss1")
+		Audio.set_music(boss().def.get("music", "Boss1"))
 	elif invasion.near(pos):
 		Audio.set_music("GoblinArmy")
 	elif pos.y > space_level():
@@ -1138,13 +1138,13 @@ func _fell_cactus(p: Vector3i, drop: bool) -> void:
 		spawn_item("Cactus", CactusArt.pieces(s) - 1, Vector3(p) + Vector3(0.5, 0.5, 0.5))
 
 
-## A bee larva broken (Terraria's tile 231): its sounds, and Queen Bee would
-## come for you (she isn't in yet).
+## A bee larva broken (Terraria's tile 231): its sounds, and the Queen Bee
+## comes for you (NPC.SpawnOnPlayer).
 func _larva_burst(c: Vector3) -> void:
 	Audio.play_at("NPC_Killed_1", c)
 	Audio.play_at("Item_173", c)
 	spawn_dust(c, Color(1.0, 0.75, 0.2), 16)
-	message("Something buzzes angrily... (Queen Bee is not in this version yet)", Color(0.69, 0.29, 1.0))
+	summon_boss("QueenBee")
 
 
 ## A Shadow Orb or Crimson Heart smashed: its loot, and Terraria's warnings.

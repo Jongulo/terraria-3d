@@ -221,6 +221,10 @@ func _run() -> void:
 		p.inventory.slots[5] = Inventory.stack("DirtBlock", 10)
 		slot = 5
 	p.select(slot)
+	# (A critter where it goes would stop it, as in Terraria.)
+	for n in game.npcs():
+		if n.is_critter():
+			n.queue_free()
 	await aim(-0.6)
 	var before := p.inventory.count_of("DirtBlock")
 	await use(1)

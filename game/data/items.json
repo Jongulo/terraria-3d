@@ -6,6 +6,7 @@
 		"auto_reuse: held down, it's used again and again (Terraria's autoReuse); otherwise each use takes a fresh click. By default tools, buckets and blocks do and nothing else does, like Terraria's items here (doors and the Bed are blocks that don't).",
 		"use_time is in ticks (1/60 s) like Terraria; for tools it's Terraria's mining / tool speed (ticks between hits). shoot_speed is in blocks per second.",
 		"Tiers: pick / axe are Terraria's pickaxe and axe power (%), pick_speed / axe_speed their tool speeds.",
+		"armor equip: its name in Terraria's ArmorIDs where that differs from its item name (the Bee Mask: QueenBeeMask), for its equipped sprite.",
 		"armor: slot head | body | legs, defense, and bonuses (percent): damage, crit, melee_damage, melee_crit, melee_speed, ranged_damage, ranged_crit, magic_damage, magic_crit, mana_cost (reduction), ammo_save (chance), mining_speed, move_speed; mana_bonus (points); light [r,g,b]; fire_immune. Accessories may carry the same keys. hair: the player's hair under a helmet (\"hat\": Terraria's hat hair, \"full\"), none by default.",
 		"armor_sets: the bonus for wearing all three pieces; text is the key of Terraria's set bonus text (ArmorSetBonus). Tiers add <Metal>Helmet / Chainmail / Greaves (armor: defense of each, set_defense, armor_bars).",
 		"rocket: rocket boots (Terraria's rocketBoots; 7 bursts of 10 ticks of flight). magic_cuffs: damage taken comes back as mana. mana_regen_bonus: Terraria's manaRegenBonus (half a mana a second each). regen: Terraria's lifeRegen (half a life a second each). block_range: tiles more reach placing blocks (the Toolbelt). info gps: a Gold Watch, a Depth Meter and a Compass. harpoon (ranged): Terraria's aiStyle 13 {speed, back: px a tick out and in, reach px, pierce, drop_after ticks, chain} (HarpoonShot). invasion (summon): starts that invasion (the Goblin Battle Standard). explosive spiky: a Spiky Ball (rolls, no blast, hurts `pierce` enemies).",
@@ -552,6 +553,9 @@
 		"LifeCrystal": {"value": 7500, "type": "consumable", "max_life": 20, "use_time": 30, "style": "drink", "max_stack": 99, "sound": "Item_4"},
 		"ManaCrystal": {"value": 5000, "type": "consumable", "max_mana": 20, "use_time": 30, "style": "drink", "max_stack": 99, "sound": "Item_29"},
 		"SuspiciousLookingEye": {"value": 0, "type": "summon", "summons": "EyeofCthulhu", "use_time": 45, "style": "drink", "max_stack": 20},
+		"Abeemination": {"value": 0, "type": "summon", "summons": "QueenBee", "summon_when": "jungle", "use_time": 45, "style": "drink", "max_stack": 20},
+		"BeeWax": {"value": 2500, "type": "material"},
+		"BeeMask": {"value": 37500, "type": "armor", "slot": "head", "defense": 0, "equip": "QueenBeeMask"},
 		"SlimeCrown": {"value": 0, "type": "summon", "summons": "KingSlime", "summon_when": "any", "use_time": 45, "style": "drink", "max_stack": 20},
 		"WormFood": {"value": 0, "type": "summon", "summons": "EaterofWorldsHead", "summon_when": "corruption", "use_time": 45, "style": "drink", "max_stack": 20},
 

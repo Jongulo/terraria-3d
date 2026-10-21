@@ -4,6 +4,18 @@ A first-person, voxel 3D take on Terraria built with Godot 4.7 and a Rust voxel 
 using the original game's art, sounds, music and fonts extracted from **your own**
 Terraria install. No Terraria assets are stored in this repository.
 
+## License
+
+This is an unofficial, noncommercial fan project. It isn't affiliated with or endorsed by
+Re-Logic. Terraria and its art, sounds, music, names and designs belong to Re-Logic, and you
+need your own copy of Terraria to play.
+
+The code in this repository is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE):
+you're welcome to use it, change it, fork it and share it for any noncommercial purpose, as long
+as the license and its `Required Notice:` line go with it. Selling it, or using it commercially in
+any other way, isn't permitted. The license covers only this project's own code and data, not
+anything of Terraria's.
+
 ## Setup
 
 Requirements: Godot 4.7, Rust (cargo), ffmpeg, python3, and Terraria installed through Steam.
@@ -917,8 +929,49 @@ music (surface and underground) and enemies:
   crafting stations (Bottled Honey: a Bottle by honey, heals 80 and makes you Honey for 15 s). The
   Campfire is a crafting station (the Honey Bucket: a Honey Block and an Empty Bucket); Crispy Honey
   from a Honey Block at a Furnace.
-- **Not yet:** breaking the larva wakes Queen Bee in Terraria; she isn't in yet, so it only buzzes.
-  The Abeemination and the honey furniture (the Honey Dispenser) wait for her.
+- **Blocks count as the Jungle:** hive blocks count toward the Jungle biome, as in Terraria's
+  JungleTileCount.
+- **Not yet:** the honey furniture (the Honey Dispenser).
+
+**The Queen Bee**, Terraria's (aiStyle 43, in its px and ticks; `entities/npc.gd`, Queen Bee
+section). Break a bee larva, or use an Abeemination in the Jungle (5 Honey Blocks, a Stinger, 5 Hive
+and a Bottled Honey), and she comes for you to her own music.
+- **Body:** 3400 life, 30 damage, 8 defense, no knockback, flying through blocks. Her charging
+  frames (0-3) show while she charges, her hovering ones (4-11) otherwise.
+- **Attacks,** in turn, never the same one twice running (Terraria's 2D left and right are the
+  line between you on the ground here):
+  - **Charges:** she lines up level with you (within 20 px), keeping 300-600 px off, then dashes
+    at you at 12 px a tick until she's 600 px past you. She slows, turns and goes again: 2 dashes,
+    plus 1 per fury.
+  - **Bees:** she flies to 200 px over your head, then hovers near you. A Bee (20 life) or small
+    bee (10) comes out of her every 40 ticks, 6 in all. Bees home in at up to 5 px a tick with a
+    wobble (aiStyle 5). Their pull starts out backwards and grows over 2 seconds, so they burst
+    out of her and swing back round.
+  - **Stingers:** she flies to 300 px over your head. While she's above you she shoots a stinger
+    every 40 ticks (8 px a tick, 22 damage) for 800 ticks.
+- **Fury:** she gets 1 fury for being above the underground and 1 for you being out of the Jungle.
+  Each makes her faster: dashes +7 px a tick, a bee every 18 ticks sooner, stingers sooner and
+  faster.
+- **Leaving:** 3000 px off she flies straight back to you; with you dead she flies off and is gone.
+- **Poisoned:** stingers (hers and the Hornet's) poison you one hit in three for 10 s. That's 2
+  life a second, and no natural healing meanwhile, as when on fire.
+- **Drops:** 5-15 Bottled Honey, 17-30 Bee Wax, 5 gold, the Bee Mask (1 in 7), and her gores and
+  dust. Drops not in yet roll but aren't given: one of the Bee Gun, Bee Keeper or Bee's Knees;
+  Beenades (3 in 4, 10-30); the Hive Wand (1 in 3, else a bee vanity piece half the time); the
+  Honey Comb (1 in 3); Nectar, the Queen of Bees painting and the Honeyed Goggles.
+- **The test world:** spawners for her and her bees in the enemy arena (her fury is 2 there), and
+  the hive's larva.
+
+**Keeping bosses in sight.** Bosses fly through blocks, and in Terraria's 2D view NPCs are drawn in
+front of the tiles, so you never lose one. Here:
+- **Seen through blocks:** wherever blocks hide a boss, it shows through them, dimmed and tinted
+  gold. That covers its bees, Skeletron's hands and arms, the Dungeon Guardian and the Queen Bee's
+  stingers too. A second pass draws only where the scene's depth is in front of the boss
+  (`shaders/*_xray.gdshader`): the sprite as its material overlay, 3D models as a flat silhouette.
+- **Off-screen markers:** while a boss is out of view, its Terraria boss head icon
+  (NPC_Head_Boss_<n>; npcs.json "head_icon", from NPCID.Sets.BossHeadTextures) sits at the screen's
+  edge with an arrow toward it (`ui/boss_markers.gd`). A boss behind you shows along the bottom,
+  on the side you'd turn to. The Eye of Cthulhu's icon changes once it has turned.
 
 **Fishing**, Terraria 1.4.5's (`scripts/items/fishing.gd`, `entities/bobber.gd`, `items/crates.gd`):
 

@@ -153,10 +153,11 @@ func set_bonus_text(key: String) -> String:
 
 ## The equipped look of an armor piece (slot head / body / legs): Terraria's
 ## Armor_Head_N, Armor/Armor_N (1.4's composite body sheet) or Armor_Legs_N, or
-## null.
+## null. (Its "equip" name, where Terraria's armor IDs call it something else:
+## the Bee Mask is ArmorIDs.Head.QueenBeeMask.)
 func armor_texture(slot: String, internal: String) -> Texture2D:
 	var table: String = {"head": "ArmorHead", "body": "ArmorBody", "legs": "ArmorLegs"}[slot]
-	var n = ids.get(table, {}).get(internal)
+	var n = ids.get(table, {}).get(Data.item(internal).get("equip", internal))
 	if n == null:
 		return null
 	var path: String = {"head": "Images/Armor_Head_%d", "body": "Images/Armor/Armor_%d", "legs": "Images/Armor_Legs_%d"}[slot] % int(n)

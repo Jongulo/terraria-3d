@@ -82,6 +82,8 @@ var _crafting := VBoxContainer.new()
 var _crafting_scroll := ScrollContainer.new()
 var _craft_title := Label.new()
 var _boss_bar := ProgressBar.new()
+## Arrows to bosses out of view.
+var boss_markers := BossMarkers.new()
 ## The Goblin Army's progress, bottom right while you're near it (Terraria's
 ## invasion progress bar, with its Extra_9 icon).
 var _invasion := HBoxContainer.new()
@@ -327,6 +329,9 @@ func _build_hud() -> void:
 	col.add_child(_invasion_bar)
 	_root.add_child(_invasion)
 	_root.add_child(_boss_bar)
+	boss_markers.set_anchors_preset(Control.PRESET_FULL_RECT)
+	boss_markers.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(boss_markers)
 	_boss_label = _label(_boss_bar, "", Vector2(0, -28))
 	_boss_label.size = Vector2(600, 26)
 	_boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -652,6 +657,7 @@ func _process(delta: float) -> void:
 		_invasion_bar.value = game.invasion.progress() * 100.0
 		_invasion_label.text = "Goblin Army  %d%%" % int(game.invasion.progress() * 100.0)
 	_boss_bar.visible = not b.is_empty()
+	boss_markers.update_marks(player.camera if player.alive else null, game.npcs().filter(func(n): return n.boss) if game and not b.is_empty() else [])
 	if not b.is_empty():
 		_boss_bar.value = float(b.life) / b.max * 100.0
 		_boss_label.text = "%s  %d/%d" % [b.name, b.life, b.max]
