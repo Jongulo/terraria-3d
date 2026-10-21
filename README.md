@@ -1,8 +1,23 @@
+<p align="center"><img src="docs/images/logo.png" alt="Terraria 3D" width="622"></p>
+
 # Terraria 3D
 
 A first-person, voxel 3D take on Terraria built with Godot 4.7 and a Rust voxel core,
 using the original game's art, sounds, music and fonts extracted from **your own**
 Terraria install. No Terraria assets are stored in this repository.
+
+## Screenshots
+
+| | |
+|:---:|:---:|
+| ![The forest at dusk](docs/images/forest.jpg) | ![The snow biome](docs/images/snow.jpg) |
+| The forest at dusk | Snow |
+| ![The jungle](docs/images/jungle.jpg) | ![The desert](docs/images/desert.jpg) |
+| Jungle | Desert |
+| ![The crimson](docs/images/crimson.jpg) | ![The ocean](docs/images/ocean.jpg) |
+| The Crimson | Ocean |
+| ![A glowing mushroom cavern](docs/images/mushroom.jpg) | ![The underworld](docs/images/underworld.jpg) |
+| Glowing Mushroom cavern | The Underworld |
 
 ## License
 
