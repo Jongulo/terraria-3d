@@ -757,6 +757,11 @@ func info_text() -> String:
 		lines.append(weather_text())
 	if info.has("moon"):
 		lines.append(MOON_PHASES[game.sky.moon_phase % 8])
+	if info.has("tally"):
+		# The Tally Counter (Terraria's accJarOfSouls): the last creature you
+		# hit, and how many of its kind you've killed.
+		var who := player.last_creature_hit
+		lines.append("Kill count unavailable" if who == "" else "%s: %d" % [Assets.npc_name(who), int(game.kill_counts.get(who, 0))])
 	if info.has("fishing"):
 		# The Fisherman's Pocket Guide: what the bobber's last check said, or
 		# with none out, your fishing power.

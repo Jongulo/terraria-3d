@@ -89,6 +89,8 @@ var ocean_width := 0.0
 var beach_width := 0.0
 var ocean_depth := 0.0
 var defeated_bosses := {}
+## Kills by banner kind (Terraria's NPC.killCount).
+var kill_counts := {}
 ## A boss made of many NPCs (the Eater of Worlds' segments, boss_group in
 ## npcs.json): its life when it appeared, for the boss bar.
 var boss_life_max := {}
@@ -668,6 +670,10 @@ func on_boss_despawned(npc: NPC) -> void:
 
 func on_npc_killed(npc: NPC) -> void:
 	invasion.on_kill(npc)
+	# Kills by banner (Terraria's NPC.killCount: the Tally Counter's).
+	if npc.def.ai != "town" and not npc.is_critter() and not npc.def.get("invulnerable", false):
+		var banner: String = npc.def.get("banner", npc.kind)
+		kill_counts[banner] = int(kill_counts.get(banner, 0)) + 1
 	var group: String = npc.def.get("boss_group", "")
 	if group != "":
 		# The last of it: the boss is beaten, and this one drops its loot.
@@ -682,6 +688,23 @@ func on_npc_killed(npc: NPC) -> void:
 	if npc.boss:
 		defeated_bosses[npc.kind] = true
 		message("%s has been defeated!" % Assets.npc_name(npc.kind), Color(0.69, 0.29, 1.0))
+
+
+## The Dungeon's wall at `pos` (worldgen's "dungeon_part" blobs: dungeon.rs
+## wall_variants, the last one it's in): 0 brick, 1 slab, 2 tiled.
+func dungeon_wall(pos: Vector3) -> int:
+	if _dungeon_parts.is_empty():
+		for d in world.get_decorations():
+			if d.kind == "dungeon_part":
+				_dungeon_parts.append([Vector3(d.pos), float(int(d.style) >> 2) / 10.0, int(d.style) & 3])
+	var v := 0
+	for part in _dungeon_parts:
+		if pos.distance_to(part[0]) < part[1]:
+			v = part[2]
+	return v
+
+
+var _dungeon_parts: Array = []
 
 
 ## The Old Man at the Dungeon's door (worldgen's "old_man" decoration), if
@@ -1409,6 +1432,7 @@ func save_world() -> bool:
 		"sky": sky.save_state(),
 		"chests": chests.save_state(),
 		"bosses": defeated_bosses,
+		"kills": kill_counts,
 		"saved_at": Time.get_datetime_string_from_system(),
 	}
 	if test_world:
@@ -1433,6 +1457,7 @@ func _apply_meta(meta: Dictionary) -> void:
 	sky.load_state(meta.get("sky", {}))
 	chests.load_state(meta.get("chests", {}))
 	defeated_bosses = meta.get("bosses", {})
+	kill_counts = meta.get("kills", {})
 	block_rotations = meta.get("rotations", {})
 	orbs_broken = int(meta.get("orbs_broken", 0))
 	creative = meta.get("creative", false)

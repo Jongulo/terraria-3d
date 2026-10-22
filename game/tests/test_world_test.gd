@@ -452,6 +452,7 @@ func _run() -> void:
 	await _underworld_checks(c)
 	await _shadow_chest_checks(c)
 	await _hellstone_checks(c)
+	await _dungeon_enemy_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -5491,6 +5492,7 @@ func _shadow_chest_checks(c: Vector3i) -> void:
 	# The Treasure Magnet: items come from further off.
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y  # (moved down, not fallen)
 	await frames(2)
 	game.spawn_item("Gel", 1, p.global_position + Vector3(0, 0.9, 0) + Vector3(7.0, 0, 0))
 	await frames(50)
@@ -5592,6 +5594,161 @@ func _hellstone_checks(c: Vector3i) -> void:
 	p.god_mode = was_god
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y  # (moved down, not fallen)
+	await frames(2)
+
+
+func _dungeon_enemy_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var clear := func() -> void:
+		for n in game.npcs():
+			if not n.def.get("persistent", false) and n.def.ai != "town" and n.def.ai != "dummy":
+				n.queue_free()
+		for e in game.entities.get_children():
+			if e is Projectile or e is ItemDrop:
+				e.queue_free()
+	clear.call()
+	# Terraria's Dungeon chain.
+	var share := func(wall: int, near: bool, kind: String) -> float:
+		var n := 0
+		for i in 20000:
+			if Spawner.dungeon_pick(wall, near) == kind:
+				n += 1
+		return n / 20000.0
+	var skull: float = share.call(0, false, "CursedSkull")
+	var spike: float = share.call(1, false, "SpikeBall")
+	var wheel: float = share.call(2, false, "BlazingWheel")
+	var caster: float = share.call(2, false, "DarkCaster")
+	var slime: float = share.call(0, false, "DungeonSlime")
+	check(absf(skull - 0.139) < 0.012 and absf(spike - 0.324) < 0.015 and absf(wheel - 0.194) < 0.013 and absf(caster - 0.111) < 0.01 and absf(slime - 0.0286) < 0.006
+			and share.call(1, true, "SpikeBall") == 0.0, "the Dungeon's spawns are Terraria's chain (skull %.3f, spike %.3f, wheel %.3f, caster %.3f, slime %.3f)" % [skull, spike, wheel, caster, slime])
+	# Its walls by worldgen's parts: the last blob a spot is in.
+	w.add_decoration("dungeon_part", Vector3i(5000, 0, 5000), 1 + 4 * 300)
+	w.add_decoration("dungeon_part", Vector3i(5010, 0, 5000), 2 + 4 * 100)
+	game._dungeon_parts.clear()
+	check(game.dungeon_wall(Vector3(5000, 0, 5000)) == 1 and game.dungeon_wall(Vector3(5012, 0, 5000)) == 2 and game.dungeon_wall(Vector3(6000, 0, 6000)) == 0,
+			"its walls: brick, slab or tiled by worldgen's blobs")
+	w.remove_decorations_at(Vector3i(5000, 0, 5000))
+	w.remove_decorations_at(Vector3i(5010, 0, 5000))
+	game._dungeon_parts.clear()
+	# A floor up in the air to try them on, a stone pillar in the middle.
+	var o := c + Vector3i(30, 45, 0)
+	for x in range(-12, 13):
+		for z in range(-12, 13):
+			for y in range(-1, 8):
+				var pillar := y >= 0 and absi(x) <= 1 and absi(z - 4) <= 1
+				w.set_block(o + Vector3i(x, y, z), Data.block_id("stone") if y == -1 or pillar else 0)
+	p.global_position = Vector3(o) + Vector3(0.5, 0, 8.5)
+	p.velocity = Vector3.ZERO
+	await frames(3)
+	# Angry Bones walk at you.
+	var bones := game.spawn_npc("AngryBones", Vector3(o) + Vector3(-8.5, 0, 8.5))
+	var d0 := bones.global_position.distance_to(p.global_position)
+	await frames(90)
+	check(bones.global_position.distance_to(p.global_position) < d0 - 2.5, "Angry Bones walk at you (%.1f -> %.1f)" % [d0, bones.global_position.distance_to(p.global_position)])
+	# Their chain: a Bone Wand, Tally Counter or Golden Key now and then, else
+	# 1-3 Bones.
+	var bone_drops := 0
+	for i in 5:
+		var b := game.spawn_npc("AngryBones", Vector3(o) + Vector3(-6.5, 0, -6.5))
+		var at := b.center()
+		b.hit(9999, 0.0, Vector3.RIGHT, 0.0)
+		await frames(1)
+		for e in game.entities.get_children():
+			if e is ItemDrop and e.global_position.distance_to(at) < 3.0 and e.item in ["Bone", "BoneWand", "TallyCounter", "GoldenKey"]:
+				bone_drops += 1
+				e.queue_free()
+	check(bone_drops == 5, "each Angry Bones drops one of its chain: Bones mostly (%d of 5)" % bone_drops)
+	clear.call()
+	await frames(2)
+	# A Cursed Skull comes through the stone at you.
+	var sk := game.spawn_npc("CursedSkull", Vector3(o) + Vector3(0.5, 1.5, -2.5))
+	var s0 := sk.center().distance_to(p.center())
+	await frames(120)
+	check(is_instance_valid(sk) and sk.center().distance_to(p.center()) < s0 - 1.5, "a Cursed Skull flies through the stone at you (%.1f -> %.1f)" % [s0, sk.center().distance_to(p.center())])
+	clear.call()
+	await frames(2)
+	# A Spike Ball swings round where it hangs; it can't be hurt.
+	var ball := game.spawn_npc("SpikeBall", Vector3(o) + Vector3(-6.5, 4.0, -6.5))
+	await frames(2)
+	var hang: Vector3 = ball._hang
+	var far := 0.0
+	for i in 120:
+		await frames(1)
+		far = maxf(far, ball.center().distance_to(hang))
+	ball.hit(500, 0.0, Vector3.RIGHT, 0.0)
+	check(far > 1.0 and far < 14.0 and ball.life == ball.life_max and ball._chain.size() > 1, "a Spike Ball swings on its chain (out to %.1f blocks), unhurt" % far)
+	clear.call()
+	# A Blazing Wheel rolls along the floor and up the pillar's side; it can't
+	# be hurt either.
+	var wh := game.spawn_npc("BlazingWheel", Vector3(o) + Vector3(-6.5, 0.0, 4.5))
+	var w0 := wh.global_position
+	var touching := 0
+	for i in 90:
+		await frames(1)
+		var cell := Vector3i(wh.center().floor())
+		for dd in [Vector3i.DOWN, Vector3i.UP, Vector3i.LEFT, Vector3i.RIGHT, Vector3i.FORWARD, Vector3i.BACK]:
+			if w.is_solid(cell + dd * 2) or w.is_solid(cell + dd):
+				touching += 1
+				break
+	wh.hit(500, 0.0, Vector3.RIGHT, 0.0)
+	check(wh.global_position.distance_to(w0) > 2.0 and touching > 65 and wh.life == wh.life_max, "a Blazing Wheel rolls along the blocks (%d of 90 ticks by one), unhurt" % touching)
+	clear.call()
+	await frames(2)
+	# A Dark Caster casts Water Spheres at you.
+	var dc := game.spawn_npc("DarkCaster", Vector3(o) + Vector3(-8.5, 0, -8.5))
+	var spheres := []
+	for i in 330:
+		await frames(1)
+		for e in game.entities.get_children():
+			if e is Projectile and e.kind == "WaterSphere" and not spheres.has(e):
+				spheres.append(e)
+	check(spheres.size() >= 1 and is_instance_valid(dc), "a Dark Caster casts Water Spheres (%d)" % spheres.size())
+	clear.call()
+	await frames(2)
+	# A Dungeon Slime always has a Golden Key in it.
+	var ds := game.spawn_npc("DungeonSlime", Vector3(o) + Vector3(6.5, 0, -6.5))
+	var ds_at := ds.center()
+	ds.hit(9999, 0.0, Vector3.RIGHT, 0.0)
+	await frames(1)
+	check(game.entities.get_children().any(func(e): return e is ItemDrop and e.item == "GoldenKey" and e.global_position.distance_to(ds_at) < 3.0), "a Dungeon Slime drops a Golden Key")
+	clear.call()
+	# The Tally Counter: the last creature you hit and how many you've killed.
+	game.kill_counts.erase("AngryBones")
+	p.last_creature_hit = ""
+	p.inventory.add("TallyCounter", 1)
+	check("Kill count unavailable" in game.hud.info_text(), "the Tally Counter, before you've hit anything: %s" % game.hud.info_text())
+	for k in ["AngryBones", "AngryBonesBig"]:
+		var e := game.spawn_npc(k, Vector3(o) + Vector3(6.5, 0, 6.5))
+		e.hit(9999, 0.0, Vector3.RIGHT, 0.0)
+	await frames(1)
+	check("Angry Bones: 2" in game.hud.info_text(), "then the Angry Bones killed, every kind of them: %s" % game.hud.info_text())
+	p.inventory.remove("TallyCounter", 1)
+	clear.call()
+	# The Bone Wand: places Bone Blocks, using up Bones.
+	var held = p.inventory.slots[p.selected]
+	p.inventory.slots[p.selected] = Inventory.stack("BoneWand", 1)
+	p.inventory.remove("Bone", p.inventory.count_of("Bone"))
+	var floor_at := o + Vector3i(5, -1, 0)
+	p.target = {"block": floor_at, "normal": Vector3i.UP, "id": w.get_block(floor_at), "distance": 3.0}
+	var none := p._place(Data.item("BoneWand"))
+	p.inventory.add("Bone", 2)
+	var placed := p._place(Data.item("BoneWand"))
+	check(not none and placed and Data.block(w.get_block(floor_at + Vector3i.UP)).get("name", "") == "bone_block" and p.inventory.count_of("Bone") == 1
+			and p.inventory.slots[p.selected] != null, "the Bone Wand places a Bone Block for a Bone (none without)")
+	p.inventory.slots[p.selected] = held
+	p.inventory.remove("Bone", p.inventory.count_of("Bone"))
+	for x in range(-12, 13):
+		for z in range(-12, 13):
+			for y in range(-1, 8):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	p.god_mode = was_god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y  # (moved down, not fallen)
 	await frames(2)
 
 

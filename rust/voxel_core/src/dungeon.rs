@@ -1124,6 +1124,12 @@ impl<'a> Gen<'a> {
                     self.rng.range(self.lo.2, self.hi.2 + 1) as f64,
                 );
                 self.variants.push((c, r, k));
+                // Kept for the game, which spawns by them (Terraria's Dungeon
+                // spawns read the wall): a "dungeon_part" at the blob's
+                // centre, style its wall (0 brick, 1 slab, 2 tiled) + 4 x its
+                // radius in tenths.
+                let style = k as i32 + 4 * (r * 10.0).round() as i32;
+                self.w.decorations.push(Decoration { kind: "dungeon_part".into(), pos: (c.0 as i32, c.1 as i32, c.2 as i32), style });
             }
         }
     }

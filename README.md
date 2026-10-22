@@ -1219,7 +1219,7 @@ brick colour (blue, green or pink, like Terraria's).
   aren't flat here as Terraria's back wall is, so each looks a few blocks round its spot for one
   that is.
 - **Not yet:** Terraria's cracked-brick pit traps, dart and boulder traps, locked biome chests,
-  furniture, and the Dungeon's enemies (Angry Bones and the rest).
+  and furniture.
 - **Bricks:** dungeon brick needs 65% pickaxe power (Nightmare / Deathbringer Pickaxe), as in
   Terraria.
 - **The Dungeon biome:** inside (under the keep's roof, or among dungeon brick underground) the
@@ -1243,6 +1243,33 @@ brick colour (blue, green or pink, like Terraria's).
 - **The Dungeon Guardian:** go below the ground in the Dungeon before Skeletron is beaten and it
   comes for you: Skeletron's head always enraged, 9999 damage, at 8 px a tick through the walls.
   It leaves when you leave the Dungeon.
+- **Its enemies, once Skeletron is beaten** (Terraria's, with its numbers): they spawn 3.3 times
+  as often in the Dungeon, up to 1.8 times as many, by Terraria's chain. Each spawn reads the wall
+  there - the brick, slab and tiled parts worldgen lays out (kept with the world now), 1 time in 7
+  any of them. Roll by roll: 1 in 35 a Dungeon Slime; on slab 1 in 3 a Spike Ball (none within
+  300 px of another), on tiled 1 in 5 a Blazing Wheel, on brick 1 in 7 a Cursed Skull; 1 in 7 a
+  Dark Caster; else Angry Bones.
+  - **Angry Bones** (80 life, 26 damage) walk at you at 1.5 px a tick; 1 in 5 each the big ones
+    (Terraria's three: faster, tougher or armored), else 1 in 4 Big Boned (1.15x, 10% more
+    damage and life) or 1 in 5 Short Bones (0.9x).
+  - **Dark Caster** (50 life): the caster AI (the Goblin Sorcerer's), teleporting in a blue puff
+    and casting Water Spheres (20 damage) that fly through the walls at you.
+  - **Cursed Skull** (40 life, 35 damage): Terraria's aiStyle 10. It flies through the blocks at
+    you, faster the further off (up to 5 px a tick), wobbling round you close up and lunging for
+    50 ticks every 600.
+  - **Dungeon Slime** (150 life): a slime with a Golden Key in it, always dropped.
+  - **Spike Ball** (32 damage) swings on its chain round where it hangs (aiStyle 20: its speeds
+    across and up a triangle, half a swing apart, 6-14 px a tick at the top); here in an upright
+    plane. **Blazing Wheel** (24 damage) rolls along the blocks at 6 px a tick hugging them
+    round every corner (aiStyle 21), glowing. Neither can be hurt.
+  - **Drops:** every bone one rolls in turn a Bone Wand (1 in 250), Tally Counter (1 in 100) or
+    Golden Key (1 in 65), else 1-3 Bones; also the Ancient Necro Helmet (1 in 450, a Necro set
+    head) and the Clothier Voodoo Doll (1 in 300); the Dark Caster the Dark Forebodings painting
+    (1 in 150), the Cursed Skull the Nazar (1 in 100). The Bone Wand places Bone Blocks, using up
+    Bones (Terraria's tile wands). The Tally Counter shows the last creature you hit and how many
+    of its kind you've killed (Terraria's by banner: all the Angry Bones count as one).
+  - **Not yet:** the Bound Mechanic, and 1.4.5's Librarian Skeleton and Water Bolt Mimic (by the
+    Dungeon's books).
 - **New items:** Blue / Green / Pink Brick, the brick platforms, Spikes, Books, Water Candles,
   the four shelves, the Dungeon Doors, the seven lanterns, the Dungeon Chandeliers, the six banners
   and the Switch are placeable.
@@ -1859,6 +1886,6 @@ enemy's head once it is hurt, facing you; bosses get a bigger one. Town NPCs and
 have none. Settings → Interface → "Enemy health bars" turns them off.
 
 Not yet: Devourers and Blood Crawlers,
-Giant Worms, the other town NPCs (Clothier...), NPC happiness,
+Giant Worms, the other town NPCs, NPC happiness,
 other biomes and bosses; the ocean's seashells; Granite and Marble caves, the Dungeon's
-enemies, traps and furniture, and the Underground Desert's open caverns.
+traps and furniture, and the Underground Desert's open caverns.

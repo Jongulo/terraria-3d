@@ -44,19 +44,27 @@ func spawn_tick() -> void:
 		cap = 8
 	elif depth != "surface":
 		cap = 7
+	# The Dungeon: Terraria's spawn rate x0.3 (here always a try), its cap
+	# x1.8.
+	var dungeon: bool = game.biome == "dungeon"
+	if dungeon:
+		cap = int(round(cap * 1.8))
 	if game.boss_alive():
 		cap = 2
 	if game.npcs().filter(func(n): return n.def.ai != "town" and not n.is_critter()).size() >= cap:
 		return
-	if randf() > 0.45:
+	if randf() > (1.0 if dungeon else 0.45):
 		return
-	if game.biome == "dungeon":
+	if dungeon:
 		# Below the ground before Skeletron is beaten, the Dungeon Guardian
-		# comes for you (Terraria's); its other enemies aren't in yet.
+		# comes for you (Terraria's); after, the Dungeon's own.
 		var p := player.global_position
-		if not game.defeated_bosses.has("SkeletronHead") and not game.boss_alive() and p.y < game.world.surface_y(floori(p.x), floori(p.z)) \
-				and not game.npcs().any(func(n): return n.kind == "DungeonGuardian"):
-			game.spawn_npc("DungeonGuardian", p + Vector3(randf_range(-1, 1), 0.6, randf_range(-1, 1)).normalized() * 40.0)
+		if not game.defeated_bosses.has("SkeletronHead"):
+			if not game.boss_alive() and p.y < game.world.surface_y(floori(p.x), floori(p.z)) \
+					and not game.npcs().any(func(n): return n.kind == "DungeonGuardian"):
+				game.spawn_npc("DungeonGuardian", p + Vector3(randf_range(-1, 1), 0.6, randf_range(-1, 1)).normalized() * 40.0)
+			return
+		_spawn_dungeon(game, p)
 		return
 	# The Sleeping Angler (Terraria's SpawnAnNPC): till he's woken, a spawn
 	# in the ocean's water is him, asleep on the surface (one at a time).
@@ -92,6 +100,56 @@ func spawn_tick() -> void:
 			else _find_spot(game, player.global_position, depth in ["underground", "caverns", "underworld"], flying)
 	if pos != null:
 		game.spawn_npc(kind, pos)
+
+
+## The Dungeon's spawns once Skeletron is beaten (Terraria's SpawnNPC with
+## ZoneDungeon): a spot in the Dungeon, its wall there (Game.dungeon_wall: 0
+## brick, 1 slab, 2 tiled; 1 time in 7 any of them) picking from the chain.
+func _spawn_dungeon(game, p: Vector3) -> void:
+	for attempt in 6:
+		var at = _find_spot(game, p, true, false)
+		if at == null or game.detect_biome(at + Vector3(0, 0.5, 0)) != "dungeon":
+			continue
+		var wall: int = game.dungeon_wall(at)
+		if randi() % 7 == 0:
+			wall = randi() % 3
+		var spikes_near: bool = game.npcs().any(func(n): return n.kind == "SpikeBall" and absf(n._hang.x - at.x) < SPIKE_BALL_ROOM \
+				and absf(n._hang.y - at.y) < SPIKE_BALL_ROOM and absf(n._hang.z - at.z) < SPIKE_BALL_ROOM)
+		var kind := dungeon_pick(wall, spikes_near)
+		var flies: bool = Data.npcs[kind].ai in ["skull", "spike_ball", "wheel"]
+		game.spawn_npc(kind, at + (Vector3(0, 1.0, 0) if flies else Vector3.ZERO))
+		return
+
+
+## No Spike Ball within 300 px of another's anchor (Terraria's NearSpikeBall).
+const SPIKE_BALL_ROOM := 300.0 / 24.0
+
+
+## Terraria's Dungeon chain, roll by roll: 1 in 35 a Dungeon Slime; on slab
+## walls 1 in 3 a Spike Ball (none near another), on tiled walls 1 in 5 a
+## Blazing Wheel, on brick 1 in 7 a Cursed Skull; 1 in 7 a Dark Caster; then
+## Angry Bones: 1 in 5 each the three big ones, else 1 in 4 Big Boned, 1 in 5
+## Short Bones, else the plain one. (Not yet: the Bound Mechanic, and the
+## Librarian Skeleton and Water Bolt Mimic by a book.)
+static func dungeon_pick(wall: int, spikes_near: bool) -> String:
+	if randi() % 35 == 0:
+		return "DungeonSlime"
+	if wall == 1 and randi() % 3 == 0 and not spikes_near:
+		return "SpikeBall"
+	if wall == 2 and randi() % 5 == 0:
+		return "BlazingWheel"
+	if wall == 0 and randi() % 7 == 0:
+		return "CursedSkull"
+	if randi() % 7 == 0:
+		return "DarkCaster"
+	var r := randi() % 5
+	if r < 3:
+		return ["AngryBonesBig", "AngryBonesBigMuscle", "AngryBonesBigHelmet"][r]
+	if randi() % 4 == 0:
+		return "BigBoned"
+	if randi() % 5 == 0:
+		return "ShortBones"
+	return "AngryBones"
 
 
 const INVASION_CAP := 10

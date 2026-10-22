@@ -136,6 +136,9 @@ var _yaw := 0.0
 var _pitch := 0.0
 var _immune := 0.0
 var _use_timer := 0.0
+## The last creature you hit, by its banner (Terraria's lastCreatureHit: the
+## Tally Counter's).
+var last_creature_hit := ""
 ## What's being used, and how long the use lasts (for its swing's dust).
 var _use_def := {}
 var _use_length := 0.0
@@ -2111,6 +2114,9 @@ func _place(def: Dictionary) -> bool:
 	if target.is_empty():
 		return false
 	var game := Game.current
+	# A tile wand (the Bone Wand) needs what it places from.
+	if def.has("wand_ammo") and inventory.count_of(def.wand_ammo) <= 0:
+		return false
 	var id := Data.block_id(def.place)
 	var bdef := Data.block(id)
 	var pos: Vector3i = target.block
@@ -2169,7 +2175,10 @@ func _place(def: Dictionary) -> bool:
 		# Directional models face the player. A model's front is +z; turning it by
 		# the player's yaw points it back along their view, toward them.
 		game.block_rotations[Chests.key(pos)] = posmod(roundi(_yaw / (PI * 0.5)), 4)
-	_use_up(selected)
+	if def.has("wand_ammo"):
+		inventory.remove(def.wand_ammo, 1)
+	else:
+		_use_up(selected)
 	Audio.play("Dig_*", 0.6)
 	if bdef.get("interact") == "chest":  # chests, barrels
 		game.chests.register_new(pos)

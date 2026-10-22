@@ -9,6 +9,7 @@ extends Node3D
 const GRAVITY := 45.0
 const MAX_FALL := 25.0
 const PX_TICK := 2.5  # 1 px/tick in blocks/s
+const PX_PER_BLOCK := 24.0  # Terraria's px in a block, for its NPCs
 const DESPAWN_DISTANCE := 110.0
 
 var kind := ""
@@ -101,6 +102,7 @@ func setup(kind_name: String) -> void:
 	damage = int(def.damage)
 	defense = int(def.defense)
 	boss = def.get("boss", false)
+	dont_take_damage = def.get("dont_take_damage", false)
 	var lk := look(kind_name)
 	var size: Array = lk.hitbox
 	half = Vector3(size[0] * 0.5, size[1], size[0] * 0.5)
@@ -137,7 +139,8 @@ static func look(kind_name: String) -> Dictionary:
 	var s: float = sc.scale
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
-	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper"]
+	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper",
+			"skull", "spike_ball", "wheel"]
 	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
@@ -266,9 +269,16 @@ func _physics_process(delta: float) -> void:
 			_worm_despawn(game)
 			return
 
-	if def.ai in ["skeletron", "skeletron_hand", "queen_bee", "brain", "creeper"]:
-		# Through the blocks (Terraria's noTileCollide), like the worms.
-		if def.ai == "skeletron":
+	if def.ai in ["skeletron", "skeletron_hand", "queen_bee", "brain", "creeper", "skull", "spike_ball", "wheel"]:
+		# Through the blocks (Terraria's noTileCollide), like the worms (the
+		# Blazing Wheel moves itself, along them).
+		if def.ai == "skull":
+			_ai_skull(delta, player)
+		elif def.ai == "spike_ball":
+			_ai_spike_ball(delta, game)
+		elif def.ai == "wheel":
+			_ai_wheel(delta, game)
+		elif def.ai == "skeletron":
 			_ai_skeletron(delta, game, player)
 		elif def.ai == "queen_bee":
 			_ai_queen_bee(delta, game, player)
@@ -280,7 +290,8 @@ func _physics_process(delta: float) -> void:
 			_ai_skeletron_hand(delta, game, player)
 		if is_queued_for_deletion():
 			return
-		global_position += velocity * delta
+		if def.ai != "wheel":
+			global_position += velocity * delta
 		if on_fire > 0.0 or hellfire > 0.0:
 			_burn_tick(delta, game)
 			if life <= 0:
@@ -1428,10 +1439,193 @@ func _teleport_near(player) -> void:
 		var spot := Vector3(cell.x + 0.5, cell.y + 1, cell.z + 0.5)
 		if not clear or spot.distance_to(pc) < 3.4:
 			continue
-		Game.current.dust.spawn(27, center(), Vector3.ZERO, 1.3)
+		var puff := int(def.get("teleport_dust", 27))
+		Game.current.dust.spawn(puff, center(), Vector3.ZERO, 1.3)
 		global_position = spot
-		Game.current.dust.spawn(27, center(), Vector3.ZERO, 1.3)
+		Game.current.dust.spawn(puff, center(), Vector3.ZERO, 1.3)
 		return
+
+
+## Terraria's aiStyle 10 (the Cursed Skull), through the blocks, in px a
+## tick: it steers each axis at you by `accel` a tick toward `speed`: 1 and
+## 0.011 near you, wobbling within 250 px (0.019 a tick, its count swinging
+## -200..200 at 0.9 a tick); further off 1.5 / 0.1 (250+), 3 / 0.2 (300+),
+## 5 / 0.3 (350+). Every 600 ticks it lunges for 50: 4 and 0.088 while near.
+## (Its Expert-mode shots aren't here.)
+func _ai_skull(delta: float, player) -> void:
+	var to: Vector3 = player.center() - center()
+	var dist := to.length() * PX_PER_BLOCK
+	var t := _ticks_for(delta)
+	for i in t:
+		ai_count += 1
+		var speed := 1.0
+		var accel := 0.011
+		if ai_count > 600:
+			speed = 4.0
+			accel = 0.088
+			if ai_count > 650:
+				ai_count = 0
+		elif dist < 250.0:
+			ai_timer += 0.9
+			velocity.y += (0.019 if ai_timer > 0.0 else -0.019) * PX_TICK
+			var side := Vector3(-to.z, 0, to.x).normalized()
+			velocity += side * (0.019 if absf(ai_timer) > 100.0 else -0.019) * PX_TICK
+			if ai_timer > 200.0:
+				ai_timer = -200.0
+		if dist > 350.0:
+			speed = 5.0
+			accel = 0.3
+		elif dist > 300.0:
+			speed = 3.0
+			accel = 0.2
+		elif dist > 250.0:
+			speed = 1.5
+			accel = 0.1
+		var want := to.normalized() * speed * PX_TICK if player.alive else Vector3(0, -speed * 0.5, 0) * PX_TICK
+		for axis in 3:
+			velocity[axis] = move_toward(velocity[axis], want[axis], accel * PX_TICK)
+	anim += delta * 60.0 / 8.0
+	sprite.set_frame(int(anim) % int(def.frames))
+	look_dir = to
+
+
+## Ticks of Terraria's AI this frame.
+var _tick_acc := 0.0
+
+
+func _ticks_for(delta: float) -> int:
+	_tick_acc += delta * 60.0
+	var n := int(_tick_acc)
+	_tick_acc -= n
+	return n
+
+
+## Terraria's aiStyle 20 (the Spike Ball): it swings round where it hangs,
+## on a chain (here in an upright plane, its way across picked at random).
+## Its speed across and up each run a triangle between +-6 x its own (1-2.4)
+## px a tick, 0.2 x that a tick, half a swing apart; it starts going up for
+## a quarter.
+var _hang := Vector3.ZERO
+var _swing := Vector2.ZERO
+var _swing_dir := Vector2i.ONE
+var _swing_axis := Vector3.RIGHT
+var _swing_k := 1.0
+var _chain: Array = []
+
+
+func _ai_spike_ball(delta: float, game) -> void:
+	if _hang == Vector3.ZERO:
+		_hang = center()
+		_swing_k = 1.0 + randi_range(0, 14) * 0.1
+		_swing_axis = Vector3.RIGHT if randi() % 2 == 0 else Vector3.BACK
+		_swing_dir = Vector2i(-1 if randi() % 2 == 0 else 1, -1)
+		_swing = Vector2(0, 6.0 * _swing_k * _swing_dir.y)
+		ai_count = 1
+	var top := 6.0 * _swing_k
+	var acc := 0.2 * _swing_k
+	var quarter := int(top / acc / 2.0)
+	for i in _ticks_for(delta):
+		if ai_count >= 1 and ai_count < quarter:
+			_swing.y = _swing_dir.y * top
+			ai_count += 1
+			continue
+		if ai_count >= quarter:
+			_swing.y = 0.0
+			_swing_dir.y = -_swing_dir.y
+			_swing.x = top * _swing_dir.x
+			ai_count = -1
+			continue
+		for a in 2:
+			var d := _swing_dir[a]
+			if (d > 0 and _swing[a] >= top) or (d < 0 and _swing[a] <= -top):
+				_swing_dir[a] = -d
+				_swing[a] = top * d
+			_swing[a] += acc * _swing_dir[a]
+	# (Terraria's y is down.)
+	velocity = (_swing_axis * _swing.x - Vector3.UP * _swing.y) * PX_TICK
+	_draw_chain(game)
+
+
+## The Spike Ball's chain, from where it hangs to it (Terraria's Chain, 12
+## px a link, and the Spike Base it hangs from; 24 px a block).
+func _draw_chain(game) -> void:
+	if _chain.is_empty():
+		var base := EntitySprite.new()
+		var bt := Assets.texture("Images/Spike_Base")
+		base.setup(bt, 1, Vector2(bt.get_width(), bt.get_height()) / PX_PER_BLOCK, true, true)
+		game.entities.add_child(base)
+		base.global_position = _hang
+		base.update_light(game.world, game.sky, _hang)
+		_chain.append(base)
+		var tex := Assets.texture("Images/Chain")
+		for i in 24:
+			var link := EntitySprite.new()
+			link.setup(tex, 1, Vector2(0.5, 0.5), true, true)
+			game.entities.add_child(link)
+			_chain.append(link)
+	var from := _hang
+	var to := center()
+	var n := clampi(int(from.distance_to(to) / 0.5), 1, _chain.size() - 1)
+	for i in range(1, _chain.size()):
+		var link: EntitySprite = _chain[i]
+		link.visible = i <= n
+		if i <= n:
+			link.global_position = from.lerp(to, (i - 0.5) / n)
+			link.update_light(game.world, game.sky, link.global_position)
+
+
+func _exit_tree() -> void:
+	for link in _chain:
+		if is_instance_valid(link):
+			link.queue_free()
+	_chain.clear()
+
+
+## Terraria's aiStyle 21 (the Blazing Wheel): it rolls along the blocks at 6
+## px a tick each way at once, across and up (here in an upright plane, its
+## way across picked at random), hugging what it's on: moving across, a wall
+## ahead turns it up or down and a floor left behind sends it back round the
+## corner; moving up or down, likewise the other way round.
+var _wheel_dir := Vector2i.ZERO
+var _wheel_state := 0
+var _wheel_touch := 0
+
+
+func _ai_wheel(delta: float, game) -> void:
+	if _wheel_dir == Vector2i.ZERO:
+		var p: Vector3 = game.player.center() - center()
+		_swing_axis = Vector3.RIGHT if absf(p.x) > absf(p.z) else Vector3.BACK
+		_wheel_dir = Vector2i(1 if p.dot(_swing_axis) > 0.0 else -1, 1)
+		_wheel_touch = 1
+	for i in _ticks_for(delta):
+		velocity = (_swing_axis * _wheel_dir.x + Vector3.DOWN * _wheel_dir.y) * 6.0 * PX_TICK
+		var r: Dictionary = game.world.move_aabb(global_position, half, velocity / 60.0, 0.0, false)
+		global_position = r.position
+		var b: Vector3i = r.blocked
+		var cx := b.x != 0 if _swing_axis == Vector3.RIGHT else b.z != 0
+		var cy := b.y != 0
+		if _wheel_state == 0:
+			if cy:
+				_wheel_touch = 2
+			elif _wheel_touch == 2:
+				_wheel_dir.x = -_wheel_dir.x
+				_wheel_state = 1
+				_wheel_touch = 1
+			if cx:
+				_wheel_dir.y = -_wheel_dir.y
+				_wheel_state = 1
+		else:
+			if cx:
+				_wheel_touch = 2
+			elif _wheel_touch == 2:
+				_wheel_dir.y = -_wheel_dir.y
+				_wheel_state = 0
+				_wheel_touch = 1
+			if cy:
+				_wheel_dir.x = -_wheel_dir.x
+				_wheel_state = 0
+	anim += delta * 60.0 / 4.0
+	sprite.set_frame(int(anim) % int(def.frames))
 
 
 ## Antlions: buried in the sand, they stay put and throw sand at you.
@@ -2556,6 +2750,10 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 		return
 	_just_hit = true
 	var game := Game.current
+	# The Tally Counter shows the last creature you hit (Terraria's
+	# lastCreatureHit, by its banner).
+	if def.ai != "dummy" and not def.get("invulnerable", false):
+		game.player.last_creature_hit = def.get("banner", kind)
 	var crit := randf() < crit_chance
 	var dmg := maxi(1, int(round(base_damage * randf_range(0.85, 1.15) - maxi(0, defense - armor_pen) * 0.5)))
 	if crit:
@@ -2770,7 +2968,8 @@ func _die(game, drops := true) -> void:
 	for d in def.get("drops_chain", []) if drops else []:
 		if randf() < float(d[1]):
 			var item: String = d[0][randi() % d[0].size()] if d[0] is Array else d[0]
-			game.spawn_item(item, 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
+			var n := randi_range(int(d[2]), int(d[3])) if d.size() > 3 else 1
+			game.spawn_item(item, n, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 			break
 	var one_of: Array = def.get("drops_one_of", []) if drops else []
 	if not one_of.is_empty():

@@ -103,6 +103,7 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"Hellwing": {"hellwing": [0.3927, 0.19635], "gravity": 0.0, "pierce": 1000000, "dust": [6], "glow": true, "size": 0.94, "radius": 0.375, "life": 20.0},
 		"HellfireArrow": {"blast": 1.35, "dust": [31, 6]},
 		"FireArrow": {"ignite": [3, 180, 180], "dust": [6], "glow": true},
+		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
 		"Volcano": {"ghost": true, "pierce": 3, "radius": 3.33, "size": 2.2, "life": 10.0 / 60.0, "ignite": [1, 180, 180], "glow": true, "melee": true}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
