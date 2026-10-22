@@ -1,6 +1,10 @@
 {
 	"canopies_split": true,
 	"claude": {
+		"alchemy_table": {
+			"noise": "speckle",
+			"one_color": true
+		},
 		"ash_wood_bathtub": {
 			"noise": "speckle",
 			"one_color": true,
@@ -13,6 +17,10 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.6
+		},
+		"bewitching_table": {
+			"noise": "speckle",
+			"one_color": true
 		},
 		"blue_dungeon_bathtub": {
 			"noise": "grain",
@@ -61,6 +69,9 @@
 			"noise": "grain",
 			"one_color": true,
 			"seed": 3.0
+		},
+		"gothic_lamp": {
+			"one_color": false
 		},
 		"green_dungeon_bathtub": {
 			"noise": "grain",
@@ -5250,7 +5261,6 @@
 	"methods": {
 		"ash_wood_lamp": "hull",
 		"barrel": "extruded",
-		"bewitching_table": "extruded",
 		"blue_dungeon_lamp": "hull",
 		"blue_dungeon_sink": "rendered",
 		"blue_dungeon_vase": "hull",
