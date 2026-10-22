@@ -1116,6 +1116,7 @@ const DIALOG := {
 	"dryad": {"any": [70, 71, 72, 73, 74, 75, 78, 79, 80, 81], "night": [76], "corruption": [69, 77], "crimson": [332, 333]},
 	"demolitionist": {"any": [93, 94, 95, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109], "night": [96]},
 	"old_man": {"day": [82, 83, 84], "night": [85, 86, 87, 88]},
+	"clothier": {"any": [110, 112, 114, 115, 116, 117, 118, 119]},
 	"bound_goblin": {"any": [121]},
 	"goblin_tinkerer": {"any": [122, 123, 125, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]},
 	"sleeping_angler": {"any": [353, 354, 355]},
@@ -2774,6 +2775,10 @@ func _die(game, drops := true) -> void:
 	var one_of: Array = def.get("drops_one_of", []) if drops else []
 	if not one_of.is_empty():
 		game.spawn_item(one_of[randi() % one_of.size()], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
+	# Skeletron brings a Hellforge to a world without one (Terraria's
+	# NPCLoot_DropHellforge: no Hellforge or Adamantite Forge anywhere).
+	if drops and def.get("hellforge_if_none", false) and not game.world.has_block(Data.block_id("hellforge")):
+		game.spawn_item("Hellforge", 1, center(), Vector3.ZERO)
 	game.spawn_coins(int(def.get("coins", 0)) if drops else 0, center())
 	var g: Dictionary = Data.npc_gore.get(kind, {})
 	if g.is_empty():

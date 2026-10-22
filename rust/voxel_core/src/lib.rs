@@ -302,6 +302,16 @@ impl VoxelWorld {
         false
     }
 
+    /// Whether any cell of the world holds block `id` (Terraria's
+    /// Skyblock.hasTile scan: Skeletron's Hellforge when there's none).
+    #[func]
+    fn has_block(&self, id: i32) -> bool {
+        use rayon::prelude::*;
+        let w = self.world();
+        let id = id as u16;
+        id != 0 && w.blocks.par_iter().any(|&b| b == id)
+    }
+
     /// How many of each block id lie in the cube of `radius` around `center`
     /// (index = block id), for biome detection.
     #[func]

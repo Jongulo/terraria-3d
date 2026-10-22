@@ -10,7 +10,7 @@ extends Node
 ## Seconds between housing checks (Terraria checks every few seconds too).
 const CHECK_INTERVAL := 4.0
 ## In the order they can move in.
-const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer", "Angler"]
+const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "Clothier", "GoblinTinkerer", "Angler"]
 
 var game: Game
 ## Kind -> the NPC living here.
@@ -60,6 +60,9 @@ func wants_to_come(kind: String) -> bool:
 			return not game.defeated_bosses.is_empty()
 		"explosive":
 			return p.inventory.slots.any(func(s): return s != null and Data.item(s.item).has("explosive"))
+		"skeletron":
+			# The Old Man freed of his curse (Terraria's downedBoss3).
+			return game.defeated_bosses.has("SkeletronHead")
 		"freed":
 			return false  # only once you've freed him (free_goblin)
 		"woken":

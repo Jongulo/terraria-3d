@@ -1238,7 +1238,8 @@ brick colour (blue, green or pink, like Terraria's).
   head and the hands go with it. It drops 5-15 Healing Potions, 5 gold and, at most one of, the
   Skeletron Mask (1 in 7), Skeletron Hand or Book of Skulls (each 1 in 7 of what's left; the Hand
   isn't in yet, being a grappling hook). The Book of Skulls shoots skulls that fly through blocks
-  and home in. Not yet: its trophy, Chippy's Couch, the Hellforge it brings, expert-mode skulls.
+  and home in. Its trophy 1 in 10 and Chippy's Couch 1 in 7; and into a world with no Hellforge
+  left anywhere it drops one, as Terraria's does. Not yet: expert-mode skulls.
 - **The Dungeon Guardian:** go below the ground in the Dungeon before Skeletron is beaten and it
   comes for you: Skeletron's head always enraged, 9999 damage, at 8 px a tick through the walls.
   It leaves when you leave the Dungeon.
@@ -1533,6 +1534,12 @@ The Hellstone gear, Terraria's (Hellstone Bars at an anvil, with its numbers and
 - The Molten armor and the Flamarang were already in. Not yet: the Imp Staff (summons wait for
   minions).
 
+The Clothier, Terraria's: he moves in once Skeletron is beaten, with Terraria's lines, and his
+shop changes with the hour and the moon: Black and Pink Thread, the Familiar Wig, Shirt and Pants,
+the Summer Hat by day, the Plumber's Shirt and Pants while the moon is full (and the White Tuxedo
+on those nights), the Doctor's Shirt and Pants while it's waning gibbous, and the Beanie in the
+snow. His Blood Moon, clown, Party and Hardmode items wait for those.
+
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a
 Skyware house, a sky lake, or nothing. Houses follow Terraria's: a blue Sunplate shell with gold
@@ -1569,7 +1576,8 @@ for the evil bosses and meteorites.
 
 Town NPCs: the Guide is there from the start; the Merchant comes once you carry 50 silver, the
 Nurse once the Merchant lives here and you have over 100 max life, the Arms Dealer once you carry a
-gun or bullets, the Dryad once you've beaten a boss, the Demolitionist once you carry an explosive. Each needs a free home near you and moves in
+gun or bullets, the Dryad once you've beaten a boss, the Demolitionist once you carry an explosive,
+the Clothier once Skeletron is beaten (the Old Man freed of his curse). Each needs a free home near you and moves in
 with a name from Terraria's lists ("Andrew the Guide has arrived!"). A home is Terraria's: a room
 closed off on every side (floor, walls, ceiling) by blocks, doors and platforms, 18 to 1500 open
 cells, with a door or platform, a light source, a table and a chair. Residents walk about near
@@ -1578,7 +1586,7 @@ home by day, opening doors and shutting them behind them, and go home at night. 
 rather than straight lines, so they don't get stuck against walls. Right-click one to
 talk (Terraria's own lines, naming the others who live here): the Merchant (torches, potions,
 arrows, Copper tools, an Iron Anvil, Mining gear), Arms Dealer (Musket Balls, Flintlock Pistol,
-Unholy Arrows at night) and Dryad (plants) have shops - click to buy, sell anything for a fifth of
+Unholy Arrows at night), Dryad (plants) and Clothier have shops - click to buy, sell anything for a fifth of
 its value; the Guide's Help gives Terraria's tips; the Nurse heals you for a price; the Dryad's
 Status tells how corrupt the world is. Coins join up (100 copper make a silver). Inventory ->
 Housing lists who lives where and checks the room you're in, with Terraria's reasons. The test

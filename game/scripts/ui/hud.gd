@@ -1884,7 +1884,7 @@ func open_shop() -> void:
 	var i := 0
 	for entry in npc.def.get("town", {}).get("shop", []):
 		var item: String = entry if entry is String else entry[0]
-		if entry is Array and entry[1] == "night" and Game.current.sky.is_day:
+		if entry is Array and not shop_condition(entry[1]):
 			continue
 		_shop_inv.slots[i] = Inventory.stack(item, 1)
 		i += 1
@@ -1896,6 +1896,24 @@ func open_shop() -> void:
 	_shop_hint.position = Vector2(0, 28 + rows * (SLOT + GAP))
 	_shop_panel.visible = true
 	_refresh_shop()
+
+
+## Whether a shop item's condition holds (npcs.json town "shop": [item,
+## condition]): "day" or "night"; "moon0".."moon7" (Terraria's moonPhase, 0
+## the full moon), with "_night" only then; "snow": you're in the snow.
+static func shop_condition(cond: String) -> bool:
+	var game := Game.current
+	var parts := cond.split("_")
+	for c in parts:
+		if c == "day" and not game.sky.is_day:
+			return false
+		if c == "night" and game.sky.is_day:
+			return false
+		if c.begins_with("moon") and game.sky.moon_phase != int(c.substr(4)):
+			return false
+		if c == "snow" and game.biome != "snow":
+			return false
+	return true
 
 
 func _refresh_shop() -> void:

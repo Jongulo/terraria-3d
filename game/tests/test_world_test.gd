@@ -741,10 +741,27 @@ func _skeletron_checks(c: Vector3i) -> void:
 	check(game.defeated_bosses.has("SkeletronHead") and last_message() == "Skeletron has been defeated!", "killing the head beats Skeletron")
 	check(game.npcs().filter(func(n): return n.kind == "SkeletronHand").is_empty(), "and its hands go with it")
 	check(drops.get("HealingPotion", 0) >= 5 and drops.get("HealingPotion", 0) <= 15 and drops.has("GoldCoin"), "it drops 5-15 Healing Potions and gold (%s)" % [drops])
+	# A Hellforge if the world has none (Terraria's NPCLoot_DropHellforge);
+	# Chippy's Couch 1 in 7.
+	var forge := Data.block_id("hellforge")
+	check(drops.has("Hellforge") != game.world.has_block(forge), "Skeletron drops a Hellforge only into a world without one (%s, has one: %s)" % [drops.has("Hellforge"), game.world.has_block(forge)])
+	check(Data.npcs.SkeletronHead.drops.any(func(e): return e[0] == "ChippysCouch" and absf(e[3] - 1.0 / 7.0) < 0.001), "Chippy's Couch: 1 in 7")
+	# The Clothier comes once it's beaten: Terraria's lines and his shop.
+	check(game.town.wants_to_come("Clothier"), "the Clothier wants to move in once Skeletron is beaten")
+	var clothier := game.town.move_in("Clothier", p.global_position + Vector3(3, 0, 0))
+	var line := clothier.talk_line()
+	check(clothier.title().ends_with("the Clothier") and line != "..." and line != "", "the Clothier: his name and Terraria's lines (%s: %s)" % [clothier.title(), line])
+	game.sky.moon_phase = 0
+	check(Hud.shop_condition("moon0_night") and not Hud.shop_condition("moon1") and not Hud.shop_condition("day") and not Hud.shop_condition("snow"),
+			"his shop by the moon: the White Tuxedo on a full moon's night, not the Doctor's clothes")
+	clothier.queue_free()
+	game.town.residents.erase("Clothier")
+	game.town.arrived.erase("Clothier")
 	# No Old Man once it's beaten; until then, he's back at dawn.
 	game._on_dawn()
 	check(game.npcs().filter(func(n): return n.kind == "OldMan").is_empty(), "the Old Man doesn't come back once Skeletron is beaten")
 	game.defeated_bosses.erase("SkeletronHead")
+	check(not game.town.wants_to_come("Clothier"), "not before")
 	game._on_dawn()
 	check(game.npcs().filter(func(n): return n.kind == "OldMan").size() == 1, "before then he's back at dawn")
 	# The Dungeon Guardian: below the ground in the Dungeon before Skeletron
@@ -4016,11 +4033,12 @@ func _armor_checks(c: Vector3i) -> void:
 		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n if x[0] is String else n in x[0]))
 		var in_set: bool = Data.loot.values().any(func(t): return t is Dictionary and t.get("sets", []).any(func(e): return n in e[0]))
 		# (The Angler's armor: his rewards for the 10th, 15th and 20th quests.)
+		var sold: bool = Data.npcs.values().any(func(e): return e.get("town", {}).get("shop", []).any(func(x): return (x if x is String else x[0]) == n))
 		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set \
-				or n in AnglerQuests.MILESTONES.values()
-		if not d.get("slot") in Data.ARMOR_SLOTS or Assets.armor_texture(d.slot, n) == null or d.id == 0 or not sources:
+				or sold or n in AnglerQuests.MILESTONES.values()
+		if not d.get("slot") in Data.ARMOR_SLOTS or (Assets.armor_texture(d.slot, n) == null and not d.get("own_look", false)) or d.id == 0 or not sources:
 			bad.append(n)
-	check(armor_items.size() >= 50 and bad.is_empty(), "%d armor pieces, each with its equip sprite and a recipe, chest, enemy drop or Angler reward (bad: %s)" % [armor_items.size(), bad])
+	check(armor_items.size() >= 50 and bad.is_empty(), "%d armor pieces, each with its equip sprite and a recipe, chest, enemy drop, shop or Angler reward (bad: %s)" % [armor_items.size(), bad])
 	var sets_ok := Data.armor_sets.all(func(a): return Data.item(a.head).get("slot") == "head" and Data.item(a.body).get("slot") == "body" \
 			and Data.item(a.legs).get("slot") == "legs" and Hud.set_bonus_text(a) != "")
 	check(Data.armor_sets.size() >= 18 and sets_ok, "%d armor sets, each one head, body and legs, with Terraria's set bonus text" % Data.armor_sets.size())

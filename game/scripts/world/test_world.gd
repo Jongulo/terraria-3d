@@ -804,6 +804,9 @@ func _build_hammered(c: Vector3i) -> void:
 ## (door, light, table, chair), with a resident in each (see activate).
 const TOWN := Vector3i(52, 0, -24)
 const TOWN_HOUSES := 8
+## Who lives in them (the Clothier comes once Skeletron is beaten, as in
+## Terraria).
+const TOWN_RESIDENTS := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "GoblinTinkerer", "Angler"]
 
 
 ## The north-west corner (at ground + 1) of town house `i`.
@@ -833,12 +836,12 @@ func _build_town(c: Vector3i) -> void:
 ## Settles the town NPCs in the town's houses (a fresh test world).
 func _settle_town() -> void:
 	var c := Vector3i(SIZE.x / 2, GROUND + 1, SIZE.z / 2)
-	for i in Town.ROSTER.size():
+	for i in TOWN_RESIDENTS.size():
 		var h := Housing.check(game.world, town_house(c, i) + Vector3i(3, 0, 3))
 		if not h.ok:
 			push_warning("test town house %d: %s" % [i, h.reason])
 			continue
-		var npc := game.town.move_in(Town.ROSTER[i], Vector3(h.spot) + Vector3(0.5, 0, 0.5))
+		var npc := game.town.move_in(TOWN_RESIDENTS[i], Vector3(h.spot) + Vector3(0.5, 0, 0.5))
 		npc.home_key = h.key
 		npc.home_spot = h.spot
 
