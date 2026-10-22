@@ -19,7 +19,9 @@ global uniform float underworld_top;
 global uniform vec3 hell_light;
 
 // Light that isn't in the voxel light: the player's and the Underworld's.
+// The top faces of the Underworld's highest blocks lie right on its top: a
+// little give keeps them lit, instead of each pixel flipping with rounding.
 vec3 extra_light(vec3 world_pos) {
 	vec3 l = player_light(world_pos);
-	return world_pos.y < underworld_top ? max(l, hell_light) : l;
+	return world_pos.y < underworld_top + 0.01 ? max(l, hell_light) : l;
 }
