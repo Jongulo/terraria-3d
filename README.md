@@ -1274,8 +1274,7 @@ Furniture: Terraria's early house furniture and the crafting chain behind it.
 - **Recipes are Terraria's own:** every recipe is read from your Terraria.exe
   (`tools/terraria_recipes.py`, run by `extract_assets.sh`), so amounts, stations and "any Wood" /
   "Iron or Lead Bar" are exactly Terraria's. An item is craftable here when everything its Terraria
-  recipe takes exists in this game. One stand-in remains until its parts exist: Hellstone Bars
-  (at a furnace, not a Hellforge). Like Terraria, the Candle, Candelabra and chandeliers take one metal each (Terraria has
+  recipe takes exists in this game. Like Terraria, the Candle, Candelabra and chandeliers take one metal each (Terraria has
   separate Platinum, Tin... versions, not in this game yet), and the plain Work Bench and Wooden
   Table take plain Wood.
 - **Supporting recipes:** Chain is 15 from 1 Iron or Lead Bar at an anvil, Glass is 2 Sand at a
@@ -1406,6 +1405,31 @@ The surface, like Terraria's (its TerrainPass; `rust/voxel_core/src/terrain.rs`)
   quarter of the forest); elsewhere trees wherever there's room, thicker in places and thinner in
   others, from dense woods to open meadows. No two trunks within 2 blocks (Terraria leaves two
   columns between), and none on a lake's floor.
+
+The Underworld's ruined houses, like Terraria's (WorldGen.HellFort and AddHellHouses, and its
+Hellforges pass; `rust/voxel_core/src/hell.rs`): across the middle half of the Underworld each way
+(the ash forest has the outer sixth), a fort on the ground every 20-87 blocks (Terraria's 30-129
+tiles, now and then more), the walk along x on lines across z spaced the same way. A fort is
+Terraria's grid of rooms, 5 columns across and 10 rows tall (rows 4-7 blocks high: its 6-11 tiles at
+the cabins' 2/3 scale), the 4th row from the top on the ground and the rows under it dug in; the
+middle column round the spot, the others beside it sharing their walls. Its plan is Terraria's,
+twice over: 1 time in 3 a wing out one way (one column or two) and likewise the other, each wing
+with a shaft up or down its end column 9 times in 10; with no wing, a tower 6 or more rows tall.
+Here each wing heads along x or z, so a fort is a cross, an L, a T or a line; columns where
+another fort already stands are left out, so forts run together in places. Each room is an
+Obsidian Brick frame (1 time in 10 Hellstone Brick) round its brick wall (Terraria's dark back
+wall), drained of lava; Obsidian Doors between neighbouring columns (and 1 time in 3 between other
+neighbours) and out of each end of the fort where it's open; hatches of Obsidian Platforms up
+through the floors between stacked rooms and one in the roof; then half the outer walls facing
+open air crumble from the ceiling down, the corner posts standing. Inside (Terraria's counts per
+its forts): Demon Torches on the walls (none within 8 tiles of another), Obsidian furniture down the
+middle of the rooms' floors (a table with chairs and a candle, a work bench with a chair, a vase,
+bookcase, chair, bed, piano, dresser, sofa, clock, bathtub, lamp or candelabra), and from the
+ceilings the world's three Hell banners (of six), Obsidian Chandeliers and Lanterns; about 9 forts
+in 10 have a Hellforge, the Hellstone Bar's station (it counts as a Furnace too; Terraria's recipes
+made at it work: Hellstone Bars, Obsidian armor, the Fireproof Bug Net). The Obsidian lights pulse
+purple like the Demon Torch. Not yet: Terraria's paintings on the walls, and the Shadow Chests
+(placed through the whole Underworld, with the Shadow Key from cavern chests).
 
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a

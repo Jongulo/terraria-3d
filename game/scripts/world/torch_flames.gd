@@ -10,7 +10,9 @@ extends Node3D
 ## (TileDrawing.DrawTiles_EmitParticles): most drift up slowing and shrinking,
 ## a third fall; drawn from the dust sheet, for torches near you. Pulsing
 ## lights: a block with a "pulse" (the Demon Torch) has its light set to the
-## pulse's colour as it changes (VoxelWorld.set_block_emit relights it).
+## pulse's colour as it changes (VoxelWorld.set_block_emit relights it),
+## within PULSE_RANGE of you (each change relights them and remeshes round
+## them; farther off they keep the colour they had).
 
 ## Each tile sheet's flame sheet (Terraria's Main.tileFlame).
 const FLAME_SHEETS := {"Tiles_4": "Flame_0", "Tiles_33": "Flame_1", "Tiles_100": "Flame_2", "Tiles_34": "Flame_3",
@@ -23,6 +25,10 @@ const MAX_EMBERS := 400
 const TICK := 1.0 / 60.0
 ## Terraria pixels a tick (velocity) per block a second.
 const PX_TICK := 60.0 / 16.0
+## Pulsing lights pulse this close to you (blocks), the list of them made
+## again once you've moved PULSE_MOVE from where it was.
+const PULSE_RANGE := 24.0
+const PULSE_MOVE := 4.0
 
 var world: VoxelWorld
 var game: Game
@@ -32,8 +38,9 @@ var _embers: Array = []  # {pos, vel, scale, gravity, frame: Vector2, px}
 var _ember_mm := MultiMesh.new()
 var _acc := 0.0
 var _pulse := {}  # Vector3i chunk -> {block id: PackedInt32Array of x, y, z}
-var _pulse_cells := {}  # block id -> PackedInt32Array (every loaded chunk's)
+var _pulse_cells := {}  # block id -> PackedInt32Array (the chunks round you)
 var _pulse_dirty := false
+var _pulse_center := Vector3(INF, INF, INF)
 static var _info := {}  # block id -> flame info ({} if it has none)
 static var _materials := {}
 static var _quad: QuadMesh
@@ -291,14 +298,26 @@ func _physics_process(delta: float) -> void:
 ## Pulsing lights: each kind's light set to its colour now (the world only
 ## relights when that moves to another of its 16 levels).
 func _update_pulses() -> void:
+	var at := game.player.global_position
+	if at.distance_to(_pulse_center) >= PULSE_MOVE:
+		_pulse_center = at
+		_pulse_dirty = true
 	if _pulse_dirty:
 		_pulse_dirty = false
 		_pulse_cells = {}
-		for per in _pulse.values():
+		var reach := PULSE_RANGE + ChunkRenderer.CHUNK
+		for c in _pulse:
+			var mid := (Vector3(c) + Vector3.ONE * 0.5) * ChunkRenderer.CHUNK
+			if absf(mid.x - at.x) > reach or absf(mid.y - at.y) > reach or absf(mid.z - at.z) > reach:
+				continue
+			var per: Dictionary = _pulse[c]
 			for id in per:
-				if not _pulse_cells.has(id):
-					_pulse_cells[id] = PackedInt32Array()
-				_pulse_cells[id].append_array(per[id])
+				var cells: PackedInt32Array = per[id]
+				for i in range(0, cells.size(), 3):
+					if Vector3(cells[i], cells[i + 1], cells[i + 2]).distance_to(at) <= PULSE_RANGE:
+						if not _pulse_cells.has(id):
+							_pulse_cells[id] = PackedInt32Array()
+						_pulse_cells[id].append_array([cells[i], cells[i + 1], cells[i + 2]])
 	for id in _pulse_cells:
 		world.set_block_emit(id, Data.pulse_color(Data.block(id).pulse), _pulse_cells[id])
 

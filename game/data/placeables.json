@@ -56,6 +56,9 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"obsidian_bathtub": {
+			"one_color": true
+		},
 		"obsidian_sink": {
 			"noise": "grain",
 			"one_color": true,
@@ -2709,6 +2712,14 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"obsidian_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": false,
+			"strength": 0.6
+		},
 		"oil_rag_sconse": {
 			"depth": 9.0
 		},
@@ -4918,8 +4929,17 @@
 			"one_color": false,
 			"strength": 0.5
 		},
+		"obsidian_platform": {
+			"noise": "speckle",
+			"one_color": false,
+			"strength": 0.5
+		},
 		"obsidian_sink": {
 			"noise": "grain"
+		},
+		"obsidian_vase": {
+			"no_outline": false,
+			"one_color": true
 		},
 		"orange_torch": {
 			"one_color": true
@@ -5285,6 +5305,8 @@
 		"mushroom_vines_7": "extruded",
 		"mushroom_vines_8": "extruded",
 		"mushroom_vines_9": "extruded",
+		"obsidian_lamp": "hull",
+		"obsidian_vase": "hull",
 		"oil_rag_sconse": "billboard",
 		"orange_torch": "hull",
 		"palm_wood_lamp": "hull",
@@ -6136,6 +6158,9 @@
 		},
 		"mushroom_vines_9": {
 			"model": "extruded"
+		},
+		"obsidian_bathtub": {
+			"outline": false
 		},
 		"platinum_chandelier": {
 			"model": "auto"

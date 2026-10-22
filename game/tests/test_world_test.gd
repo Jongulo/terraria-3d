@@ -5179,10 +5179,10 @@ func _recipe_checks(c: Vector3i) -> void:
 	var potion: Dictionary = find.call("LesserHealingPotion")[0]
 	check(potion.count == 2 and potion.ingredients == {"Mushroom": 1, "Gel": 2, "Bottle": 2} and potion.station == "bottles",
 			"Lesser Healing Potions: 2 from a Mushroom, 2 Gel and 2 Bottles at a placed Bottle")
-	var odd := Data.recipes.filter(func(r): return not r.get("terraria", false) and not r.has("stand_in"))
-	var stand_ins: Array = Data.recipes.filter(func(r): return r.has("stand_in")).map(func(r): return r.result)
-	check(odd.is_empty() and stand_ins == ["HellstoneBar"],
-			"every recipe is Terraria's but one marked stand-in (%s)" % [stand_ins])
+	var odd := Data.recipes.filter(func(r): return not r.get("terraria", false))
+	check(odd.is_empty(), "every recipe is Terraria's (%s)" % [odd.map(func(r): return r.result)])
+	var bar: Dictionary = find.call("HellstoneBar")[0]
+	check(bar.ingredients == {"Hellstone": 3, "Obsidian": 1} and bar.station == "hellforge", "Hellstone Bars: 3 Hellstone and an Obsidian at a Hellforge (%s)" % bar)
 	check(find.call("MusketBall").is_empty() and find.call("Shuriken").is_empty(), "no recipes Terraria doesn't have (Musket Balls, Shurikens)")
 	# A placed Bottle is where potions are made; a Lead Anvil counts as an anvil.
 	var p := game.player

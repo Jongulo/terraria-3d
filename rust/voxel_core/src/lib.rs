@@ -15,6 +15,7 @@ pub mod save;
 pub mod shrines;
 pub mod shrink;
 pub mod surface;
+pub mod hell;
 pub mod terrain;
 pub mod world;
 pub mod worldgen;

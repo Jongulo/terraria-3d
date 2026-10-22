@@ -2100,6 +2100,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // Gem trees after the Dungeon and the hives, as Terraria grows them late
     // (its Speleothems And Gem Trees pass), and out of them.
     gem_trees(w, seed, &l);
+    // Pass 6c: the Underworld's ruined houses (Terraria's AddHellHouses, at
+    // the end of its Underworld pass, and its Hellforges pass), after the
+    // Dungeon so neither builds over the other; their own random numbers.
+    crate::hell::hell_houses(w, &mut Rng::new(seed as u64 ^ 0x4e11_f0e7), &l);
     // Pass 7: underground cabins, after the liquids and the trees as in
     // Terraria (its Buried Chests pass). Terraria's CaveHouseCount is 35-40 in
     // a small world, scaled with its area; its worlds are a 2D slice, so here

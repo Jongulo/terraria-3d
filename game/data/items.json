@@ -347,6 +347,33 @@
 		"Bench": {"type": "block", "place": "bench", "max_stack": 99},
 		"Bed": {"auto_reuse": false, "type": "block", "place": "bed", "max_stack": 99},
 		"GrandfatherClock": {"type": "block", "place": "grandfather_clock", "max_stack": 99},
+		"ObsidianBrickWall": {"type": "block", "place": "obsidian_brick_wall"},
+		"HellstoneBrickWall": {"type": "block", "place": "hellstone_brick_wall"},
+		"ObsidianDoor": {"value": 200, "auto_reuse": false, "type": "block", "place": "obsidian_door", "max_stack": 99},
+		"ObsidianPlatform": {"type": "block", "place": "obsidian_platform"},
+		"ObsidianTable": {"value": 300, "type": "block", "place": "obsidian_table", "max_stack": 99},
+		"ObsidianChair": {"value": 150, "type": "block", "place": "obsidian_chair", "max_stack": 99},
+		"ObsidianWorkBench": {"value": 150, "type": "block", "place": "obsidian_workbench", "max_stack": 99},
+		"ObsidianCandle": {"type": "block", "place": "obsidian_candle", "max_stack": 99},
+		"ObsidianVase": {"value": 300, "type": "block", "place": "obsidian_vase", "max_stack": 99},
+		"ObsidianBookcase": {"value": 300, "type": "block", "place": "obsidian_bookcase", "max_stack": 99},
+		"ObsidianBed": {"value": 2000, "type": "block", "place": "obsidian_bed", "max_stack": 99, "auto_reuse": false},
+		"ObsidianPiano": {"type": "block", "place": "obsidian_piano", "max_stack": 99},
+		"ObsidianDresser": {"type": "block", "place": "obsidian_dresser", "max_stack": 99},
+		"ObsidianSofa": {"type": "block", "place": "obsidian_sofa", "max_stack": 99},
+		"ObsidianClock": {"type": "block", "place": "obsidian_clock", "max_stack": 99},
+		"ObsidianBathtub": {"type": "block", "place": "obsidian_bathtub", "max_stack": 99},
+		"ObsidianLamp": {"type": "block", "place": "obsidian_lamp", "max_stack": 99},
+		"ObsidianCandelabra": {"type": "block", "place": "obsidian_candelabra", "max_stack": 99},
+		"ObsidianChandelier": {"type": "block", "place": "obsidian_chandelier", "max_stack": 99},
+		"ObsidianLantern": {"type": "block", "place": "obsidian_lantern", "max_stack": 99},
+		"HellboundBanner": {"value": 1000, "type": "block", "place": "hellbound_banner", "max_stack": 99},
+		"HellHammerBanner": {"value": 1000, "type": "block", "place": "hell_hammer_banner", "max_stack": 99},
+		"HelltowerBanner": {"value": 1000, "type": "block", "place": "helltower_banner", "max_stack": 99},
+		"LostHopesofManBanner": {"value": 1000, "type": "block", "place": "lost_hopes_banner", "max_stack": 99},
+		"ObsidianWatcherBanner": {"value": 1000, "type": "block", "place": "obsidian_watcher_banner", "max_stack": 99},
+		"LavaEruptsBanner": {"value": 1000, "type": "block", "place": "lava_erupts_banner", "max_stack": 99},
+		"Hellforge": {"value": 3000, "type": "block", "place": "hellforge", "max_stack": 99},
 		"Barrel": {"type": "block", "place": "barrel", "max_stack": 99},
 		"Candle": {"type": "block", "place": "candle", "max_stack": 99, "light": [0.9, 0.7, 0.45]},
 		"CopperChandelier": {"type": "block", "place": "copper_chandelier", "max_stack": 99},
@@ -895,8 +922,5 @@
 		{"head": "CrimsonHelmet", "body": "CrimsonScalemail", "legs": "CrimsonGreaves", "text": "Crimson", "crimson_regen": true},
 		{"head": "NinjaHood", "body": "NinjaShirt", "legs": "NinjaPants", "text": "Ninja", "move_speed": 20}
 	],
-	"recipes": [
-		{"result": "HellstoneBar", "station": "furnace", "ingredients": {"Hellstone": 3, "Obsidian": 1},
-			"stand_in": "Terraria's is made at a Hellforge, which isn't in yet"}
-	]
+	"recipes": []
 }
