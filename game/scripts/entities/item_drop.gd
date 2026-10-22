@@ -52,7 +52,8 @@ func _physics_process(delta: float) -> void:
 	var player := game.player
 	var to_player := player.global_position + Vector3(0, 0.9, 0) - global_position
 	var dist := to_player.length()
-	if player.alive and age > PICKUP_DELAY and dist < GRAB_RANGE and player.inventory.count_space(item) > 0:
+	# The Treasure Magnet reaches further (Terraria's treasureGrabRange).
+	if player.alive and age > PICKUP_DELAY and dist < GRAB_RANGE + player.stat("grab_range") and player.inventory.count_space(item) > 0:
 		if dist < PICKUP_RANGE:
 			_pick_up(player)
 			return

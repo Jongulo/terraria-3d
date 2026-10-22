@@ -38,7 +38,7 @@
 		"gem: a gem tree's trunk (Terraria's SetGemTreeDrops): each cell drops that gem 1 time in 10, else its drop (Stone Block).",
 		"Tree trunks: Terraria's plain trunk frames (GrowTree's default three twice as likely as each other set), the 16 px trunk inside each 20 px frame. Not its branch-joint frames, whose outline is open (TreeBranches' stems cover the outline instead), nor the two sets whose knots bulge past 16 px (cropped, they'd leave gaps).",
 		"cut (set from the art): its sheet is one of Terraria's Main.tileCut tiles (grass, flowers, plants, vines, cobwebs, herbs, pots...), which a swung weapon or tool and the player's projectiles break (Data.TILE_CUT, Game.cut_tile). tile_id: that sheet's Terraria tile id.",
-		"touch_damage: touching it (standing on it too) hurts that much (Terraria's TouchDamageImmediate: Spikes 60). off / lit: a light's switched-off twin and back (a switch wired to it swaps them). interact locked_chest: a Golden Key (key) opens it for good, turning it into unlocks_to; interact switch: right-click it to swap the light it's wired to (worldgen's 'switch' decoration), turning into toggles_to.",
+		"touch_damage: touching it (standing on it too) hurts that much (Terraria's TouchDamageImmediate: Spikes 60). off / lit: a light's switched-off twin and back (a switch wired to it swaps them). interact locked_chest: its key (a Golden Key, used up; key_kept: not used up, the Shadow Key) opens it for good, turning it into unlocks_to; interact switch: right-click it to swap the light it's wired to (worldgen's 'switch' decoration), turning into toggles_to.",
 		"tool: pickaxe | axe | any (any = breaks instantly with anything). Axes do Terraria's axe power x 0.24 a hit (x axe_mult: cactus 3); pickable: a pickaxe works too. hit_to: the first pickaxe hit turns it into this (grass to dirt, like Terraria's). drop: internal Terraria item name."
 	],
 	"blocks": [
@@ -1429,6 +1429,8 @@
 		{"name": "prost_painting", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "drop": "PaintingGermanBeer", "sound": "dig", "wall": true, "wall_tilt": 0, "wall_inset": 0.04, "wall_raise": -0.5, "default_method": "flat", "painting": true, "hidden": true,
 			"tex": {"all": {"sheet": "Tiles_242", "tiles": [6, 4], "frames": [[216, 1440]]}}},
 		{"name": "remix_painting", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "drop": "PaintingRemix", "sound": "dig", "wall": true, "wall_tilt": 0, "wall_inset": 0.04, "wall_raise": -0.25, "default_method": "flat", "painting": true, "hidden": true,
-			"tex": {"all": {"sheet": "Tiles_240", "tiles": [3, 3], "frames": [[1512, 108]]}}}
+			"tex": {"all": {"sheet": "Tiles_240", "tiles": [3, 3], "frames": [[1512, 108]]}}},
+		{"name": "shadow_chest", "render": "cutout", "opaque": false, "tool": "any", "drop": "ShadowChest", "sound": "dig", "interact": "chest", "settings": "chest", "tex": {"side": {"sheet": "Tiles_21", "tiles": [2, 2], "frames": [[108, 0]]}, "top": {"sheet": "Tiles_140", "frames": [[18, 18]]}, "bottom": {"sheet": "Tiles_140", "frames": [[18, 18]]}}},
+		{"name": "locked_shadow_chest", "render": "cutout", "opaque": false, "tool": "any", "sound": "dig", "interact": "locked_chest", "key": "ShadowKey", "key_kept": true, "unlocks_to": "shadow_chest", "settings": "chest", "unbreakable": "It's locked", "tex": {"side": {"sheet": "Tiles_21", "tiles": [2, 2], "frames": [[144, 0]]}, "top": {"sheet": "Tiles_140", "frames": [[18, 18]]}, "bottom": {"sheet": "Tiles_140", "frames": [[18, 18]]}}}
 	]
 }

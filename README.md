@@ -1454,8 +1454,35 @@ made at it work: Hellstone Bars, Obsidian armor, the Fireproof Bug Net). The Obs
 purple like the Demon Torch. Paintings (Terraria's 100 tries, RandHellPicture: Hand Earth,
 Skelehead, Imp Face, Ominous Presence, Shining Moon, Lake of Fire, Darkness, Dark Soul Reaper,
 Trapped Ghost, Demon's Eye, Living Gore, Flowing Magma) hang in the middle of a room's wall where
-it's more than 7 tiles wide and 5 tall clear, none within 8 tiles of another. Not yet: the Shadow
-Chests (placed through the whole Underworld, with the Shadow Key from cavern chests).
+it's more than 7 tiles wide and 5 tall clear, none within 8 tiles of another.
+
+Shadow Chests, Terraria's (its Buried Chests pass, UnderworldChestCount): 10-15 per small world's
+width, here per line of forts (about 80 in a 1024 x 1024 world), each at a random spot in the
+Underworld dropped onto the first solid ground below it (through platforms; in a fort, on its
+floor, or out on the ash), lava or not. They're Locked Shadow Chests: the Shadow Key opens them for
+good and isn't used up. The Dungeon's first chest always holds a Shadow Key, and each after it
+1 time in 3. Terraria shuffles the five main items once a world and deals them out in turn, so a
+world's chests share them evenly: the Dark Lance (spear), Sunfury (flail), Flower of Fire, Flamelash
+and Hellwing Bow. With it: 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or
+Gold Bars; 1 in 2 50-74 Hellfire Arrows or Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 4
+Torches; 1 in 2 2-4 Gold Coins. Worldgen chests' bars and Silver Bullets are now the world's own of
+each pair, as in Terraria (Platinum Bars in a Platinum world). Not here yet: the Hellcart, Ornate
+Shadow Key and Hell Cake (no minecarts or pets), the buff and Recall Potions (alchemy) and
+Glowsticks.
+- **Flower of Fire** (48 magic damage, 9 mana): a Ball of Fire that flies straight for 20 ticks,
+  then falls (0.2 px a tick²), bouncing off blocks 5 times and going out on the 6th; 1 in 2 it
+  sets enemies on fire for 5 s.
+- **Flamelash** (32, 21 mana): steered toward your crosshair while you hold the button, like the
+  Magic Missile, through 2 enemies; 1 in 2 it sets them on fire for 4-8 s.
+- **Hellwing Bow** (22 ranged damage, fast): Wooden Arrows become Hellwings, fiery bats that fly on
+  with no drop, each steering gently toward its own way (Terraria's: launched up to 0.1 rad off
+  your aim, turning toward up to 0.2 off it), through every enemy in their path. Other arrows fire
+  as arrows.
+- **Treasure Magnet**: items come to you from 6 blocks further (Terraria's 150 px).
+- **Hellfire Arrows** (13 damage, 8 knockback; 100 from 100 Wooden Arrows and a Hellstone Bar)
+  blow up on what they hit, hurting every other enemy within 64 px. **Silver** and **Tungsten
+  Bullets** (9 damage) and the **Restoration Potion** (90 life, 45 s of potion sickness) come
+  with Terraria's recipes; the **Meteorite Bar** waits for meteorites.
 
 The Underworld's enemies, Terraria's, with its numbers (life, damage, defense, knockback
 resistance, coins, sounds, gores and dust, all from its NPC code):
@@ -1574,8 +1601,7 @@ Melee speed throws it faster and brings it back sooner.
 
 Flails: the Mace (underground chests), Flaming Mace (a Mace and 99 Torches), Ball O' Hurt (Shadow
 Orbs), The Meatball (10 Crimtane Bars and 5 Tissue Samples at an anvil), and the Blue Moon and Sunfury
-(the Blue Moon in the Dungeon's chests; the Sunfury creative only for now: the Underworld's Shadow
-Chests aren't in yet), with
+(the Blue Moon in the Dungeon's chests, the Sunfury in the Underworld's Shadow Chests), with
 Terraria's stats and its flail AI (AI_015_Flails), in its pixels (16 a block) and ticks:
 - **Spinning:** hold the button and it whirls round over your head, 5 turns a second. After 12 ticks
   it hits anything within 55 px of you that you can see, each enemy every 15 ticks, for 1.2x damage
@@ -1615,8 +1641,9 @@ The world's first Shadow Orb always gives the Musket, as in Terraria (then one o
 Vilethorn, Ball O' Hurt and Band of Starpower).
 
 Spears: the Spear (chests), The Rotted Fork (Crimson Hearts), the Storm Spear (deep desert
-cabins' Sandstone Chests), and the Trident, Slime Spear, Swordfish and Dark Lance (creative only
-for now: their Water and Shadow chests, the Solidifier and fishing aren't in yet), with Terraria's damage, speed and knockback. A
+cabins' Sandstone Chests), the Dark Lance (the Underworld's Shadow Chests), and the Trident, Slime
+Spear and Swordfish (creative only for now: their Water chests, the Solidifier and fishing aren't in
+yet), with Terraria's damage, speed and knockback. A
 click thrusts the spear out along your aim and pulls it back, its tip going exactly as far as
 Terraria's (the Spear 5 blocks, the Storm Spear 6.7); it hits every enemy the tip touches, each up to
 6 times a second, but only ones you can see. The Dark Lance and Rotted Fork reach a little past

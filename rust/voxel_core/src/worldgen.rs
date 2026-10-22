@@ -1579,6 +1579,12 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         life_crystal: w.id_of("life_crystal"),
         chest: w.id_of("chest"),
     };
+    // Which of each pair the world has, for the game (its chests' bars, as
+    // Terraria's GenVars.goldBar): an "ores" decoration, bit k set for the
+    // second of pair k (Tin, Lead, Tungsten, Platinum).
+    let second = ["tin_ore", "lead_ore", "tungsten_ore", "platinum_ore"].map(|n| w.id_of(n));
+    let ores = (0..4).filter(|&k| second[k] != 0 && ids.ores[k].0 == second[k]).fold(0, |b, k| b | 1 << k);
+    w.decorations.push(Decoration { kind: "ores".into(), pos: (0, 0, 0), style: ores });
 
     // The surface: Terraria's plateaus, hills, dales, mountains and valleys
     // (terrain.rs).
@@ -2104,6 +2110,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // the end of its Underworld pass, and its Hellforges pass), after the
     // Dungeon so neither builds over the other; their own random numbers.
     crate::hell::hell_houses(w, &mut Rng::new(seed as u64 ^ 0x4e11_f0e7), &l);
+    // Pass 6d: the Underworld's Shadow Chests (Terraria's Buried Chests pass
+    // places them before its cave houses); their own random numbers.
+    crate::hell::shadow_chests(w, &mut Rng::new(seed as u64 ^ 0x5ad0_c4e5), &l);
     // Pass 7: underground cabins, after the liquids and the trees as in
     // Terraria (its Buried Chests pass). Terraria's CaveHouseCount is 35-40 in
     // a small world, scaled with its area; its worlds are a 2D slice, so here
@@ -3790,19 +3799,25 @@ mod tests {
             }
         }
         assert!(deepest < depth_y_t(&l, 230.0), "the Dungeon goes deep, reached from the entrance (to y {deepest})");
-        let chests: Vec<_> = w.decorations.iter().filter(|d| d.kind == "chest" && d.style >= crate::dungeon::DUNGEON_LOOT).collect();
+        let loot = |d: &Decoration| d.style & !crate::dungeon::SHADOW_KEY;
+        let chests: Vec<_> = w.decorations.iter().filter(|d| d.kind == "chest" && (crate::dungeon::DUNGEON_LOOT..crate::dungeon::DUNGEON_LOOT + 8).contains(&loot(d))).collect();
         assert!(chests.len() >= 5, "a chest in each room ({})", chests.len());
         let reached = chests.iter().filter(|d| seen.contains(&(d.pos.0, d.pos.1 + 1, d.pos.2))).count();
         assert!(reached * 2 >= chests.len(), "most chests reached from the entrance ({reached} of {})", chests.len());
         for c in &chests {
             let b = w.get(c.pos.0, c.pos.1, c.pos.2);
-            let key = c.style == crate::dungeon::DUNGEON_LOOT + 6;
+            let key = loot(c) == crate::dungeon::DUNGEON_LOOT + 6;
             assert_eq!(b, if key { id("chest") } else { id("locked_gold_chest") }, "a locked Gold Chest (a wooden one with the key) at {:?}", c.pos);
             assert!(w.is_solid(c.pos.0, c.pos.1 - 1, c.pos.2), "on the floor");
         }
         // In Terraria's order, a shallow chest being a key chest.
-        let deep: Vec<i32> = chests.iter().map(|c| c.style).collect();
+        let deep: Vec<i32> = chests.iter().map(|c| loot(c)).collect();
         assert_eq!(deep[0], crate::dungeon::DUNGEON_LOOT, "the first chest holds the Muramasa (or a key near the top): {deep:?}");
+        // A Shadow Key in the first chest, and 1 in 3 of the rest.
+        let keys: Vec<bool> = chests.iter().map(|c| c.style & crate::dungeon::SHADOW_KEY != 0).collect();
+        assert!(keys[0], "the first chest holds a Shadow Key");
+        let more = keys[1..].iter().filter(|&&k| k).count();
+        assert!(more < keys.len() - 1, "only some of the rest with a Shadow Key ({more} of {})", keys.len() - 1);
         let doors: Vec<_> = (0..w.blocks.len()).filter(|&i| w.blocks[i] == id("dungeon_door") || [id("blue_dungeon_door"), id("green_dungeon_door"), id("pink_dungeon_door")].contains(&w.blocks[i])).collect();
         assert!(doors.len() >= 5, "doors in the halls ({})", doors.len());
         for &i in &doors {

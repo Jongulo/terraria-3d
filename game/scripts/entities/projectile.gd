@@ -49,10 +49,13 @@ const BOMB_RADIUS := 0.18
 ## pointing right instead of up, or up and right (the Enchanted Beam: AI 27
 ## turns it its velocity's angle + 0.785); "styles": the frames are looks, one
 ## picked at random and held (the Book of Skulls' three skulls); "long": laid
-## along its flight though not twice as long as it's wide (the stingers).
+## along its flight though not twice as long as it's wide (the stingers);
+## "fps": its frames a second (else 20; the Flamelash's every 5 ticks, the
+## Hellwing's every 2).
 const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3},
 		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true},
-		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true}}
+		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true},
+		"Flamelash": {"frames": 8, "fps": 12}, "Hellwing": {"frames": 5, "right": true, "fps": 30}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
@@ -68,6 +71,17 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## Demon Scythes and the weapon's): spinning (0.8 a tick), from its 30th tick
 ## to its 100th it speeds up 1.06 a tick; size: drawn that big (blocks);
 ## radius: how far from its centre it hits, enemies or you.
+## Ball of Fire (the Flower of Fire's, AI 8): falls from its 20th tick
+## (gravity_after) at 0.2 px a tick (45 blocks/s^2) up to 16 px a tick
+## (max_fall: 60 blocks/s), spinning 0.3 a tick, and dies on its 6th touch of
+## a block, Item10 each bounce. ignite: [1 in n, min, max ticks] On Fire! on
+## the enemies it hits (Terraria's StatusNPC: the Ball of Fire 1 in 2 for 300,
+## the Flamelash 1 in 2 for 240-479). hellwing: [aim, launch] (the Hellwing
+## Bow's, AI 1): fired turned by up to half `launch` either way, it steers
+## toward its way turned up to half `aim` (each tick its velocity is 39/40 of
+## itself and 1/40 of that); Terraria's penetrate -1 (each enemy hit once).
+## blast: when it dies (a block, an enemy, its time), it hurts every other
+## enemy within that many blocks (the Hellfire Arrow: Terraria's 64 px box).
 const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7},
 		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
@@ -78,7 +92,12 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"BurningSphere": {"ghost": true, "hidden": true, "dust": [6]},
 		"DemonSickle": {"scythe": true, "dust": [27], "size": 1.8, "radius": 0.9, "life": 5.0},
 		"DemonScythe": {"scythe": true, "dust": [27], "size": 1.8, "radius": 0.9, "pierce": 5, "life": 60.0},
-		"Stinger": {"dust": [18]}, "QueenBeeStinger": {"dust": [147], "life": 5.0, "xray": true}}
+		"Stinger": {"dust": [18]}, "QueenBeeStinger": {"dust": [147], "life": 5.0, "xray": true},
+		"BallofFire": {"bounce": 5, "bounce_sound": "Item_10", "gravity": 45.0, "gravity_after": 20, "max_fall": 60.0, "spin": 18.0,
+			"dust": [6], "glow": true, "size": 0.5, "radius": 0.25, "ignite": [2, 300, 300], "life": 60.0},
+		"Flamelash": {"dust": [6], "glow": true, "pierce": 2, "size": 1.5, "radius": 0.5, "ignite": [2, 240, 479], "life": 60.0},
+		"Hellwing": {"hellwing": [0.3927, 0.19635], "pierce": 1000000, "dust": [6], "glow": true, "size": 0.94, "radius": 0.375, "life": 20.0},
+		"HellfireArrow": {"blast": 1.35, "dust": [31, 6]}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -93,7 +112,10 @@ var bounces := 0
 var steered_by = null
 var _flight := {}
 var _frames := 1
+var _fps := 20.0
 var _frame_t := 0.0
+## The way a Hellwing steers toward (its "hellwing" flight).
+var _aim := Vector3.ZERO
 var _turn := PI
 ## A long, thin sprite (arrows, bullets, bolts): laid along its flight in 3D
 ## (EntitySprite.set_axis) rather than turned on the screen.
@@ -109,6 +131,7 @@ func setup(proj: String, size := 0.5) -> void:
 	var tex := Assets.texture("Images/Projectile_%d" % id)
 	var sheet: Dictionary = SHEETS.get(proj, {})
 	_frames = int(sheet.get("frames", 1))
+	_fps = float(sheet.get("fps", 20.0))
 	if sheet.get("styles", false):
 		frame = randi() % _frames
 	if sheet.get("right", false):
@@ -150,6 +173,22 @@ func _ready() -> void:
 		radius = float(_flight.radius)
 	if _flight.get("scythe", false):
 		spin = 48.0  # 0.8 a tick
+	if _flight.has("spin"):
+		spin = float(_flight.spin)
+	if _flight.has("gravity_after"):
+		gravity_delay = float(_flight.gravity_after) / 60.0
+	if _flight.has("hellwing"):
+		_aim = _turned(velocity, float(_flight.hellwing[0]))
+		velocity = _turned(velocity, float(_flight.hellwing[1]))
+
+
+## Terraria's RotatedByRandom: turned by up to half `most` either way (here
+## about a random axis across the way it goes).
+static func _turned(v: Vector3, most: float) -> Vector3:
+	var axis := v.cross(Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1))).normalized()
+	if axis == Vector3.ZERO:
+		return v
+	return v.rotated(axis, randf() * most - most / 2.0)
 
 
 func _physics_process(delta: float) -> void:
@@ -178,6 +217,8 @@ func _physics_process(delta: float) -> void:
 	if not explosive.is_empty():
 		_explosive_step(delta, game)
 		return
+	if _aim != Vector3.ZERO:
+		velocity = velocity.lerp(_aim, 1.0 - pow(39.0 / 40.0, delta * 60.0))
 	life -= delta
 	_age += delta
 	if _flight.get("scythe", false):
@@ -194,6 +235,8 @@ func _physics_process(delta: float) -> void:
 			game.dust.spawn(int(_trail.pick_random()), global_position - velocity * 4.0 / 60.0, velocity * 0.1 * 16.0 / 60.0, 1.25)
 	if _age >= gravity_delay:
 		velocity.y -= gravity * delta
+		if _flight.has("max_fall"):
+			velocity.y = maxf(velocity.y, -float(_flight.max_fall))
 		if drag > 0.0:
 			var keep := pow(1.0 - drag, delta)
 			velocity.x *= keep
@@ -229,15 +272,17 @@ func _physics_process(delta: float) -> void:
 						turned = true
 				if not turned:
 					velocity = -velocity
+				if _flight.has("bounce_sound"):
+					Audio.play_at(_flight.bounce_sound, global_position, 0.5)
 				break
 			Audio.play_at("Dig_*", global_position, 0.4)
-			queue_free()
+			_die(game)
 			return
 		if _check_hits(game):
-			queue_free()
+			_die(game)
 			return
 	if life <= 0:
-		queue_free()
+		_die(game)
 		return
 	var cam := game.player.camera
 	if spin != 0.0:
@@ -252,7 +297,7 @@ func _physics_process(delta: float) -> void:
 		sprite.set_frame(frame)
 	elif _frames > 1:
 		_frame_t += delta
-		sprite.set_frame(int(_frame_t * 20.0) % _frames)
+		sprite.set_frame(int(_frame_t * _fps) % _frames)
 	if glow != Color.BLACK:
 		sprite.set_glow()
 	else:
@@ -318,12 +363,33 @@ func _explosive_step(delta: float, game) -> void:
 		queue_free()
 
 
+## Gone: a Hellfire Arrow's blast first ("blast": Terraria's Kill grows it to
+## 64 px and Damage()s every enemy in that, the one it hit being immune just
+## then), with Item14.
+func _die(game) -> void:
+	if _flight.has("blast") and friendly:
+		var r := float(_flight.blast)
+		Audio.play_at("Item_14", global_position, 0.6)
+		for i in 10:
+			game.dust.spawn(6, global_position, Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * 2.0, 1.5)
+		for npc in game.npcs():
+			if _hit.has(npc) or npc.def.ai in ["town", "dummy"] or npc.untouchable or npc.dont_take_damage:
+				continue
+			var to: Vector3 = npc.center() - global_position
+			if to.length() < r + npc.half.x:
+				npc.hit(damage, knockback, to.normalized(), crit, armor_pen)
+	queue_free()
+
+
 func _check_hits(game) -> bool:
 	if friendly:
 		for npc in game.npcs():
 			if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
 				_hit[npc] = true
 				npc.hit(damage, knockback, velocity.normalized(), crit, armor_pen)
+				var fire: Array = _flight.get("ignite", [])
+				if not fire.is_empty() and randi() % int(fire[0]) == 0:
+					npc.ignite(randi_range(int(fire[1]), int(fire[2])) / 60.0)
 				damage = maxi(1, int(round(damage * (1.0 - pierce_falloff))))
 				penetrate -= 1
 				if penetrate <= 0:

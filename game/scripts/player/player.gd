@@ -1907,11 +1907,13 @@ func _shoot_ranged(def: Dictionary) -> bool:
 	if ammo_slot < 0:
 		return false
 	var ammo := Data.item(inventory.slots[ammo_slot].item)
+	# The Hellwing Bow fires Hellwings for Wooden Arrows (Terraria's PickAmmo).
+	var proj: String = def.get("converts", {}).get(inventory.slots[ammo_slot].item, ammo.projectile)
 	# Some armor has a chance to save ammo.
 	if randf() * 100.0 >= stat("ammo_save"):
 		_use_up(ammo_slot)
 	var is_arrow: bool = def.ammo == "WoodenArrow"
-	var drop := float(ammo.get("gravity", 6.0 if is_arrow else 0.0))
+	var drop := float(ammo.get("gravity", 6.0 if is_arrow else 0.0)) if proj == ammo.projectile else 0.0
 	# A shotgun (the Boomstick) fires several, spread out, for one round.
 	var pellets: Array = def.get("pellets", [1, 1])
 	var spread := float(def.get("spread", 0.0))
@@ -1920,7 +1922,7 @@ func _shoot_ranged(def: Dictionary) -> bool:
 		var dir := forward()
 		if spread > 0.0:
 			dir = (dir + basis.x * randf_range(-spread, spread) + basis.y * randf_range(-spread, spread)).normalized()
-		var pr := Game.current.spawn_projectile(ammo.projectile, camera.global_position + forward() * 0.5 + basis.y * -0.1,
+		var pr := Game.current.spawn_projectile(proj, camera.global_position + forward() * 0.5 + basis.y * -0.1,
 				dir * float(def.shoot_speed), weapon_damage(def, int(def.damage) + int(ammo.get("damage", 0))),
 				float(def.knockback) + float(ammo.get("knockback", 0)), drop, 0.0, 0.7 if is_arrow else 0.25,
 				true, crit_chance(def))
@@ -2256,7 +2258,7 @@ func _consume(def: Dictionary) -> bool:
 		if potion_sickness > 0.0 or (life >= life_max and not def.has("honey")):
 			return false
 		heal(int(def.heal))
-		potion_sickness = POTION_SICKNESS if def.internal != "Mushroom" else 0.0
+		potion_sickness = float(def.get("sickness", POTION_SICKNESS)) if def.internal != "Mushroom" else 0.0
 		honey_time = maxf(honey_time, float(def.get("honey", 0)))
 	elif def.has("mana"):
 		if mana >= mana_cap():

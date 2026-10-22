@@ -450,6 +450,7 @@ func _run() -> void:
 	await _king_slime_checks(c)
 	await _recipe_checks(c)
 	await _underworld_checks(c)
+	await _shadow_chest_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -3183,7 +3184,8 @@ func _prefix_checks(c: Vector3i) -> void:
 	var found := 0
 	for i in 30:
 		var at := Vector3i(5, 3, 5 + i)
-		game.chests._worldgen[Chests.key(at)] = "chest"
+		game.chests._worldgen[Chests.key(at)] = true
+		game.chests._tables[Chests.key(at)] = "chest"
 		for s in game.chests.get_inventory(at).slots:
 			if s != null and s.has("prefix"):
 				found += 1
@@ -3269,7 +3271,8 @@ func _accessory_checks(c: Vector3i) -> void:
 	var top := Vector3i(c.x + 3, TestWorld.GROUND + 1, c.z + 60)
 	var all_surface := true
 	for i in 12:
-		game.chests._worldgen[Chests.key(top)] = "chest"
+		game.chests._worldgen[Chests.key(top)] = true
+		game.chests._tables[Chests.key(top)] = "chest"
 		game.chests._chests.erase(Chests.key(top))
 		all_surface = all_surface and game.chests.get_inventory(top).slots.any(func(s): return s != null and s.item in surface_items)
 	game.chests._chests.erase(Chests.key(top))
@@ -5325,6 +5328,170 @@ func _underworld_checks(c: Vector3i) -> void:
 	clear_npcs.call()
 	await frames(30)
 	p.life = p.life_max
+
+
+func _shadow_chest_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var ores_was := game.chests.ores
+	var clear := func() -> void:
+		for n in game.npcs():
+			if not n.def.get("persistent", false) and n.def.ai != "town" and n.def.ai != "dummy":
+				n.queue_free()
+		for e in game.entities.get_children():
+			if e is Projectile or e is ItemDrop:
+				e.queue_free()
+	# A Locked Shadow Chest (worldgen's, hell.rs) holding a Flamelash.
+	var spot := c + Vector3i(-4, 40, 0)
+	w.set_block(spot + Vector3i.DOWN, Data.block_id("stone"))
+	w.set_block(spot, Data.block_id("locked_shadow_chest"))
+	w.add_decoration("chest", spot, 16 + 3)
+	# One left unopened through a save and reload; a Dungeon chest with a
+	# Shadow Key in it.
+	var later := spot + Vector3i(2, 0, 0)
+	var keyed := spot + Vector3i(-2, 0, 0)
+	w.add_decoration("chest", later, 16)
+	w.add_decoration("chest", keyed, 7 + Chests.SHADOW_KEY)
+	game.chests.setup(w)
+	game.chests.ores = 8
+	p.inventory.remove("ShadowKey", p.inventory.count_of("ShadowKey"))
+	check(not game.unlock_chest(spot) and last_message() == "It's locked", "a Locked Shadow Chest stays locked without a Shadow Key")
+	p.inventory.add("ShadowKey", 1)
+	check(game.unlock_chest(spot) and Data.block(w.get_block(spot)).get("name", "") == "shadow_chest" and p.inventory.count_of("ShadowKey") == 1,
+			"a Shadow Key opens it for good, and isn't used up")
+	check(game.chests.get_inventory(spot).count_of("Flamelash") == 1, "its main item inside")
+	game.hud.close_inventory()
+	game.chests.load_state(game.chests.save_state())
+	check(game.chests.get_inventory(later).count_of("DarkLance") == 1, "a worldgen chest left unopened rolls its loot after a save and reload")
+	var dungeon := game.chests.get_inventory(keyed)
+	check(dungeon.count_of("Muramasa") == 1 and dungeon.count_of("ShadowKey") == 1, "a Dungeon chest with a Shadow Key")
+	# The loot: Terraria's odds, the world's bars.
+	var seen := {}
+	for i in 1000:
+		for drop in Game.roll_loot("shadow_HellwingBow", true):
+			seen[drop[0]] = int(seen.get(drop[0], 0)) + 1
+	var n := func(k: String) -> int: return int(seen.get(k, 0))
+	check(n.call("HellwingBow") == 1000 and absi(n.call("TreasureMagnet") - 200) < 50 and absi(n.call("MeteoriteBar") + n.call("GoldBar") - 500) < 60
+			and n.call("MeteoriteBar") > 150 and absi(n.call("HellfireArrow") + n.call("SilverBullet") - 500) < 60 and absi(n.call("RestorationPotion") - 500) < 60,
+			"a Shadow Chest's loot (%s)" % [seen])
+	check(game.chests.world_item("GoldBar") == "PlatinumBar" and game.chests.world_item("SilverBullet") == "SilverBullet" and game.chests.world_item("IronBar") == "IronBar",
+			"a Platinum world's chests hold Platinum Bars")
+	game.chests.ores = 4
+	check(game.chests.world_item("SilverBullet") == "TungstenBullet" and game.chests.world_item("GoldBar") == "GoldBar", "a Tungsten world's, Tungsten Bullets")
+	game.chests.ores = ores_was
+	for q in [spot, later, keyed]:
+		w.set_block(q, 0)
+		w.remove_decorations_at(q)
+		game.chests.remove(q)
+	w.set_block(spot + Vector3i.DOWN, 0)
+
+	# The Flower of Fire's Ball of Fire: straight for 20 ticks, then falling;
+	# in a box it bounces 5 times and goes out on the 6th.
+	var box := c + Vector3i(0, 52, 0)
+	for x in range(-2, 3):
+		for y in range(-2, 3):
+			for z in range(-2, 3):
+				w.set_block(box + Vector3i(x, y, z), Data.block_id("stone") if maxi(absi(x), maxi(absi(y), absi(z))) == 2 else 0)
+	var open := c + Vector3i(0, 64, 0)
+	var ball := game.spawn_projectile("BallofFire", Vector3(open) + Vector3(0.5, 0.5, 0.5), Vector3(28.125, 0, 0), 48, 5.5)
+	await frames(15)
+	var vy15 := ball.velocity.y
+	await frames(25)
+	check(vy15 == 0.0 and ball.velocity.y < -5.0, "a Ball of Fire flies straight, then falls (%.1f, %.1f)" % [vy15, ball.velocity.y])
+	ball.queue_free()
+	ball = game.spawn_projectile("BallofFire", Vector3(box) + Vector3(0.5, 0.5, 0.5), Vector3(20, 6, 9), 48, 5.5)
+	var bounced := false
+	for i in 120:
+		await frames(1)
+		if not is_instance_valid(ball):
+			break
+		bounced = bounced or ball.bounces < 5
+	check(bounced and not is_instance_valid(ball), "it bounces round a box and goes out")
+	# It sets enemies on fire 1 time in 2.
+	var target := game.spawn_npc("Zombie", Vector3(open) + Vector3(3.5, 0, 0.5))
+	target.life_max = 100000
+	target.life = 100000
+	target.velocity = Vector3.ZERO
+	var lit := 0
+	for i in 12:
+		target.on_fire = 0.0
+		target.global_position = Vector3(open) + Vector3(3.5, -0.5, 0.5)
+		game.spawn_projectile("BallofFire", target.center() - Vector3(1.0, 0, 0), Vector3(28.125, 0, 0), 48, 0.0)
+		await frames(3)
+		if target.on_fire > 0.0:
+			lit += 1
+	check(lit >= 1 and lit <= 11, "a Ball of Fire sets enemies on fire, some of the time (%d of 12)" % lit)
+	clear.call()
+	for x in range(-2, 3):
+		for y in range(-2, 3):
+			for z in range(-2, 3):
+				w.set_block(box + Vector3i(x, y, z), 0)
+	await frames(2)
+
+	# The Hellwing Bow: Wooden Arrows become Hellwings, flying straight on
+	# with no drop; other arrows stay arrows.
+	var bow := Data.item("HellwingBow")
+	p.global_position = Vector3(open) + Vector3(0.5, -1.5, 0.5)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(0.0, 0.0)
+	p.inventory.remove("WoodenArrow", p.inventory.count_of("WoodenArrow"))
+	p.inventory.remove("HellfireArrow", p.inventory.count_of("HellfireArrow"))
+	p.inventory.add("WoodenArrow", 5)
+	p._shoot_ranged(bow)
+	var wing: Projectile = null
+	for e in game.entities.get_children():
+		if e is Projectile and e.kind == "Hellwing":
+			wing = e
+	var fwd := p.forward()
+	await frames(30)
+	check(wing != null and is_instance_valid(wing) and wing.gravity == 0.0 and wing.velocity.normalized().dot(fwd) > 0.97,
+			"the Hellwing Bow turns a Wooden Arrow into a Hellwing, flying on with no drop")
+	p.inventory.remove("WoodenArrow", p.inventory.count_of("WoodenArrow"))
+	p.inventory.add("HellfireArrow", 5)
+	p._shoot_ranged(bow)
+	var arrows := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "HellfireArrow")
+	check(arrows.size() == 1 and arrows[0].gravity > 0.0, "other arrows stay arrows")
+	p.inventory.remove("HellfireArrow", p.inventory.count_of("HellfireArrow"))
+	clear.call()
+	await frames(2)
+	# A Hellfire Arrow blows up on what it hits, hurting what's beside it too.
+	var a := game.spawn_npc("Zombie", Vector3(open) + Vector3(4.5, -1.5, 0.5))
+	var b := game.spawn_npc("Zombie", Vector3(open) + Vector3(4.5, -1.5, 1.6))
+	for z in [a, b]:
+		z.life_max = 100000
+		z.life = 100000
+		z.velocity = Vector3.ZERO
+	game.spawn_projectile("HellfireArrow", a.center() - Vector3(1.2, 0, 0), Vector3(30, 0, 0), 13, 0.0)
+	await frames(4)
+	check(a.life < a.life_max and b.life < b.life_max, "a Hellfire Arrow's blast hurts the one beside it (%d, %d)" % [a.life_max - a.life, b.life_max - b.life])
+	clear.call()
+	await frames(2)
+
+	# The Treasure Magnet: items come from further off.
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(2)
+	game.spawn_item("Gel", 1, p.global_position + Vector3(0, 0.9, 0) + Vector3(7.0, 0, 0))
+	await frames(50)
+	var gel: Array = game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "Gel")
+	var far: bool = gel.size() == 1 and gel[0].global_position.distance_to(p.global_position) > 6.0
+	p.accessories.slots[0] = Inventory.stack("TreasureMagnet", 1)
+	await frames(50)
+	check(far and (gel.is_empty() or not is_instance_valid(gel[0]) or gel[0].global_position.distance_to(p.global_position) < 4.0),
+			"with a Treasure Magnet items 7 blocks off come to you")
+	p.accessories.slots[0] = null
+	clear.call()
+	# The Restoration Potion: 90 life, 45 s of potion sickness.
+	p.life = 100
+	p.potion_sickness = 0.0
+	p._consume(Data.item("RestorationPotion"))
+	check(p.life == 190 and is_equal_approx(p.potion_sickness, 45.0), "a Restoration Potion heals 90, 45 s of sickness (%d, %.0f)" % [p.life, p.potion_sickness])
+	p.potion_sickness = 0.0
+	p.life = p.life_max
+	p.god_mode = was_god
+	await frames(2)
 
 
 func _recipe_checks(c: Vector3i) -> void:

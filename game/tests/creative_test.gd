@@ -391,7 +391,7 @@ func _run() -> void:
 	var cs := Chests.new()
 	w.add_decoration("chest", Vector3i(3, 70, 3), 2)
 	cs.setup(w)
-	check(cs._worldgen.get(Chests.key(Vector3i(3, 70, 3))) == "ivy_chest", "a worldgen chest of style 2 holds Ivy Chest loot")
+	check(cs._worldgen.has(Chests.key(Vector3i(3, 70, 3))) and cs._tables.get(Chests.key(Vector3i(3, 70, 3))) == "ivy_chest", "a worldgen chest of style 2 holds Ivy Chest loot")
 	# The loot itself does what Terraria's does.
 	p.accessories.slots[0] = Inventory.stack("FeralClaws", 1)
 	check(p.stat("melee_speed") >= 12.0 and p.auto_reuses(Data.item("CopperBroadsword") if not Data.item("CopperBroadsword").is_empty() else {"type": "melee", "auto_reuse": false}),

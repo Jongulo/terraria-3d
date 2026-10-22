@@ -874,6 +874,11 @@ static func roll_loot(table_name: String, lava := false) -> Array:
 	for e in table.get("extras", []):
 		if randf() < float(e[3]):
 			out.append([e[0], randi_range(int(e[1]), int(e[2]))])
+	# One of a few, that often (a Shadow Chest's Meteorite or Gold Bars).
+	for e in table.get("either", []):
+		if randf() < float(e[1]):
+			var c: Array = e[0].pick_random()
+			out.append([c[0], randi_range(int(c[1]), int(c[2]))])
 	# Sets that come together (the Mushroom Chest's Mushroom Hat, Vest and Pants).
 	for e in table.get("sets", []):
 		if randf() < float(e[1]):
@@ -1336,13 +1341,15 @@ func open_chest(p: Vector3i) -> void:
 	hud.open_chest(chests.get_inventory(p), p)
 
 
-## A locked chest (the Dungeon's Locked Gold Chests): its key, if you carry
-## one, is used up and opens it for good - it becomes its unlocked chest, its
-## loot still in it (Terraria's Chest.Unlock).
+## A locked chest (the Dungeon's Locked Gold Chests, the Underworld's Locked
+## Shadow Chests): its key, if you carry one, opens it for good - it becomes
+## its unlocked chest, its loot still in it (Terraria's Chest.Unlock). A Golden
+## Key is used up; a Shadow Key ("key_kept") isn't.
 func unlock_chest(p: Vector3i) -> bool:
 	var b := Data.block(world.get_block(p))
 	var key: String = b.get("key", "")
-	if key == "" or not player.inventory.remove(key, 1):
+	var kept: bool = b.get("key_kept", false)
+	if key == "" or not (player.inventory.count_of(key) > 0 if kept else player.inventory.remove(key, 1)):
 		message("It's locked", Color(0.9, 0.7, 0.7))
 		return false
 	world.set_block(p, Data.block_id(b.unlocks_to))

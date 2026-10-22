@@ -64,6 +64,8 @@
 //!     strength): Locked Gold Chests holding, in turn, the Muramasa, Cobalt
 //!     Shield, Aqua Scepter, Blue Moon, Magic Missile, Valor, a Golden Key (a
 //!     wooden chest) and Handgun; near the surface, a wooden chest with a key.
+//!     The first chest also holds a Shadow Key, and each after it 1 time in 3
+//!     (AddBuriedChest's generatedShadowKey).
 //!   - Lights: 28 per 4200 tiles, hanging from ceilings 15 apart, 1 in 7 the
 //!     brick colour's Dungeon Chandelier (where 15 is open below), else a
 //!     lantern of the part's style (three of the seven lanterns); each with a
@@ -203,6 +205,8 @@ pub const DUNGEON_LOOT: i32 = 7;
 const LOOT_ORDER: usize = 8;
 /// The one that holds a Golden Key (in a wooden chest).
 const KEY_LOOT: i32 = 6;
+/// Added to a chest's style: it holds a Shadow Key too.
+pub const SHADOW_KEY: i32 = 64;
 
 #[derive(Clone, Copy)]
 struct Room {
@@ -1399,7 +1403,9 @@ impl<'a> Gen<'a> {
                     break;
                 }
                 self.set(p, block);
-                self.w.decorations.push(Decoration { kind: "chest".into(), pos: p, style: DUNGEON_LOOT + style });
+                // A Shadow Key in the first, and 1 time in 3 in each after it.
+                let key = if self.loot == 0 || self.r(3) == 0 { SHADOW_KEY } else { 0 };
+                self.w.decorations.push(Decoration { kind: "chest".into(), pos: p, style: DUNGEON_LOOT + style + key });
                 // Facing into the room.
                 let face = (r.end.0 as i32 - x, r.end.2 as i32 - z);
                 let into = if face.0.abs() > face.1.abs() { (face.0.signum(), 0) } else if face.1 < 0 { (0, -1) } else { (0, 1) };

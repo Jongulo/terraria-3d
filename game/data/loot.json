@@ -1,5 +1,5 @@
 {
-	"_doc": "Loot tables: [item, min, max, chance]. 'pick_one' rolls a single primary item; 'instead': tried in order, the first that rolls replaces it (a fifth entry \"lava\": only in chests below the lava line, Terraria's Lava Charm); worldgen chests near the surface roll <table>_surface if there is one (Chests); 'extras' each roll independently; 'sets': [[items], chance] gives all of those items together that often.",
+	"_doc": "Loot tables: [item, min, max, chance]. 'pick_one' rolls a single primary item; 'instead': tried in order, the first that rolls replaces it (a fifth entry \"lava\": only in chests below the lava line, Terraria's Lava Charm); worldgen chests near the surface roll <table>_surface if there is one (Chests); 'extras' each roll independently; 'sets': [[items], chance] gives all of those items together that often. 'either': [[[item, min, max], ...], chance] gives one of those that often. Worldgen chests' bars (and Silver Bullets) are the world's own of the pair (Chests.world_item).",
 	"chest_surface": {
 		"_doc": "Terraria's surface chests (AddBuriedChest above worldSurface + 25 tiles): one of Spear, Blowpipe, Wooden Boomerang, Aglet, Climbing Claws, Umbrella, Guide to Plant Fiber Cordage, Wand of Sparking, Radar, Portable Stool, Poison Barb (those in the game here), and Rope half the time.",
 		"pick_one": [["Spear", 1, 1], ["WoodenBoomerang", 1, 1], ["Aglet", 1, 1], ["ClimbingClaws", 1, 1], ["CordageGuide", 1, 1], ["Radar", 1, 1]],
@@ -56,43 +56,73 @@
 		"extras": [["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05]]
 	},
 	"dungeon_Muramasa": {
-		"_doc": "The Dungeon's chest 1 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Muramasa; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 1 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Muramasa; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["Muramasa", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_CobaltShield": {
-		"_doc": "The Dungeon's chest 2 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Cobalt Shield; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 2 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Cobalt Shield; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["CobaltShield", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_AquaScepter": {
-		"_doc": "The Dungeon's chest 3 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Aqua Scepter; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 3 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Aqua Scepter; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["AquaScepter", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_BlueMoon": {
-		"_doc": "The Dungeon's chest 4 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Blue Moon; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 4 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Blue Moon; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["BlueMoon", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_MagicMissile": {
-		"_doc": "The Dungeon's chest 5 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Magic Missile; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 5 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Magic Missile; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["MagicMissile", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_Valor": {
-		"_doc": "The Dungeon's chest 6 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Valor; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 6 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Valor; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["Valor", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_GoldenKey": {
-		"_doc": "The Dungeon's chest 7 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): a Golden Key, in a wooden chest (and any chest near the surface); AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 7 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): a Golden Key, in a wooden chest (and any chest near the surface); AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["GoldenKey", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
 	},
 	"dungeon_Handgun": {
-		"_doc": "The Dungeon's chest 8 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Handgun; AddBuriedChest's cavern-layer extras that are in the game (not its Shadow Key, Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
+		"_doc": "The Dungeon's chest 8 of 8 in Terraria's order (WorldGen.GetDungeonLootAndChestStyle): the Handgun; AddBuriedChest's cavern-layer extras that are in the game (a Shadow Key in some: Chests; not its Ram Rune, Silver Bracer, Jester's Arrows, bars, Flaming Arrows, buff potions, Recall Potions or Glowsticks).",
 		"pick_one": [["Handgun", 1, 1]],
 		"extras": [["SuspiciousLookingEye", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["ThrowingKnife", 25, 50, 0.25], ["HealingPotion", 3, 5, 0.5], ["Torch", 15, 30, 0.25], ["GoldCoin", 1, 2, 0.5]]
+	},
+	"shadow_DarkLance": {
+		"_doc": "A Shadow Chest (AddBuriedChest below maxTilesY - 205: hell.rs deals the five main items out in turn): the Dark Lance; 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or the world's Gold Bars; 1 in 2 50-74 Hellfire Arrows or the world's Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 2 15-29 Torches or Glowsticks (not in the game: Torches 1 in 4); 1 in 2 2-4 Gold Coins. Not here yet: its Hellcart, Ornate Shadow Key and Hell Cake (1 in 10 each), buff potions and Recall Potions.",
+		"pick_one": [["DarkLance", 1, 1]],
+		"extras": [["TreasureMagnet", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["RestorationPotion", 15, 20, 0.5], ["Torch", 15, 29, 0.25], ["GoldCoin", 2, 4, 0.5]],
+		"either": [[[["MeteoriteBar", 15, 29], ["GoldBar", 15, 29]], 0.5], [[["HellfireArrow", 50, 74], ["SilverBullet", 50, 74]], 0.5]]
+	},
+	"shadow_Sunfury": {
+		"_doc": "A Shadow Chest (AddBuriedChest below maxTilesY - 205: hell.rs deals the five main items out in turn): the Sunfury; 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or the world's Gold Bars; 1 in 2 50-74 Hellfire Arrows or the world's Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 2 15-29 Torches or Glowsticks (not in the game: Torches 1 in 4); 1 in 2 2-4 Gold Coins. Not here yet: its Hellcart, Ornate Shadow Key and Hell Cake (1 in 10 each), buff potions and Recall Potions.",
+		"pick_one": [["Sunfury", 1, 1]],
+		"extras": [["TreasureMagnet", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["RestorationPotion", 15, 20, 0.5], ["Torch", 15, 29, 0.25], ["GoldCoin", 2, 4, 0.5]],
+		"either": [[[["MeteoriteBar", 15, 29], ["GoldBar", 15, 29]], 0.5], [[["HellfireArrow", 50, 74], ["SilverBullet", 50, 74]], 0.5]]
+	},
+	"shadow_FlowerofFire": {
+		"_doc": "A Shadow Chest (AddBuriedChest below maxTilesY - 205: hell.rs deals the five main items out in turn): the Flower of Fire; 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or the world's Gold Bars; 1 in 2 50-74 Hellfire Arrows or the world's Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 2 15-29 Torches or Glowsticks (not in the game: Torches 1 in 4); 1 in 2 2-4 Gold Coins. Not here yet: its Hellcart, Ornate Shadow Key and Hell Cake (1 in 10 each), buff potions and Recall Potions.",
+		"pick_one": [["FlowerofFire", 1, 1]],
+		"extras": [["TreasureMagnet", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["RestorationPotion", 15, 20, 0.5], ["Torch", 15, 29, 0.25], ["GoldCoin", 2, 4, 0.5]],
+		"either": [[[["MeteoriteBar", 15, 29], ["GoldBar", 15, 29]], 0.5], [[["HellfireArrow", 50, 74], ["SilverBullet", 50, 74]], 0.5]]
+	},
+	"shadow_Flamelash": {
+		"_doc": "A Shadow Chest (AddBuriedChest below maxTilesY - 205: hell.rs deals the five main items out in turn): the Flamelash; 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or the world's Gold Bars; 1 in 2 50-74 Hellfire Arrows or the world's Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 2 15-29 Torches or Glowsticks (not in the game: Torches 1 in 4); 1 in 2 2-4 Gold Coins. Not here yet: its Hellcart, Ornate Shadow Key and Hell Cake (1 in 10 each), buff potions and Recall Potions.",
+		"pick_one": [["Flamelash", 1, 1]],
+		"extras": [["TreasureMagnet", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["RestorationPotion", 15, 20, 0.5], ["Torch", 15, 29, 0.25], ["GoldCoin", 2, 4, 0.5]],
+		"either": [[[["MeteoriteBar", 15, 29], ["GoldBar", 15, 29]], 0.5], [[["HellfireArrow", 50, 74], ["SilverBullet", 50, 74]], 0.5]]
+	},
+	"shadow_HellwingBow": {
+		"_doc": "A Shadow Chest (AddBuriedChest below maxTilesY - 205: hell.rs deals the five main items out in turn): the Hellwing Bow; 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or the world's Gold Bars; 1 in 2 50-74 Hellfire Arrows or the world's Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 2 15-29 Torches or Glowsticks (not in the game: Torches 1 in 4); 1 in 2 2-4 Gold Coins. Not here yet: its Hellcart, Ornate Shadow Key and Hell Cake (1 in 10 each), buff potions and Recall Potions.",
+		"pick_one": [["HellwingBow", 1, 1]],
+		"extras": [["TreasureMagnet", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["RestorationPotion", 15, 20, 0.5], ["Torch", 15, 29, 0.25], ["GoldCoin", 2, 4, 0.5]],
+		"either": [[[["MeteoriteBar", 15, 29], ["GoldBar", 15, 29]], 0.5], [[["HellfireArrow", 50, 74], ["SilverBullet", 50, 74]], 0.5]]
 	}
 }

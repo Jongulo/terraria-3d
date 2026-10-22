@@ -58,6 +58,8 @@
 //!   beside a door or another of them.
 //! - **Hellforges**: one per 200 tiles of width (about 9 forts in 10), each
 //!   on the floor of a room.
+//! - **Shadow Chests** (shadow_chests, Terraria's Buried Chests pass): locked,
+//!   on the ground anywhere in the Underworld, in the forts or out of them.
 
 use crate::paintings::{self, Paintings};
 use crate::world::{Decoration, World};
@@ -763,12 +765,66 @@ fn furnish(w: &mut World, rng: &mut Rng, ids: &Ids, forts: &[Fort]) {
     }
 }
 
+/// Chest decoration styles (scripts/world/chests.gd's loot tables): the
+/// Shadow Chests' are SHADOW_LOOT + their main item's place in SHADOW_ITEMS.
+pub const SHADOW_LOOT: i32 = 16;
+/// Terraria's hellChestItem: Dark Lance, Sunfury, Flower of Fire, Flamelash,
+/// Hellwing Bow.
+pub const SHADOW_ITEMS: usize = 5;
+
+/// The Underworld's Shadow Chests, like Terraria's (its Buried Chests pass:
+/// UnderworldChestCount, 10-15 in a small world, scaled with its width, each
+/// AddBuriedChest at a random spot in the Underworld). Terraria shuffles its
+/// five main items once a world (WorldGen.Reset) and deals them out in turn,
+/// so the chests share them evenly. Each spot: Terraria's x anywhere, y from
+/// the Underworld's top down to its last 50 tiles (here the bottom quarter);
+/// the chest goes on the first solid ground below it (falling through
+/// platforms, as Terraria's SolidTile does), if that cell and the one above
+/// it are empty - lava or not, Terraria's chests don't mind it - else that
+/// try fails. 10000 tries in all. Locked (Terraria's Locked Shadow Chest: the
+/// Shadow Key opens it). Here each line of forts across z (Terraria's world)
+/// gets its share, the lines spaced as hell_houses spaces them (90 tiles or
+/// so). Returns how many.
+pub fn shadow_chests(w: &mut World, rng: &mut Rng, l: &Layers) -> usize {
+    let locked = w.id_of("locked_shadow_chest");
+    if locked == 0 {
+        return 0;
+    }
+    let lines = w.sz as f64 / blocks(90) as f64;
+    let width = w.sx as f64 * 1.5 / 4200.0;
+    let count = (rng.range(10, 16) as f64 * width * lines).round() as usize;
+    let mut order: Vec<i32> = (0..SHADOW_ITEMS as i32).collect();
+    for i in (1..order.len()).rev() {
+        order.swap(i, rng.range(0, i as i32 + 1) as usize);
+    }
+    let (mut placed, mut tries) = (0, 10000);
+    while placed < count && tries > 0 {
+        tries -= 1;
+        let x = rng.range(blocks(20), w.sx - blocks(20));
+        let z = rng.range(blocks(20), w.sz - blocks(20));
+        // The first solid cell from the spot down is the floor.
+        let mut floor = rng.range(l.underworld_top / 4, l.underworld_top);
+        while floor > 0 && !w.is_solid(x, floor, z) {
+            floor -= 1;
+        }
+        let y = floor + 1;
+        if floor <= 0 || w.get(x, y, z) != 0 || w.get(x, y + 1, z) != 0 || w.shapes.contains_key(&w.idx(x, floor, z)) {
+            continue;
+        }
+        put(w, (x, y, z), locked);
+        w.decorations.push(Decoration { kind: "chest".into(), pos: (x, y, z), style: SHADOW_LOOT + order[placed % SHADOW_ITEMS] });
+        turn(w, (x, y, z), FACING[rng.range(0, 4) as usize]);
+        placed += 1;
+    }
+    placed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::world::{BlockDef, LIQ_LAVA, RENDER_CROSS, RENDER_CUBE};
 
-    const SOLID: [&str; 9] = ["ash", "hellstone", "obsidian_brick", "hellstone_brick", "obsidian_brick_wall", "hellstone_brick_wall", "obsidian_door", "door_top", "obsidian_workbench"];
+    const SOLID: [&str; 10] = ["ash", "hellstone", "obsidian_brick", "hellstone_brick", "obsidian_brick_wall", "hellstone_brick_wall", "obsidian_door", "door_top", "obsidian_workbench", "locked_shadow_chest"];
     const SPRITES: [&str; 25] = [
         "obsidian_platform", "demon_wall_torch", "obsidian_table", "obsidian_chair", "obsidian_candle", "obsidian_vase", "obsidian_bookcase", "obsidian_bed",
         "obsidian_piano", "obsidian_dresser", "obsidian_sofa", "obsidian_clock", "obsidian_bathtub", "obsidian_lamp", "obsidian_candelabra", "obsidian_chandelier",
@@ -992,6 +1048,32 @@ mod tests {
                 assert!(dx > 5 || dz > 5 || dy > 3, "paintings {a:?} and {b:?} 8 tiles apart");
             }
         }
+    }
+
+    #[test]
+    fn shadow_chests_on_the_ground_dealing_out_their_items() {
+        let (mut w, l) = underworld();
+        hell_houses(&mut w, &mut Rng::new(7), &l);
+        let placed = shadow_chests(&mut w, &mut Rng::new(7), &l);
+        let locked = w.id_of("locked_shadow_chest");
+        let chests: Vec<&Decoration> = w.decorations.iter().filter(|d| d.kind == "chest").collect();
+        // 10-15 per 4200 tiles of a line of forts, the lines 60 blocks apart.
+        assert!((3..=7).contains(&placed), "{placed} Shadow Chests");
+        assert_eq!(chests.len(), placed);
+        assert_eq!(count(&w, "locked_shadow_chest"), placed);
+        let mut dealt = [0; SHADOW_ITEMS];
+        for d in &chests {
+            let (x, y, z) = d.pos;
+            assert_eq!(w.get(x, y, z), locked);
+            assert!(w.is_solid(x, y - 1, z) && w.get(x, y - 1, z) != locked, "on solid ground at {:?}", d.pos);
+            assert_eq!(w.get(x, y + 1, z), 0, "open above at {:?}", d.pos);
+            assert!(y < l.underworld_top, "in the Underworld at {:?}", d.pos);
+            assert!((SHADOW_LOOT..SHADOW_LOOT + SHADOW_ITEMS as i32).contains(&d.style));
+            dealt[(d.style - SHADOW_LOOT) as usize] += 1;
+        }
+        // Dealt out in turn: no item twice before each has been once.
+        let (lo, hi) = (dealt.iter().min().unwrap(), dealt.iter().max().unwrap());
+        assert!(hi - lo <= 1, "dealt evenly: {dealt:?}");
     }
 
     #[test]
