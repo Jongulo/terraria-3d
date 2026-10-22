@@ -1521,6 +1521,18 @@ resistance, coins, sounds, gores and dust, all from its NPC code):
   less and burns half as long), the Bat Bat (36 melee damage; each swing heals you 1) and the
   Plumber's Hat. The Bone Serpent's Hotdog waits for food (Well Fed).
 
+The Hellstone gear, Terraria's (Hellstone Bars at an anvil, with its numbers and prices):
+- **Molten Pickaxe** (20 bars): 100% pickaxe power, fire thrown off each swing.
+- **Molten Hamaxe** (15): 150% axe and 70% hammer; it chops trees and hammers everything else.
+- **Fiery Greatsword** (20): 40 damage, a slow swing trailing fire. The first enemy each swing hits
+  erupts (Terraria's Volcano): 75% of the hit again to up to 3 enemies within 80 px, each set on
+  fire for 3 s.
+- **Molten Fury** (15): a bow (31 damage) that turns Wooden Arrows into Flaming Arrows (On Fire!
+  1 in 3 for 3 s; Flaming Arrows also craft from Wooden Arrows and a Torch).
+- **Phoenix Blaster** (a Handgun and 10 bars): 30 damage, fast.
+- The Molten armor and the Flamarang were already in. Not yet: the Imp Staff (summons wait for
+  minions).
+
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a
 Skyware house, a sky lake, or nothing. Houses follow Terraria's: a blue Sunplate shell with gold
@@ -1547,9 +1559,11 @@ Defense takes half its value off each hit. Sets: Wood, Boreal Wood, Rich Mahogan
 Shadewood (work bench); Cactus (spines hurt whatever touches you); Copper to Platinum (anvil; the
 set adds 2-4 defense); Mining (chests; Mining Helmet light, faster digging); Jungle (Stingers,
 Jungle Spores and Vines; mana, magic crit, cheaper spells); Necro (Bones and Cobwebs; ranged
-damage and crit); Molten (Hellstone Bars; melee damage, crit and speed, fire immunity). Tooltips
-and set bonuses use Terraria's own text, read from Terraria.exe. Hellstone sets you on fire when
-you touch it unless you wear the Molten set or an Obsidian Skull (20 Obsidian at a furnace). A
+damage and crit); Molten (Hellstone Bars; melee damage, crit and speed; the set: 10% more melee
+damage, and nothing sets you On Fire!). Tooltips and set bonuses use Terraria's own text, read from
+Terraria.exe. Hellstone sets you on fire when you touch it unless you wear the Molten set or an
+Obsidian Skull (20 Obsidian at a furnace) or its kin, Terraria's fireWalk; those don't keep lava
+or burning shots from setting you on fire, as in Terraria. A
 held torch lights your surroundings like the Mining Helmet. Shadow, Crimson and Meteor armor wait
 for the evil bosses and meteorites.
 

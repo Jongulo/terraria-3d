@@ -451,6 +451,7 @@ func _run() -> void:
 	await _recipe_checks(c)
 	await _underworld_checks(c)
 	await _shadow_chest_checks(c)
+	await _hellstone_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -5491,6 +5492,88 @@ func _shadow_chest_checks(c: Vector3i) -> void:
 	p.potion_sickness = 0.0
 	p.life = p.life_max
 	p.god_mode = was_god
+	await frames(2)
+
+
+func _hellstone_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var find := func(item: String) -> Dictionary:
+		var r: Array = Data.recipes.filter(func(x): return x.result == item)
+		return r[0] if not r.is_empty() else {}
+	check(find.call("MoltenPickaxe").get("ingredients") == {"HellstoneBar": 20} and find.call("MoltenHamaxe").get("ingredients") == {"HellstoneBar": 15}
+			and find.call("FieryGreatsword").get("ingredients") == {"HellstoneBar": 20} and find.call("MoltenFury").get("ingredients") == {"HellstoneBar": 15}
+			and find.call("PhoenixBlaster").get("ingredients") == {"HellstoneBar": 10, "Handgun": 1} and find.call("MoltenPickaxe").get("station") == "iron_anvil",
+			"the Hellstone gear has Terraria's recipes, at an anvil")
+	var open := c + Vector3i(0, 40, 0)
+	p.global_position = Vector3(open) + Vector3(0.5, -1.5, 0.5)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(0.0, 0.0)
+	# The Fiery Greatsword: the first enemy a swing hits erupts, hurting and
+	# burning up to 3 round it.
+	var sword := Data.item("FieryGreatsword")
+	var zs := []
+	for i in 4:
+		var z := game.spawn_npc("Zombie", Vector3(open) + Vector3(0.5 + i * 1.2, -1.5, -4.5))
+		z.life_max = 100000
+		z.life = 100000
+		z.velocity = Vector3.ZERO
+		zs.append(z)
+	var swing := {}
+	p.on_melee_hit(zs[0], sword, swing)
+	var volcanoes := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "Volcano")
+	await frames(14)
+	var hurt: Array = zs.filter(func(z): return z.life < z.life_max)
+	check(volcanoes.size() == 1 and hurt.size() == 3 and hurt.all(func(z): return z.on_fire > 0.0),
+			"a Fiery Greatsword swing's first hit erupts: 3 enemies hurt and burning (%d volcanoes, %d hurt)" % [volcanoes.size(), hurt.size()])
+	p.on_melee_hit(zs[1], sword, swing)
+	var again := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "Volcano" and not volcanoes.has(e))
+	check(again.is_empty(), "once a swing")
+	for z in zs:
+		z.queue_free()
+	# Molten Fury: Wooden Arrows become Flaming Arrows.
+	p.inventory.remove("WoodenArrow", p.inventory.count_of("WoodenArrow"))
+	var added := p.inventory.add("WoodenArrow", 3)
+	var shot := p._shoot_ranged(Data.item("MoltenFury"))
+	var fire := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "FireArrow")
+	check(added == 0 and shot and fire.size() == 1 and fire[0].gravity > 0.0, "Molten Fury turns Wooden Arrows into Flaming Arrows")
+	p.inventory.remove("WoodenArrow", p.inventory.count_of("WoodenArrow"))
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	# The Molten Hamaxe chops trees and hammers the rest.
+	var trunk := open + Vector3i(0, -1, -3)
+	w.set_block(trunk, Data.block_id("tree_trunk"))
+	var held = p.inventory.slots[p.selected]
+	p.inventory.slots[p.selected] = Inventory.stack("MoltenHamaxe", 1)
+	p._use_timer = 0.0
+	p._mine_damage = 0.0
+	p.target = {"block": trunk, "normal": Vector3i.BACK, "id": w.get_block(trunk), "distance": 3.0}
+	p.use_item()
+	check(p._mine_pos == trunk and p._mine_damage > 0.0, "the Molten Hamaxe chops a tree (%.0f)" % p._mine_damage)
+	w.set_block(trunk, 0)
+	p.inventory.slots[p.selected] = held
+	p._use_timer = 0.0
+	# The Molten set: +10% melee damage, fire blocks don't burn, nor can
+	# anything set you on fire; the Obsidian Skull only keeps fire blocks off.
+	for i in 3:
+		p.armor.slots[i] = Inventory.stack(["MoltenHelmet", "MoltenBreastplate", "MoltenGreaves"][i], 1)
+	p.on_fire = 0.0
+	p.god_mode = false
+	p.ignite(5.0)
+	check(p.on_fire == 0.0 and p.has_effect("fire_walk") and p.stat("melee_damage") >= 17.0, "the Molten set: no On Fire!, fire blocks harmless, melee damage up")
+	for i in 3:
+		p.armor.slots[i] = null
+	p.accessories.slots[0] = Inventory.stack("ObsidianSkull", 1)
+	p.ignite(5.0)
+	check(p.on_fire > 0.0 and p.has_effect("fire_walk"), "an Obsidian Skull keeps fire blocks off, not On Fire!")
+	p.on_fire = 0.0
+	p.accessories.slots[0] = null
+	p.god_mode = was_god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
 	await frames(2)
 
 

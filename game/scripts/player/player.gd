@@ -136,6 +136,10 @@ var _yaw := 0.0
 var _pitch := 0.0
 var _immune := 0.0
 var _use_timer := 0.0
+## What's being used, and how long the use lasts (for its swing's dust).
+var _use_def := {}
+var _use_length := 0.0
+var _swing_dust_ticks := 0.0
 ## The channelled projectile (Magic Missile) you're steering, if any.
 var channelled: Projectile = null
 var _free_shots := 0
@@ -492,6 +496,8 @@ func _physics_process(delta: float) -> void:
 	potion_sickness = maxf(0.0, potion_sickness - delta)
 	_tick_buffs(delta)
 	_use_timer = maxf(0.0, _use_timer - delta)
+	if _use_timer > 0.0 and _use_def.has("swing_dust"):
+		_swing_dust(delta)
 	_swing_shot_cd = maxf(0.0, _swing_shot_cd - delta)
 	_update_bast(delta, game)
 	_update_charge(delta)
@@ -1443,6 +1449,7 @@ func _liquid_effects(delta: float) -> void:
 	if breath <= 0.0:
 		dot += DROWN_DPS / diving
 	var fire_immune := has_effect("fire_immune")
+	var fire_walk := has_effect("fire_walk")
 	# The Lava Charm: lava doesn't hurt while its time lasts; out of lava it
 	# fills back up as fast (a tick a tick).
 	if in_liquid == LIQ_LAVA and lava_time > 0.0:
@@ -1454,7 +1461,7 @@ func _liquid_effects(delta: float) -> void:
 		# The Molten set: "Cannot be set on fire".
 		if not fire_immune and life < before:
 			on_fire = maxf(on_fire, ON_FIRE_TIME * (0.5 if rose else 1.0))
-	elif not fire_immune and _touching_hot():
+	elif not fire_walk and not fire_immune and _touching_hot():
 		# Hellstone, like Terraria's fire blocks, sets you on fire.
 		on_fire = ON_FIRE_TIME
 	# Spikes (Terraria's TouchDamageImmediate): hurt at once, give or take 15%.
@@ -1631,7 +1638,8 @@ func use_item() -> void:
 		duration /= 1.0 + stat("mining_speed") / 100.0
 	match def.get("type", ""):
 		"tool":
-			if def.has("hammer"):
+			# A hamaxe (the Molten Hamaxe) chops trees and hammers the rest.
+			if def.has("hammer") and not (def.has("axe") and not target.is_empty() and Data.block(target.id).get("tool") == "axe"):
 				_hammer(def)
 			else:
 				_mine(def)
@@ -1701,6 +1709,8 @@ func use_item() -> void:
 			duration = 0.25
 	if used:
 		_use_timer = duration
+		_use_def = def
+		_use_length = duration
 		# Placing blocks and using generic items swing the arm, as in Minecraft.
 		viewmodel.play(Viewmodel.use_style(def), duration)
 		if def.get("type") in ["tool", "melee"]:
@@ -1907,13 +1917,14 @@ func _shoot_ranged(def: Dictionary) -> bool:
 	if ammo_slot < 0:
 		return false
 	var ammo := Data.item(inventory.slots[ammo_slot].item)
-	# The Hellwing Bow fires Hellwings for Wooden Arrows (Terraria's PickAmmo).
+	# The Hellwing Bow fires Hellwings for Wooden Arrows, Molten Fury Flaming
+	# Arrows (Terraria's PickAmmo; a Hellwing's flight has no drop).
 	var proj: String = def.get("converts", {}).get(inventory.slots[ammo_slot].item, ammo.projectile)
 	# Some armor has a chance to save ammo.
 	if randf() * 100.0 >= stat("ammo_save"):
 		_use_up(ammo_slot)
 	var is_arrow: bool = def.ammo == "WoodenArrow"
-	var drop := float(ammo.get("gravity", 6.0 if is_arrow else 0.0)) if proj == ammo.projectile else 0.0
+	var drop := float(ammo.get("gravity", 6.0 if is_arrow else 0.0))
 	# A shotgun (the Boomstick) fires several, spread out, for one round.
 	var pellets: Array = def.get("pellets", [1, 1])
 	var spread := float(def.get("spread", 0.0))
@@ -2483,10 +2494,26 @@ func poison(seconds: float) -> void:
 
 
 ## Sets you on fire for `seconds` (the longer of it and what's left), unless
-## you can't be (the Molten set, the Obsidian Skull's kin).
+## you can't be (the Molten set: Terraria's buffImmune for On Fire!).
 func ignite(seconds: float) -> void:
 	if alive and not invulnerable() and not has_effect("fire_immune"):
 		on_fire = maxf(on_fire, seconds)
+
+
+## Fire thrown off a swing (Terraria's ItemCheck_EmitUseVisuals: the Molten
+## tools' and the Fiery Greatsword's dust 6 in the swung item's box): along
+## the arc the swing sweeps, from over your right shoulder down to the left.
+func _swing_dust(delta: float) -> void:
+	var dust: Array = _use_def.swing_dust
+	_swing_dust_ticks += delta * 60.0
+	var basis := camera.global_transform.basis
+	while _swing_dust_ticks >= 1.0:
+		_swing_dust_ticks -= 1.0
+		var t := 1.0 - _use_timer / maxf(_use_length, 0.001)
+		var a := lerpf(deg_to_rad(60.0), deg_to_rad(-120.0), t)
+		for i in int(dust[1]):
+			var at := camera.global_position - basis.z * randf_range(0.9, 1.6) + (basis.x * cos(a) + basis.y * sin(a)) * randf_range(0.3, 0.8)
+			Game.current.dust.spawn(int(dust[0]), at, Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * 1.5, float(dust[2]) * 0.6)
 
 
 ## A melee hit's extras (Terraria's StatusToNPC, and Projectile.StatusNPC for
@@ -2497,6 +2524,17 @@ func ignite(seconds: float) -> void:
 func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
 	if has_effect("magma_stone"):
 		npc.ignite_hellfire(6.0 if randi() % 4 == 0 else (4.0 if randi() % 2 == 0 else 2.0))
+	# The Fiery Greatsword: the first enemy a swing hits erupts (Terraria's
+	# Volcano_TrySpawningVolcano: 75% of the hit, not off target dummies or
+	# critters).
+	if def.get("volcano", false) and not swing.get("erupted", false) and npc.def.ai != "dummy" and not npc.is_critter():
+		swing["erupted"] = true
+		Game.current.spawn_projectile("Volcano", npc.center(), Vector3(0, 0.01, 0), int(weapon_damage(def) * 0.75),
+				float(def.get("knockback", 0)), 0.0, 0.0, 2.2, true, crit_chance(def))
+		Audio.play_at("Custom/dd2_explosive_trap_explode_*", npc.center(), 0.7)
+		for i in 20:
+			Game.current.dust.spawn(6, npc.center() + Vector3(randf_range(-0.4, 0.4), randf_range(-0.4, 0.4), randf_range(-0.4, 0.4)),
+					Vector3(randf_range(-0.6, 0.6), 1.0, randf_range(-0.6, 0.6)) * randf_range(2.0, 7.0), randf_range(1.0, 2.0))
 	if def.get("leech", false) and not swing.get("leeched", false) and life < life_max \
 			and npc.def.ai != "dummy" and not npc.is_critter():
 		swing["leeched"] = true

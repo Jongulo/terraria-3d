@@ -55,7 +55,7 @@ const BOMB_RADIUS := 0.18
 const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3},
 		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true},
 		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true},
-		"Flamelash": {"frames": 8, "fps": 12}, "Hellwing": {"frames": 5, "right": true, "fps": 30}}
+		"Flamelash": {"frames": 8, "fps": 12}, "Hellwing": {"frames": 5, "right": true, "fps": 30}, "Volcano": {"frames": 5, "fps": 30}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
@@ -76,12 +76,16 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## (max_fall: 60 blocks/s), spinning 0.3 a tick, and dies on its 6th touch of
 ## a block, Item10 each bounce. ignite: [1 in n, min, max ticks] On Fire! on
 ## the enemies it hits (Terraria's StatusNPC: the Ball of Fire 1 in 2 for 300,
-## the Flamelash 1 in 2 for 240-479). hellwing: [aim, launch] (the Hellwing
+## the Flamelash 1 in 2 for 240-479, the Flaming Arrow 1 in 3 for 180). hellwing: [aim, launch] (the Hellwing
 ## Bow's, AI 1): fired turned by up to half `launch` either way, it steers
 ## toward its way turned up to half `aim` (each tick its velocity is 39/40 of
 ## itself and 1/40 of that); Terraria's penetrate -1 (each enemy hit once).
 ## blast: when it dies (a block, an enemy, its time), it hurts every other
 ## enemy within that many blocks (the Hellfire Arrow: Terraria's 64 px box).
+## melee: its hits are melee hits (the Magma Stone's Hellfire). The Volcano
+## (the Fiery Greatsword's, AI 189): where it stands, 10 ticks, Terraria's
+## 160 px box (here 80 px at 24 a block round it), each enemy once, 3 at most,
+## On Fire! 3 s every hit.
 const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7},
 		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
@@ -96,8 +100,10 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"BallofFire": {"bounce": 5, "bounce_sound": "Item_10", "gravity": 45.0, "gravity_after": 20, "max_fall": 60.0, "spin": 18.0,
 			"dust": [6], "glow": true, "size": 0.5, "radius": 0.25, "ignite": [2, 300, 300], "life": 60.0},
 		"Flamelash": {"dust": [6], "glow": true, "pierce": 2, "size": 1.5, "radius": 0.5, "ignite": [2, 240, 479], "life": 60.0},
-		"Hellwing": {"hellwing": [0.3927, 0.19635], "pierce": 1000000, "dust": [6], "glow": true, "size": 0.94, "radius": 0.375, "life": 20.0},
-		"HellfireArrow": {"blast": 1.35, "dust": [31, 6]}}
+		"Hellwing": {"hellwing": [0.3927, 0.19635], "gravity": 0.0, "pierce": 1000000, "dust": [6], "glow": true, "size": 0.94, "radius": 0.375, "life": 20.0},
+		"HellfireArrow": {"blast": 1.35, "dust": [31, 6]},
+		"FireArrow": {"ignite": [3, 180, 180], "dust": [6], "glow": true},
+		"Volcano": {"ghost": true, "pierce": 3, "radius": 3.33, "size": 2.2, "life": 10.0 / 60.0, "ignite": [1, 180, 180], "glow": true, "melee": true}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -387,6 +393,8 @@ func _check_hits(game) -> bool:
 			if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
 				_hit[npc] = true
 				npc.hit(damage, knockback, velocity.normalized(), crit, armor_pen)
+				if _flight.get("melee", false):
+					game.player.on_melee_hit(npc, {})
 				var fire: Array = _flight.get("ignite", [])
 				if not fire.is_empty() and randi() % int(fire[0]) == 0:
 					npc.ignite(randi_range(int(fire[1]), int(fire[2])) / 60.0)
