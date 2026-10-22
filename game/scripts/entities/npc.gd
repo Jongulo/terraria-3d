@@ -1398,10 +1398,13 @@ func _ai_caster(delta: float, player) -> void:
 	for t in CAST_AT:
 		if was < t + lag and _cast_t >= t + lag and player.alive and (not def.get("firing_range", false) or _in_firing_range(player)):
 			var cast: Dictionary = def.cast
+			Audio.play_at("Item_8", center(), 0.6)
+			if cast.get("book", false):
+				_cast_book(cast)
+				continue
 			var aim: Vector3 = (player.center() - center()).normalized()
 			var p := Game.current.spawn_projectile(cast.projectile, center() + Vector3(0, 0.35, 0), aim * float(cast.speed), int(cast.damage), 0.0, 0.0, 0.0, 0.4, false)
 			p.life = CHAOS_BALL_LIFE
-			Audio.play_at("Item_8", center(), 0.6)
 	# Its arms up while casting.
 	var casting := CAST_AT.any(func(t): return _cast_t > t + lag - 30.0 and _cast_t < t + lag + 10.0)
 	var idle: Array = def.get("idle_frames", [0, 0])
@@ -1416,12 +1419,54 @@ func _ai_caster(delta: float, player) -> void:
 const CHAOS_BALL_LIFE := 5.0
 
 
+## The Librarian Skeleton's book: off a placed book near it (Terraria's
+## AI_FindNearbyBook: 20 tiles across, from 20 over it to 10 under; here
+## blocks), else beside it; it rises and then flies at you (Projectile
+## "LibrarianSkeletonBook"). 13 damage, doubled on you as hostile.
+func _cast_book(cast: Dictionary) -> void:
+	var game := Game.current
+	var c := center()
+	var books: PackedInt32Array = game.world.find_blocks(Vector3i(c.floor()) + Vector3i(0, 5, 0), Vector3i(10, 15, 10), book_ids(), 64)
+	var at := c + Vector3(randf_range(-1.25, 1.25), randf_range(-0.6, 0.6), randf_range(-1.25, 1.25))
+	if books.size() >= 3:
+		var i := (randi() % (books.size() / 3)) * 3
+		at = Vector3(books[i], books[i + 1], books[i + 2]) + Vector3(0.5, 0.5, 0.5)
+	var p: Projectile = game.spawn_projectile(cast.projectile, at, Vector3(0, 3.0 * 3.75, 0), int(cast.damage), 0.0, 0.0, 0.0, 1.0, false)
+	p.target = game.player
+
+
+## The placed books (Terraria's tile 50: books and the Water Bolt).
+static var _book_ids := PackedInt32Array()
+
+
+static func book_ids() -> PackedInt32Array:
+	if _book_ids.is_empty():
+		for id in Data.blocks.size():
+			if Data.block(id).get("tex", {}).get("all", {}).get("sheet", "") == "Tiles_50":
+				_book_ids.append(id)
+	return _book_ids
+
+
 ## Finds a spot on the ground within 20 tiles of the player and more than 5
 ## from them (with 3 x 4 tiles clear over it, no lava) and goes there, in a
 ## puff of its dust.
 func _teleport_near(player) -> void:
 	var w: VoxelWorld = Game.current.world
 	var pc: Vector3 = player.global_position
+	# The Librarian Skeleton first tries beside a placed book.
+	if def.get("teleport_books", false):
+		var books: PackedInt32Array = w.find_blocks(Vector3i(pc.floor()), Vector3i(13, 8, 13), book_ids(), 64)
+		for k in mini(books.size() / 3, 20):
+			var i := (randi() % (books.size() / 3)) * 3
+			var b := Vector3i(books[i], books[i + 1], books[i + 2])
+			for d in [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]:
+				var cell: Vector3i = b + d
+				var n := 0
+				while n < 5 and not w.is_solid(cell + Vector3i.DOWN):
+					cell += Vector3i.DOWN
+					n += 1
+				if _teleport_to(w, cell + Vector3i.DOWN, pc):
+					return
 	for i in 60:
 		var x := pc.x + randf_range(-13.3, 13.3)
 		var z := pc.z + randf_range(-13.3, 13.3)
@@ -1430,20 +1475,26 @@ func _teleport_near(player) -> void:
 		var cell := Vector3i(floori(x), floori(pc.y) + 8, floori(z))
 		while cell.y > floori(pc.y) - 8 and not w.is_solid(cell):
 			cell.y -= 1
-		if not w.is_solid(cell) or w.get_liquid(cell + Vector3i.UP).x == 2:
-			continue
-		var clear := true
-		for h in range(1, 4):
-			if w.is_solid(cell + Vector3i(0, h, 0)):
-				clear = false
-		var spot := Vector3(cell.x + 0.5, cell.y + 1, cell.z + 0.5)
-		if not clear or spot.distance_to(pc) < 3.4:
-			continue
-		var puff := int(def.get("teleport_dust", 27))
-		Game.current.dust.spawn(puff, center(), Vector3.ZERO, 1.3)
-		global_position = spot
-		Game.current.dust.spawn(puff, center(), Vector3.ZERO, 1.3)
-		return
+		if _teleport_to(w, cell, pc):
+			return
+
+
+## Onto the ground at `cell` if there's room over it, no lava, and it's
+## more than 5 tiles from the player.
+func _teleport_to(w: VoxelWorld, cell: Vector3i, pc: Vector3) -> bool:
+	if not w.is_solid(cell) or w.get_liquid(cell + Vector3i.UP).x == 2:
+		return false
+	for h in range(1, 4):
+		if w.is_solid(cell + Vector3i(0, h, 0)):
+			return false
+	var spot := Vector3(cell.x + 0.5, cell.y + 1, cell.z + 0.5)
+	if spot.distance_to(pc) < 3.4:
+		return false
+	var puff := int(def.get("teleport_dust", 27))
+	Game.current.dust.spawn(puff, center(), Vector3.ZERO, 1.3)
+	global_position = spot
+	Game.current.dust.spawn(puff, center(), Vector3.ZERO, 1.3)
+	return true
 
 
 ## Terraria's aiStyle 10 (the Cursed Skull), through the blocks, in px a
@@ -1453,6 +1504,9 @@ func _teleport_near(player) -> void:
 ## 5 / 0.3 (350+). Every 600 ticks it lunges for 50: 4 and 0.088 while near.
 ## (Its Expert-mode shots aren't here.)
 func _ai_skull(delta: float, player) -> void:
+	if def.get("mimic", false):
+		_ai_mimic(delta, player)
+		return
 	var to: Vector3 = player.center() - center()
 	var dist := to.length() * PX_PER_BLOCK
 	var t := _ticks_for(delta)
@@ -1487,6 +1541,162 @@ func _ai_skull(delta: float, player) -> void:
 	anim += delta * 60.0 / 8.0
 	sprite.set_frame(int(anim) % int(def.frames))
 	look_dir = to
+
+
+## The Water Bolt Mimic (Terraria's aiStyle 10 with its own turns): its
+## state (Terraria's ai[3]: 3 a book on the shelf, 4 waking, 0 about you, 1
+## casting, 2 dashing) and that state's clock (ai[2]).
+var _mimic := 3
+var _mimic_t := 0.0
+
+
+## A placed Water Bolt until it's hurt (it still hurts what touches it);
+## then 80 ticks waking, and after that the Cursed Skull's flight through the
+## blocks, with turns: within 100-300 px it may wind up 120 ticks and dash
+## (slowing 10 ticks, then 14 px a tick straight on until its 60th, 300 ticks
+## to wait after), within 500 px wind up 120 ticks and cast a Water Sphere
+## (at its 17th tick of 30), and within 100 px it flees 30 ticks at 8 px a
+## tick. A hit stops a wind-up.
+func _ai_mimic(delta: float, player) -> void:
+	var t := _ticks_for(delta)
+	for i in t:
+		var c := center() + Vector3(0, -10.0 / PX_PER_BLOCK, 0)
+		var to: Vector3 = player.center() - c
+		var dist := to.length() * PX_PER_BLOCK
+		if _mimic == 3:
+			velocity = Vector3.ZERO
+			if _just_hit:
+				_mimic = 4
+				_just_hit = false
+				ai_count = 0
+			continue
+		ai_count += 1
+		if _mimic == 4:
+			velocity = Vector3.ZERO
+			if ai_count > 80:
+				ai_count = 0
+				_mimic = 0
+			continue
+		if _just_hit:
+			_just_hit = false
+			_mimic_t = 0.0
+			_mimic = 0
+		var dash := _mimic_t >= 0.0 and _mimic == 2
+		var casting := _mimic_t >= 0.0 and _mimic == 1
+		var fleeing := not dash and not casting and ai_count <= 600 and ai_count < -30
+		var speed := 1.0
+		var accel := 0.011
+		if not dash:
+			if ai_count > 600:
+				accel *= 8.0
+				speed = 4.0
+				if ai_count > 650:
+					ai_count = 0
+			elif dist < 100.0 and ai_count >= 0:
+				ai_count = -60
+			elif dist < 250.0:
+				ai_timer += 0.9
+				velocity.y += (0.019 if ai_timer > 0.0 else -0.019) * PX_TICK
+				var side := Vector3(-to.z, 0, to.x).normalized()
+				velocity += side * (0.019 if absf(ai_timer) > 100.0 else -0.019) * PX_TICK
+				if ai_timer > 200.0:
+					ai_timer = -200.0
+		if fleeing:
+			speed = 8.0
+			accel = 0.25
+		elif dist > 350.0:
+			speed = 5.0
+			accel = 0.3
+		elif dist > 300.0:
+			speed = 3.0
+			accel = 0.2
+		elif dist > 250.0:
+			speed = 1.5
+			accel = 0.1
+		if dash:
+			if _mimic_t < 10.0:
+				velocity *= 0.5
+			else:
+				var way := velocity if velocity.length() >= 0.1 * PX_TICK else to
+				velocity = way.normalized() * 14.0 * PX_TICK
+		else:
+			var want := to.normalized() * speed * PX_TICK * (-1.0 if fleeing else 1.0) if player.alive else Vector3(0, -speed * 0.5, 0) * PX_TICK
+			for axis in 3:
+				velocity[axis] = move_toward(velocity[axis], want[axis], accel * PX_TICK)
+		# Its turns.
+		var can_dash := dist >= 100.0 and dist <= 300.0 and _mimic_t >= 0.0 and _mimic in [0, 2]
+		var can_cast := dist <= 500.0 and _mimic_t >= 0.0 and _mimic in [0, 1]
+		if can_dash and (not can_cast or randi() % 3 == 0):
+			_mimic_t += 1.0
+			if _mimic == 0 and _mimic_t > 120.0:
+				_mimic_t = 0.0
+				_mimic = 2
+			elif _mimic == 2 and _mimic_t > 60.0:
+				_mimic_t = -300.0
+				_mimic = 0
+		elif can_cast:
+			_mimic_t += 1.0
+			if _mimic == 0 and _mimic_t > 120.0:
+				_mimic_t = 0.0
+				_mimic = 1
+			elif _mimic == 1:
+				if _mimic_t > 30.0:
+					_mimic_t = 0.0
+					_mimic = 0
+				elif _mimic_t == 17.0 and player.alive:
+					var cast: Dictionary = def.cast
+					Audio.play_at("Item_8", c, 0.6)
+					var p := Game.current.spawn_projectile(cast.projectile, c, to.normalized() * float(cast.speed), int(cast.damage), 0.0, 0.0, 0.0, 0.4, false)
+					p.life = CHAOS_BALL_LIFE
+		else:
+			_mimic_t = minf(0.0, _mimic_t + 1.0)
+			_mimic = 0
+		_mimic_frame_tick()
+	if _mimic != 3:
+		look_dir = player.center() - center()
+
+
+## Terraria's FindFrame for it: the book (0), waking (on to 16, 5 ticks a
+## frame), dashing (17 on, held at 19 till its 40th tick, then to 23),
+## casting (24 to 29) and else flapping 17, 22, 23 (6 ticks a frame).
+var _mimic_f := 0
+var _mimic_fc := 0
+
+
+func _mimic_frame_tick() -> void:
+	match _mimic:
+		3:
+			_mimic_f = 0
+			_mimic_fc = 0
+		4:
+			_mimic_fc += 1
+			if _mimic_fc >= 5:
+				_mimic_fc = 0
+				_mimic_f = mini(16, _mimic_f + 1)
+		2:
+			if _mimic_t == 0.0 or _mimic_f < 17 or _mimic_f > 23:
+				_mimic_f = 17
+			_mimic_fc += 1
+			if _mimic_fc >= 5:
+				_mimic_fc = 0
+				_mimic_f = mini(23, _mimic_f + 1)
+				if _mimic_t < 40.0:
+					_mimic_f = mini(19, _mimic_f)
+		1:
+			if _mimic_f < 24 or _mimic_f > 29:
+				_mimic_f = 24
+			_mimic_fc += 1
+			if _mimic_fc >= 5:
+				_mimic_fc = 0
+				_mimic_f = mini(29, _mimic_f + 1)
+		_:
+			if _mimic_f < 17 or _mimic_f > 23:
+				_mimic_f = 17
+			_mimic_fc += 1
+			if _mimic_fc >= 6:
+				_mimic_fc = 0
+				_mimic_f = {17: 22, 22: 23}.get(_mimic_f, 17)
+	sprite.set_frame(_mimic_f)
 
 
 ## Ticks of Terraria's AI this frame.

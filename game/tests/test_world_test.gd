@@ -454,6 +454,7 @@ func _run() -> void:
 	await _hellstone_checks(c)
 	await _dungeon_enemy_checks(c)
 	await _trap_checks(c)
+	await _boulder_kind_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -1017,8 +1018,11 @@ func _cut_checks(c: Vector3i) -> void:
 		w.set_block(base + Vector3i(-3, 0, z), id.call("tall_grass"))
 	game.spawn_projectile("WoodenArrowFriendly", Vector3(base) + Vector3(3.5, 0.5, -2.2), Vector3(0, 0, -20), 5, 0.0)
 	game.spawn_projectile("WoodenArrowFriendly", Vector3(base) + Vector3(-2.5, 0.5, -2.2), Vector3(0, 0, -20), 5, 0.0, 0.0, 0.0, 0.5, false)
-	for i in 30:
+	# Until the arrow has flown past it all (frame timing varies headless).
+	for i in 120:
 		await get_tree().physics_frame
+		if range(-8, -2).all(func(z): return w.get_block(base + Vector3i(3, 0, z)) == 0):
+			break
 	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(3, 0, z)) == 0), "your arrow cuts the grass it flies through (left at z %s; about: %s)" % [range(-8, -2).filter(func(z): return w.get_block(base + Vector3i(3, 0, z)) != 0), game.npcs().filter(func(n): return n.global_position.distance_to(Vector3(base)) < 12.0).map(func(n): return n.kind)])
 	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(-3, 0, z)) == id.call("tall_grass")), "an enemy's doesn't")
 	p.inventory.slots[9] = null
@@ -5599,6 +5603,72 @@ func _hellstone_checks(c: Vector3i) -> void:
 	await frames(2)
 
 
+## The Librarian Skeleton's books and the Water Bolt Mimic, on a stone floor
+## high over the test world with a book on it.
+func _book_dweller_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var o := c + Vector3i(40, 50, 30)
+	var stone := Data.block_id("stone")
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			w.set_block(o + Vector3i(x, -1, z), stone)
+			for y in range(0, 6):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	var book := o + Vector3i(6, 0, 0)
+	w.set_block(book, Data.block_id("book"))
+	p.global_position = Vector3(o) + Vector3(-5.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	p.look_at_yaw_pitch(PI / 2.0, 0.0)
+	# The Librarian Skeleton casts off the book: it rises, harmless, then
+	# flies at you.
+	var lib: NPC = game.spawn_npc("LibrarianSkeleton", Vector3(o) + Vector3(3.5, 0, 0.5))
+	lib._cast_t = 98.0
+	var books: Array = []
+	for i in 10:
+		await frames(1)
+		books = game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "LibrarianSkeletonBook")
+		if not books.is_empty():
+			break
+	check(books.size() == 1 and books[0].global_position.distance_to(Vector3(book) + Vector3(0.5, 0.5, 0.5)) < 0.6 and books[0].velocity.y > 0.0,
+			"a Librarian Skeleton's book rises off the placed book")
+	if books.size() == 1:
+		var b: Projectile = books[0]
+		var life := p.life
+		p.god_mode = false
+		await frames(20)
+		check(is_instance_valid(b) and not b._launched and p.life == life, "hurting nothing while it rises")
+		await frames(40)
+		var to_you: Vector3 = p.global_position + Vector3(0, 0.9, 0) - b.global_position
+		check(is_instance_valid(b) and b._launched and b.velocity.normalized().dot(to_you.normalized()) > 0.8 and b.velocity.length() > 30.0,
+				"then it flies at you (%.1f blocks/s)" % (b.velocity.length() if is_instance_valid(b) else 0.0))
+		p.god_mode = true
+		if is_instance_valid(b):
+			b.queue_free()
+	lib.queue_free()
+	# The Water Bolt Mimic sits as a book till it's hurt.
+	var mimic: NPC = game.spawn_npc("WaterBoltMimic", Vector3(book) + Vector3(0.5, 0.5, 0.5))
+	var at := mimic.global_position
+	p.global_position = Vector3(book) + Vector3(-1.5, 0, 0.5)
+	await frames(60)
+	check(mimic.global_position.distance_to(at) < 0.01 and mimic._mimic == 3 and mimic._mimic_f == 0, "a Water Bolt Mimic sits still as a book, even with you by it")
+	mimic.hit(1, 0.0, Vector3.RIGHT, 0.0)
+	await frames(10)
+	check(mimic._mimic == 4 and mimic.global_position.distance_to(at) < 0.01, "hurt, it wakes")
+	p.global_position = Vector3(o) + Vector3(-9.5, 0, 0.5)
+	await frames(110)
+	check(mimic._mimic != 3 and mimic._mimic != 4 and mimic.global_position.distance_to(at) > 0.3, "and comes after you (%.1f blocks)" % mimic.global_position.distance_to(at))
+	mimic.queue_free()
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			for y in range(-1, 6):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+
+
 func _dungeon_enemy_checks(c: Vector3i) -> void:
 	var p := game.player
 	var w: VoxelWorld = game.world
@@ -5626,6 +5696,20 @@ func _dungeon_enemy_checks(c: Vector3i) -> void:
 	var slime: float = share.call(0, false, "DungeonSlime")
 	check(absf(skull - 0.139) < 0.012 and absf(spike - 0.324) < 0.015 and absf(wheel - 0.194) < 0.013 and absf(caster - 0.111) < 0.01 and absf(slime - 0.0286) < 0.006
 			and share.call(1, true, "SpikeBall") == 0.0, "the Dungeon's spawns are Terraria's chain (skull %.3f, spike %.3f, wheel %.3f, caster %.3f, slime %.3f)" % [skull, spike, wheel, caster, slime])
+	# By a placed book (1.4.5): 1 in 8 a Water Bolt Mimic, else 1 in 10 a
+	# Librarian Skeleton; with no book, nothing.
+	var by_book := func(kind: String, found: bool) -> float:
+		var n := 0
+		for i in 20000:
+			if Spawner.dungeon_pick(2, false, func() -> bool: return found) == kind:
+				n += 1
+		return n / 20000.0
+	var mimic: float = by_book.call("WaterBoltMimic", true)
+	var librarian: float = by_book.call("LibrarianSkeleton", true)
+	var no_book: float = by_book.call("", false)
+	check(absf(mimic - 0.0833) < 0.008 and absf(librarian - 0.0583) < 0.007 and absf(no_book - 0.1416) < 0.01 and by_book.call("WaterBoltMimic", false) == 0.0,
+			"by a book, Water Bolt Mimics (%.3f) and Librarian Skeletons (%.3f); no book, no spawn (%.3f)" % [mimic, librarian, no_book])
+	await _book_dweller_checks(c)
 	# Its walls by worldgen's parts: the last blob a spot is in.
 	w.add_decoration("dungeon_part", Vector3i(5000, 0, 5000), 1 + 4 * 300)
 	w.add_decoration("dungeon_part", Vector3i(5010, 0, 5000), 2 + 4 * 100)
@@ -5777,6 +5861,105 @@ func _dungeon_enemy_checks(c: Vector3i) -> void:
 	p.velocity = Vector3.ZERO
 	p._fall_start = p.global_position.y  # (moved down, not fallen)
 	await frames(2)
+
+
+## Terraria's boulder kinds (AI 25's variants), rolled down a tunnel along x
+## toward its +x end.
+func _boulder_kind_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var o := c + Vector3i(-30, 45, 0)
+	var stone := Data.block_id("stone")
+	for x in range(-12, 13):
+		for z in range(-3, 4):
+			for y in range(-4, 12):
+				var open := z == 0 and y >= 0 and y < 4 and absi(x) < 12
+				w.set_block(o + Vector3i(x, y, z), 0 if open else stone)
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	p.global_position = Vector3(o) + Vector3(-10.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	p.look_at_yaw_pitch(-PI / 2.0, 0.0)
+	var roll := func(kind: String, from_x: float, speed: float) -> Projectile:
+		var b: Projectile = game.spawn_projectile(kind, Vector3(o) + Vector3(from_x, 0.5, 0.5), Vector3(speed, 0, 0), 100 if kind == "RainbowBoulder" else 70, 10.0, 0.0, 0.0, 1.0, false)
+		b.boulder = true
+		b._roll = Vector3.RIGHT
+		return b
+	# Lava Boulder: into the end wall it breaks, and lava fills round it.
+	var lava: Projectile = roll.call("LavaBoulder", 6.5, 15.0)
+	for i in 60:
+		await frames(1)
+		if not is_instance_valid(lava):
+			break
+	var pooled := 0
+	for x in range(6, 12):
+		for y in range(0, 4):
+			if w.get_liquid(o + Vector3i(x, y, 0)) == Vector2i(Player.LIQ_LAVA, 63):
+				pooled += 1
+	check(not is_instance_valid(lava) and pooled >= 3, "a Lava Boulder breaks on a wall and leaves lava round it (%d cells)" % pooled)
+	for x in range(-12, 13):
+		for y in range(0, 4):
+			w.set_liquid(o + Vector3i(x, y, 0), 0, 0)
+	# Bouncy Boulder: the wall bounces it back.
+	var bouncy: Projectile = roll.call("BouncyBoulder", 6.5, 15.0)
+	var back := false
+	for i in 60:
+		await frames(1)
+		if is_instance_valid(bouncy) and bouncy.velocity.x < -5.0:
+			back = true
+			break
+	check(back, "a Bouncy Boulder bounces off the wall")
+	if is_instance_valid(bouncy):
+		bouncy.queue_free()
+	# Ghoulder: the wall turns it into a ghost, which comes through the rock
+	# at you while you look away and stops while you look at it.
+	p.look_at_yaw_pitch(PI / 2.0, 0.0)
+	var ghoulder: Projectile = roll.call("Ghoulder", 6.5, 15.0)
+	for i in 60:
+		await frames(1)
+		if not is_instance_valid(ghoulder) or ghoulder._ghost:
+			break
+	check(is_instance_valid(ghoulder) and ghoulder._ghost, "a Ghoulder turns into a ghost on hitting a wall")
+	if is_instance_valid(ghoulder):
+		var d0 := ghoulder.global_position.distance_to(p.global_position)
+		await frames(40)
+		var d1 := ghoulder.global_position.distance_to(p.global_position)
+		check(d1 < d0 - 1.0 and ghoulder.frame > 0, "it flies at you while you look away (%.1f -> %.1f blocks)" % [d0, d1])
+		p.look_at_yaw_pitch(-PI / 2.0, 0.0)
+		await frames(40)
+		var flat := Vector2(ghoulder.velocity.x, ghoulder.velocity.z).length()
+		check(flat < 2.0, "and stops while you look at it (%.1f blocks/s)" % flat)
+		ghoulder.queue_free()
+	# The pet boulder breaks landing hard.
+	var pet: Projectile = game.spawn_projectile("BoulderThatSpawnsPet", Vector3(o) + Vector3(0.5, 2.5, 0.5), Vector3(0, -25.0, 0), 70, 10.0, 0.0, 0.0, 1.0, false)
+	pet.boulder = true
+	await frames(10)
+	check(not is_instance_valid(pet), "the pet boulder breaks on a hard landing")
+	# Rainbow Boulder: friendly - it never hurts you - and it leaps at you.
+	p.god_mode = false
+	p.life = p.life_max
+	p.global_position = Vector3(o) + Vector3(-6.5, 0, 0.5)
+	var rainbow: Projectile = roll.call("RainbowBoulder", 4.5, 0.0)
+	var d_start := rainbow.global_position.distance_to(p.global_position)
+	var nearest := d_start
+	for i in 120:
+		await frames(1)
+		if not is_instance_valid(rainbow):
+			break
+		nearest = minf(nearest, rainbow.global_position.distance_to(p.global_position))
+	check(nearest < d_start - 3.0, "a Rainbow Boulder leaps at you (%.1f -> %.1f blocks)" % [d_start, nearest])
+	check(p.life == p.life_max, "without hurting you (%d)" % p.life)
+	if is_instance_valid(rainbow):
+		rainbow.queue_free()
+	for x in range(-14, 15):
+		for z in range(-5, 6):
+			for y in range(-6, 14):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	p.god_mode = was_god
 
 
 func _trap_checks(c: Vector3i) -> void:

@@ -2129,7 +2129,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     {
         let rooms: Vec<_> = cabins.iter().flatten().map(|r| (r.x0 - 3, r.x1() + 3, r.y0 - 3, r.ceiling() + 3, r.z0 - 3, r.z1() + 3)).collect();
         let keep_out = |p: (i32, i32, i32)| rooms.iter().any(|r| p.0 >= r.0 && p.0 <= r.1 && p.1 >= r.2 && p.1 <= r.3 && p.2 >= r.4 && p.2 <= r.5);
-        crate::traps::traps_pass(w, &mut Rng::new(seed as u64 ^ 0x7a5_7e47), &l, &keep_out);
+        crate::traps::traps_pass(w, &mut Rng::new(seed as u64 ^ 0x7a5_7e47), &l, &keep_out, dungeon.map(|(x, _, z, _)| (x, z)));
     }
     // Springs that were in the rock a cabin now stands in.
     w.decorations.retain(|d| {

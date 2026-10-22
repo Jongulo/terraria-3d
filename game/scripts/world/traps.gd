@@ -7,7 +7,9 @@ extends RefCounted
 ## - Dart trap: a Poison Dart out of its face (12 px a tick, 20 damage; it
 ##   poisons you 10 s), 200 ticks at least between shots.
 ## - Boulder: the actuated stone under it drops away and the Boulder falls
-##   and rolls (Projectile "Boulder").
+##   and rolls (its block's "boulder": Projectile "Boulder", "LavaBoulder",
+##   "Ghoulder"...).
+## - Geyser: not wired to anything in a new world, so it never goes off.
 ## - Explosives: they blow up (Terraria's 500-damage blast, 260 px across),
 ##   blocks and all.
 
@@ -92,7 +94,9 @@ func _drop_boulder(game, at: Vector3i) -> void:
 	while Data.block(w.get_block(q)).get("actuated", false):
 		w.set_block(q, 0)
 		q += Vector3i.DOWN
+	var kind: String = Data.block(w.get_block(at)).get("boulder", "Boulder")
 	w.set_block(at, 0)
-	# Boulder: 70 damage (Terraria's tile drop; doubled on you as hostile).
-	var b: Projectile = game.spawn_projectile("Boulder", Vector3(at) + Vector3(0.5, 0.5, 0.5), Vector3.ZERO, 70, 10.0, 0.0, 0.0, 1.0, false)
+	# Terraria's Check2x2: 70 damage (doubled on you as hostile), the Rainbow
+	# Boulder's 100.
+	var b: Projectile = game.spawn_projectile(kind, Vector3(at) + Vector3(0.5, 0.5, 0.5), Vector3.ZERO, 100 if kind == "RainbowBoulder" else 70, 10.0, 0.0, 0.0, 1.0, false)
 	b.boulder = true

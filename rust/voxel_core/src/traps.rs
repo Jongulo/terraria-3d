@@ -19,9 +19,17 @@
 //!   actuated stone (an orange plate). Stepping on the plate drops the plug.
 //! - **Explosives** (1 in 20): 4-6 tiles down through solid ground beside the
 //!   plate, with solid ground all round it (a gray or brown plate).
-//! - Deep down (30 tiles under the lava line, 1 in 6) Terraria's is a
-//!   Geyser instead, not wired to anything; that isn't here yet (nothing is
-//!   placed, as if it were).
+//!   The boulder is one of Terraria's kinds, tried in its order: a Ghoulder
+//!   (1 in 6 near the Dungeon: on its side of the world, within 1000 of
+//!   Terraria's 4200 tiles of it, here that share of the world's width), a
+//!   Lava Boulder (1 in 3 with lava within 60 tiles), a Rainbow Boulder (1 in
+//!   25), a Bouncy Boulder (1 in 20), else a plain one - the first 2, 4 or 6
+//!   of those (small, medium, large worlds) the boulder that leaves a pet.
+//!   (Terraria's Spider Boulder needs a spider cave's wall within 80 tiles;
+//!   there are no spider caves yet, so it still draws its 1 in 2 and never
+//!   goes in.)
+//! - **Geyser** (deep down: 30 tiles under the lava line, 1 in 6): on the
+//!   ground with nothing beside it and no water in it, not wired to anything.
 
 use crate::world::{Decoration, World};
 use crate::worldgen::{Layers, Rng};
@@ -39,6 +47,15 @@ pub struct TrapIds {
     boulder: u16,
     plug: u16,
     explosives: u16,
+    geyser: u16,
+    /// Ghoulder, Lava, Rainbow, Bouncy, pet boulder.
+    kinds: [u16; 5],
+    /// All the boulders (Terraria's Boulders set).
+    boulders: Vec<u16>,
+    /// Boulders that still leave a pet (Terraria's boulderPetsPlaced).
+    pets_left: std::cell::Cell<i32>,
+    /// The Dungeon's entrance (x, z), for the Ghoulder.
+    pub dungeon_at: Option<(i32, i32)>,
     stone: u16,
     spike: u16,
     mushroom_grass: u16,
@@ -57,13 +74,21 @@ impl TrapIds {
             boulder: id("boulder"),
             plug: id("boulder_plug"),
             explosives: id("explosives"),
+            geyser: id("geyser"),
+            kinds: [id("ghoulder"), id("lava_boulder"), id("rainbow_boulder"), id("bouncy_boulder"), id("pet_boulder")],
+            boulders: ["boulder", "ghoulder", "lava_boulder", "rainbow_boulder", "bouncy_boulder", "pet_boulder"]
+                .iter().map(|n| id(n)).filter(|&b| b != 0).collect(),
+            // GetWorldSize: 2, 4 or 6.
+            pets_left: std::cell::Cell::new(if w.sx <= 800 { 2 } else if w.sx <= 1200 { 4 } else { 6 }),
+            dungeon_at: None,
             stone: id("stone"),
             spike: id("spike"),
             mushroom_grass: id("mushroom_grass"),
             snow: [id("snow_block"), id("ice_block")],
             // Chests and boulders keep a boulder trap away (IsTileNearby 21,
             // 467; the Boulders set).
-            avoid_near: ["chest", "gold_chest", "locked_gold_chest", "frozen_chest", "ivy_chest", "rich_mahogany_chest", "sandstone_chest", "mushroom_chest", "locked_shadow_chest", "boulder"]
+            avoid_near: ["chest", "gold_chest", "locked_gold_chest", "frozen_chest", "ivy_chest", "rich_mahogany_chest", "sandstone_chest", "mushroom_chest", "locked_shadow_chest",
+                    "boulder", "ghoulder", "lava_boulder", "rainbow_boulder", "bouncy_boulder", "pet_boulder"]
                 .iter().map(|n| id(n)).filter(|&b| b != 0).collect(),
             // Not on spikes, nor a dart trap's wall a door or spikes.
             no_ground: ["spike", "dungeon_door", "blue_dungeon_door", "green_dungeon_door", "pink_dungeon_door", "door_top", "wooden_door"]
@@ -147,8 +172,7 @@ pub fn place_trap(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, start
         return false;
     }
     if kind == 3 {
-        // (A Geyser: not here yet.)
-        return true;
+        return geyser(w, ids, p, lava);
     }
     // Room round the plate and over it.
     for (dx, dz) in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)] {
@@ -230,7 +254,7 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
                 for dy in 0..3 {
                     let c = (bx + dx, y0 + dy, bz + dz);
                     let b = w.get(c.0, c.1, c.2);
-                    if ids.dungeon.contains(&b) || b == ids.boulder || b == ids.plug {
+                    if ids.dungeon.contains(&b) || ids.boulders.contains(&b) || b == ids.plug {
                         return false;
                     }
                     if !solid(w, c) {
@@ -250,7 +274,7 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
     if k <= blocks(5) {
         return false;
     }
-    if near(w, (bx, top + 1, bz), blocks(4), &ids.avoid_near) || near(w, (bx, top + 1, bz), blocks(10), &[ids.boulder]) {
+    if near(w, (bx, top + 1, bz), blocks(4), &ids.avoid_near) || near(w, (bx, top + 1, bz), blocks(10), &ids.boulders) {
         return false;
     }
     // The shaft from the pocket down to the plate; stone round the pocket.
@@ -268,10 +292,80 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
         }
     }
     set(w, p, ids.plates[2]);
-    set(w, (bx, top + 2, bz), ids.boulder);
+    let kind = boulder_kind(w, rng, ids, (bx, top + 2, bz));
+    set(w, (bx, top + 2, bz), kind);
     set(w, (bx, top + 1, bz), ids.plug);
     set(w, (bx, top, bz), ids.plug);
     wire(w, p, (bx, top + 2, bz));
+    true
+}
+
+/// Which boulder (placeTrap's pick, in its order; its random numbers drawn
+/// whether or not the place suits).
+fn boulder_kind(w: &World, rng: &mut Rng, ids: &TrapIds, at: P) -> u16 {
+    let [ghoulder, lava, rainbow, bouncy, pet] = ids.kinds;
+    // Spider Boulder: no spider caves.
+    let _ = rng.range(0, 2);
+    let mut kind = ids.boulder;
+    if rng.range(0, 6) == 0 && near_dungeon(w, ids, at) && ghoulder != 0 {
+        kind = ghoulder;
+    } else if rng.range(0, 3) == 0 && near_lava(w, at) && lava != 0 {
+        kind = lava;
+    } else if rng.range(0, 25) == 0 && rainbow != 0 {
+        kind = rainbow;
+    } else if rng.range(0, 20) == 0 && bouncy != 0 {
+        kind = bouncy;
+    }
+    if kind == ids.boulder && ids.pets_left.get() > 0 && pet != 0 {
+        ids.pets_left.set(ids.pets_left.get() - 1);
+        kind = pet;
+    }
+    kind
+}
+
+/// closeEnoughToDungeonToSpawnGhoulder: on the Dungeon's side of the world
+/// and within 1000 of Terraria's 4200 tiles of it (that share of the width).
+fn near_dungeon(w: &World, ids: &TrapIds, at: P) -> bool {
+    let Some((dx, dz)) = ids.dungeon_at else { return false };
+    let half = w.sx / 2;
+    if (dx < half) != (at.0 < half) {
+        return false;
+    }
+    let r = w.sx * 1000 / 4200;
+    (at.0 - dx).abs() <= r && (at.2 - dz).abs() <= r
+}
+
+/// closeEnoughToLavaToSpawnLavaBoulder: lava within 60 tiles, looked for
+/// every 3rd tile (here 40 blocks, every 2nd).
+fn near_lava(w: &World, at: P) -> bool {
+    let r = blocks(60);
+    for x in (at.0 - r..=at.0 + r).step_by(2) {
+        for y in (at.1 - r..=at.1 + r).step_by(2) {
+            for z in (at.2 - r..=at.2 + r).step_by(2) {
+                if w.in_bounds(x, y, z) {
+                    let (kind, amount) = w.liquid_at(x, y, z);
+                    if amount > 0 && kind == crate::world::LIQ_LAVA {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// placeTrap's Geyser: on solid ground, nothing beside it, no water in it.
+fn geyser(w: &mut World, ids: &TrapIds, p: P, liquid: (u8, u8)) -> bool {
+    if ids.geyser == 0 || w.get(p.0, p.1, p.2) != 0 || (liquid.1 > 0 && liquid.0 != crate::world::LIQ_LAVA) {
+        return false;
+    }
+    if !solid(w, (p.0, p.1 - 1, p.2)) || ids.no_ground.contains(&w.get(p.0, p.1 - 1, p.2)) {
+        return false;
+    }
+    if [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dz)| w.get(p.0 + dx, p.1, p.2 + dz) != 0) {
+        return false;
+    }
+    set(w, p, ids.geyser);
     true
 }
 
@@ -305,8 +399,9 @@ fn explosives(w: &mut World, rng: &mut Rng, ids: &TrapIds, p: P) -> bool {
 /// 1150 tries at a random spot from the surface to the Underworld's top, in
 /// the open rock (Terraria: no wall behind it; here not in a structure or
 /// `keep_out`).
-pub fn traps_pass(w: &mut World, rng: &mut Rng, l: &Layers, keep_out: &dyn Fn(P) -> bool) -> usize {
-    let ids = TrapIds::of(w);
+pub fn traps_pass(w: &mut World, rng: &mut Rng, l: &Layers, keep_out: &dyn Fn(P) -> bool, dungeon_at: Option<(i32, i32)>) -> usize {
+    let mut ids = TrapIds::of(w);
+    ids.dungeon_at = dungeon_at;
     if !ids.ready() {
         return 0;
     }
@@ -342,7 +437,8 @@ pub(crate) mod tests {
     pub(crate) fn add_trap_defs(w: &mut World) {
         let mut id = w.defs.len() as u16;
         for (name, solid) in [("gray_pressure_plate", false), ("brown_pressure_plate", false), ("orange_pressure_plate", false), ("dart_trap", true),
-                ("boulder", true), ("boulder_plug", true), ("explosives", true), ("stone", true)] {
+                ("boulder", true), ("boulder_plug", true), ("explosives", true), ("stone", true), ("geyser", false),
+                ("ghoulder", true), ("lava_boulder", true), ("rainbow_boulder", true), ("bouncy_boulder", true), ("pet_boulder", true)] {
             if w.id_of(name) != 0 {
                 continue;
             }
@@ -413,7 +509,7 @@ pub(crate) mod tests {
         assert!(place_trap(&mut w, &mut rng, &l, &ids, (40, 22, 48), 1, 0), "a boulder trap goes in");
         let (plate, b) = wires(&w)[0];
         assert_eq!(w.get(plate.0, plate.1, plate.2), ids.plates[2], "an orange plate");
-        assert_eq!(w.get(b.0, b.1, b.2), ids.boulder, "wired to the boulder");
+        assert!(ids.boulders.contains(&w.get(b.0, b.1, b.2)), "wired to the boulder");
         assert!(b.1 - plate.1 > blocks(5), "well over the plate ({} up)", b.1 - plate.1);
         assert_eq!(w.get(b.0, b.1 - 1, b.2), ids.plug);
         assert_eq!(w.get(b.0, b.1 - 2, b.2), ids.plug, "resting on its plug");
@@ -436,9 +532,50 @@ pub(crate) mod tests {
     #[test]
     fn the_traps_pass_places_its_share() {
         let (mut w, l) = cave();
-        let n = traps_pass(&mut w, &mut Rng::new(11), &l, &|_| false);
+        let n = traps_pass(&mut w, &mut Rng::new(11), &l, &|_| false, None);
         // 210 per 640 x 640: 4.7 here, the tunnel taking what fits.
         assert!(n >= 1 && n <= 5, "{n} traps");
         assert!(!wires(&w).is_empty() || n > 0);
+    }
+
+    #[test]
+    fn the_first_boulders_leave_pets_then_plain_or_rarer_ones() {
+        let (mut w, _l) = cave();
+        let ids = TrapIds::of(&w);
+        let [ghoulder, lava, rainbow, bouncy, pet] = ids.kinds;
+        let mut rng = Rng::new(5);
+        let mut got = vec![];
+        for _ in 0..200 {
+            got.push(boulder_kind(&w, &mut rng, &ids, (40, 30, 48)));
+        }
+        assert_eq!(&got[..2], &[pet, pet], "a small world's first two boulders leave pets");
+        assert!(!got[2..].contains(&pet));
+        assert!(!got.contains(&ghoulder) && !got.contains(&lava), "no Dungeon or lava near");
+        let (r, b) = (got.iter().filter(|&&k| k == rainbow).count(), got.iter().filter(|&&k| k == bouncy).count());
+        assert!(r >= 1 && r <= 25 && b >= 1 && b <= 30, "1 in 25 rainbow ({r}), 1 in 20 bouncy ({b})");
+        // Lava within 40 blocks: a third are Lava Boulders.
+        let i = w.idx(70, 30, 48);
+        w.liquid[i] = crate::world::liq_pack(crate::world::LIQ_LAVA, crate::world::LIQ_MAX);
+        assert!(near_lava(&w, (40, 30, 48)));
+        let n = (0..300).filter(|_| boulder_kind(&w, &mut rng, &ids, (40, 30, 48)) == lava).count();
+        assert!(n > 60 && n < 140, "{n} of 300 Lava Boulders");
+        // By the Dungeon, on its side: a sixth are Ghoulders.
+        let mut ids = TrapIds::of(&w);
+        ids.dungeon_at = Some((10, 40));
+        assert!(near_dungeon(&w, &ids, (20, 30, 48)) && !near_dungeon(&w, &ids, (60, 30, 48)), "the Dungeon's side only");
+        let n = (0..300).filter(|_| boulder_kind(&w, &mut rng, &ids, (20, 30, 48)) == ghoulder).count();
+        assert!(n > 25 && n < 80, "{n} of 300 Ghoulders");
+    }
+
+    #[test]
+    fn a_geyser_deep_down_on_open_ground() {
+        let (mut w, l) = cave();
+        let ids = TrapIds::of(&w);
+        let mut rng = Rng::new(9);
+        assert!(place_trap(&mut w, &mut rng, &l, &ids, (40, 22, 48), 3, 0), "a geyser goes in");
+        assert_eq!(w.get(40, 20, 48), ids.geyser, "on the tunnel's floor");
+        assert!(wires(&w).is_empty(), "not wired to anything");
+        // Not against a wall: z 47 has the tunnel's side at 46.
+        assert!(!place_trap(&mut w, &mut rng, &l, &ids, (50, 22, 47), 3, 0));
     }
 }

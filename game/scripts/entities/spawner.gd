@@ -115,10 +115,47 @@ func _spawn_dungeon(game, p: Vector3) -> void:
 			wall = randi() % 3
 		var spikes_near: bool = game.npcs().any(func(n): return n.kind == "SpikeBall" and absf(n._hang.x - at.x) < SPIKE_BALL_ROOM \
 				and absf(n._hang.y - at.y) < SPIKE_BALL_ROOM and absf(n._hang.z - at.z) < SPIKE_BALL_ROOM)
-		var kind := dungeon_pick(wall, spikes_near)
+		var book = [null]
+		var find_book := func() -> bool:
+			book[0] = _book_near(game, at)
+			return book[0] != null
+		var kind := dungeon_pick(wall, spikes_near, find_book)
+		if kind in ["WaterBoltMimic", "LibrarianSkeleton"]:
+			# In front of the book (the Librarian on the floor under it).
+			var b: Vector3i = book[0]
+			var spot := Vector3(b) + Vector3(0.5, 0.5, 0.5)
+			if kind == "LibrarianSkeleton":
+				var cell: Vector3i = b
+				while cell.y > b.y - 8 and not game.world.is_solid(cell + Vector3i.DOWN):
+					cell += Vector3i.DOWN
+				spot = Vector3(cell.x + 0.5, cell.y, cell.z + 0.5)
+			game.spawn_npc(kind, spot)
+			return
+		if kind == "":
+			return
 		var flies: bool = Data.npcs[kind].ai in ["skull", "spike_ball", "wheel"]
 		game.spawn_npc(kind, at + (Vector3(0, 1.0, 0) if flies else Vector3.ZERO))
 		return
+
+
+## A placed book within 16 blocks of `at` (Terraria's AI_FindNearbyBook over
+## 32 x 32 tiles round the spawn spot), the nearest to it that's out of the
+## player's sight (as the spawns are: 14 blocks off and not ahead of them).
+static func _book_near(game, at: Vector3):
+	var p = game.player
+	var books: PackedInt32Array = game.world.find_blocks(Vector3i(at.floor()), Vector3i(16, 16, 16), NPC.book_ids(), 256)
+	var best = null
+	var best_d := INF
+	for i in range(0, books.size(), 3):
+		var b := Vector3i(books[i], books[i + 1], books[i + 2])
+		var from_player: Vector3 = Vector3(b) + Vector3(0.5, 0.5, 0.5) - p.global_position
+		if from_player.length() < 14.0 or from_player.normalized().dot(p.forward()) > 0.6:
+			continue
+		var d := at.distance_to(Vector3(b))
+		if d < best_d:
+			best_d = d
+			best = b
+	return best
 
 
 ## No Spike Ball within 300 px of another's anchor (Terraria's NearSpikeBall).
@@ -128,10 +165,11 @@ const SPIKE_BALL_ROOM := 300.0 / 24.0
 ## Terraria's Dungeon chain, roll by roll: 1 in 35 a Dungeon Slime; on slab
 ## walls 1 in 3 a Spike Ball (none near another), on tiled walls 1 in 5 a
 ## Blazing Wheel, on brick 1 in 7 a Cursed Skull; 1 in 7 a Dark Caster; then
-## Angry Bones: 1 in 5 each the three big ones, else 1 in 4 Big Boned, 1 in 5
-## Short Bones, else the plain one. (Not yet: the Bound Mechanic, and the
-## Librarian Skeleton and Water Bolt Mimic by a book.)
-static func dungeon_pick(wall: int, spikes_near: bool) -> String:
+## 1 in 8 a Water Bolt Mimic, else 1 in 10 a Librarian Skeleton, by a placed
+## book that `book_near` finds (none: nothing spawns, ""); then Angry Bones:
+## 1 in 5 each the three big ones, else 1 in 4 Big Boned, 1 in 5 Short
+## Bones, else the plain one. (Not yet: the Bound Mechanic.)
+static func dungeon_pick(wall: int, spikes_near: bool, book_near := Callable()) -> String:
 	if randi() % 35 == 0:
 		return "DungeonSlime"
 	if wall == 1 and randi() % 3 == 0 and not spikes_near:
@@ -142,7 +180,15 @@ static func dungeon_pick(wall: int, spikes_near: bool) -> String:
 		return "CursedSkull"
 	if randi() % 7 == 0:
 		return "DarkCaster"
+	# 1.4.5's book dwellers, in front of a placed book (none: nothing spawns).
+	var bookish := ""
+	if randi() % 8 == 0:
+		bookish = "WaterBoltMimic" if book_near.is_valid() and book_near.call() else "-"
+	elif randi() % 10 == 0:
+		bookish = "LibrarianSkeleton" if book_near.is_valid() and book_near.call() else "-"
 	var r := randi() % 5
+	if bookish != "":
+		return "" if bookish == "-" else bookish
 	if r < 3:
 		return ["AngryBonesBig", "AngryBonesBigMuscle", "AngryBonesBigHelmet"][r]
 	if randi() % 4 == 0:

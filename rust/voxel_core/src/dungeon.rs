@@ -98,8 +98,6 @@
 //!   Bewitching Tables first (ground_furniture).
 //! - Traps (DungeonGlobalTraps): 8.4 per 4200 tiles, Terraria's placeTrap
 //!   (traps.rs) from a random spot inside.
-//!
-//! Not here yet: Terraria's bookshelves (DungeonGlobalBookshelves).
 
 use crate::paintings::{self, Paintings};
 use crate::world::{Decoration, World};
