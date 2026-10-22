@@ -338,6 +338,7 @@ func _check_hits(game) -> void:
 		var dir := away.normalized() if away.length() > 0.01 else player.forward()
 		npc.hit(int(round(player.weapon_damage(def) * damage_mult())), float(def.get("knockback", 0)) * knockback_mult(), dir,
 				player.crit_chance(def), player.armor_penetration(def))
+		player.on_melee_hit(npc, def)
 		_cooldowns[npc] = int(num("spin_cooldown")) if state == State.SPIN else HIT_COOLDOWN
 		var fire: Array = def.get("on_fire", [])
 		if not fire.is_empty() and not _doused and randi() % int(fire[0]) == 0:

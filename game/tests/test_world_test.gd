@@ -449,6 +449,7 @@ func _run() -> void:
 	await _eater_checks(c)
 	await _king_slime_checks(c)
 	await _recipe_checks(c)
+	await _underworld_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -1326,10 +1327,11 @@ func _dust_checks(c: Vector3i) -> void:
 ## Knockback, as far as Terraria's: each enemy hit (knockback 5 for ~12
 ## damage, then 8 for ~20) flies back as far at its farthest as Terraria's
 ## own tick-by-tick rules carry it (StrikeNPC_Inner, then its AI, gravity and
-## the ground: worked out by a transcription of them, in blocks).
+## the ground: worked out by a transcription of them, in blocks; aiStyle
+## 14 steers a bat twice a tick).
 const KNOCKBACK_TERRARIA := {
 	"Zombie": [1.713, 4.052], "BlueSlime": [2.434, 4.24], "DemonEye": [1.108, 5.392],
-	"EaterofSouls": [3.203, 8.25], "CaveBat": [6.581, 9.131],
+	"EaterofSouls": [3.203, 8.25], "CaveBat": [3.25, 4.5],
 }
 
 
@@ -5167,6 +5169,164 @@ func _yoyo_checks(c: Vector3i) -> void:
 
 ## Recipes are Terraria's own, read from Terraria.exe (tools/terraria_recipes.py),
 ## except marked stand-ins for things this game can't make Terraria's way yet.
+## The Underworld's enemies: Terraria's spawn chain, the bats' and demons'
+## aiStyle 14, the Fire Imp's spell, the Bone Serpent's shared life, lava.
+func _underworld_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	var clear_npcs := func() -> void:
+		for n in game.npcs():
+			if not n.def.get("persistent", false) and n.def.ai != "town" and n.def.ai != "dummy":
+				n.queue_free()
+		for e in game.entities.get_children():
+			if e is Projectile:
+				e.queue_free()
+	clear_npcs.call()
+	await frames(2)
+	# Terraria's chain: 1 in 8 a critter, 1 in 40 a Bone Serpent, 1 in 14 a
+	# Fire Imp, 1 in 7 a Demon (1 in 10 of them Voodoo), 1 in 3 a Lava Slime,
+	# else a Hellbat.
+	var counts := {}
+	for i in 20000:
+		var k := Spawner.underworld_pick(false)
+		counts[k] = int(counts.get(k, 0)) + 1
+	var share := func(k: String) -> float: return float(counts.get(k, 0)) / 20000.0
+	check(absf(share.call("Hellbat") - 0.452) < 0.02 and absf(share.call("LavaSlime") - 0.226) < 0.015 and absf(share.call("Demon") - 0.102) < 0.012
+			and absf(share.call("") - 0.125) < 0.012 and absf(share.call("FireImp") - 0.061) < 0.01 and absf(share.call("BoneSerpentHead") - 0.022) < 0.006
+			and absf(share.call("VoodooDemon") - 0.0113) < 0.004, "the Underworld's spawns are Terraria's chain (%s)" % [counts])
+	var serpents := 0
+	for i in 4000:
+		if Spawner.underworld_pick(true) == "BoneSerpentHead":
+			serpents += 1
+	check(serpents == 0 and game.spawner._depth(game.underworld_level - 1.0, game) == "underworld", "one Bone Serpent at a time; below the Underworld's top is the Underworld")
+
+	# A Hellbat comes at you (aiStyle 14: steered twice a tick), up in the
+	# open air.
+	var sky := c + Vector3i(0, 40, 0)
+	for x in range(-14, 6):
+		for y in range(-3, 6):
+			for z in range(-4, 5):
+				w.set_block(sky + Vector3i(x, y, z), Data.block_id("stone") if y == -1 and absi(x + 4) <= 1 and absi(z) <= 1 else 0)
+	p.global_position = Vector3(sky) + Vector3(-3.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(2)
+	var bat := game.spawn_npc("Hellbat", p.center() + Vector3(-10, 1, 0))
+	var d0 := bat.center().distance_to(p.center())
+	await frames(90)
+	check(bat.center().distance_to(p.center()) < d0 - 4.0, "a Hellbat flies at you (%.1f -> %.1f blocks)" % [d0, bat.center().distance_to(p.center())])
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	# Lava doesn't hurt it; it does a Cave Bat: 50 and 7 s of On Fire!
+	var lava := c + Vector3i(-23, -1, 10)
+	var cave := game.spawn_npc("CaveBat", Vector3(lava) + Vector3(0.5, 0.2, 0.5))
+	bat.global_position = Vector3(lava) + Vector3(0.5, 0.2, 0.5)
+	bat.velocity = Vector3.ZERO
+	cave.velocity = Vector3.ZERO
+	var cave_life := cave.life
+	await frames(3)
+	check(bat.life == bat.life_max and bat.on_fire == 0.0, "lava doesn't hurt a Hellbat (%d of %d)" % [bat.life, bat.life_max])
+	check(not is_instance_valid(cave) or cave.life < cave_life, "it does a Cave Bat")
+	clear_npcs.call()
+	await frames(2)
+
+	# A Demon's scythes: four, 20 ticks apart, slow then fast.
+	var demon := game.spawn_npc("Demon", p.center() + Vector3(7, 3, 0))
+	var scythes := []
+	var fastest := 0.0
+	for i in 110:
+		await frames(1)
+		for e in game.entities.get_children():
+			if e is Projectile and e.kind == "DemonSickle" and not e.friendly:
+				if not scythes.has(e):
+					scythes.append(e)
+				fastest = maxf(fastest, e.velocity.length())
+	check(scythes.size() == 4, "a Demon throws four Demon Scythes (%d)" % scythes.size())
+	check(fastest > 10.0, "speeding up as they fly (%.1f blocks/s)" % fastest)
+	clear_npcs.call()
+	await frames(2)
+
+	# A Voodoo Demon always drops the Guide Voodoo Doll.
+	var vd := game.spawn_npc("VoodooDemon", p.center() + Vector3(4, 3, 0))
+	await frames(2)
+	var drop_at := vd.center()
+	vd.hit(9999, 0.0, Vector3.RIGHT)
+	await frames(2)
+	var dolls := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "GuideVoodooDoll" and e.global_position.distance_to(drop_at) < 4.0)
+	check(dolls.size() == 1, "a Voodoo Demon drops the Guide Voodoo Doll")
+	for e in dolls:
+		e.queue_free()
+
+	# A Fire Imp teleports near you and casts Burning Spheres.
+	var imp := game.spawn_npc("FireImp", p.global_position + Vector3(8, 0, 8))
+	var spheres := []
+	for i in 330:
+		await frames(1)
+		for e in game.entities.get_children():
+			if e is Projectile and e.kind == "BurningSphere" and not spheres.has(e):
+				spheres.append(e)
+	check(spheres.size() >= 1 and imp.global_position.distance_to(p.global_position) < 21.5, "a Fire Imp teleports near you and casts a Burning Sphere (%d)" % spheres.size())
+	clear_npcs.call()
+	await frames(2)
+
+	# A Bone Serpent: 14-22 bodies and a tail, one life for all of it.
+	var head := game.spawn_npc("BoneSerpentHead", p.center() + Vector3(0, -6, 12))
+	await frames(3)
+	var segs: Array = game.npcs().filter(func(n): return n.kind.begins_with("BoneSerpent"))
+	check(segs.size() >= 16 and segs.size() <= 24 and segs.filter(func(n): return n.worm_role() == "tail").size() == 1,
+			"a Bone Serpent: a head, 14-22 bodies and a tail (%d)" % segs.size())
+	var body: NPC = head.behind.behind
+	body.hit(60, 0.0, Vector3.RIGHT, 0.0)
+	check(head.life < head.life_max and body.life == head.life, "a hit anywhere comes off its one life (%d of %d)" % [head.life, head.life_max])
+	body.hit(9999, 0.0, Vector3.RIGHT, 0.0)
+	await frames(2)
+	var left := game.npcs().filter(func(n): return n.kind.begins_with("BoneSerpent"))
+	check(left.is_empty(), "and it dies all at once (%s)" % [left.map(func(n): return "%s %d %s" % [n.kind, n.life, n._dying])])
+	clear_npcs.call()
+	await frames(2)
+
+	# A Lava Slime glows.
+	var slime := game.spawn_npc("LavaSlime", p.global_position + Vector3(5, 0, 0))
+	check(slime.glowing(), "a Lava Slime glows")
+	clear_npcs.call()
+
+	# The Magma Stone: melee hits set enemies on Hellfire (15 a second), not
+	# the Underworld's.
+	p.accessories.slots[0] = Inventory.stack("MagmaStone", 1)
+	var zombie := game.spawn_npc("Zombie", p.global_position + Vector3(6, 0, 0))
+	var hellbat := game.spawn_npc("Hellbat", p.global_position + Vector3(-6, 3, 0))
+	p.on_melee_hit(zombie, {})
+	p.on_melee_hit(hellbat, {})
+	var z_life := zombie.life
+	check(zombie.hellfire >= 2.0 and hellbat.hellfire == 0.0, "the Magma Stone's Hellfire takes, but not on a Hellbat")
+	await frames(62)
+	check(z_life - zombie.life >= 10, "Hellfire burns 15 a second, 5 at a time (%d)" % (z_life - zombie.life))
+	# The Obsidian Rose: lava does 45 less.
+	p.accessories.slots[0] = Inventory.stack("ObsidianRose", 1)
+	p.god_mode = false
+	p.life = p.life_max
+	p._immune = 0.0
+	p.on_fire = 0.0
+	var life0 := p.life
+	p.global_position = Vector3(lava) + Vector3(0.5, 0.1, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(3)
+	var expect := maxi(1, Player.LAVA_DAMAGE - Player.LAVA_ROSE_DAMAGE - p.defense() / 2)
+	check(p.in_liquid == Player.LIQ_LAVA and life0 - p.life == expect, "with an Obsidian Rose lava hurts %d (took %d)" % [expect, life0 - p.life])
+	p.god_mode = true
+	p.on_fire = 0.0
+	p.accessories.slots[0] = null
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p.god_mode = was_god
+	clear_npcs.call()
+	await frames(30)
+	p.life = p.life_max
+
+
 func _recipe_checks(c: Vector3i) -> void:
 	var find := func(item: String) -> Array: return Data.recipes.filter(func(r): return r.result == item)
 	var f := FileAccess.open(Data.TERRARIA_RECIPES, FileAccess.READ)

@@ -69,8 +69,13 @@ func spawn_tick() -> void:
 				top.y += 1
 			game.spawn_npc("SleepingAngler", Vector3(top) + Vector3(0.5, 0.95, 0.5))
 			return
-	var table := _table(depth, night, game.biome)
-	var kind: String = _pick(table)
+	var kind: String
+	if depth == "underworld":
+		kind = underworld_pick(game.npcs().any(func(n): return n.kind == "BoneSerpentHead"))
+		if kind == "":
+			return
+	else:
+		kind = _pick(_table(depth, night, game.biome))
 	# Goblin Scouts by day on the outer sixths of the surface (here the outer
 	# third of the island across): 1 in 15, 1 in 5 once an orb is smashed
 	# and the army isn't beaten.
@@ -84,7 +89,7 @@ func spawn_tick() -> void:
 		kind = "BoundGoblin"
 	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy"]
 	var pos = _find_water_spot(game, player.global_position, NPC.look(kind).hitbox) if Data.npcs[kind].ai == "swim" \
-			else _find_spot(game, player.global_position, depth in ["underground", "caverns"], flying)
+			else _find_spot(game, player.global_position, depth in ["underground", "caverns", "underworld"], flying)
 	if pos != null:
 		game.spawn_npc(kind, pos)
 
@@ -176,7 +181,7 @@ func spawn_critter(game, player, depth: String, night: bool) -> void:
 			elif not game.in_ocean(spot):
 				game.spawn_npc("Pupfish" if under == "sand" else _gold("Goldfish", "GoldGoldfish"), spot)
 			return
-	var under_ground: bool = depth in ["underground", "caverns"]
+	var under_ground: bool = depth in ["underground", "caverns", "underworld"]
 	var at = _find_spot(game, p, under_ground, false)
 	if at == null:
 		return
@@ -280,7 +285,28 @@ func _depth(y: float, game) -> String:
 		return "surface"
 	if y > game.cavern_level:
 		return "underground"
+	if y < game.underworld_level:
+		return "underworld"
 	return "caverns"
+
+
+## Terraria's Underworld spawns (Spawner.SpawnAnNPC below its last 190
+## tiles, before Hardmode), in its order: 1 in 8 a lava critter (here
+## spawn_critter's, so no enemy: ""), else 1 in 40 a Bone Serpent while
+## there's none, 1 in 14 a Fire Imp, 1 in 7 a Demon (1 in 10 of those a
+## Voodoo Demon), 1 in 3 a Lava Slime, else a Hellbat.
+static func underworld_pick(serpent_alive: bool) -> String:
+	if randi() % 8 == 0:
+		return ""
+	if randi() % 40 == 0 and not serpent_alive:
+		return "BoneSerpentHead"
+	if randi() % 14 == 0:
+		return "FireImp"
+	if randi() % 7 == 0:
+		return "VoodooDemon" if randi() % 10 == 0 else "Demon"
+	if randi() % 3 == 0:
+		return "LavaSlime"
+	return "Hellbat"
 
 
 ## Weighted spawn tables: [kind, weight].

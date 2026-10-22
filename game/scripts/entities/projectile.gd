@@ -64,7 +64,10 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## stream, AI 12: 0.075 px a tick each of its 3 updates); hidden: no sprite,
 ## only its dust (Terraria draws them at alpha 255); glow: lit by itself
 ## (the Magic Missile's light); xray: seen through blocks like the boss that
-## shot it (the Queen Bee's stingers).
+## shot it (the Queen Bee's stingers). scythe: Terraria's AI 18 (the Demons'
+## Demon Scythes and the weapon's): spinning (0.8 a tick), from its 30th tick
+## to its 100th it speeds up 1.06 a tick; size: drawn that big (blocks);
+## radius: how far from its centre it hits, enemies or you.
 const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7},
 		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
@@ -72,10 +75,17 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"MagicMissile": {"dust": [15], "glow": true, "life": 10.0},
 		"BookOfSkullsSkull": {"ghost": true, "home": 0.6, "pierce": 3, "life": 8.0},
 		"ChaosBall": {"ghost": true, "hidden": true, "dust": [27]},
+		"BurningSphere": {"ghost": true, "hidden": true, "dust": [6]},
+		"DemonSickle": {"scythe": true, "dust": [27], "size": 1.8, "radius": 0.9, "life": 5.0},
+		"DemonScythe": {"scythe": true, "dust": [27], "size": 1.8, "radius": 0.9, "pierce": 5, "life": 60.0},
 		"Stinger": {"dust": [18]}, "QueenBeeStinger": {"dust": [147], "life": 5.0, "xray": true}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
+## Hostile shots that set you on fire one hit in three, for 7 s (Terraria's
+## StatusFromNPC: the Fire Imp's Burning Sphere, there an NPC).
+const IGNITES := ["BurningSphere"]
+var _ticks := 0.0
 ## Bounces left off blocks (Water Bolt).
 var bounces := 0
 ## The player steering it while they hold the button (a channelled spell:
@@ -106,6 +116,7 @@ func setup(proj: String, size := 0.5) -> void:
 	elif sheet.get("diagonal", false):
 		_turn = PI * 0.75
 	var aspect := float(tex.get_width()) / tex.get_height() * _frames
+	size = float(FLIGHT.get(proj, {}).get("size", size))
 	sprite.setup(tex, _frames, Vector2(size * aspect, size), true, true)
 	add_child(sprite)
 	# Long along the way it points: up the sheet, or across it for the ones
@@ -135,6 +146,10 @@ func _ready() -> void:
 		penetrate = int(_flight.pierce)
 	if _flight.get("glow", false):
 		glow = Color(0.4, 0.6, 1.0)
+	if _flight.has("radius"):
+		radius = float(_flight.radius)
+	if _flight.get("scythe", false):
+		spin = 48.0  # 0.8 a tick
 
 
 func _physics_process(delta: float) -> void:
@@ -165,6 +180,12 @@ func _physics_process(delta: float) -> void:
 		return
 	life -= delta
 	_age += delta
+	if _flight.get("scythe", false):
+		var was := int(_ticks)
+		_ticks += delta * 60.0
+		for t in range(was + 1, int(_ticks) + 1):
+			if t >= 30 and t < 100:
+				velocity *= 1.06
 	if not _trail.is_empty():
 		_trail_ticks += delta * 60.0
 		while _trail_ticks >= 1.0:
@@ -309,9 +330,11 @@ func _check_hits(game) -> bool:
 					return true
 	else:
 		var p = game.player
-		if p.alive and p.overlaps_point(global_position, 0.2):
+		if p.alive and p.overlaps_point(global_position, float(_flight.get("radius", 0.2))):
 			p.hurt(damage, global_position)
 			if kind in POISONS and randi() % 3 == 0:
 				p.poison(10.0)
+			if kind in IGNITES and randi() % 3 == 0:
+				p.ignite(7.0)
 			return true
 	return false

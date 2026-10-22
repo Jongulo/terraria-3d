@@ -172,6 +172,7 @@ func _check_hits(game) -> void:
 		if not npc.overlaps_point(global_position, radius):
 			continue
 		npc.hit(player.weapon_damage(def), float(def.get("knockback", 0)), velocity.normalized(), player.crit_chance(def), player.armor_penetration(def))
+		player.on_melee_hit(npc, def)
 		_cooldowns[npc] = HIT_COOLDOWN
 		if not returning:
 			# Terraria: it turns round on the first enemy it hits.

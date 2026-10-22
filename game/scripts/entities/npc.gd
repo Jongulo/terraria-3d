@@ -49,6 +49,10 @@ var _just_hit := false
 ## a second, taken (and shown) 1 at a time.
 var on_fire := 0.0
 var _burn := 0.0
+## Seconds of Terraria's Hellfire left (the Magma Stone): 15 life a second,
+## taken (and shown) 5 at a time.
+var hellfire := 0.0
+var _hellburn := 0.0
 var _stuck := 0.0
 var _wander := Vector3.ZERO
 ## Which way the last hit came (its gore and death dust fly that way).
@@ -254,8 +258,13 @@ func _physics_process(delta: float) -> void:
 	var player = game.player
 	var to_player: Vector3 = player.global_position - global_position
 	if not boss and not def.get("persistent", false) and not released and to_player.length() > DESPAWN_DISTANCE:
-		queue_free()
-		return
+		# A worm goes all at once, when its head is that far off.
+		if def.ai != "worm":
+			queue_free()
+			return
+		if worm_role() == "head":
+			_worm_despawn(game)
+			return
 
 	if def.ai in ["skeletron", "skeletron_hand", "queen_bee", "brain", "creeper"]:
 		# Through the blocks (Terraria's noTileCollide), like the worms.
@@ -272,7 +281,7 @@ func _physics_process(delta: float) -> void:
 		if is_queued_for_deletion():
 			return
 		global_position += velocity * delta
-		if on_fire > 0.0:
+		if on_fire > 0.0 or hellfire > 0.0:
 			_burn_tick(delta, game)
 			if life <= 0:
 				return
@@ -285,7 +294,7 @@ func _physics_process(delta: float) -> void:
 		_ai_worm(delta, game, player)
 		if is_queued_for_deletion():
 			return
-		if on_fire > 0.0:
+		if on_fire > 0.0 or hellfire > 0.0:
 			_burn_tick(delta, game)
 			if life <= 0:
 				return
@@ -318,7 +327,7 @@ func _physics_process(delta: float) -> void:
 		"hopper": _ai_hopper(delta)
 		"bee": _ai_bee(delta, player)
 
-	if on_fire > 0.0:
+	if on_fire > 0.0 or hellfire > 0.0:
 		_burn_tick(delta, game)
 		if life <= 0:
 			return
@@ -327,10 +336,13 @@ func _physics_process(delta: float) -> void:
 	var swimming: bool = def.ai == "swim" and in_water(center())
 	if liquid.y > 0 and not boss:
 		if liquid.x == 2:
+			# Terraria's lava (NPC.Collision_LavaCollision): 50 damage and 7 s
+			# of On Fire! each 30 ticks, unless it's lava-immune.
 			_lava_timer -= delta
-			if _lava_timer <= 0.0:
+			if _lava_timer <= 0.0 and not def.get("lava_immune", false):
 				_lava_timer = 0.5
-				hit(30, 0.0, Vector3.ZERO, 0.0)
+				ignite(7.0)
+				hit(50, 0.0, Vector3.ZERO, 0.0)
 				if life <= 0:
 					return
 		elif not flying and not swimming:
@@ -688,6 +700,12 @@ func _ks_spot_near(game, player) -> Vector3:
 ## a tail; a head or tail left alone, or a segment with neither, dies. When
 ## you leave the Corruption (or die) it digs straight down and is gone once
 ## it's deep. Each segment drops its own loot; the last one the boss's.
+## The Bone Serpent ("shared_life", Terraria's realLife): its segments share
+## its head's life, whatever segment is hit (each with its own defense), so
+## it never splits, and it all dies at once, dropping its loot once. Its
+## length is rolled ("segments" [least, most]), it falls lighter while still
+## rising ("rise_gravity": 0.08 px/tick², else 0.11), and as it has no home
+## biome ("stays_in") it never digs off; far from you it's gone, all of it.
 const WORM_PX := 24.0
 const WORM_TICK := 1.0 / 60.0
 var ahead: NPC = null
@@ -703,7 +721,7 @@ func _worm() -> Dictionary:
 	var w: Dictionary = def.get("worm", {})
 	if w.has("kinds"):
 		return w
-	return Data.npcs[str(def.get("boss_group", kind))].worm
+	return Data.npcs[str(w.get("head", def.get("boss_group", kind)))].worm
 
 
 func worm_role() -> String:
@@ -747,15 +765,17 @@ func _lay_segments(game) -> void:
 	var gap: float = float(w.spacing) / WORM_PX
 	var lead: NPC = self
 	var total := life
-	for i in int(w.segments) + 1:
-		var k: String = w.kinds.tail if i == int(w.segments) else w.kinds.body
+	var count: int = randi_range(int(w.segments[0]), int(w.segments[1])) if w.segments is Array else int(w.segments)
+	for i in count + 1:
+		var k: String = w.kinds.tail if i == count else w.kinds.body
 		var seg: NPC = game.spawn_npc(k, global_position - Vector3(0, gap * (i + 1), 0))
 		seg.ahead = lead
 		lead.behind = seg
 		seg._worm_laid = true
 		lead = seg
 		total += seg.life
-	game.boss_life_max[str(def.get("boss_group", kind))] = total
+	if boss:
+		game.boss_life_max[str(def.get("boss_group", kind))] = total
 
 
 ## Turns into a head or tail of the worm (Terraria's NPC.Transform), life kept.
@@ -807,7 +827,7 @@ func _worm_head_tick(game, player) -> void:
 	if not dug and (absf(to.x) > 1000.0 or absf(to.y) > 1000.0 or absf(to.z) > 1000.0):
 		dug = true  # far from you: on its way through anything
 	# Out of its biome (or you're dead): straight down, and gone when deep.
-	var leaving: bool = not player.alive or (game.test_world == null and not game.biome in w.get("stays_in", []))
+	var leaving: bool = not player.alive or (game.test_world == null and w.has("stays_in") and not game.biome in w.stays_in)
 	if leaving:
 		to = Vector3(0, -speed, 0)
 		dug = true
@@ -816,7 +836,7 @@ func _worm_head_tick(game, player) -> void:
 			return
 	if not dug:
 		# In the open: falls, drifting.
-		v.y = maxf(v.y - 0.11, -speed)
+		v.y = maxf(v.y - (float(w.get("rise_gravity", 0.11)) if v.y > 0.0 else 0.11), -speed)
 		var h := Vector2(v.x, v.z)
 		var aim := Vector2(to.x, to.z)
 		if absf(v.x) + absf(v.y) + absf(v.z) < speed * 0.4:
@@ -1203,6 +1223,9 @@ func _ai_slime(delta: float, player) -> void:
 	var dir: Vector3 = player.global_position - global_position
 	dir.y = 0
 	var ticks := delta * 60.0
+	# The Lava Slime's fire dust, a speck a tick ("trail_dust").
+	if def.has("trail_dust") and randf() < ticks:
+		Game.current.dust.spawn(int(def.trail_dust), center() + Vector3(randf_range(-half.x, half.x), randf_range(-half.y, half.y), randf_range(-half.x, half.x)), velocity / PX_TICK * 0.2, 1.7)
 	# (On the ground as Terraria has it: not moving up or down. A hit that
 	# knocks it up counts as in the air from that tick.)
 	if on_floor and velocity.y <= 0.0:
@@ -1219,9 +1242,11 @@ func _ai_slime(delta: float, player) -> void:
 			ai_timer = randf_range(0.0, 0.5)
 			ai_count += 1
 			_facing = dir.normalized() if dir.length() < 40.0 else Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()
-			# Every third hop is a big one: 8 px/tick up and 3 on (else 6 and 2).
+			# Every third hop is a big one: 8 px/tick up and 3 on (else 6 and 2;
+			# the Lava Slime's go on further: "hop_boost" [small, big]).
 			var big := ai_count % 3 == 0
-			velocity += _facing * (3.0 if big else 2.0) * PX_TICK
+			var boost: Array = def.get("hop_boost", [0.0, 0.0])
+			velocity += _facing * ((3.0 + float(boost[1])) if big else (2.0 + float(boost[0]))) * PX_TICK
 			velocity.y = (8.0 if big else 6.0) * PX_TICK
 	else:
 		sprite.set_frame(1)
@@ -1343,7 +1368,9 @@ func _try_shoot(delta: float, player) -> void:
 ## 650 (the first 150 after it appears) it teleports to the ground within
 ## 20 tiles of you but more than 5 away, then casts a Chaos Ball at you at
 ## ticks 100, 200 and 300. A hit puts the teleport 250 ticks off, with no
-## casting till then.
+## casting till then. The Fire Imp casts its Burning Sphere "cast_delay" (20)
+## ticks after each, only with you within a screen of it ("firing_range"),
+## idling through its "idle_frames" and casting through its "cast_frames".
 var _cast_t := 500.0
 const CAST_AT := [100.0, 200.0, 300.0]
 
@@ -1355,16 +1382,20 @@ func _ai_caster(delta: float, player) -> void:
 	if _cast_t >= 650.0:
 		_cast_t = 1.0
 		_teleport_near(player)
+	var lag := float(def.get("cast_delay", 0.0))
 	for t in CAST_AT:
-		if was < t and _cast_t >= t and player.alive:
+		if was < t + lag and _cast_t >= t + lag and player.alive and (not def.get("firing_range", false) or _in_firing_range(player)):
 			var cast: Dictionary = def.cast
 			var aim: Vector3 = (player.center() - center()).normalized()
 			var p := Game.current.spawn_projectile(cast.projectile, center() + Vector3(0, 0.35, 0), aim * float(cast.speed), int(cast.damage), 0.0, 0.0, 0.0, 0.4, false)
 			p.life = CHAOS_BALL_LIFE
 			Audio.play_at("Item_8", center(), 0.6)
 	# Its arms up while casting.
-	var casting := CAST_AT.any(func(t): return _cast_t > t - 30.0 and _cast_t < t + 10.0)
-	sprite.set_frame(1 + int(_cast_t / 8.0) % 2 if casting else 0)
+	var casting := CAST_AT.any(func(t): return _cast_t > t + lag - 30.0 and _cast_t < t + lag + 10.0)
+	var idle: Array = def.get("idle_frames", [0, 0])
+	var cf: Array = def.get("cast_frames", [1, 2])
+	var frames: Array = cf if casting else idle
+	sprite.set_frame(int(frames[0]) + int(_cast_t / 8.0) % (int(frames[1]) - int(frames[0]) + 1))
 	if is_instance_valid(player):
 		look_dir = player.global_position - global_position
 
@@ -1502,8 +1533,9 @@ func _ai_swim(delta: float, player) -> void:
 ## a time in its px/tick: across the ground toward the target and up or down
 ## to it each on its own, like Terraria's x and y; drift sideways brakes away.
 ## Fliers without one steer straight at it at their speed and accel.
-func _fly_toward(target: Vector3, delta: float) -> void:
-	var f: Dictionary = def.get("flight", {})
+## `which`: the flight to use (a bat's second pass a tick: "flight2").
+func _fly_toward(target: Vector3, delta: float, which := "flight") -> void:
+	var f: Dictionary = def.get(which, {})
 	var to := target - center()
 	if f.is_empty():
 		velocity += to.normalized() * float(def.get("accel", 5.0)) * delta
@@ -1580,14 +1612,115 @@ func _fly_frame() -> void:
 	sprite.set_frame(int(ff[0]) + int(anim) % (int(ff[1]) - int(ff[0]) + 1))
 
 
+## Terraria's bats and demons (aiStyle 14), a tick at a time in its px/tick.
+## Each tick it steers at you (its "flight": across the ground toward you,
+## up or down to you) and then again ("flight2": Terraria's bats run their
+## steering twice a tick, the Hellbat its own second pass); in water it
+## rises (0.5 px/tick², up to 4). Walls bounce it back at half speed. Every
+## 200 ticks it looks for you: out of sight (or with you in water) it
+## wanders until it sees you again, on top of its steering: up and down in
+## a 600-tick swing, across the ground one way for the middle of each half
+## and back the other ("wander": [across, up, across top speed, up top
+## speed] px/tick; 0.2, 0.1, 4, 1.5, the Demons slower). A Demon's scythes
+## ("scythes"): with you in sight, one at each of ticks 20, 40, 60 and 80,
+## aimed within 100 px of you; it counts on, starting again once it reaches
+## 300 + (0-299, rolled each tick) with you within a screen of it.
+const BAT_WANDER := [0.2, 0.1, 4.0, 1.5]
+## Terraria's AI_GlobalFiringDistanceCheck: within a screen of you (half its
+## view each way, less 50 px), here 40 blocks across and 24 up or down.
+const FIRING_RANGE := Vector2(40.0, 24.0)
+var _bat := [0, 0, 0]  # Terraria's ai[0] (scythes), ai[1] (looking), ai[2] (wandering)
+var _bat_way := Vector3.ZERO
+
+
 func _ai_bat(delta: float, player) -> void:
-	ai_timer -= delta
-	if ai_timer <= 0.0:
-		ai_timer = randf_range(0.5, 1.2)
-		_wander = Vector3(randf_range(-3, 3), randf_range(-1, 3), randf_range(-3, 3))
-	_fly_toward(player.global_position + Vector3(0, 1.2, 0) + _wander, delta)
-	anim += delta * 12.0
+	var game := Game.current
+	for t in _critter_ticks(delta):
+		_bat_tick(game, player)
+		if is_queued_for_deletion():
+			return
+	# Terraria's frames: one every 6 ticks (bats leave their last one out).
+	anim += delta * 10.0
 	_fly_frame()
+
+
+## Within a screen of you (Terraria's firing distance).
+func _in_firing_range(player) -> bool:
+	var d: Vector3 = player.center() - center()
+	return Vector2(d.x, d.z).length() <= FIRING_RANGE.x and absf(d.y) <= FIRING_RANGE.y
+
+
+## A clear line from it to you (Terraria's Collision.CanHit).
+func _sees(player) -> bool:
+	var to: Vector3 = player.center() - center()
+	return Game.current.world.raycast(center(), to.normalized(), to.length()).is_empty()
+
+
+func _bat_tick(game, player) -> void:
+	var tick := 1.0 / 60.0
+	var target: Vector3 = player.center()
+	_fly_toward(target, tick)
+	var second = def.get("flight2", "")
+	if second is String and second != "":
+		_fly_toward(target, tick, second)
+	elif second is Dictionary:
+		_fly_toward(target, tick, "flight2")
+	var v := velocity / PX_TICK  # px/tick, y up
+	if in_water(center()):
+		if v.y < 0.0:
+			v.y *= 0.95
+		v.y = minf(v.y + 0.5, 4.0)
+	# Looking for you.
+	_bat[1] += 1
+	if _bat[1] > 200:
+		if player.in_liquid == 0 and _sees(player):
+			_bat[1] = 0
+		var wd: Array = def.get("wander", BAT_WANDER)
+		if _bat[1] > 1000:
+			_bat[1] = 0
+		if _bat_way == Vector3.ZERO:
+			var a := randf() * TAU
+			_bat_way = Vector3(cos(a), 0, sin(a))
+		_bat[2] += 1
+		# Terraria's +y is down: ai[2] > 0 sinks it.
+		if _bat[2] > 0:
+			if -v.y < float(wd[3]):
+				v.y -= float(wd[1])
+		elif v.y < float(wd[3]):
+			v.y += float(wd[1])
+		var across := Vector3(v.x, 0, v.z).dot(_bat_way)
+		if _bat[2] < -150 or _bat[2] > 150:
+			if across < float(wd[2]):
+				v += _bat_way * float(wd[0])
+		elif across > -float(wd[2]):
+			v -= _bat_way * float(wd[0])
+		if _bat[2] > 300:
+			_bat[2] = -300
+	else:
+		_bat_way = Vector3.ZERO
+	velocity = v * PX_TICK
+	if def.has("trail_dust"):
+		game.dust.spawn(int(def.trail_dust), center() + Vector3(randf_range(-half.x, half.x), randf_range(-half.y, half.y), randf_range(-half.x, half.x)), velocity / PX_TICK * 0.2, 2.0)
+	var sc: Dictionary = def.get("scythes", {})
+	if sc.is_empty() or not player.alive:
+		return
+	_bat[0] += 1
+	if _bat[0] in [20, 40, 60, 80]:
+		if _sees(player):
+			_demon_scythe(game, player, int(sc.damage))
+	elif _in_firing_range(player) and _bat[0] >= 300 + randi() % 300:
+		_bat[0] = 0
+
+
+## A Demon's scythe (Terraria's DemonSickle): at you, give or take 100 px each
+## way, at 0.2 px/tick, speeding up (Projectile FLIGHT "scythe"); hostile
+## shots hit for twice their damage, as Terraria's do.
+func _demon_scythe(game, player, dmg: int) -> void:
+	var off := Vector3(randi_range(-100, 100), randi_range(-100, 100), randi_range(-100, 100)) / WORM_PX
+	var aim: Vector3 = (player.center() + off - center()).normalized()
+	var shot: Projectile = game.spawn_projectile("DemonSickle", center(), aim * 0.2 * PX_TICK, dmg * 2, 0.0, 0.0, 0.0, 1.8, false)
+	shot.life = 300.0 / 60.0
+	Audio.play_at("Item_8", center(), 0.6)
 
 
 ## How fast a 3D Eye of Cthulhu turns (radians a second: Terraria's step a tick
@@ -2426,7 +2559,10 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 	var dmg := maxi(1, int(round(base_damage * randf_range(0.85, 1.15) - maxi(0, defense - armor_pen) * 0.5)))
 	if crit:
 		dmg *= 2
-	life -= dmg
+	var owner := _life_owner()
+	owner.life -= dmg
+	if owner != self:
+		life = owner.life
 	_flash = 1.0
 	if def.ai == "caster" and _cast_t < 400.0:
 		_cast_t = 400.0  # hurt: no casting, and its teleport 250 ticks off
@@ -2458,19 +2594,36 @@ func ignite(seconds: float) -> void:
 	on_fire = maxf(on_fire, seconds)
 
 
+## Sets it on Hellfire for `seconds` (the fire-immune are immune to both, as
+## Terraria's Underworld creatures are).
+func ignite_hellfire(seconds: float) -> void:
+	if def.get("fire_immune", false):
+		return
+	hellfire = maxf(hellfire, seconds)
+
+
 ## Burning: 4 life a second (Terraria's lifeRegen -8), each 1 shown as it
 ## goes, and flames all over it (UpdateNPC_BuffApplyVFX: 3 ticks in 4,
 ## rising; drawn at half Terraria's size).
 func _burn_tick(delta: float, game) -> void:
-	on_fire -= delta
-	_burn += delta * 4.0
-	while _burn >= 0.9999:  # (sixty 1/60 s ticks add up to a hair under 4)
-		_burn -= 1.0
-		game.floating_text("1", center() + Vector3(0, half.y * 0.6, 0), Color(1.0, 0.55, 0.16))
+	if on_fire > 0.0:
+		on_fire -= delta
+		_burn += delta * 4.0
+	if hellfire > 0.0:
+		hellfire -= delta
+		_hellburn += delta * 3.0  # Hellfire: 15 a second, 5 at a time
+	while _burn >= 0.9999 or _hellburn >= 0.9999:  # (sixty 1/60 s ticks add up to a hair under)
+		var dmg := 1
+		if _burn >= 0.9999:
+			_burn -= 1.0
+		else:
+			_hellburn -= 1.0
+			dmg = 5
+		game.floating_text(str(dmg), center() + Vector3(0, half.y * 0.6, 0), Color(1.0, 0.55, 0.16))
 		if def.get("invulnerable", false):
-			_hits.append([Time.get_ticks_msec() / 1000.0, 1])
+			_hits.append([Time.get_ticks_msec() / 1000.0, dmg])
 			continue
-		life -= 1
+		life -= dmg
 		if life <= 0:
 			_die(game)
 			return
@@ -2479,6 +2632,8 @@ func _burn_tick(delta: float, game) -> void:
 		game.dust.spawn(6, at, Vector3(0, 0.9, 0), 1.75 if randf() < 0.75 else 0.875)
 	if on_fire <= 0.0:
 		_burn = 0.0
+	if hellfire <= 0.0:
+		_hellburn = 0.0
 
 
 ## Terraria's knockback (NPC.StrikeNPC_Inner), in its units: the weapon's
@@ -2565,26 +2720,61 @@ func _blood_color() -> Color:
 	return Color(0.65, 0.05, 0.05)
 
 
-func _die(game) -> void:
+## Whose life it takes hits from: its head's for a worm sharing one (the
+## Bone Serpent), else its own.
+func _life_owner() -> NPC:
+	if def.ai != "worm" or not _worm().get("shared_life", false):
+		return self
+	# (Along the segments still there: with the life gone they all have none.)
+	var head: NPC = self
+	var n := 0
+	while head.ahead != null and is_instance_valid(head.ahead) and not head.ahead.is_queued_for_deletion() and n < 400:
+		head = head.ahead
+		n += 1
+	return head
+
+
+var _dying := false
+
+
+func _die(game, drops := true) -> void:
 	if is_queued_for_deletion():
 		return  # (killed twice in a tick: it counts once)
+	if def.ai == "worm" and _worm().get("shared_life", false) and not _dying:
+		# The whole worm dies with its life: its head drops the loot.
+		var head := _life_owner()
+		var seg: NPC = head
+		var n := 0
+		var chain: Array = []
+		while seg != null and is_instance_valid(seg) and not seg.is_queued_for_deletion() and n < 400:
+			chain.append(seg)
+			seg = seg.behind
+			n += 1
+		if not self in chain:
+			chain.append(self)
+		for c in chain:
+			c.life = 0
+			c._dying = true
+		for c in chain:
+			c._die(game, c == head)
+		return
 	if def.ai == "worm":
 		_worm_unlink()
 	Audio.play_at(def.get("death_sound", "NPC_Killed_1"), center())
-	for d in def.get("drops", []):
+	for d in def.get("drops", []) if drops else []:
 		if randf() < float(d[3]):
 			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	# One of these at most: the first that rolls (Skeletron's mask, hand, book).
 	# (A link can be one of several: the Queen Bee's bee hat, shirt or pants.)
-	for d in def.get("drops_chain", []):
+	for d in def.get("drops_chain", []) if drops else []:
 		if randf() < float(d[1]):
 			var item: String = d[0][randi() % d[0].size()] if d[0] is Array else d[0]
 			game.spawn_item(item, 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 			break
-	var one_of: Array = def.get("drops_one_of", [])
+	var one_of: Array = def.get("drops_one_of", []) if drops else []
 	if not one_of.is_empty():
 		game.spawn_item(one_of[randi() % one_of.size()], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
-	game.spawn_coins(int(def.get("coins", 0)), center())
+	game.spawn_coins(int(def.get("coins", 0)) if drops else 0, center())
 	var g: Dictionary = Data.npc_gore.get(kind, {})
 	if g.is_empty():
 		game.spawn_dust(center(), _blood_color(), 14)

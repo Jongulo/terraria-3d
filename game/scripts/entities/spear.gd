@@ -231,6 +231,7 @@ func _check_hits(game) -> void:
 		if not touched or not _can_see(game, cam, npc):
 			continue
 		npc.hit(player.weapon_damage(def), float(def.get("knockback", 0)), (npc.center() - cam).normalized(), player.crit_chance(def), player.armor_penetration(def))
+		player.on_melee_hit(npc, def)
 		_cooldowns[npc] = HIT_COOLDOWN
 
 

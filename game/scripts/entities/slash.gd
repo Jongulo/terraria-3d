@@ -112,6 +112,10 @@ func _tick() -> void:
 	_check_hits(game)
 
 
+## What the swing has done once already (a Bat Bat's heal).
+var _swing := {}
+
+
 func _check_hits(game) -> void:
 	for n in _cooldowns.keys():
 		_cooldowns[n] -= 1
@@ -126,6 +130,7 @@ func _check_hits(game) -> void:
 		away.y = 0.0
 		var dir := away.normalized() if away.length() > 0.01 else aim
 		npc.hit(player.weapon_damage(def), float(def.get("knockback", 0)), dir, player.crit_chance(def), player.armor_penetration(def))
+		player.on_melee_hit(npc, def, _swing)
 		_cooldowns[npc] = int(num("immunity", 5))
 
 

@@ -52,7 +52,10 @@ const LIQ_HONEY := 3
 ## Seconds of air underwater (Terraria's 200 breath ticks at 7 ticks each ≈ 23 s).
 const BREATH_MAX := 23.0
 const DROWN_DPS := 20.0
-const LAVA_DAMAGE := 50
+## Terraria's lava (Player.Update): 80 damage and 7 s of On Fire!; the
+## Obsidian Rose ("lava_rose") takes 45 and 3.5 s off.
+const LAVA_DAMAGE := 80
+const LAVA_ROSE_DAMAGE := 45
 const ON_FIRE_TIME := 7.0
 const ON_FIRE_DPS := 4.0
 ## Poisoned (stingers): lifeRegen -4.
@@ -1445,10 +1448,12 @@ func _liquid_effects(delta: float) -> void:
 	if in_liquid == LIQ_LAVA and lava_time > 0.0:
 		lava_time = maxf(0.0, lava_time - delta)
 	elif in_liquid == LIQ_LAVA:
-		hurt(LAVA_DAMAGE, Vector3.ZERO)
+		var rose := has_effect("lava_rose")
+		var before := life
+		hurt(LAVA_DAMAGE - (LAVA_ROSE_DAMAGE if rose else 0), Vector3.ZERO)
 		# The Molten set: "Cannot be set on fire".
-		if not fire_immune:
-			on_fire = ON_FIRE_TIME
+		if not fire_immune and life < before:
+			on_fire = maxf(on_fire, ON_FIRE_TIME * (0.5 if rose else 1.0))
 	elif not fire_immune and _touching_hot():
 		# Hellstone, like Terraria's fire blocks, sets you on fire.
 		on_fire = ON_FIRE_TIME
@@ -1858,6 +1863,7 @@ var _last_flower_cell := Vector3i(-1, -1, -1)
 
 func _melee(def: Dictionary) -> void:
 	var game := Game.current
+	var swing := {}
 	var thrust: bool = def.get("style", "swing") == "thrust"
 	# A bigger sword (a size prefix: Large, Massive...) reaches further.
 	var reach := (2.4 if thrust else 2.9) * float(def.get("scale", 1.0))
@@ -1875,6 +1881,7 @@ func _melee(def: Dictionary) -> void:
 		var dist: float = to.length() - npc.half.x
 		if dist < reach and to.normalized().dot(fwd) > cone:
 			npc.hit(weapon_damage(def), float(def.get("knockback", 0)), to.normalized(), crit_chance(def), armor_penetration(def))
+			on_melee_hit(npc, def, swing)
 	# Ice Blade: a bolt with the swing, every so often (Terraria's useTime
 	# longer than its useAnimation).
 	if def.has("swing_shot") and _swing_shot_cd <= 0.0:
@@ -2471,6 +2478,27 @@ func heal(amount: int) -> void:
 func poison(seconds: float) -> void:
 	if alive and not invulnerable():
 		poisoned = maxf(poisoned, seconds)
+
+
+## Sets you on fire for `seconds` (the longer of it and what's left), unless
+## you can't be (the Molten set, the Obsidian Skull's kin).
+func ignite(seconds: float) -> void:
+	if alive and not invulnerable() and not has_effect("fire_immune"):
+		on_fire = maxf(on_fire, seconds)
+
+
+## A melee hit's extras (Terraria's StatusToNPC, and Projectile.StatusNPC for
+## melee projectiles): the Magma Stone's Hellfire (6 s one hit in four, else
+## 4 s or 2 s at even odds); a "leech" weapon (the Bat Bat) heals you 1, once a
+## swing (`swing`: a dictionary the swing keeps), and not off target dummies
+## or critters (BatBat_TryLifeLeeching).
+func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
+	if has_effect("magma_stone"):
+		npc.ignite_hellfire(6.0 if randi() % 4 == 0 else (4.0 if randi() % 2 == 0 else 2.0))
+	if def.get("leech", false) and not swing.get("leeched", false) and life < life_max \
+			and npc.def.ai != "dummy" and not npc.is_critter():
+		swing["leeched"] = true
+		heal(1)
 
 
 func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null) -> void:

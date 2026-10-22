@@ -363,7 +363,8 @@ Enemy knockback works as in Terraria (`NPC.StrikeNPC_Inner`), in its own pixels 
   - Zombies and other walkers keep their speed in the air and slide to a stop on the ground
     (×0.8 a tick).
   - Slimes slow ×0.93 a tick in the air and ×0.8 on the ground.
-  - Demon Eyes and bats brake by their own steering; bats barely brake, so they fly furthest.
+  - Demon Eyes and bats brake by their own steering; bats steer twice a tick (Terraria's
+    aiStyle 14 runs it twice for them), so they're back at you soonest.
   - Eaters of Souls, Crimeras, Hornets and Servants home back in at their own rate.
   - Gravity is Terraria's NPC gravity (0.3 px/tick², 45 blocks/s²).
 - **Checked:** at knockback 5 and 8, a test measures how far each kind flies back in 3D against a
@@ -375,7 +376,7 @@ Enemy knockback works as in Terraria (`NPC.StrikeNPC_Inner`), in its own pixels 
   | Blue Slime | 2.4 | 4.2 |
   | Demon Eye | 1.1 | 5.4 |
   | Eater of Souls | 3.2 | 8.3 |
-  | Cave Bat | 6.6 | 9.1 |
+  | Cave Bat | 3.3 | 4.5 |
 - **Jumps:** with Terraria's gravity, the jumps are Terraria's too.
   - Slimes hop 6 px/tick up, 2 forward; every third hop is a big one at 8 and 3.
   - Zombies jump 5–8 px/tick by how tall the wall ahead is.
@@ -1455,6 +1456,43 @@ Skelehead, Imp Face, Ominous Presence, Shining Moon, Lake of Fire, Darkness, Dar
 Trapped Ghost, Demon's Eye, Living Gore, Flowing Magma) hang in the middle of a room's wall where
 it's more than 7 tiles wide and 5 tall clear, none within 8 tiles of another. Not yet: the Shadow
 Chests (placed through the whole Underworld, with the Shadow Key from cavern chests).
+
+The Underworld's enemies, Terraria's, with its numbers (life, damage, defense, knockback
+resistance, coins, sounds, gores and dust, all from its NPC code):
+- **Spawns:** Terraria's chain below the Underworld's top (before Hardmode), roll by roll: 1 in 8 a
+  lava critter, else 1 in 40 a Bone Serpent (one at a time), 1 in 14 a Fire Imp, 1 in 7 a Demon
+  (1 in 10 of those a Voodoo Demon), 1 in 3 a Lava Slime, else a Hellbat.
+- **Hellbat** (46 life, 35 damage): Terraria's aiStyle 14 bat, as every bat now is. Each tick it
+  steers at you twice (the Hellbat's second pass its own tuning), throwing off fire dust. It's
+  pushed up out of water, bounces off walls, and every 200 ticks looks for you: out of sight, it
+  wanders in a slow swing until it sees you again. Drops the Magma Stone (1 in 150) and the Bat Bat
+  (1 in 300).
+- **Demon** (120 life) and **Voodoo Demon** (140): the same flight, slower when wandering. With you
+  in sight, a Demon throws four Demon Scythes, 20 ticks apart. Each starts slow and speeds up 1.06 a
+  tick from its 30th tick to its 100th, then flies on spinning; they hit for 42 (Terraria doubles
+  enemy shots' damage). It throws again once its count passes 300-600 with you within a screen of
+  it. Demons drop the Demon Scythe (1 in 35); the Voodoo Demon always drops the Guide Voodoo Doll
+  it carries.
+- **Fire Imp** (70 life, 16 defense): the Goblin Sorcerer's AI. It teleports near you every 650
+  ticks and casts a Burning Sphere (30 damage; 1 in 3 sets you on fire for 7 s) 20 ticks after each
+  of its cast times, with you within a screen. Drops the Obsidian Rose (1 in 20) and the Plumber's
+  Hat (1 in 250).
+- **Lava Slime** (50 life, 10 defense): hops a little further than other slimes, glows and throws
+  off fire. It drops nothing, as in Terraria outside the Remix seed.
+- **Bone Serpent**: a worm of 14-22 body segments and a tail. Its segments share one 300-life pool
+  (Terraria's realLife): hit any of them, each with its own defense, and it comes off the whole
+  worm, so it never splits and dies all at once. Through the ground it comes at you at 9 px/tick
+  (0.1 a tick²); in the open it falls, lighter while it's still rising.
+- **Lava:** Terraria's rule now: an NPC in lava takes 50 and 7 s of On Fire! every 30 ticks, unless
+  it's lava-immune (all of these but the Bone Serpent, which, like every worm, never touches
+  it). Underworld enemies can't be set on fire. Your own lava damage is Terraria's 80 and 7 s of
+  On Fire!.
+- **New items:** the Guide Voodoo Doll (an accessory; summoning the Wall of Flesh with it is still
+  to come), the Demon Scythe (35 magic damage, 14 mana; its scythe speeds up like the Demons',
+  through 5 enemies), the Magma Stone (melee hits, swings and melee projectiles alike, set enemies
+  on Hellfire: 15 life a second, 6 s one hit in four, else 4 or 2), the Obsidian Rose (lava does 45
+  less and burns half as long), the Bat Bat (36 melee damage; each swing heals you 1) and the
+  Plumber's Hat. The Bone Serpent's Hotdog waits for food (Well Fed).
 
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a

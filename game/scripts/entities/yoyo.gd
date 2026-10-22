@@ -149,6 +149,7 @@ func _check_hits(game) -> void:
 		if blocked:
 			dmg = maxi(1, int(dmg * 0.75))
 		npc.hit(dmg, float(def.get("knockback", 0)), (npc.center() - cam).normalized(), player.crit_chance(def), player.armor_penetration(def))
+		player.on_melee_hit(npc, def)
 		spin -= 1.0 if blocked else 1.0 / 3.0
 		_hit_cd = HIT_COOLDOWN
 		# Bounces off what it hit.
