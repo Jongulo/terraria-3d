@@ -1897,6 +1897,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         EVIL_CORRUPTION | EVIL_CRIMSON => w.gen_evil,
         _ => if rng.chance(0.5) { EVIL_CORRUPTION } else { EVIL_CRIMSON },
     };
+    // Kept for the passes after (the Dungeon's biome chest).
+    w.gen_evil = evil;
     {
         // 2-3 in a small world, more in bigger ones (with the width, as in Terraria).
         let count = ((2 + rng.range(0, 2)) as f32 * (sx.min(sz) as f32 / 768.0).max(1.0)).round() as usize;
@@ -2122,6 +2124,13 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // Pass 8: Enchanted Sword Shrines (Terraria's Micro Biomes pass, after its
     // Buried Chests), kept out of the cabins and chests.
     crate::shrines::sword_shrines(w, &mut rng, &l);
+    // Pass 9: Terraria's Traps pass (dart traps, boulders, explosives under
+    // pressure plates), out of the cabins; their own random numbers.
+    {
+        let rooms: Vec<_> = cabins.iter().flatten().map(|r| (r.x0 - 3, r.x1() + 3, r.y0 - 3, r.ceiling() + 3, r.z0 - 3, r.z1() + 3)).collect();
+        let keep_out = |p: (i32, i32, i32)| rooms.iter().any(|r| p.0 >= r.0 && p.0 <= r.1 && p.1 >= r.2 && p.1 <= r.3 && p.2 >= r.4 && p.2 <= r.5);
+        crate::traps::traps_pass(w, &mut Rng::new(seed as u64 ^ 0x7a5_7e47), &l, &keep_out);
+    }
     // Springs that were in the rock a cabin now stands in.
     w.decorations.retain(|d| {
         d.kind != "waterfall" || !cabins.iter().flatten().any(|r| {
@@ -3553,6 +3562,7 @@ mod tests {
         }
         crate::cabins::tests::add_cabin_defs(&mut w);
         crate::dungeon::tests::add_dungeon_defs(&mut w);
+        crate::traps::tests::add_trap_defs(&mut w);
         crate::mushroom::tests::add_mushroom_defs(&mut w);
         for name in ["silt", "slush"] {
             let id = w.defs.len() as u16;
@@ -3773,7 +3783,41 @@ mod tests {
         let brick = ["blue_brick", "green_brick", "pink_brick"].iter().map(|n| id(n)).find(|&b| w.get(x0, gy, z0 + 3) == b || w.get(x0 + 3, gy, z0) == b).expect("brick floor");
         let count = |b: u16| w.blocks.iter().filter(|&&c| c == b).count();
         assert!(count(brick) > 150_000, "a mass of dungeon brick ({})", count(brick));
+        // Its furniture: the brick colour's set and the Gothic, on the floor;
+        // an Alchemy and a Bewitching Table.
+        let colour = w.def(brick).name.trim_end_matches("_brick").to_string();
+        let mut pieces = 0;
+        for set in [format!("{colour}_dungeon"), "gothic".to_string()] {
+            for k in ["chair", "table", "workbench", "candle", "vase", "bookcase", "bed", "piano", "dresser", "sofa", "bathtub", "candelabra", "lamp", "clock"] {
+                let b = id(&format!("{set}_{k}"));
+                if b == 0 || k == "candle" {
+                    continue;
+                }
+                for (i, &c) in w.blocks.iter().enumerate() {
+                    if c == b {
+                        let (x, y, z) = unflat(&w, i);
+                        assert!(w.is_solid(x, y - 1, z), "a {set} {k} on the floor at {:?}", (x, y, z));
+                        pieces += 1;
+                    }
+                }
+            }
+        }
+        assert!(pieces > 15 && count(id("alchemy_table")) >= 1 && count(id("bewitching_table")) >= 1,
+            "furniture ({pieces}), an Alchemy Table ({}) and a Bewitching Table ({})", count(id("alchemy_table")), count(id("bewitching_table")));
+        // Its five locked biome chests: the Jungle's, the world evil's, Hallowed, Frozen, Desert.
+        let biome = ["locked_jungle_chest", "locked_corruption_chest", "locked_crimson_chest", "locked_hallowed_chest", "locked_frozen_chest", "locked_desert_chest"].map(|n| count(id(n)));
+        assert!(biome.iter().filter(|&&n| n == 1).count() == 5 && (biome[1] == 0) != (biome[2] == 0), "five locked biome chests, one evil's ({biome:?})");
+        let cracked = ["cracked_blue_brick", "cracked_green_brick", "cracked_pink_brick"].map(|n| count(id(n)));
+        assert!(cracked.iter().filter(|&&n| n > 0).count() == 1 && cracked.iter().sum::<usize>() > 1000, "some halls of the colour's cracked brick ({cracked:?})");
         let (lo, hi) = *w.structures.last().expect("the Dungeon is a protected structure");
+        // Traps: some in the Dungeon, more in the caves (Terraria's Traps pass).
+        let wires: Vec<_> = w.decorations.iter().filter(|d| d.kind == "trap_wire").map(|d| d.pos).collect();
+        let inside = wires.iter().filter(|p| p.0 >= lo.0 && p.0 <= hi.0 && p.1 >= lo.1 && p.1 <= hi.1 && p.2 >= lo.2 && p.2 <= hi.2).count();
+        assert!(inside >= 1 && wires.len() > inside + 20, "traps: {inside} in the Dungeon of {}", wires.len());
+        for p in &wires {
+            let b = w.def(w.get(p.0, p.1, p.2)).name.clone();
+            assert!(b.ends_with("pressure_plate") && w.is_solid(p.0, p.1 - 1, p.2), "a pressure plate on the ground at {p:?} ({b})");
+        }
         assert!(lo.1 >= l.underworld_top - 6 && hi.1 < gy + 30, "between the underworld and the surface: {lo:?} {hi:?}");
         // Walk from the hall floor through open cells, doors and platforms.
         // (Spikes too: you can walk over them, if it hurts.)

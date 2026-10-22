@@ -64,6 +64,8 @@ var hud: Hud
 var entities := Node3D.new()
 var spawner := Spawner.new()
 var chests := Chests.new()
+## Worldgen's traps and the plates wired to them.
+var traps := Traps.new()
 ## The town NPCs and their homes.
 var town := Town.new()
 ## The Goblin Army (Invasion): on its way, here, beaten.
@@ -160,6 +162,7 @@ func _process(delta: float) -> void:
 				_begin_play()
 		State.PLAYING:
 			_update_playing(delta)
+			traps.update(self, delta)
 
 
 ## Terraria's Underworld glow (TileLightScanner.ApplyHellLight): open tiles
@@ -238,6 +241,7 @@ func _on_world_ready() -> void:
 	renderer.chunk_updated.connect(torch_flames.chunk_updated)
 	renderer.chunk_unloaded.connect(torch_flames.chunk_unloaded)
 	chests.setup(world)
+	traps.setup(world)
 
 	add_child(player)
 	sky.camera = player.camera
@@ -964,7 +968,7 @@ func explode(pos: Vector3, damage: int, knockback: float, ex: Dictionary) -> voi
 ## Whether explosions can break this block (Terraria's: not chests, dungeon
 ## brick, Hellstone before Hardmode, orbs, altars, or anything unbreakable).
 static func blastproof(b: Dictionary) -> bool:
-	return b.has("unbreakable") or b.get("interact") in ["chest", "spawner"] or b.get("biome") == "dungeon" \
+	return b.has("unbreakable") or b.get("interact") in ["chest", "spawner"] or (b.get("biome") == "dungeon" and not b.get("cracked", false)) \
 			or b.get("name") == "hellstone" or b.get("on_break") == "orb" or int(b.get("min_pick", 0)) > 65
 
 

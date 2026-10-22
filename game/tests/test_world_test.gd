@@ -453,6 +453,7 @@ func _run() -> void:
 	await _shadow_chest_checks(c)
 	await _hellstone_checks(c)
 	await _dungeon_enemy_checks(c)
+	await _trap_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -5728,6 +5729,32 @@ func _dungeon_enemy_checks(c: Vector3i) -> void:
 	check("Angry Bones: 2" in game.hud.info_text(), "then the Angry Bones killed, every kind of them: %s" % game.hud.info_text())
 	p.inventory.remove("TallyCounter", 1)
 	clear.call()
+	# Cracked brick: landing hard on it shatters it under you; firm ground
+	# doesn't; explosions break it, not the other dungeon brick.
+	var cb := Data.block_id("cracked_blue_brick")
+	for x in range(-2, 3):
+		for z in range(-2, 3):
+			w.set_block(o + Vector3i(x, -1, z) + Vector3i(0, 0, -8), cb)
+			w.set_block(o + Vector3i(x, -2, z) + Vector3i(0, 0, -8), cb)
+	# (At most 10 px a tick, Terraria's fall: it beats the random 2-11 8 times
+	# in 10, so a few tries.)
+	var shattered := false
+	for attempt in 5:
+		p.global_position = Vector3(o) + Vector3(0.5, 2.5, -7.5)
+		p.velocity = Vector3(0, -30.0, 0)
+		await frames(6)
+		if w.get_block(o + Vector3i(0, -1, -8)) == 0:
+			shattered = true
+			break
+	check(shattered, "landing hard on cracked brick shatters it")
+	p.global_position = Vector3(o) + Vector3(0.5, 0, 8.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	check(Game.blastproof(Data.block(Data.block_id("blue_brick"))) and not Game.blastproof(Data.block(cb)), "explosions break cracked brick, not the rest")
+	for x in range(-2, 3):
+		for z in range(-2, 3):
+			for y in [-1, -2]:
+				w.set_block(o + Vector3i(x, y, z - 8), Data.block_id("stone") if y == -1 else 0)
 	# The Bone Wand: places Bone Blocks, using up Bones.
 	var held = p.inventory.slots[p.selected]
 	p.inventory.slots[p.selected] = Inventory.stack("BoneWand", 1)
@@ -5749,6 +5776,93 @@ func _dungeon_enemy_checks(c: Vector3i) -> void:
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	p.velocity = Vector3.ZERO
 	p._fall_start = p.global_position.y  # (moved down, not fallen)
+	await frames(2)
+
+
+func _trap_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var o := c + Vector3i(-30, 45, 0)
+	var stone := Data.block_id("stone")
+	# A tunnel along x (4 tall, 1 wide), rock round it.
+	for x in range(-12, 13):
+		for z in range(-3, 4):
+			for y in range(-4, 12):
+				var open := z == 0 and y >= 0 and y < 4 and absi(x) < 12
+				w.set_block(o + Vector3i(x, y, z), 0 if open else stone)
+	var plate := o
+	w.set_block(plate, Data.block_id("gray_pressure_plate"))
+	# A dart trap in the tunnel's end, facing back down it (-x: FACING 3).
+	var dart := o + Vector3i(12, 1, 0)
+	w.set_block(dart, Data.block_id("dart_trap"))
+	game.block_rotations[Chests.key(dart)] = 3
+	# Explosives under the floor, and a boulder over a shaft.
+	var bomb := o + Vector3i(-6, -3, 0)
+	w.set_block(bomb, Data.block_id("explosives"))
+	var shaft_x := o + Vector3i(-3, 0, 0)
+	for y in range(4, 9):
+		w.set_block(shaft_x + Vector3i(0, y, 0), 0)
+	var boulder := shaft_x + Vector3i(0, 9, 0)
+	w.set_block(boulder, Data.block_id("boulder"))
+	w.set_block(boulder + Vector3i.DOWN, Data.block_id("boulder_plug"))
+	w.set_block(boulder + Vector3i.DOWN * 2, Data.block_id("boulder_plug"))
+	game.traps.wires[Chests.key(plate)] = [dart, boulder]
+	var bomb_plate := o + Vector3i(-9, 0, 0)
+	w.set_block(bomb_plate, Data.block_id("brown_pressure_plate"))
+	game.traps.wires[Chests.key(bomb_plate)] = [bomb]
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	p.global_position = Vector3(o) + Vector3(2.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	await frames(3)
+	# Stepping onto the plate: a Poison Dart out of the trap, the boulder down.
+	p.global_position = Vector3(plate) + Vector3(0.5, 0.05, 0.5)
+	await frames(2)
+	var darts := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "PoisonDart")
+	var rocks := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "Boulder")
+	check(darts.size() == 1 and darts[0].velocity.x < -40.0 and not darts[0].friendly, "a pressure plate fires its dart trap: a Poison Dart down the tunnel (%d)" % darts.size())
+	check(rocks.size() == 1 and w.get_block(boulder) == 0 and w.get_block(boulder + Vector3i.DOWN) == 0, "and drops its boulder, the plug gone")
+	# Off and on again at once: the dart trap is still cooling down.
+	p.global_position = Vector3(o) + Vector3(2.5, 0, 0.5)
+	await frames(1)
+	p.global_position = Vector3(plate) + Vector3(0.5, 0.05, 0.5)
+	await frames(1)
+	check(game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "PoisonDart").size() <= 1, "200 ticks between darts")
+	p.global_position = Vector3(o) + Vector3(-11.5, 0, 0.5)
+	await frames(1)
+	if rocks.size() == 1:
+		var rock: Projectile = rocks[0]
+		var fastest := 0.0
+		for i in 90:
+			await frames(1)
+			if not is_instance_valid(rock):
+				break
+			fastest = maxf(fastest, Vector2(rock.velocity.x, rock.velocity.z).length())
+		check(fastest > 5.0, "the boulder lands and rolls (%.1f blocks/s)" % fastest)
+	# Explosives: the blast takes the rock round them.
+	var round_bomb := w.get_block(bomb + Vector3i(1, 0, 0))
+	p.global_position = Vector3(bomb_plate) + Vector3(0.5, 0.05, 0.5)
+	await frames(2)
+	check(w.get_block(bomb) == 0 and w.get_block(bomb + Vector3i(1, 0, 0)) == 0 and round_bomb != 0, "a plate sets off its explosives, blasting the rock")
+	for e in game.entities.get_children():
+		if e is Projectile or e is ItemDrop:
+			e.queue_free()
+	for x in range(-14, 15):
+		for z in range(-5, 6):
+			for y in range(-6, 14):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	game.traps.wires.erase(Chests.key(plate))
+	game.traps.wires.erase(Chests.key(bomb_plate))
+	p.god_mode = was_god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y  # (moved down, not fallen)
+	p.life = p.life_max
+	p.poisoned = 0.0
 	await frames(2)
 
 

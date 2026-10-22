@@ -1218,8 +1218,24 @@ brick colour (blue, green or pink, like Terraria's).
   in a row 7 apart along a long passage or a column up a tall shaft, none within 8. A room's walls
   aren't flat here as Terraria's back wall is, so each looks a few blocks round its spot for one
   that is.
-- **Not yet:** Terraria's cracked-brick pit traps, dart and boulder traps, locked biome chests,
-  and furniture.
+- **Cracked bricks:** 1 hall in 6 (Terraria's CrackedBrickChance 0.166, not the entrance
+  hallway) is built of the colour's cracked brick. Run over it or land on it fast enough and it
+  shatters under you (Terraria's CheckCrackedBrickBreak: faster than a random 2-11 px a tick,
+  unless you're also on firm ground), dropping you through; explosions break it too, though not
+  the rest of the Dungeon's brick.
+- **Traps:** 8.4 per 4200 tiles, placed as the caves' are (below).
+- **Biome chests:** Terraria's five, each on the floor at a random spot inside: a Locked Jungle
+  Chest, a Locked Corruption or Crimson Chest (the world's evil), and Locked Hallowed, Frozen and
+  Desert Chests. Their keys and Hardmode loot aren't in yet, so they stay locked.
+- **Furniture** (DungeonGlobalGroundFurniture, 2000 tries per 4200 tiles): at the middle of a run
+  of floor long enough for it and clear to its height, the brick colour's Dungeon furniture in the
+  brick parts and the Gothic set in the slab and tiled parts: tables with a chair each side and,
+  1 time in 2, a candle, a Water Candle or a book on them, work benches with a chair, vases,
+  bookcases, beds, pianos, dressers, sofas, bathtubs, lamps, candelabras and clocks. The first
+  spots go to an Alchemy Table and a Bewitching Table (1 and one per 4200 tiles of width each,
+  none within 15 tiles of another); the Alchemy Table works as a placed Bottle for crafting.
+- **Not yet:** Terraria's Dungeon bookshelves (DungeonGlobalBookshelves), the Bewitching Table's
+  buff (minions aren't in yet).
 - **Bricks:** dungeon brick needs 65% pickaxe power (Nightmare / Deathbringer Pickaxe), as in
   Terraria.
 - **The Dungeon biome:** inside (under the keep's roof, or among dungeon brick underground) the
@@ -1566,6 +1582,24 @@ shop changes with the hour and the moon: Black and Pink Thread, the Familiar Wig
 the Summer Hat by day, the Plumber's Shirt and Pants while the moon is full (and the White Tuxedo
 on those nights), the Doctor's Shirt and Pants while it's waning gibbous, and the Beanie in the
 snow. His Blood Moon, clown, Party and Hardmode items wait for those.
+
+Traps, Terraria's (its Traps pass and WorldGen.placeTrap; `rust/voxel_core/src/traps.rs`): 210
+per small world (here that many in each 640 x 640 blocks, about 540 in 1024 x 1024), in the open
+caves from the surface down to the Underworld, each a pressure plate on the ground wired to:
+- **a Dart Trap** (half of them): in the wall along a line through the plate, 5-50 tiles off,
+  up to 2 over the floor, facing it. Each step onto the plate it shoots a Poison Dart (12 px a
+  tick, 20 damage, doubled on you as Terraria's hostile shots are, and 10 s of Poisoned), 200
+  ticks at least between shots.
+- **a Boulder** (the other half; a dart trap near snow or ice): high in the rock over the plate
+  (5-40 tiles), at the top of a shaft cut down to it, resting on a plug of actuated stone. The
+  plate drops the plug; the boulder falls (bouncing a little if it lands hard), rolls the way with
+  the most floor ahead, speeding up to 7 px a tick, and breaks on the first wall. It hits for 70
+  (140 on you).
+- **Explosives** (1 in 20): 4-6 tiles down under the plate, in solid rock: Terraria's
+  500-damage blast, blocks and all.
+- The plates are the gray and brown ones (the orange one for a boulder), stepped on by players
+  only. Deep down Terraria's are Geysers 1 time in 6; those aren't in yet. Plates, Dart Traps,
+  Boulders and Explosives drop as items and can be placed (there are no wires to place yet).
 
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a

@@ -491,6 +491,7 @@ func _physics_process(delta: float) -> void:
 			_respawn()
 		return
 	_update_liquid(game)
+	_crack_bricks(game, delta)
 	_move(delta, game)
 	_flower_boots(game)
 	_regen(delta)
@@ -2523,6 +2524,43 @@ func _swing_dust(delta: float) -> void:
 		for i in int(dust[1]):
 			var at := camera.global_position - basis.z * randf_range(0.9, 1.6) + (basis.x * cos(a) + basis.y * sin(a)) * randf_range(0.3, 0.8)
 			Game.current.dust.spawn(int(dust[0]), at, Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * 1.5, float(dust[2]) * 0.6)
+
+
+## Terraria's Player.CheckCrackedBrickBreak, in its px a tick: running faster
+## than a random 2-11 across, or landing faster than that, on cracked brick
+## (unless you're also on firm ground) shatters the cracked bricks under you
+## and a tile either side (nothing on top of them), and you fall through.
+func _crack_bricks(game, delta: float) -> void:
+	var across := Vector2(velocity.x, velocity.z).length() / 2.5
+	var down := -velocity.y / 2.5
+	if not (randi_range(2, 11) < across or randi_range(2, 11) < down):
+		return
+	var w: VoxelWorld = game.world
+	# Where this tick takes you (Terraria's position + velocity).
+	var feet := global_position + velocity * delta
+	var below := int(floor(feet.y - 0.05))
+	var cracked := func(q: Vector3i) -> bool: return Data.block(w.get_block(q)).get("cracked", false)
+	if down < 1.0:
+		for c in [Vector2(0, 0), Vector2(-half.x, -half.z), Vector2(half.x, half.z), Vector2(-half.x, half.z), Vector2(half.x, -half.z)]:
+			var q := Vector3i(floori(feet.x + c.x), below, floori(feet.z + c.y))
+			if w.is_solid(q) and not cracked.call(q):
+				return
+	var lo := Vector3i(floori(feet.x - half.x - 1.0), below - 1, floori(feet.z - half.z - 1.0))
+	var hi := Vector3i(floori(feet.x + half.x + 1.0), below, floori(feet.z + half.z + 1.0))
+	var under := false
+	for x in range(floori(feet.x - half.x), floori(feet.x + half.x) + 1):
+		for z in range(floori(feet.z - half.z), floori(feet.z + half.z) + 1):
+			var q := Vector3i(x, below, z)
+			if cracked.call(q) and not w.is_solid(q + Vector3i.UP):
+				under = true
+	if not under:
+		return
+	for x in range(lo.x, hi.x + 1):
+		for z in range(lo.z, hi.z + 1):
+			for y in range(hi.y, lo.y - 1, -1):
+				var q := Vector3i(x, y, z)
+				if cracked.call(q) and not w.is_solid(q + Vector3i.UP):
+					game.break_block(q)
 
 
 ## A melee hit's extras (Terraria's StatusToNPC, and Projectile.StatusNPC for

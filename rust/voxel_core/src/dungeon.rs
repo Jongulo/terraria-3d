@@ -84,8 +84,22 @@
 //!     Hanging Skeleton or Catacomb, one or a row or column 7 apart, none
 //!     within 8 (paintings.rs).
 //!
-//! Not here yet: Terraria's cracked-brick pit traps, dart and boulder traps,
-//! locked biome chests and furniture.
+//! - Cracked bricks: 1 hall in 6 (DungeonHallSettings.CrackedBrickChance
+//!   0.166; not the entrance hallway) is built of the colour's cracked brick,
+//!   which shatters under you as you run or land on it (in the game).
+//!
+//! - Biome chests (DungeonGlobalBiomeChests): a Locked Jungle, Corruption or
+//!   Crimson (the world's evil), Hallowed, Frozen and Desert Chest, each on
+//!   the floor at a random spot inside.
+//! - Furniture (DungeonGlobalGroundFurniture): 2000 tries per 4200 tiles,
+//!   each at the middle of a run of floor - the brick colour's Dungeon
+//!   furniture in the brick parts, Gothic in the slab and tiled ones - tables
+//!   with chairs and candles, Water Candles or books on them; the Alchemy and
+//!   Bewitching Tables first (ground_furniture).
+//! - Traps (DungeonGlobalTraps): 8.4 per 4200 tiles, Terraria's placeTrap
+//!   (traps.rs) from a random spot inside.
+//!
+//! Not here yet: Terraria's bookshelves (DungeonGlobalBookshelves).
 
 use crate::paintings::{self, Paintings};
 use crate::world::{Decoration, World};
@@ -143,6 +157,16 @@ impl Mask {
 
 struct Ids {
     brick: u16,
+    /// The colour's cracked brick (Terraria's BrickCrackedTileType), for the
+    /// halls that are built of it.
+    cracked: u16,
+    /// The locked biome chests in BIOME_LOOT's order.
+    biome_chests: [u16; 6],
+    /// The brick colour's Dungeon furniture and the Gothic set (its slab and
+    /// tiled parts'), by FURNITURE's kinds.
+    furniture: [[u16; 14]; 2],
+    alchemy_table: u16,
+    bewitching_table: u16,
     /// Every dungeon brick colour (Terraria's tileDungeon).
     bricks: Vec<u16>,
     platform: u16,
@@ -166,6 +190,15 @@ struct Ids {
 }
 
 impl Ids {
+    /// The bricks and the cracked brick: what the Dungeon built.
+    fn all_bricks(&self) -> Vec<u16> {
+        let mut b = self.bricks.clone();
+        if self.cracked != 0 {
+            b.push(self.cracked);
+        }
+        b
+    }
+
     fn new(w: &World, brick_name: &str) -> Self {
         let id = |n: &str| w.id_of(n);
         let colour = brick_name.trim_end_matches("_brick");
@@ -175,6 +208,14 @@ impl Ids {
         let lanterns = ["chain_lantern", "brass_lantern", "caged_lantern", "carriage_lantern", "alchemy_lantern", "diablost_lamp", "oil_rag_sconse"];
         Ids {
             brick: id(brick_name),
+            cracked: id(&format!("cracked_{colour}_brick")),
+            furniture: [
+                FURNITURE.map(|k| id(&format!("{colour}_dungeon_{k}"))),
+                FURNITURE.map(|k| id(&format!("gothic_{k}"))),
+            ],
+            alchemy_table: id("alchemy_table"),
+            bewitching_table: id("bewitching_table"),
+            biome_chests: ["locked_jungle_chest", "locked_corruption_chest", "locked_crimson_chest", "locked_hallowed_chest", "locked_frozen_chest", "locked_desert_chest"].map(|n| id(n)),
             bricks: ["blue_brick", "green_brick", "pink_brick"].iter().map(|n| id(n)).filter(|&b| b != 0).collect(),
             platform: id(&format!("{colour}_brick_platform")),
             door: id("dungeon_door"),
@@ -205,6 +246,29 @@ pub const DUNGEON_LOOT: i32 = 7;
 const LOOT_ORDER: usize = 8;
 /// The one that holds a Golden Key (in a wooden chest).
 const KEY_LOOT: i32 = 6;
+/// The locked biome chests' styles: BIOME_LOOT + 0..5, Jungle, Corruption,
+/// Crimson, Hallowed, Frozen and Desert (chests.gd's loot tables).
+pub const BIOME_LOOT: i32 = 21;
+/// Terraria's tiles in blocks: the Dungeon is a block a tile.
+fn blocks_of(tiles: i32) -> i32 {
+    tiles
+}
+
+/// A whole solid cell (Terraria's SolidTile).
+fn solid_cube(w: &World, (x, y, z): P) -> bool {
+    w.in_bounds(x, y, z) && w.is_solid(x, y, z) && !w.shapes.contains_key(&w.idx(x, y, z))
+}
+
+/// The furniture's kinds (block names after the set's prefix).
+const FURNITURE: [&str; 14] = ["chair", "table", "workbench", "candle", "vase", "bookcase", "bed", "piano", "dresser", "sofa", "bathtub", "candelabra", "lamp", "clock"];
+/// GroundFurniture's 13 kinds (table, work bench, vase, bookcase, chair, bed,
+/// piano, dresser, sofa, bathtub, lamp, candelabra, clock): the piece each
+/// places (FURNITURE's index), and the room it wants, in tiles: half its
+/// width along the floor and its height - the later tries' (and roomier),
+/// and the first half's.
+const FURNITURE_KINDS: [usize; 13] = [1, 2, 4, 5, 0, 6, 7, 8, 9, 10, 12, 11, 13];
+const FURNITURE_ROOM: [(i32, i32); 13] = [(5, 4), (4, 3), (3, 5), (4, 6), (3, 3), (5, 3), (5, 4), (5, 4), (5, 4), (5, 3), (2, 4), (3, 3), (2, 5)];
+const FURNITURE_ROOM_SMALL: [(i32, i32); 13] = [(3, 4), (2, 3), (3, 5), (3, 6), (1, 3), (4, 3), (4, 4), (4, 4), (4, 4), (4, 3), (1, 4), (2, 3), (2, 5)];
 /// Added to a chest's style: it holds a Shadow Key too.
 pub const SHADOW_KEY: i32 = 64;
 
@@ -241,6 +305,9 @@ struct PlatformSpot {
 struct Gen<'a> {
     w: &'a mut World,
     rng: Rng,
+    /// Which halls are of cracked brick: their own random numbers, so the
+    /// layout stays as it was.
+    crack_rng: Rng,
     ids: Ids,
     l: Layers,
     mask: Mask,
@@ -328,6 +395,7 @@ pub fn dungeon(w: &mut World, seed: u64, l: &Layers, keep: P, door: i32, brick: 
     let mut g = Gen {
         w,
         rng: Rng::new(seed ^ 0xd4_96e0),
+        crack_rng: Rng::new(seed ^ 0xc4ac_6ed),
         ids,
         l: *l,
         mask,
@@ -386,6 +454,8 @@ pub fn dungeon(w: &mut World, seed: u64, l: &Layers, keep: P, door: i32, brick: 
     g.place_platforms();
     g.shelves();
     g.chests();
+    g.biome_chests();
+    g.ground_furniture();
     g.tidy_cut_flora();
     // DungeonBounds.Inflate(25) before the lights.
     g.lo = (g.lo.0 - 25, g.lo.1 - 25, g.lo.2 - 25);
@@ -393,6 +463,7 @@ pub fn dungeon(w: &mut World, seed: u64, l: &Layers, keep: P, door: i32, brick: 
     g.lights();
     g.paintings();
     g.banners();
+    g.traps();
     true
 }
 
@@ -454,7 +525,7 @@ impl<'a> Gen<'a> {
 
     /// One box of a room or hall: brick in [lo, hi) where the dungeon isn't
     /// yet, walled inside its outer layer, open in [ilo, ihi).
-    fn carve(&mut self, lo: P, hi: P, ilo: P, ihi: P, brick_below: i32) {
+    fn carve(&mut self, lo: P, hi: P, ilo: P, ihi: P, brick_below: i32, brick: u16) {
         self.grow_bounds(lo, hi);
         for x in lo.0..hi.0 {
             for z in lo.2..hi.2 {
@@ -464,7 +535,7 @@ impl<'a> Gen<'a> {
                         continue;
                     }
                     if !self.mask.get(p) && y < brick_below {
-                        self.set(p, self.ids.brick);
+                        self.set(p, brick);
                     }
                     if x > lo.0 && x < hi.0 - 1 && y > lo.1 && y < hi.1 - 1 && z > lo.2 && z < hi.2 - 1 {
                         self.mask.set(p);
@@ -569,7 +640,7 @@ impl<'a> Gen<'a> {
                 let hs = strength * 0.5 + j as f64;
                 let ilo = ((p.0 - hs) as i32, (p.1 - hs) as i32, (p.2 - hs) as i32);
                 let ihi = ((p.0 + hs) as i32, (p.1 + hs) as i32, (p.2 + hs) as i32);
-                self.carve(lo, hi, ilo, ihi, self.keep.4);
+                self.carve(lo, hi, ilo, ihi, self.keep.4, self.ids.brick);
                 p = (p.0 + v.0, p.1 + v.1, p.2 + v.2);
             }
             first = false;
@@ -635,7 +706,7 @@ impl<'a> Gen<'a> {
             let i = s * 0.5;
             let ilo = ((p.0 - i) as i32, (p.1 - i) as i32, (p.2 - i) as i32);
             let ihi = ((p.0 + i) as i32, (p.1 + i) as i32, (p.2 + i) as i32);
-            self.carve(lo, hi, ilo, ihi, i32::MAX);
+            self.carve(lo, hi, ilo, ihi, i32::MAX, self.ids.brick);
             ilo_all = (ilo_all.0.min(ilo.0), ilo_all.1.min(ilo.1), ilo_all.2.min(ilo.2));
             ihi_all = (ihi_all.0.max(ihi.0 - 1), ihi_all.1.max(ihi.1 - 1), ihi_all.2.max(ihi.2 - 1));
             p = (p.0 + v.0, p.1 + v.1, p.2 + v.2);
@@ -672,6 +743,9 @@ impl<'a> Gen<'a> {
 
     /// LegacyDungeonHall from the walker; the walker ends at its end.
     fn hall(&mut self, force_across: bool) {
+        // 1 time in 6 a hall of cracked brick (DungeonHallSettings'
+        // CrackedBrickChance 0.166; not the entrance hallway).
+        let brick = if self.ids.cracked != 0 && self.crack_rng.next() % 1000 < 166 { self.ids.cracked } else { self.ids.brick };
         let mut strength = (4 + self.r(2)) as f64;
         let mut steps = 35 + self.r(45);
         if force_across {
@@ -820,7 +894,7 @@ impl<'a> Gen<'a> {
             let hs = strength * 0.5 + j as f64;
             let ilo = ((p.0 - hs) as i32, (p.1 - hs) as i32, (p.2 - hs) as i32);
             let ihi = ((p.0 + hs) as i32, (p.1 + hs) as i32, (p.2 + hs) as i32);
-            self.carve(lo, hi, ilo, ihi, i32::MAX);
+            self.carve(lo, hi, ilo, ihi, i32::MAX, brick);
             p = (p.0 + v.0, p.1 + v.1, p.2 + v.2);
         }
         self.pos = (p.0 as i32, p.1 as i32, p.2 as i32);
@@ -831,7 +905,7 @@ impl<'a> Gen<'a> {
     fn clear_old_decorations(&mut self) {
         let mask = &self.mask;
         let w = &*self.w;
-        let bricks = &self.ids.bricks;
+        let bricks = &self.ids.all_bricks();
         let keep_y = self.keep.4;
         let keep = self.keep;
         let in_keep = |p: P| p.0 >= keep.0 && p.0 <= keep.2 && p.2 >= keep.1 && p.2 <= keep.3 && p.1 >= keep_y;
@@ -852,7 +926,7 @@ impl<'a> Gen<'a> {
     /// left standing on brick or over a gap goes (worldgen::tidy_plants).
     fn tidy_cut_flora(&mut self) {
         let (lo, hi) = (self.lo, self.hi);
-        let bricks = self.ids.bricks.clone();
+        let bricks = self.ids.all_bricks();
         let w = &mut *self.w;
         let mut cut: Vec<(usize, i32, i32, Vec<i32>)> = Vec::new();
         for (k, d) in w.decorations.iter().enumerate() {
@@ -1423,6 +1497,178 @@ impl<'a> Gen<'a> {
         }
     }
 
+    /// DungeonGlobalBiomeChests: five, one of each in turn - the Jungle's,
+    /// the world evil's (Corruption or Crimson), the Hallowed, Frozen and
+    /// Desert ones - each up to 1000 tries at a random open spot inside (not
+    /// in the entrance), on the floor below it (AddBuriedChest), Locked.
+    fn biome_chests(&mut self) {
+        let crimson = self.w.gen_evil == crate::worldgen::EVIL_CRIMSON;
+        for k in [0usize, if crimson { 2 } else { 1 }, 3, 4, 5] {
+            let block = self.ids.biome_chests[k];
+            if block == 0 {
+                continue;
+            }
+            for _ in 0..1000 {
+                let Some(mut p) = self.random_inside(self.hi.1) else { continue };
+                while p.1 > 1 && self.open((p.0, p.1 - 1, p.2)) {
+                    p.1 -= 1;
+                }
+                if self.in_keep(p) || !self.is_brick((p.0, p.1 - 1, p.2)) || !self.open((p.0, p.1 + 1, p.2)) || !self.mask.get(p) {
+                    continue;
+                }
+                self.set(p, block);
+                self.w.decorations.push(Decoration { kind: "chest".into(), pos: p, style: BIOME_LOOT + k as i32 });
+                let facing = self.r(4);
+                self.w.decorations.push(Decoration { kind: "rotation".into(), pos: p, style: facing });
+                break;
+            }
+        }
+    }
+
+    /// DungeonGlobalGroundFurniture: 2000 tries per 4200 tiles. Each a random
+    /// open spot inside, on the floor below it, in the middle of the run of
+    /// floor along a line through it (here x or z): one of 13 kinds of
+    /// furniture (the last three now and then rerolled), of the brick
+    /// colour's Dungeon set in the brick parts and the Gothic set elsewhere
+    /// (no vase), where the run is long enough (1.75 x its half width; the
+    /// first half of the tries a smaller room and just its half width) and
+    /// its room clear. A table gets a chair each side and, on it, 1 in 2 a
+    /// candle, a Water Candle or a book; a work bench a chair and the same.
+    /// The first spots go to the Alchemy and Bewitching Tables (1 and one
+    /// per 4200 tiles each), none within 15 tiles of another.
+    fn ground_furniture(&mut self) {
+        let tries = (2000.0 * self.width_t / 4200.0) as i32;
+        let mut specials = [1 + (self.width_t / 4200.0) as i32; 2];
+        let mut tables: Vec<P> = Vec::new();
+        for t in 0..tries {
+            let small = t < tries / 2;
+            let Some(mut p) = (0..1000).find_map(|_| self.random_inside(self.hi.1)) else { break };
+            while p.1 > 1 && self.open((p.0, p.1 - 1, p.2)) {
+                p.1 -= 1;
+            }
+            let floor = |g: &Gen, c: P| g.open(c) && solid_cube(g.w, (c.0, c.1 - 1, c.2));
+            if !floor(self, p) || self.in_keep(p) {
+                continue;
+            }
+            let along = if self.r(2) == 0 { (1, 0) } else { (0, 1) };
+            let at = |k: i32| (p.0 + along.0 * k, p.1, p.2 + along.1 * k);
+            let (mut lo, mut hi) = (0, 0);
+            while lo > -40 && floor(self, at(lo - 1)) {
+                lo -= 1;
+            }
+            while hi < 40 && floor(self, at(hi + 1)) {
+                hi += 1;
+            }
+            let mid_k = (lo + hi).div_euclid(2);
+            let mid = at(mid_k);
+            if self.get((mid.0, mid.1 - 1, mid.2)) == self.ids.spike {
+                continue;
+            }
+            let set = if self.variant(mid) == 0 { 0 } else { 1 };
+            let mut kind = self.r(13) as usize;
+            if kind >= 10 && self.r(4) != 0 {
+                kind = self.r(13) as usize;
+            }
+            for _ in 0..50 {
+                if self.ids.furniture[set][FURNITURE_KINDS[kind]] != 0 {
+                    break;
+                }
+                kind = self.r(13) as usize;
+            }
+            let room = if small { FURNITURE_ROOM_SMALL[kind] } else { FURNITURE_ROOM[kind] };
+            let (hw, ht) = (blocks_of(room.0), blocks_of(room.1 + 1));
+            let clear = (-hw..=hw).all(|k| (0..ht).all(|dy| {
+                let c = at(mid_k + k);
+                self.open((c.0, c.1 + dy, c.2))
+            }));
+            if !clear {
+                continue;
+            }
+            let need = if small { hw as f64 } else { hw as f64 * 1.75 };
+            let fits = (hi - lo) as f64 >= need;
+            let across = if self.r(2) == 0 { (-along.1, along.0) } else { (along.1, -along.0) };
+            // The Alchemy and Bewitching Tables first.
+            if specials.iter().any(|&n| n > 0) && !tables.iter().any(|q| (q.0 - mid.0).abs() <= 10 && (q.1 - mid.1).abs() <= 10 && (q.2 - mid.2).abs() <= 10) {
+                let which = if specials[0] > 0 { 0 } else { 1 };
+                let block = [self.ids.alchemy_table, self.ids.bewitching_table][which];
+                if block != 0 {
+                    self.set(mid, block);
+                    self.face(mid, across);
+                    tables.push(mid);
+                }
+                specials[which] -= 1;
+                continue;
+            }
+            if !fits {
+                continue;
+            }
+            let pieces = self.ids.furniture[set];
+            let piece = |i: usize| pieces[i];
+            match kind {
+                0 | 1 => {
+                    self.set(mid, piece(FURNITURE_KINDS[kind]));
+                    self.face(mid, across);
+                    let chair = piece(0);
+                    let sides: Vec<i32> = if kind == 0 { vec![-1, 1] } else { vec![if self.r(2) == 0 { -1 } else { 1 }] };
+                    for k in sides {
+                        let c = at(mid_k + k);
+                        if chair != 0 && self.open(c) {
+                            self.set(c, chair);
+                            self.face(c, (-along.0 * k, -along.1 * k));
+                        }
+                    }
+                    let top = (mid.0, mid.1 + 1, mid.2);
+                    if self.r(2) == 0 && self.open(top) {
+                        let thing = match self.r(5) {
+                            0 | 1 => piece(3),
+                            2 => self.ids.water_candle,
+                            3 => self.ids.book,
+                            _ => 0,
+                        };
+                        if thing != 0 {
+                            self.set(top, thing);
+                        }
+                    }
+                }
+                4 => {
+                    self.set(mid, piece(0));
+                    let s = if self.r(2) == 0 { 1 } else { -1 };
+                    self.face(mid, (along.0 * s, along.1 * s));
+                }
+                _ => {
+                    self.set(mid, piece(FURNITURE_KINDS[kind]));
+                    self.face(mid, across);
+                }
+            }
+        }
+    }
+
+    fn face(&mut self, p: P, facing: (i32, i32)) {
+        let style = FACING.iter().position(|&f| f == facing).unwrap_or(0) as i32;
+        self.w.decorations.push(Decoration { kind: "rotation".into(), pos: p, style });
+    }
+
+    /// DungeonGlobalTraps: 8.4 per 4200 tiles, each up to 1000 tries at a
+    /// random open spot in the Dungeon (Terraria: on its wall), placed as
+    /// the caves' are (traps.rs: WorldGen.placeTrap; no boulder goes into its
+    /// brick).
+    fn traps(&mut self) {
+        let ids = crate::traps::TrapIds::of(self.w);
+        if !ids.ready() {
+            return;
+        }
+        let count = (8.4 * self.width_t / 4200.0) as i32;
+        let lava_line = self.l.cavern_top - 20;
+        for _ in 0..count {
+            for _ in 0..1000 {
+                let Some(p) = self.random_inside(self.hi.1) else { continue };
+                if crate::traps::place_trap(self.w, &mut self.rng, &self.l, &ids, p, -1, lava_line) {
+                    break;
+                }
+            }
+        }
+    }
+
     /// DungeonGlobalLights.
     fn lights(&mut self) {
         let count = (28.0 * self.width_t / 4200.0) as i32;
@@ -1726,15 +1972,25 @@ pub(crate) mod tests {
             w.set_def(id, BlockDef { name: name.into(), render, solid, opaque: solid && render == RENDER_CUBE, platform, variants: 1, ..Default::default() });
             id += 1;
         };
-        for name in ["blue_brick", "green_brick", "pink_brick", "spike"] {
+        for name in ["blue_brick", "green_brick", "pink_brick", "spike", "cracked_blue_brick", "cracked_green_brick", "cracked_pink_brick"] {
             add(w, name, RENDER_CUBE, true, false);
         }
         for name in ["blue_brick_platform", "green_brick_platform", "pink_brick_platform", "metal_shelf", "brass_shelf", "wood_shelf", "dungeon_shelf"] {
             add(w, name, RENDER_CUTOUT, false, true);
         }
-        for name in ["dungeon_door", "blue_dungeon_door", "green_dungeon_door", "pink_dungeon_door", "door_top", "chest", "locked_gold_chest"] {
+        for name in ["dungeon_door", "blue_dungeon_door", "green_dungeon_door", "pink_dungeon_door", "door_top", "chest", "locked_gold_chest",
+                "locked_jungle_chest", "locked_corruption_chest", "locked_crimson_chest", "locked_hallowed_chest", "locked_frozen_chest", "locked_desert_chest"] {
             add(w, name, RENDER_CUTOUT, true, false);
         }
+        for set in ["blue_dungeon", "green_dungeon", "pink_dungeon", "gothic"] {
+            for k in FURNITURE {
+                if !(set == "gothic" && k == "vase") {
+                    add(w, &format!("{set}_{k}"), RENDER_CUTOUT, false, false);
+                }
+            }
+        }
+        add(w, "alchemy_table", RENDER_CUTOUT, false, false);
+        add(w, "bewitching_table", RENDER_CUTOUT, false, false);
         let mut sprites = vec!["book", "water_bolt_book", "water_candle", "lesser_healing_potion_bottle", "lesser_mana_potion_bottle", "switch",
             "marching_bones_banner", "necromantic_sign", "rusted_company_standard", "ragged_brotherhood_sigil", "molten_legion_flag", "diabolic_sigil"]
             .into_iter().map(String::from).collect::<Vec<_>>();

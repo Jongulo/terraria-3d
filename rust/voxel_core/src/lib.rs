@@ -18,6 +18,7 @@ pub mod surface;
 pub mod hell;
 pub mod paintings;
 pub mod terrain;
+pub mod traps;
 pub mod world;
 pub mod worldgen;
 

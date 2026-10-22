@@ -104,6 +104,8 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"HellfireArrow": {"blast": 1.35, "dust": [31, 6]},
 		"FireArrow": {"ignite": [3, 180, 180], "dust": [6], "glow": true},
 		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
+		"PoisonDart": {"poison": 10.0, "life": 60.0},
+		"Boulder": {"size": 1.0, "radius": 0.6, "life": 60.0},
 		"Volcano": {"ghost": true, "pierce": 3, "radius": 3.33, "size": 2.2, "life": 10.0 / 60.0, "ignite": [1, 180, 180], "glow": true, "melee": true}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
@@ -117,6 +119,9 @@ var bounces := 0
 ## The player steering it while they hold the button (a channelled spell:
 ## the Magic Missile flies toward their crosshair, Terraria's AI 9).
 var steered_by = null
+## A rolling boulder (a trap's: Terraria's AI 25), and the way it rolls.
+var boulder := false
+var _roll := Vector3.ZERO
 var _flight := {}
 var _frames := 1
 var _fps := 20.0
@@ -223,6 +228,9 @@ func _physics_process(delta: float) -> void:
 			steered_by = null
 	if not explosive.is_empty():
 		_explosive_step(delta, game)
+		return
+	if boulder:
+		_boulder_step(delta, game)
 		return
 	if _aim != Vector3.ZERO:
 		velocity = velocity.lerp(_aim, 1.0 - pow(39.0 / 40.0, delta * 60.0))
@@ -370,6 +378,63 @@ func _explosive_step(delta: float, game) -> void:
 		queue_free()
 
 
+## Terraria's boulder (AI 25), in its px a tick (16 a block for shots): it
+## falls at 0.3 a tick (to 16), bouncing up a fifth when it lands faster than
+## 5; on the ground it picks the way with the longest run of floor (Terraria:
+## away from the nearest wall) and speeds up 0.05 a tick to 7 while it isn't
+## falling fast (6). A wall ahead breaks it. It hurts you (doubled, as
+## hostile) and enemies it rolls into.
+func _boulder_step(delta: float, game) -> void:
+	var w: VoxelWorld = game.world
+	life -= delta
+	velocity.y = maxf(velocity.y - 0.3 * 225.0 * delta, -16.0 * 3.75)
+	var below := Vector3i((global_position - Vector3(0, 0.55, 0)).floor())
+	var grounded := w.is_solid(below)
+	if grounded and _roll == Vector3.ZERO:
+		var best := -1
+		for d in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+			var n := 0
+			while n < 12:
+				var c := Vector3i((global_position + d * (n + 1)).floor())
+				if w.is_solid(c) or not w.is_solid(c + Vector3i.DOWN):
+					break
+				n += 1
+			if n > best or (n == best and randi() % 2 == 0):
+				best = n
+				_roll = d
+	if _roll != Vector3.ZERO and velocity.y > -6.0 * 3.75:
+		var along := velocity.dot(_roll)
+		along = minf(along + 0.05 * 225.0 * delta, 7.0 * 3.75)
+		velocity = _roll * along + Vector3(0, velocity.y, 0)
+	var next := global_position + velocity * delta
+	if velocity.y < 0.0 and w.is_solid(Vector3i((next - Vector3(0, 0.5, 0)).floor())):
+		if velocity.y < -5.0 * 3.75:
+			velocity.y = -velocity.y * 0.2
+			Audio.play_at("Dig_*", global_position, 0.6)
+		else:
+			velocity.y = 0.0
+		next.y = global_position.y
+	if _roll != Vector3.ZERO and w.is_solid(Vector3i((next + _roll * 0.5).floor())):
+		# Terraria's boulder breaks on a wall (BoulderExplosion).
+		game.spawn_dust(global_position, Color(0.45, 0.42, 0.4), 16)
+		Audio.play_at("Dig_*", global_position)
+		queue_free()
+		return
+	global_position = next
+	_angle -= velocity.length() * delta / 0.5
+	sprite.set_rotation_angle(_angle)
+	sprite.update_light(w, game.sky, global_position)
+	var p = game.player
+	if p.alive and p.overlaps_point(global_position, radius):
+		p.hurt(damage * 2, global_position)
+	for npc in game.npcs():
+		if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
+			_hit[npc] = true
+			npc.hit(damage, knockback, velocity.normalized(), 0.0)
+	if life <= 0.0:
+		queue_free()
+
+
 ## Gone: a Hellfire Arrow's blast first ("blast": Terraria's Kill grows it to
 ## 64 px and Damage()s every enemy in that, the one it hit being immune just
 ## then), with Item14.
@@ -409,6 +474,8 @@ func _check_hits(game) -> bool:
 			p.hurt(damage, global_position)
 			if kind in POISONS and randi() % 3 == 0:
 				p.poison(10.0)
+			if _flight.has("poison"):
+				p.poison(float(_flight.poison))
 			if kind in IGNITES and randi() % 3 == 0:
 				p.ignite(7.0)
 			return true

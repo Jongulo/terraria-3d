@@ -24,12 +24,15 @@ var ores := 0
 ## desert cabin's Sandstone Chest (the upper and the deeper desert), 7 to 14
 ## the Dungeon's chests in Terraria's order (dungeon.rs: DUNGEON_LOOT), 15 a
 ## mushroom cabin's Mushroom Chest, 16 to 20 the Underworld's Shadow Chests by
-## their main item (hell.rs: SHADOW_LOOT). SHADOW_KEY added to a style: a
+## their main item (hell.rs: SHADOW_LOOT), 21 to 26 the Dungeon's locked
+## biome chests (dungeon.rs: BIOME_LOOT; their keys and Hardmode loot aren't
+## in the game yet, so they stay locked). SHADOW_KEY added to a style: a
 ## Shadow Key in it too (the Dungeon's first chest, and 1 in 3 after it).
 const LOOT := ["chest", "sky_chest", "ivy_chest", "chest", "frozen_chest", "sandstone_chest", "sandstone_chest_deep",
 		"dungeon_Muramasa", "dungeon_CobaltShield", "dungeon_AquaScepter", "dungeon_BlueMoon", "dungeon_MagicMissile",
 		"dungeon_Valor", "dungeon_GoldenKey", "dungeon_Handgun", "mushroom_chest",
-		"shadow_DarkLance", "shadow_Sunfury", "shadow_FlowerofFire", "shadow_Flamelash", "shadow_HellwingBow"]
+		"shadow_DarkLance", "shadow_Sunfury", "shadow_FlowerofFire", "shadow_Flamelash", "shadow_HellwingBow",
+		"biome_jungle", "biome_corruption", "biome_crimson", "biome_hallowed", "biome_frozen", "biome_desert"]
 const SHADOW_KEY := 64
 ## The second ore of each pair's things, by the first's: what a world with it
 ## puts in its chests instead.

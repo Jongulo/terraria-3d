@@ -14,6 +14,11 @@
 			"one_color": true,
 			"strength": 0.6
 		},
+		"blue_dungeon_bathtub": {
+			"noise": "grain",
+			"one_color": true,
+			"seed": 3.0
+		},
 		"blue_dungeon_sink": {
 			"one_color": true
 		},
@@ -52,12 +57,24 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"gothic_bathtub": {
+			"noise": "grain",
+			"one_color": true,
+			"seed": 3.0
+		},
+		"green_dungeon_bathtub": {
+			"noise": "grain",
+			"one_color": true,
+			"seed": 3.0
+		},
 		"green_dungeon_sink": {
 			"noise": "speckle",
 			"one_color": true
 		},
 		"obsidian_bathtub": {
-			"one_color": true
+			"noise": "grain",
+			"one_color": true,
+			"seed": 3.0
 		},
 		"obsidian_sink": {
 			"noise": "grain",
@@ -78,6 +95,11 @@
 		},
 		"picnic_table": {
 			"one_color": false
+		},
+		"pink_dungeon_bathtub": {
+			"noise": "grain",
+			"one_color": true,
+			"seed": 3.0
 		},
 		"pink_dungeon_sink": {
 			"noise": "grain",
@@ -114,6 +136,9 @@
 		}
 	},
 	"extruded": {
+		"alchemy_table": {
+			"depth": 16.0
+		},
 		"ash_wood_bathtub": {
 			"noise": "grain",
 			"strength": 0.95
@@ -170,9 +195,36 @@
 		"bench": {
 			"noise": "none"
 		},
+		"bewitching_table": {
+			"bevel": "step",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"strength": 0.4
+		},
 		"blue_brick_platform": {
 			"noise": "speckle",
 			"strength": 1.0
+		},
+		"blue_dungeon_bathtub": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"noise": "grain"
 		},
 		"bone_platform": {
 			"noise": "grain",
@@ -194,6 +246,12 @@
 		},
 		"boreal_wood_sink": {
 			"noise": "grain"
+		},
+		"boulder": {
+			"bevel": "round",
+			"bevel_size": 6.0,
+			"noise": "speckle",
+			"one_color": true
 		},
 		"cactus": {
 			"bevel": "chamfer",
@@ -1494,6 +1552,21 @@
 		"gold_chest": {
 			"one_color": true
 		},
+		"gothic_bathtub": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"noise": "grain"
+		},
+		"gothic_lamp": {
+			"depth": 4.0
+		},
 		"grandfather_clock": {
 			"depth": 10.0,
 			"noise": "grain",
@@ -1502,6 +1575,19 @@
 		"green_brick_platform": {
 			"noise": "speckle",
 			"strength": 0.65
+		},
+		"green_dungeon_bathtub": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"noise": "grain",
+			"one_color": false
 		},
 		"icicle": {
 			"one_color": false
@@ -2712,6 +2798,18 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"obsidian_bathtub": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"noise": "grain"
+		},
 		"obsidian_platform": {
 			"bevel": "none",
 			"bevel_size": 1.0,
@@ -2755,6 +2853,18 @@
 		"pink_brick_platform": {
 			"noise": "speckle",
 			"strength": 0.2
+		},
+		"pink_dungeon_bathtub": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"noise": "grain"
 		},
 		"pot": {
 			"bevel": "chamfer",
@@ -4772,6 +4882,15 @@
 		"barrel": {
 			"noise": "speckle"
 		},
+		"blue_dungeon_bathtub": {
+			"noise": "grain"
+		},
+		"blue_dungeon_lamp": {
+			"one_color": true
+		},
+		"blue_dungeon_vase": {
+			"one_color": true
+		},
 		"blue_torch": {
 			"one_color": true
 		},
@@ -4801,7 +4920,17 @@
 		"bottle": {
 			"one_color": true
 		},
+		"boulder": {
+			"no_outline": false,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"bowl": {
+			"one_color": true
+		},
+		"brown_pressure_plate": {
+			"noise": "speckle",
 			"one_color": true
 		},
 		"cactus_bathtub": {
@@ -4879,7 +5008,26 @@
 		"gold_chest": {
 			"one_color": true
 		},
+		"gothic_bathtub": {
+			"noise": "grain"
+		},
+		"gothic_lamp": {
+			"one_color": true
+		},
 		"grandfather_clock": {
+			"one_color": true
+		},
+		"gray_pressure_plate": {
+			"noise": "speckle",
+			"one_color": true
+		},
+		"green_dungeon_bathtub": {
+			"noise": "grain"
+		},
+		"green_dungeon_lamp": {
+			"one_color": true
+		},
+		"green_dungeon_vase": {
 			"one_color": true
 		},
 		"green_torch": {
@@ -4929,6 +5077,12 @@
 			"one_color": false,
 			"strength": 0.5
 		},
+		"obsidian_bathtub": {
+			"noise": "grain"
+		},
+		"obsidian_lamp": {
+			"one_color": true
+		},
 		"obsidian_platform": {
 			"noise": "speckle",
 			"one_color": false,
@@ -4939,6 +5093,10 @@
 		},
 		"obsidian_vase": {
 			"no_outline": false,
+			"one_color": true
+		},
+		"orange_pressure_plate": {
+			"noise": "speckle",
 			"one_color": true
 		},
 		"orange_torch": {
@@ -4956,6 +5114,15 @@
 			"one_color": true
 		},
 		"picnic_table_with_cloth": {
+			"one_color": true
+		},
+		"pink_dungeon_bathtub": {
+			"noise": "grain"
+		},
+		"pink_dungeon_lamp": {
+			"one_color": true
+		},
+		"pink_dungeon_vase": {
 			"one_color": true
 		},
 		"pink_vase": {
@@ -5083,10 +5250,15 @@
 	"methods": {
 		"ash_wood_lamp": "hull",
 		"barrel": "extruded",
+		"bewitching_table": "extruded",
+		"blue_dungeon_lamp": "hull",
 		"blue_dungeon_sink": "rendered",
+		"blue_dungeon_vase": "hull",
 		"blue_torch": "hull",
 		"bottle": "hull",
+		"boulder": "hull",
 		"bowl": "hull",
+		"brown_pressure_plate": "hull",
 		"cactus": "extruded",
 		"cactus_lamp": "hull",
 		"cattail": "flat",
@@ -5195,7 +5367,11 @@
 		"glowing_mushroom_3": "extruded",
 		"gold_chandelier": "billboard",
 		"gold_chest": "extruded",
+		"gothic_lamp": "hull",
 		"grandfather_clock": "hull",
+		"gray_pressure_plate": "hull",
+		"green_dungeon_lamp": "hull",
+		"green_dungeon_vase": "hull",
 		"green_torch": "hull",
 		"ice_torch": "hull",
 		"icicle": "hull",
@@ -5308,10 +5484,13 @@
 		"obsidian_lamp": "hull",
 		"obsidian_vase": "hull",
 		"oil_rag_sconse": "billboard",
+		"orange_pressure_plate": "hull",
 		"orange_torch": "hull",
 		"palm_wood_lamp": "hull",
 		"picnic_table": "hull",
 		"picnic_table_with_cloth": "hull",
+		"pink_dungeon_lamp": "hull",
+		"pink_dungeon_vase": "hull",
 		"pink_vase": "hull",
 		"platinum_chandelier": "billboard",
 		"pot": "hull",
@@ -5557,6 +5736,9 @@
 			"model": "extruded"
 		},
 		"bed": {
+			"model": "extruded"
+		},
+		"bewitching_table": {
 			"model": "extruded"
 		},
 		"campfire": {
@@ -6158,9 +6340,6 @@
 		},
 		"mushroom_vines_9": {
 			"model": "extruded"
-		},
-		"obsidian_bathtub": {
-			"outline": false
 		},
 		"platinum_chandelier": {
 			"model": "auto"
