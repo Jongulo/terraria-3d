@@ -5184,6 +5184,14 @@ func _recipe_checks(c: Vector3i) -> void:
 	var bar: Dictionary = find.call("HellstoneBar")[0]
 	check(bar.ingredients == {"Hellstone": 3, "Obsidian": 1} and bar.station == "hellforge", "Hellstone Bars: 3 Hellstone and an Obsidian at a Hellforge (%s)" % bar)
 	check(find.call("MusketBall").is_empty() and find.call("Shuriken").is_empty(), "no recipes Terraria doesn't have (Musket Balls, Shurikens)")
+	# Terraria's paintings (tiles 240-246, trophies and racks too): a block
+	# each (the Catacomb's and Strange Growth's other styles too) dropping
+	# its item.
+	var paintings := Data.blocks.filter(func(b): return b.get("painting", false))
+	var placing := Data.items.keys().filter(func(k): return Data.block(Data.block_id(Data.items[k].get("place", "air"))).get("painting", false))
+	check(paintings.size() == 254 and placing.size() == 243 and paintings.all(func(b): return Data.items.has(b.drop)),
+			"Terraria's 243 paintings, trophies and racks (%d blocks, %d items)" % [paintings.size(), placing.size()])
+	check(Data.npcs.EyeofCthulhu.drops.any(func(d): return d[0] == "EyeofCthulhuTrophy" and is_equal_approx(float(d[3]), 0.1)), "a boss drops its trophy 1 time in 10")
 	# A placed Bottle is where potions are made; a Lead Anvil counts as an anvil.
 	var p := game.player
 	var spot := c + Vector3i(-30, 0, 34)

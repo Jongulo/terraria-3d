@@ -1120,6 +1120,9 @@ func _drop_dependents(p: Vector3i, drop: bool) -> void:
 		var q := p + n
 		if Data.block(world.get_block(q)).get("wall", false) and block_rotation(q) == r:
 			break_block(q, drop)
+	# So do paintings with this block behind any of them.
+	for q in Paintings.resting_on(self, p):
+		break_block(q, drop)
 	# Lanterns hanging from it fall.
 	var below := p + Vector3i.DOWN
 	if Data.block(world.get_block(below)).get("hangs", false):

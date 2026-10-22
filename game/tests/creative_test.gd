@@ -147,6 +147,37 @@ func _run() -> void:
 	p.target = {"block": spot, "normal": Vector3i.UP, "id": w.get_block(spot), "distance": 3.0}
 	check(p.pick_block() and p.selected == 3, "picking it again selects the hotbar slot that has it")
 
+	# Paintings: the whole picture needs the wall, keeps blocks out of the
+	# cells it covers and comes down with any block behind it (the Great Wave,
+	# 6 x 4 tiles: 3 x 2 blocks over 3 x 3 cells).
+	var stone := Data.block_id("stone")
+	var wall_base := ground + Vector3i(0, 0, 6)
+	for dx in range(-3, 4):
+		for dy in range(1, 6):
+			w.set_block(wall_base + Vector3i(dx, dy, 0), stone)
+			for dz in range(1, 3):
+				w.set_block(wall_base + Vector3i(dx, dy, dz), 0)
+	var hang := wall_base + Vector3i(0, 3, 1)
+	var on_wall := {"block": wall_base + Vector3i(0, 3, 0), "normal": Vector3i(0, 0, 1), "id": stone, "distance": 3.0}
+	p.inventory.slots[4] = Inventory.stack("GreatWave", 3)
+	p.select(4)
+	w.set_block(hang + Vector3i(1, 1, 0), stone)
+	p.target = on_wall
+	check(not p._place(Data.item("GreatWave")) and w.get_block(hang) == 0, "a painting needs room for all of it")
+	w.set_block(hang + Vector3i(1, 1, 0), 0)
+	w.set_block(wall_base + Vector3i(-1, 2, 0), 0)
+	p.target = on_wall
+	check(not p._place(Data.item("GreatWave")) and w.get_block(hang) == 0, "and the wall behind all of it")
+	w.set_block(wall_base + Vector3i(-1, 2, 0), stone)
+	p.target = on_wall
+	check(p._place(Data.item("GreatWave")) and w.get_block(hang) == Data.block_id("great_wave") and game.block_rotation(hang) == 0,
+			"the Great Wave hangs on the wall, facing out")
+	p.select(0)
+	p.target = {"block": wall_base + Vector3i(1, 2, 0), "normal": Vector3i(0, 0, 1), "id": stone, "distance": 3.0}
+	check(not p._place(Data.item("DirtBlock")) and w.get_block(hang + Vector3i(1, -1, 0)) == 0, "nothing goes where the painting hangs")
+	game.break_block(wall_base + Vector3i(-1, 2, 0))
+	check(w.get_block(hang) == 0, "mining a block behind its corner brings it down")
+
 	# The creative inventory: every item, by tab and search; clicks take stacks.
 	var hud := game.hud
 	hud.toggle_inventory()

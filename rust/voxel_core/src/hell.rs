@@ -47,14 +47,19 @@
 //!   a candle on it, a work bench with a chair and 1 time in 2 a candle, a
 //!   vase, a bookcase, a chair, a bed, a piano, a dresser, a sofa, a clock, a
 //!   bathtub, a lamp or a candelabra, all Obsidian (here each across the run
-//!   it's in, the chairs facing their table); paintings (not in the game
-//!   here); and from the ceilings (100 tries) one of the world's three Hell
+//!   it's in, the chairs facing their table); paintings (100 tries,
+//!   RandHellPicture: Hand Earth, Skelehead, Imp Face, Ominous Presence,
+//!   Shining Moon, Lake of Fire, Darkness, Dark Soul Reaper, Trapped Ghost,
+//!   Demon's Eye, Living Gore, Flowing Magma), each in the middle of a room's
+//!   wall where there's room for it (paintings.rs); and from the ceilings
+//!   (100 tries) one of the world's three Hell
 //!   banners (of six; here on a wall, their tops at the ceiling, as the
 //!   Dungeon's are), an Obsidian Chandelier or an Obsidian Lantern, none
 //!   beside a door or another of them.
 //! - **Hellforges**: one per 200 tiles of width (about 9 forts in 10), each
 //!   on the floor of a room.
 
+use crate::paintings::{self, Paintings};
 use crate::world::{Decoration, World};
 use crate::worldgen::{Layers, Rng, FACING};
 
@@ -638,6 +643,59 @@ fn furnish(w: &mut World, rng: &mut Rng, ids: &Ids, forts: &[Fort]) {
             }
         }
     }
+    // Paintings (RandHellPicture), 100 tries: in the middle of a room's wall,
+    // one more than 7 tiles across (5 blocks) and 5 tall (4) clear in front,
+    // none within 8 tiles (5 blocks) across or 5 (3) up and down of another,
+    // and no tiles in the 8 x 6 round it.
+    let pics = Paintings::of(w);
+    for _ in 0..per_fort(100.0) {
+        let r = pick(rng);
+        let d = sides[rng.range(0, 4) as usize];
+        let (t0, t1) = r.wall_span(d);
+        if t1 < t0 || r.y1 - 1 < r.y0 + 1 {
+            continue;
+        }
+        let front = |t: i32, y: i32| {
+            let c = r.wall_cell(d, t, y);
+            (c.0 - d.0, c.1, c.2 - d.1)
+        };
+        let open = |w: &World, t: i32, y: i32| {
+            let c = front(t, y);
+            w.get(c.0, c.1, c.2) == 0
+        };
+        // Terraria's middle of the room, then the clear run across it (three
+        // rows open) and up and down (three columns), and their middles.
+        let (mut t, mut y) = ((t0 + t1) / 2, (r.y0 + r.y1) / 2);
+        let across = |w: &World, t: i32, y: i32| (-1..=1).all(|e| open(w, t, y + e));
+        let upright = |w: &World, t: i32, y: i32| (-1..=1).all(|e| open(w, t + e, y));
+        let (mut a0, mut a1) = (t, t);
+        while t - a0 < 64 && across(w, a0 - 1, y) {
+            a0 -= 1;
+        }
+        while a1 - t < 64 && across(w, a1 + 1, y) {
+            a1 += 1;
+        }
+        t = (a0 + a1).div_euclid(2);
+        let (mut b0, mut b1) = (y, y);
+        while y - b0 < 64 && upright(w, t, b0 - 1) {
+            b0 -= 1;
+        }
+        while b1 - y < 64 && upright(w, t, b1 + 1) {
+            b1 += 1;
+        }
+        y = (b0 + b1).div_euclid(2);
+        if (a1 - a0) as f64 * 1.5 <= 7.0 || (b1 - b0) as f64 * 1.5 <= 5.0 {
+            continue;
+        }
+        let at = front(t, y);
+        if pics.near(w, at, 5, 3) {
+            continue;
+        }
+        let p = paintings::hell(rng);
+        if pics.fits(w, at, (-d.0, -d.1), p, &|b| ids.is_fort(b), (-3, 2, -1, 2)) {
+            pics.hang(w, at, (-d.0, -d.1), p);
+        }
+    }
     // From the ceilings: the world's three Hell banners (of six), Obsidian
     // Chandeliers and Lanterns, none beside a door or another of them.
     let mut styles: Vec<usize> = Vec::new();
@@ -670,7 +728,8 @@ fn furnish(w: &mut World, rng: &mut Rng, ids: &Ids, forts: &[Fort]) {
                     let q = r.wall_cell(d, t + k, p.1 + dy);
                     ids.keeps_off(w.get(q.0 - d.0, q.1, q.2 - d.1)) || ids.keeps_off(w.get(q.0, q.1, q.2))
                 }));
-                if free && walled && !beside {
+                let over_painting = (0..=1).any(|dy| pics.covers(w, (p.0, p.1 + dy, p.2)));
+                if free && walled && !beside && !over_painting {
                     put(w, p, banner);
                     turn(w, p, (-d.0, -d.1));
                 }
@@ -682,7 +741,7 @@ fn furnish(w: &mut World, rng: &mut Rng, ids: &Ids, forts: &[Fort]) {
                     continue;
                 }
                 let beside = (-1..=1).any(|a| (-1..=1).any(|b| (0..tall).any(|k| ids.keeps_off(w.get(p.0 + a, p.1 - k, p.2 + b)))));
-                if !beside {
+                if !beside && !(0..tall).any(|k| pics.covers(w, (p.0, p.1 - k, p.2))) {
                     put(w, p, id);
                 }
             }
@@ -733,6 +792,7 @@ mod tests {
                 ..Default::default()
             });
         }
+        crate::paintings::tests::add_painting_defs(&mut w);
         w.resize(256, 128, 256);
         let ash = w.id_of("ash");
         for z in 0..256i32 {
@@ -902,6 +962,36 @@ mod tests {
         assert!(banners <= 3, "three of the six banners at most");
         let forges = count(&w, "hellforge");
         assert_eq!(forges, ((21.0 * forts.len() as f64) / FORTS_SMALL).round() as usize, "Hellforges");
+    }
+
+    #[test]
+    fn paintings_in_the_middle_of_fort_walls() {
+        let (mut w, l) = underworld();
+        let forts = hell_houses(&mut w, &mut Rng::new(5), &l);
+        let rooms: Vec<Room> = forts.iter().flat_map(|f| f.rooms.iter().copied()).collect();
+        let ids = Ids::of(&w);
+        let pics = Paintings::of(&w);
+        let mut rng = Rng::new(1);
+        let hells: Vec<u16> = (0..2000).map(|_| pics.id(paintings::hell(&mut rng))).collect();
+        let mut hung: Vec<(i32, i32, i32)> = Vec::new();
+        for d in w.decorations.iter().filter(|d| d.kind == "rotation") {
+            let (x, y, z) = d.pos;
+            let b = w.get(x, y, z);
+            if pics.is(b) {
+                let (fx, fz) = FACING[d.style as usize];
+                assert!(hells.contains(&b), "one of RandHellPicture's");
+                assert!(ids.is_fort(w.get(x - fx, y, z - fz)), "a painting at {:?} on a fort's wall", d.pos);
+                assert!(rooms.iter().any(|r| r.inside(x, y, z)), "inside a room");
+                hung.push(d.pos);
+            }
+        }
+        assert!(hung.len() >= 2, "{} paintings for {} forts", hung.len(), forts.len());
+        for (i, a) in hung.iter().enumerate() {
+            for b in &hung[i + 1..] {
+                let (dx, dy, dz) = ((a.0 - b.0).abs(), (a.1 - b.1).abs(), (a.2 - b.2).abs());
+                assert!(dx > 5 || dz > 5 || dy > 3, "paintings {a:?} and {b:?} 8 tiles apart");
+            }
+        }
     }
 
     #[test]

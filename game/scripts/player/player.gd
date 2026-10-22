@@ -2129,6 +2129,11 @@ func _place(def: Dictionary) -> bool:
 		wall_dir = WALL_NORMALS.find(normal)
 	if game.world.get_block(pos) != 0 and Data.kind_of(game.world.get_block(pos)) != "tall_grass":
 		return false
+	# A painting needs the wall for all of it; nothing goes where one hangs.
+	if Paintings.is_painting(bdef) and not Paintings.fits(game, bdef, pos, wall_dir):
+		return false
+	if not Paintings.covering(game, pos).is_empty():
+		return false
 	if bdef.get("solid", true):
 		var box_min := Vector3(pos)
 		if _box_overlap(global_position, half, box_min) or game.any_npc_in_block(pos):

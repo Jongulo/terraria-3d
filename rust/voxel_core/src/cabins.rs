@@ -52,6 +52,7 @@
 //!   (3 in the world at most) and an Extractinator, a Jungle cabin a
 //!   Sharpening Station (the first 2-4 cabins of the kind).
 
+use crate::paintings::{self, Paintings};
 use crate::world::{Decoration, World, LIQ_LAVA, SHAPE_RAMP};
 use crate::worldgen::{Layers, Rng, FACING};
 
@@ -139,6 +140,8 @@ const CHEST_SANDSTONE_DEEP: i32 = 6;
 const CHEST_MUSHROOM: i32 = 15;
 
 struct Ids {
+    /// The paintings (FillRooms' pictures); furniture keeps out of them.
+    pics: Paintings,
     door_top: u16,
     cobweb: u16,
     dirt: u16,
@@ -197,6 +200,7 @@ impl Ids {
             }
         };
         Ids {
+            pics: Paintings::of(w),
             door_top: id("door_top"),
             cobweb: id("cobweb"),
             dirt: id("dirt"),
@@ -563,7 +567,7 @@ fn build(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, cx: &mut Contex
     place_beams(w, style, rooms);
     // PlaceBiomeSpecificPriorityTool: a Desert cabin's Bast Statue, while
     // the world has fewer than its limit; on a floor, else on the roof.
-    if style.kind == Kind::Desert && cx.bast_statues < cx.bast_statue_max && place_tool(w, rng, ids.bast_statue, rooms, &keep_clear, true) {
+    if style.kind == Kind::Desert && cx.bast_statues < cx.bast_statue_max && place_tool(w, rng, ids, ids.bast_statue, rooms, &keep_clear, true) {
         cx.bast_statues += 1;
     }
     for r in rooms {
@@ -579,13 +583,13 @@ fn build(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, cx: &mut Contex
         }
     }
     let chest_style = if style.kind == Kind::Desert && rooms[rooms.len() - 1].y0 < cx.desert_deep_below { CHEST_SANDSTONE_DEEP } else { style.chest_style };
-    place_chest(w, rng, style, chest_style, rooms, &keep_clear);
+    place_chest(w, rng, ids, style, chest_style, rooms, &keep_clear);
     // PlaceBiomeSpecificTool: the first 2-4 Jungle cabins get a Sharpening
     // Station, the first 2-4 Desert cabins an Extractinator.
-    if style.kind == Kind::Jungle && cx.sharpeners < rng.range(2, 5) && place_tool(w, rng, ids.sharpening_station, rooms, &keep_clear, false) {
+    if style.kind == Kind::Jungle && cx.sharpeners < rng.range(2, 5) && place_tool(w, rng, ids, ids.sharpening_station, rooms, &keep_clear, false) {
         cx.sharpeners += 1;
     }
-    if style.kind == Kind::Desert && cx.extractinators < rng.range(2, 5) && place_tool(w, rng, ids.extractinator, rooms, &keep_clear, false) {
+    if style.kind == Kind::Desert && cx.extractinators < rng.range(2, 5) && place_tool(w, rng, ids, ids.extractinator, rooms, &keep_clear, false) {
         cx.extractinators += 1;
     }
 }
@@ -769,24 +773,43 @@ fn wall_spot(rng: &mut Rng, r: &Room) -> ((i32, i32, i32), (i32, i32)) {
 }
 
 /// Room for a piece of furniture at `p`: it and the cell over it open, not on
-/// the stairs or in a doorway.
-fn fits(w: &World, p: (i32, i32, i32), keep_clear: &[(i32, i32, i32)]) -> bool {
+/// the stairs or in a doorway, nor where a painting hangs (Terraria's
+/// tiles can't overlap; here furniture art reaches past its cell too).
+fn fits(w: &World, ids: &Ids, p: (i32, i32, i32), keep_clear: &[(i32, i32, i32)]) -> bool {
     let (x, y, z) = p;
-    w.get(x, y, z) == 0 && w.get(x, y + 1, z) == 0 && w.is_solid(x, y - 1, z) && !keep_clear.contains(&p)
+    w.get(x, y, z) == 0 && w.get(x, y + 1, z) == 0 && w.is_solid(x, y - 1, z) && !keep_clear.contains(&p) && !ids.pics.covers(w, p) && !ids.pics.covers(w, (x, y + 1, z))
 }
 
-/// HouseBuilder.FillRooms: along the room, wall decorations (paintings, not in
-/// the game yet) taking turns with unlit chandeliers, then a handful of
-/// things on the floor: a pile, a big pile, a statue (none of those in the
-/// game yet) or a piece of furniture.
+/// HouseBuilder.FillRooms: at spots along the room, a painting
+/// (RandHousePicture, a Desert cabin's RandHousePictureDesert) halfway up
+/// the back wall and an unlit chandelier - Terraria's `switch (i + first %
+/// 2)` gives only its first two spots anything, so a room has one painting
+/// and one chandelier at most; then a handful of things on the floor: a
+/// pile, a big pile, a statue (none of those in the game yet) or a piece of
+/// furniture. A 3D room has a back wall each side: the painting goes on
+/// either, the other if it doesn't fit.
 fn fill_room(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room, keep_clear: &[(i32, i32, i32)]) {
     let tiles = |blocks: i32| blocks * 3 / 2;
     let n = tiles(r.w) / 8;
     let step = r.w / (n + 1);
     let first = rng.range(0, 2);
+    let pics = &ids.pics;
     for i in 0..n {
         let x = r.x0 + (i + 1) * step;
-        if (i + first) % 2 == 1 {
+        if i + first == 0 {
+            // Terraria's Y + min(H / 2, H - 5), down from the ceiling.
+            let ht = tiles(r.h);
+            let y = r.ceiling() - ((ht / 2).min(ht - 5).max(1) as f64 * 2.0 / 3.0).round() as i32;
+            let p = if style.kind == Kind::Desert { paintings::desert(rng) } else { paintings::house(rng) };
+            let sides = if rng.range(0, 2) == 0 { [(r.z0 + 1, 1), (r.z1() - 1, -1)] } else { [(r.z1() - 1, -1), (r.z0 + 1, 1)] };
+            for (z, out) in sides {
+                let at = (x, y, z);
+                if !keep_clear.contains(&at) && pics.fits(w, at, (0, out), p, &|b| b != 0 && w.def(b).opaque, (0, 0, 0, 0)) {
+                    pics.hang(w, at, (0, out), p);
+                    break;
+                }
+            }
+        } else if i + first == 1 {
             let kind = rng.range(0, 6) as usize;
             let id = ids.chandeliers.get(kind).copied().unwrap_or(0);
             let (y, z) = (r.ceiling() - 1, r.z0 + r.d / 2);
@@ -804,7 +827,7 @@ fn fill_room(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room, k
             continue; // a pile, a big pile or a statue
         }
         let id = style.furniture[rng.range(0, style.furniture.len() as i32) as usize];
-        if id != 0 && fits(w, p, keep_clear) {
+        if id != 0 && fits(w, ids, p, keep_clear) {
             put(w, p.0, p.1, p.2, id);
             w.decorations.push(Decoration { kind: "rotation".into(), pos: p, style: face_index(into) });
         }
@@ -815,7 +838,7 @@ fn fill_room(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room, k
 /// Station: PlaceBiomeSpecificTool): 10 random spots on each room's floor,
 /// then every spot along it; the Bast Statue then tries the roofs. True if
 /// it went in.
-fn place_tool(w: &mut World, rng: &mut Rng, id: u16, rooms: &[Room], keep_clear: &[(i32, i32, i32)], roof: bool) -> bool {
+fn place_tool(w: &mut World, rng: &mut Rng, ids: &Ids, id: u16, rooms: &[Room], keep_clear: &[(i32, i32, i32)], roof: bool) -> bool {
     if id == 0 {
         return false;
     }
@@ -830,14 +853,14 @@ fn place_tool(w: &mut World, rng: &mut Rng, id: u16, rooms: &[Room], keep_clear:
             for _ in 0..10 {
                 let (p, into) = wall_spot(rng, r);
                 let p = (p.0, y, p.2);
-                if fits(w, p, keep_clear) {
+                if fits(w, ids, p, keep_clear) {
                     put_at(w, p, into);
                     return true;
                 }
             }
             for x in r.x0 + 1..r.x1() {
                 let p = (x, y, r.z0 + 1);
-                if fits(w, p, keep_clear) {
+                if fits(w, ids, p, keep_clear) {
                     put_at(w, p, (0, 1));
                     return true;
                 }
@@ -969,15 +992,17 @@ fn hang_stalactites(w: &mut World, rng: &mut Rng, r: &Room, on: &[u16], kinds: [
     }
 }
 
-/// WoodHouseBuilder.AgeRoom: cobwebs in blotches (2 x 2, half filled), the
+/// WoodHouseBuilder.AgeRoom: cobwebs in blotches (2 x 2, half filled; not
+/// over a painting, whose tiles keep them off in Terraria), the
 /// Planked Wall gone to dirt in patches, and 5% of the Wood frame gone.
 fn age_wood(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room) {
+    let pics = &ids.pics;
     if ids.cobweb != 0 {
         for _ in 0..(r.w * r.h * r.d) / 64 {
             let (x, y, z) = (rng.range(r.x0 + 1, r.x1()), rng.range(r.y0 + 1, r.ceiling()), rng.range(r.z0 + 1, r.z1()));
             for (a, b, c) in [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 0, 1), (0, 1, 1), (1, 1, 1)] {
                 let (px, py, pz) = (x + a, y + b, z + c);
-                if rng.chance(0.5) && px < r.x1() && py < r.ceiling() && pz < r.z1() && w.get(px, py, pz) == 0 {
+                if rng.chance(0.5) && px < r.x1() && py < r.ceiling() && pz < r.z1() && w.get(px, py, pz) == 0 && !pics.covers(w, (px, py, pz)) {
                     put(w, px, py, pz, ids.cobweb);
                 }
             }
@@ -1058,7 +1083,7 @@ fn age_mushroom(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, r: &Room
 /// The cabin's chest (HouseBuilder.PlaceChests: every cabin has one, the
 /// kind's): 10 random spots on each room's floor, then every spot, then on the
 /// roof.
-fn place_chest(w: &mut World, rng: &mut Rng, style: &Style, chest_style: i32, rooms: &[Room], keep_clear: &[(i32, i32, i32)]) {
+fn place_chest(w: &mut World, rng: &mut Rng, ids: &Ids, style: &Style, chest_style: i32, rooms: &[Room], keep_clear: &[(i32, i32, i32)]) {
     let put_chest = |w: &mut World, p: (i32, i32, i32), into: (i32, i32)| {
         put(w, p.0, p.1, p.2, style.chest);
         w.decorations.push(Decoration { kind: "chest".into(), pos: p, style: chest_style });
@@ -1067,7 +1092,7 @@ fn place_chest(w: &mut World, rng: &mut Rng, style: &Style, chest_style: i32, ro
     for r in rooms {
         for _ in 0..10 {
             let (p, into) = wall_spot(rng, r);
-            if fits(w, p, keep_clear) {
+            if fits(w, ids, p, keep_clear) {
                 put_chest(w, p, into);
                 return;
             }
@@ -1075,7 +1100,7 @@ fn place_chest(w: &mut World, rng: &mut Rng, style: &Style, chest_style: i32, ro
         for x in r.x0 + 1..r.x1() {
             for z in r.z0 + 1..r.z1() {
                 let p = (x, r.y0 + 1, z);
-                if fits(w, p, keep_clear) {
+                if fits(w, ids, p, keep_clear) {
                     let into = if x == r.x0 + 1 { (1, 0) } else if x == r.x1() - 1 { (-1, 0) } else if z == r.z0 + 1 { (0, 1) } else { (0, -1) };
                     put_chest(w, p, into);
                     return;
@@ -1087,7 +1112,7 @@ fn place_chest(w: &mut World, rng: &mut Rng, style: &Style, chest_style: i32, ro
         for x in r.x0 + 1..r.x1() {
             for z in r.z0 + 1..r.z1() {
                 let p = (x, r.ceiling() + 1, z);
-                if fits(w, p, keep_clear) {
+                if fits(w, ids, p, keep_clear) {
                     put_chest(w, p, (0, 1));
                     return;
                 }
@@ -1137,6 +1162,7 @@ pub(crate) mod tests {
         for name in ["cobweb", "icicle", "small_icicle", "sandstone_stalactite", "small_sandstone_stalactite", "jungle_vines", "glowing_mushroom"] {
             add(w, name, RENDER_CROSS, false, false);
         }
+        crate::paintings::tests::add_painting_defs(w);
     }
 
     /// Stone 128 x 96 x 128 with a big cave (x, z 20..108, y 20..70) whose
@@ -1295,6 +1321,62 @@ pub(crate) mod tests {
             }
         }
         assert!(lit > 0 && furniture > 0, "{lit} chandeliers, {furniture} pieces of furniture");
+    }
+
+    /// The paintings in `rooms`: each one of `pick`'s, on a back wall about
+    /// halfway up, every cell it covers open with a wall behind it. How many.
+    fn check_paintings(w: &World, rooms: &[Room], pick: fn(&mut Rng) -> paintings::Pick) -> usize {
+        let pics = Paintings::of(w);
+        let mut rng = Rng::new(1);
+        let picks: Vec<u16> = (0..2000).map(|_| pics.id(pick(&mut rng))).collect();
+        let mut n = 0;
+        for d in w.decorations.iter().filter(|d| d.kind == "rotation" && pics.is(w.get(d.pos.0, d.pos.1, d.pos.2))) {
+            let (x, y, z) = d.pos;
+            let out = FACING[d.style as usize];
+            assert!(picks.contains(&w.get(x, y, z)), "one of the picker's paintings at {:?}", d.pos);
+            let r = rooms.iter().find(|r| r.holds_column(x, z) && y > r.y0 && y < r.ceiling()).expect("in a room");
+            assert!(out.0 == 0 && (z == r.z0 + 1 && out.1 == 1 || z == r.z1() - 1 && out.1 == -1), "on a back wall, facing in");
+            assert!((y - (r.y0 + r.ceiling()) / 2).abs() <= 1, "halfway up");
+            let ((k0, k1), (j0, j1)) = pics.cover(w.get(x, y, z));
+            for k in k0..=k1 {
+                for j in j0..=j1 {
+                    if (k, j) != (0, 0) {
+                        assert_eq!(w.get(x + k, y + j, z), 0, "nothing in the painting at {:?}: {}", (x + k, y + j, z), w.def(w.get(x + k, y + j, z)).name);
+                    }
+                    assert!(w.def(w.get(x + k, y + j, z - out.1)).opaque, "a wall behind it at {:?}: {}", (x + k, y + j, z - out.1), w.def(w.get(x + k, y + j, z - out.1)).name);
+                }
+            }
+            n += 1;
+        }
+        n
+    }
+
+    #[test]
+    fn a_painting_on_a_back_wall() {
+        let mut hung = 0;
+        for seed in 0..40u64 {
+            let mut w = cave_world();
+            let ids = Ids::new(&w);
+            if let Some(rooms) = try_cabin(&mut w, &mut Rng::new(seed), &ids, &mut Context::default(), (64, 40, 64), &layers(), &[], &[]) {
+                assert!(check_paintings(&w, &rooms, paintings::house) <= rooms.len(), "one a room at most");
+                hung += check_paintings(&w, &rooms, paintings::house);
+                // Furniture and the chest keep out of them.
+                let mut kept: Vec<u16> = ids.style(Kind::Wood).unwrap().furniture.clone();
+                kept.push(w.id_of("gold_chest"));
+                for p in all_cells(&rooms) {
+                    if kept.contains(&w.get(p.0, p.1, p.2)) {
+                        assert!(!ids.pics.covers(&w, p) && !ids.pics.covers(&w, (p.0, p.1 + 1, p.2)), "furniture at {p:?} over a painting");
+                    }
+                }
+            }
+        }
+        assert!(hung >= 10, "{hung} paintings in 40 cabins");
+        let mut desert = 0;
+        for seed in 0..10u64 {
+            let (w, rooms, _) = biome_cabin("hardened_sand", seed * 200, &mut Context::default());
+            desert += check_paintings(&w, &rooms, paintings::desert);
+        }
+        assert!(desert >= 2, "{desert} paintings in 10 desert cabins");
     }
 
     #[test]

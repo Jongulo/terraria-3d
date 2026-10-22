@@ -240,15 +240,26 @@ fn place(w: &mut World, rng: &mut Rng, ids: &Ids, o: (i32, i32, i32)) -> Option<
             }
         }
     }
+    // Plants left on ground the mound reached past the room (a glowing
+    // mushroom on what is now dirt) go.
+    for p in &mound {
+        let above = (p.0, p.1 + 1, p.2);
+        let b = w.get(above.0, above.1, above.2);
+        if b != 0 && !w.def(b).solid && !mound.contains(&above) {
+            w.set(above.0, above.1, above.2, 0);
+        }
+    }
     cave.retain(|p| !mound.contains(p));
-    // Its edge lined with grass (InnerOutline, diagonals too).
-    let edge: Vec<(i32, i32, i32)> = cave
+    // Its edge lined with grass (InnerOutline, diagonals too); in order, so
+    // the vines' random numbers come out the same every time.
+    let mut edge: Vec<(i32, i32, i32)> = cave
         .iter()
         .filter(|p| {
             (-1..=1).any(|x| (-1..=1).any(|y| (-1..=1).any(|z| !cave.contains(&(p.0 + x, p.1 + y, p.2 + z)))))
         })
         .copied()
         .collect();
+    edge.sort_unstable();
     for p in &edge {
         w.set(p.0, p.1, p.2, ids.grass);
     }
@@ -349,7 +360,8 @@ fn place(w: &mut World, rng: &mut Rng, ids: &Ids, o: (i32, i32, i32)) -> Option<
     w.set_liquid(sword.0, sword.1, sword.2, LIQ_WATER, 0);
     // Grass plants on the mound (ActionGrass, on the grass over it).
     if ids.plants[0] != 0 {
-        let tops: HashSet<(i32, i32)> = mound.iter().map(|p| (p.0, p.2)).collect();
+        let mut tops: Vec<(i32, i32)> = mound.iter().map(|p| (p.0, p.2)).collect::<HashSet<_>>().into_iter().collect();
+        tops.sort_unstable();
         for (x, z) in tops {
             let top = mound.iter().filter(|p| p.0 == x && p.2 == z).map(|p| p.1).max().unwrap_or(base.1);
             let (gy, py) = (top + 1, top + 2);

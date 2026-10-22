@@ -280,6 +280,18 @@ tile data, each with Terraria's recipe):
 - **Platforms:** stone, glass, bone, skyware, frozen, cloud, snow and the dungeon bricks'.
 - **Decor:** keg, clay pot, bowls, mug, wine glass, pink vase, banners, picnic tables, bar,
   banquet table, bar stool, chimney, dungeon and obsidian sinks.
+- **Paintings:** all 243 of Terraria's paintings, trophies and racks (its tiles 240-246: 2x3,
+  3x2, 3x3, 4x3 and 6x4 tiles), each from its item, flat on a wall at Terraria's size (two tiles a
+  block), centred on the block you put it on. Like Terraria's, one needs the wall behind all of it
+  and room in front, nothing else can go where it hangs, and mining a block from behind any part
+  of it brings it down. Worldgen hangs Terraria's own picks: a house painting halfway up a back
+  wall in each cabin room (desert cabins their desert paintings), the Dungeon's paintings in its
+  brick parts and the Wall Skeleton, Hanging Skeleton and Catacombs elsewhere, the Underworld's
+  in the middle of its forts' walls (see the Dungeon and the Underworld below). Bosses drop their
+  trophy 1 time in 10; crates, the Angler and fishing give theirs (the Angler's Life Preserver,
+  Ship's Wheel, Compass Rose, Wall Anchor and fish trophies; crates' paintings; It's Scragglin'
+  Time). The Painter and the Traveling Merchant, who sell most of the rest, aren't in yet: in
+  survival those come from the creative inventory only.
 
 Wood variants share their wooden piece's 3D method and settings in the picker below. Every sink and
 bathtub has a hand-made ("Claude") model of its own: a basin you can see into, the faucet against
@@ -788,9 +800,11 @@ A frame (Wood, Boreal Wood, Sandstone, Rich Mahogany or Mushroom Blocks) with it
 Boreal Wood, Sandstone, Rich Mahogany or Mushroom Wall) lining the
 walls and an outer layer of the frame, platform stairs between stacked rooms up through a hatch,
 doors where there's open cave outside, platform hatches in the roof and floor where it's open
-beyond, beams down to the ground (Wooden, Boreal, Rich Mahogany, Mushroom Beams, Sandstone Columns), unlit
-chandeliers (copper, silver, gold, tin, tungsten or platinum; break and replace one to light
-it), furniture against the walls in the kind's style (table, anvil, work bench, loom, piano, keg,
+beyond, beams down to the ground (Wooden, Boreal, Rich Mahogany, Mushroom Beams, Sandstone Columns), an unlit
+chandelier (copper, silver, gold, tin, tungsten or platinum; break and replace one to light
+it) and a painting halfway up a back wall in each room (Terraria's house paintings, a desert
+cabin's its desert ones; Terraria's FillRooms only gives a room's first two spots anything, so a
+room has one of each at most), furniture against the walls in the kind's style (table, anvil, work bench, loom, piano, keg,
 bookcase), and the kind's chest. Then each room ages its own way: the wooden cabin gets
 cobwebs, walls gone to dirt in patches and holes in the frame; the Ice cabin's frame goes mostly
 to ice (some snow), icicles hang from the ceiling and the walls go to snow in patches; the Desert
@@ -807,7 +821,7 @@ loot, and half the time the Mushroom Hat, Vest and Pants: Terraria's other half,
 Minecart, waits for minecarts). The first desert cabins also get
 an Extractinator and a Bast Statue (3 in the world at most), the first jungle cabins a Sharpening
 Station. Terraria's Granite and Marble cabins wait for their biomes, and cabins have
-none of Terraria's paintings, statues or rubble piles yet; Enchanted Sword Shrines, Terraria's
+none of Terraria's statues or rubble piles yet; Enchanted Sword Shrines, Terraria's
 EnchantedSwordBiome with its 2D shapes spun round into 3D (1-2 tries per small world for each 640 x
 640 blocks, each half the time, as in Terraria), 50 to 99 blocks under the surface in the outer
 part of the map, in ground that's mostly dirt and stone with no sand above: a slime-shaped cave
@@ -995,10 +1009,11 @@ and a Bottled Honey), and she comes for you to her own music.
 - **Leaving:** 3000 px off she flies straight back to you; with you dead she flies off and is gone.
 - **Poisoned:** stingers (hers and the Hornet's) poison you one hit in three for 10 s. That's 2
   life a second, and no natural healing meanwhile, as when on fire.
-- **Drops:** 5-15 Bottled Honey, 17-30 Bee Wax, 5 gold, the Bee Mask (1 in 7), and her gores and
-  dust. Drops not in yet roll but aren't given: one of the Bee Gun, Bee Keeper or Bee's Knees;
-  Beenades (3 in 4, 10-30); the Hive Wand (1 in 3, else a bee vanity piece half the time); the
-  Honey Comb (1 in 3); Nectar, the Queen of Bees painting and the Honeyed Goggles.
+- **Drops:** 5-15 Bottled Honey, 17-30 Bee Wax, 5 gold, the Bee Mask (1 in 7), the Queen of Bees
+  painting (1 in 15), her trophy (1 in 10), and her gores and dust. Drops not in yet roll but
+  aren't given: one of the Bee Gun, Bee Keeper or Bee's Knees; Beenades (3 in 4, 10-30); the Hive
+  Wand (1 in 3, else a bee vanity piece half the time); the Honey Comb (1 in 3); Nectar and the
+  Honeyed Goggles.
 - **The test world:** spawners for her and her bees in the enemy arena (her fury is 2 there), and
   the hive's larva.
 
@@ -1195,8 +1210,15 @@ brick colour (blue, green or pink, like Terraria's).
   Bolt bounces off blocks (10 times, through 10 enemies); the Aqua Scepter sprays two streams a use
   for its mana once, falling as they go; the Magic Missile flies toward your crosshair while you
   hold the button, one at a time. The Cobalt Shield stops knockback.
+- **Paintings** (DungeonGlobalPaintings, after the lights): 100 tries per 4200 tiles of width,
+  each centred in a passage more than 7 long and 5 tall, on the wall beside it. In the brick parts
+  one of the Dungeon's own (Bone Warp, The Guardian's Gaze, Great Wave, Starry Night and the rest),
+  none within 15; in the slab and tiled parts a Wall Skeleton, Hanging Skeleton or Catacomb, alone,
+  in a row 7 apart along a long passage or a column up a tall shaft, none within 8. A room's walls
+  aren't flat here as Terraria's back wall is, so each looks a few blocks round its spot for one
+  that is.
 - **Not yet:** Terraria's cracked-brick pit traps, dart and boulder traps, locked biome chests,
-  furniture and paintings, and the Dungeon's enemies (Angry Bones and the rest).
+  furniture, and the Dungeon's enemies (Angry Bones and the rest).
 - **Bricks:** dungeon brick needs 65% pickaxe power (Nightmare / Deathbringer Pickaxe), as in
   Terraria.
 - **The Dungeon biome:** inside (under the keep's roof, or among dungeon brick underground) the
@@ -1428,8 +1450,11 @@ bookcase, chair, bed, piano, dresser, sofa, clock, bathtub, lamp or candelabra),
 ceilings the world's three Hell banners (of six), Obsidian Chandeliers and Lanterns; about 9 forts
 in 10 have a Hellforge, the Hellstone Bar's station (it counts as a Furnace too; Terraria's recipes
 made at it work: Hellstone Bars, Obsidian armor, the Fireproof Bug Net). The Obsidian lights pulse
-purple like the Demon Torch. Not yet: Terraria's paintings on the walls, and the Shadow Chests
-(placed through the whole Underworld, with the Shadow Key from cavern chests).
+purple like the Demon Torch. Paintings (Terraria's 100 tries, RandHellPicture: Hand Earth,
+Skelehead, Imp Face, Ominous Presence, Shining Moon, Lake of Fire, Darkness, Dark Soul Reaper,
+Trapped Ghost, Demon's Eye, Living Gore, Flowing Magma) hang in the middle of a room's wall where
+it's more than 7 tiles wide and 5 tall clear, none within 8 tiles of another. Not yet: the Shadow
+Chests (placed through the whole Underworld, with the Shadow Key from cavern chests).
 
 Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
 lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a

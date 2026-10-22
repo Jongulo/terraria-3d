@@ -74,9 +74,18 @@
 //!     Flag or Diabolic Sigil (tiled). Terraria hangs them on the back wall
 //!     from the ceiling; here they hang on a wall, their tops at the ceiling.
 //!
+//!   - Paintings (DungeonGlobalPaintings, after the lights): 100 tries per
+//!     4200 tiles, each centred in its passage on the wall beside it where
+//!     it's more than 7 long and 5 tall: in the brick parts one of the
+//!     Dungeon's paintings (the Bone Warp, The Guardian's Gaze, Great Wave,
+//!     Starry Night...) with none within 15; elsewhere a Wall Skeleton,
+//!     Hanging Skeleton or Catacomb, one or a row or column 7 apart, none
+//!     within 8 (paintings.rs).
+//!
 //! Not here yet: Terraria's cracked-brick pit traps, dart and boulder traps,
-//! locked biome chests, furniture and paintings.
+//! locked biome chests and furniture.
 
+use crate::paintings::{self, Paintings};
 use crate::world::{Decoration, World};
 use crate::worldgen::{Layers, Rng, FACING};
 
@@ -378,6 +387,7 @@ pub fn dungeon(w: &mut World, seed: u64, l: &Layers, keep: P, door: i32, brick: 
     g.lo = (g.lo.0 - 25, g.lo.1 - 25, g.lo.2 - 25);
     g.hi = (g.hi.0 + 25, g.hi.1 + 25, g.hi.2 + 25);
     g.lights();
+    g.paintings();
     g.banners();
     true
 }
@@ -1495,8 +1505,150 @@ impl<'a> Gen<'a> {
         })
     }
 
+    /// How far the run of cells `ok` takes goes from `p` along `d` each way
+    /// (offsets, at most 100).
+    fn run(&self, p: P, d: P, ok: &dyn Fn(&Self, P) -> bool) -> (i32, i32) {
+        let at = |k: i32| (p.0 + d.0 * k, p.1 + d.1 * k, p.2 + d.2 * k);
+        let (mut lo, mut hi) = (0, 0);
+        while lo > -100 && ok(self, at(lo - 1)) {
+            lo -= 1;
+        }
+        while hi < 100 && ok(self, at(hi + 1)) {
+            hi += 1;
+        }
+        (lo, hi)
+    }
+
+    /// DungeonGlobalPaintings: 100 tries per 4200 tiles. A random open cell
+    /// is centred in its passage (twice, across, along and up), then the
+    /// passage's clear run along it (three rows open) and up (three columns)
+    /// measured there, the painting going on the wall beside it, the
+    /// passage's long way running along that wall: more than 7 long and 5
+    /// tall clear, no painting within 15 across and 10 up or down (8 and 5
+    /// off the brick parts). In the brick parts one painting
+    /// (Paintings_RandomDungeonPainting); elsewhere one, a row 7 apart along
+    /// a passage more than 3 times as long as tall and over 21, or a column
+    /// 7 apart up a shaft the other way round (Paintings_RandomBonePainting).
+    /// Each needs no tiles in the 8 x 6 round it.
+    fn paintings(&mut self) {
+        let pics = Paintings::of(self.w);
+        let tries = (100.0 * self.width_t / 4200.0) as i32;
+        const CLEAR: (i32, i32, i32, i32) = (-4, 3, -2, 3);
+        let bricks = self.ids.bricks.clone();
+        let brick = |b: u16| b != 0 && bricks.contains(&b);
+        let walled = |g: &Self, q: P| g.open(q) && g.mask.get(q);
+        let flat = |g: &Self, q: P| (-1..=1).all(|e| g.open((q.0, q.1 + e, q.2)));
+        for _ in 0..tries {
+            let mut found = None;
+            for _ in 0..1000 {
+                if let Some(p) = self.random_inside(i32::MAX) {
+                    found = Some(p);
+                    break;
+                }
+            }
+            let Some(mut p) = found else { continue };
+            for _ in 0..2 {
+                for d in [(1, 0, 0), (0, 0, 1), UP] {
+                    let (lo, hi) = self.run(p, d, &walled);
+                    let m = (lo + hi).div_euclid(2);
+                    p = (p.0 + d.0 * m, p.1 + d.1 * m, p.2 + d.2 * m);
+                }
+            }
+            // The clear runs, walls or not: three rows open along, three
+            // columns open up.
+            let (x0, x1) = self.run(p, (1, 0, 0), &flat);
+            let (z0, z1) = self.run(p, (0, 0, 1), &flat);
+            let along: P = if x1 - x0 >= z1 - z0 { (1, 0, 0) } else { (0, 0, 1) };
+            let (a0, a1) = if along.0 != 0 { (x0, x1) } else { (z0, z1) };
+            let m = (a0 + a1).div_euclid(2);
+            p = (p.0 + along.0 * m, p.1, p.2 + along.2 * m);
+            let upright = move |g: &Self, q: P| (-1..=1).all(|e| g.open((q.0 + along.0 * e, q.1, q.2 + along.2 * e)));
+            let (b0, b1) = self.run(p, UP, &upright);
+            p.1 += (b0 + b1).div_euclid(2);
+            let (long, tall) = (a1 - a0, b1 - b0);
+            if long <= 7 || tall <= 5 {
+                continue;
+            }
+            // Over to the wall on one side.
+            let side = if self.r(2) == 0 { 1 } else { -1 };
+            let across = (-along.2 * side, 0, along.0 * side);
+            let mut n = 0;
+            while n < 30 && self.open((p.0 + across.0, p.1, p.2 + across.2)) {
+                p = (p.0 + across.0, p.1, p.2 + across.2);
+                n += 1;
+            }
+            let out = (-across.0, -across.2);
+            let in_brick = self.variant(p) == 0;
+            let allowed = [true, long > tall * 3 && long > 21, tall > long * 3 && tall > 21];
+            let mut layout = self.r(3) as usize;
+            if in_brick {
+                layout = 0;
+            }
+            while !allowed[layout] {
+                layout = self.r(3) as usize;
+            }
+            let (r, ry) = if in_brick { (15, 10) } else { (8, 5) };
+            if pics.near(self.w, p, r, ry) {
+                continue;
+            }
+            let pick = |g: &mut Self, q: P| if g.variant(q) == 0 { paintings::dungeon(&mut g.rng) } else { paintings::bone(&mut g.rng) };
+            let first = pick(self, p);
+            if layout == 0 {
+                // A 3D room's walls aren't flat like Terraria's back wall:
+                // the nearest spot on it within 3 along and 2 up or down
+                // where it fits.
+                let mut spots: Vec<(i32, i32)> = (-3..=3).flat_map(|t| (-2..=2).map(move |y| (t, y))).collect();
+                spots.sort_by_key(|&(t, y)| t * t + y * y);
+                for (t, y) in spots {
+                    let mut q = (p.0 + along.0 * t, p.1 + y, p.2 + along.2 * t);
+                    let back = (-across.0, 0, -across.2);
+                    while self.open((q.0 + back.0, q.1, q.2 + back.2)) && !self.open(q) {
+                        q = (q.0 + back.0, q.1, q.2 + back.2);
+                    }
+                    let mut n = 0;
+                    while n < 4 && self.open((q.0 + across.0, q.1, q.2 + across.2)) {
+                        q = (q.0 + across.0, q.1, q.2 + across.2);
+                        n += 1;
+                    }
+                    if self.open(q) && pics.fits(self.w, q, out, first, &brick, CLEAR) {
+                        pics.hang(self.w, q, out, first);
+                        break;
+                    }
+                }
+                continue;
+            }
+            // A row along the wall or a column up it: the first where it
+            // falls, then 7 on each way (2 a row, 3 a column), each centred
+            // the other way, until one would be 4 or more off the line or
+            // has tiles round it.
+            if pics.fits(self.w, p, out, first, &brick, (0, 0, 0, 0)) {
+                pics.hang(self.w, p, out, first);
+            }
+            let (step, centre, count) = if layout == 1 { (along, UP, 2) } else { (UP, along, 3) };
+            for dir in [1, -1] {
+                for k in 1..=count {
+                    let q = (p.0 + step.0 * 7 * k * dir, p.1 + step.1 * 7 * k * dir, p.2 + step.2 * 7 * k * dir);
+                    let (c0, c1) = if layout == 1 { self.run(q, centre, &upright) } else { self.run(q, centre, &flat) };
+                    let m = (c0 + c1).div_euclid(2);
+                    if m.abs() >= 4 {
+                        break;
+                    }
+                    let q = (q.0 + centre.0 * m, q.1 + centre.1 * m, q.2 + centre.2 * m);
+                    let pic = pick(self, q);
+                    if !pics.clear(self.w, q, out, CLEAR) {
+                        break;
+                    }
+                    if pics.fits(self.w, q, out, pic, &brick, (0, 0, 0, 0)) {
+                        pics.hang(self.w, q, out, pic);
+                    }
+                }
+            }
+        }
+    }
+
     /// DungeonGlobalBanners.
     fn banners(&mut self) {
+        let pics = Paintings::of(self.w);
         let tries = (200.0 * self.width_t / 4200.0) as i32;
         for _ in 0..tries {
             let mut found = None;
@@ -1529,7 +1681,8 @@ impl<'a> Gen<'a> {
                 let id = self.get((p.0 + side.0 * t, p.1 - k, p.2 + side.1 * t));
                 id != 0 && (id == self.ids.door || id == self.ids.colour_door || id == self.ids.door_top || self.ids.banners.contains(&id))
             }));
-            if near {
+            // Nor over a painting (Terraria's tiles can't overlap).
+            if near || (0..=1).any(|k| pics.covers(self.w, (p.0, p.1 - k, p.2))) {
                 continue;
             }
             let banner = self.ids.banners[self.variant(p) * 2 + self.r(2) as usize];

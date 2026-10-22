@@ -3817,6 +3817,25 @@ mod tests {
         assert!(count(id("spike")) > 200, "spikes ({})", count(id("spike")));
         let banners: usize = ["marching_bones_banner", "necromantic_sign", "rusted_company_standard", "ragged_brotherhood_sigil", "molten_legion_flag", "diabolic_sigil"].iter().map(|n| count(id(n))).sum();
         assert!(banners > 20, "banners ({banners})");
+        // Paintings on its brick: the Dungeon's own in the brick parts, bone
+        // paintings elsewhere (none of them any other building's).
+        let pics = crate::paintings::Paintings::of(&w);
+        let mut rng = Rng::new(1);
+        let mut own = std::collections::HashSet::new();
+        for _ in 0..2000 {
+            own.insert(pics.id(crate::paintings::dungeon(&mut rng)));
+            own.insert(pics.id(crate::paintings::bone(&mut rng)));
+        }
+        let bricks = ["blue_brick", "green_brick", "pink_brick"].map(id);
+        let mut hung = 0;
+        for d in w.decorations.iter().filter(|d| d.kind == "rotation" && own.contains(&w.get(d.pos.0, d.pos.1, d.pos.2))) {
+            let (x, y, z) = d.pos;
+            let out = FACING[d.style as usize];
+            assert!(x >= lo.0 && x <= hi.0 && z >= lo.2 && z <= hi.2, "in the Dungeon");
+            assert!(bricks.contains(&w.get(x - out.0, y, z - out.1)), "a painting at {:?} on the Dungeon's brick", d.pos);
+            hung += 1;
+        }
+        assert!(hung >= 5, "paintings ({hung})");
         // Each switch is wired to a light.
         let switches: Vec<_> = w.decorations.iter().filter(|d| d.kind == "switch").collect();
         assert!(switches.len() >= 10, "lights with switches ({})", switches.len());
