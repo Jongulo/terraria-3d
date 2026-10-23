@@ -95,8 +95,22 @@ func _run() -> void:
 	var guide = game.town.residents.get("Guide")
 	check(guide != null and guide.global_position.distance_to(p.global_position) < 12.0 and guide.home_key == "",
 			"a new world starts with the Guide by the spawn point, homeless")
-	# Bee hives in the Jungle (Terraria's Hives pass): each larva on a hive floor.
 	var half_size := Vector3i(size.x / 2, size.y / 2, size.z / 2)
+	# Herbs (Terraria's Herbs pass): sprouts of several kinds, each on its soil.
+	var sprout_ids := PackedInt32Array()
+	for h in Herbs.STYLES:
+		sprout_ids.append(Data.block_id(h + "_sprout"))
+	var sprouts := game.world.find_blocks(half_size, half_size, sprout_ids, 4000)
+	var herb_kinds := {}
+	var on_soil := true
+	for i in range(0, sprouts.size(), 3):
+		var at := Vector3i(sprouts[i], sprouts[i + 1], sprouts[i + 2])
+		var hb := Data.block(game.world.get_block(at))
+		herb_kinds[hb.herb] = true
+		on_soil = on_soil and Data.block(game.world.get_block(at + Vector3i.DOWN)).get("name", "") in hb.grows_on
+	check(sprouts.size() / 3 > 100 and herb_kinds.size() >= 5 and on_soil,
+			"worldgen plants herbs on their soils (%d sprouts, %d kinds)" % [sprouts.size() / 3, herb_kinds.size()])
+	# Bee hives in the Jungle (Terraria's Hives pass): each larva on a hive floor.
 	var larvae := game.world.find_blocks(half_size, half_size, PackedInt32Array([Data.block_id("larva")]), 100)
 	var on_hive := true
 	for i in range(0, larvae.size(), 3):

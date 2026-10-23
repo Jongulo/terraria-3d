@@ -56,6 +56,10 @@ gi_on={
 "type": "bool",
 "value": false
 }
+night_vision={
+"type": "float",
+"value": 0.0
+}
 sun_shade={
 "type": "float",
 "value": 0.5

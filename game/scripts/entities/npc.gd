@@ -207,6 +207,25 @@ static func make_look(kind_name: String, lk: Dictionary) -> Node3D:
 	return model
 
 
+## The Hunter Potion (Senses): 0 not shown, 1 an enemy (seen through the
+## blocks, red), 2 friendly (green).
+var _hunted := -1
+const HUNTED_COLOURS := [Color(0, 0, 0, 0), Color(1.0, 50.0 / 255.0, 50.0 / 255.0, 0.6), Color(50.0 / 255.0, 1.0, 50.0 / 255.0, 0.6)]
+
+
+func set_hunted(state: int) -> void:
+	if state == _hunted or sprite == null or not sprite.has_method("set_xray"):
+		return
+	_hunted = state
+	var own: bool = def.get("boss", false) or def.get("xray", false)
+	# (Back to its own look: off, then a boss's own silhouette again.)
+	sprite.set_xray(false)
+	if state > 0:
+		sprite.set_xray(true, HUNTED_COLOURS[state])
+	elif own:
+		sprite.set_xray(true)
+
+
 static func apply_look(sprite: EntitySprite, lk: Dictionary) -> void:
 	sprite.setup(lk.tex, lk.frames, lk.sprite_size, lk.centred)
 	if lk.trim >= 0.0:
@@ -801,6 +820,7 @@ func _worm_become(role: String) -> void:
 	sprite = make_look(k, lk)
 	add_child(sprite)
 	old.queue_free()
+	_hunted = -1
 	_worm_laid = true
 	velocity = Vector3.ZERO
 
@@ -3211,6 +3231,8 @@ func _die(game, drops := true) -> void:
 	if drops and def.get("hellforge_if_none", false) and not game.world.has_block(Data.block_id("hellforge")):
 		game.spawn_item("Hellforge", 1, center(), Vector3.ZERO)
 	game.spawn_coins(int(def.get("coins", 0)) if drops else 0, center())
+	if drops:
+		_drop_heals(game)
 	var g: Dictionary = Data.npc_gore.get(kind, {})
 	if g.is_empty():
 		game.spawn_dust(center(), _blood_color(), 14)
@@ -3219,6 +3241,43 @@ func _die(game, drops := true) -> void:
 		gib(game, g.get("gores", []))
 	game.on_npc_killed(self)
 	queue_free()
+
+
+## Hearts and Stars (Terraria's NPCLoot_DropHeals): from anything that hurts
+## and has more than 1 life (not Mother, Corrupt or Slimer slimes), 1 in 6 a
+## Star (half the time, mana not full) or else a Heart (half the time, life
+## not full); and another roll, 1 in 2, for a Star with mana not full. The
+## Eater of Worlds' segments drop a Heart 1 in 4, the Creeper 1 in 2 (life
+## not full); the other bosses 5 to 9 Hearts.
+const NO_HEALS := ["MotherSlime", "CorruptSlime", "Slimer"]
+
+
+func _drop_heals(game) -> void:
+	var p = game.player
+	if p == null or kind in NO_HEALS:
+		return
+	var hurt: bool = p.life < p.life_cap()
+	var low_mana: bool = p.mana < p.mana_cap()
+	if kind.begins_with("EaterofWorlds"):
+		if randi() % 4 == 0 and hurt:
+			game.spawn_item("Heart", 1, center())
+		return
+	if kind == "Creeper":
+		if randi() % 2 == 0 and hurt:
+			game.spawn_item("Heart", 1, center())
+		return
+	if def.get("boss", false):
+		game.spawn_item("Heart", randi_range(5, 9), center())
+		return
+	if life_max <= 1 or int(def.get("damage", 0)) <= 0 or int(def.get("coins", 0)) <= 0:
+		return
+	if randi() % 6 == 0:
+		if randi() % 2 == 0 and low_mana:
+			game.spawn_item("Star", 1, center())
+		elif randi() % 2 == 0 and hurt:
+			game.spawn_item("Heart", 1, center())
+	if randi() % 2 == 0 and low_mana:
+		game.spawn_item("Star", 1, center())
 
 
 # ------------------------------------------------------------------ critters

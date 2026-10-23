@@ -51,9 +51,18 @@ func spawn_tick() -> void:
 		cap = int(round(cap * 1.8))
 	if game.boss_alive():
 		cap = 2
+	# The Battle Potion: spawns twice as often, twice as many; the Calming
+	# Potion: 1.3 times as seldom, 0.7 as many (spawnRate, maxSpawns).
+	var rate := 1.0 if dungeon else 0.45
+	if player.has_effect("battle"):
+		cap *= 2
+		rate *= 2.0
+	if player.has_effect("calm"):
+		cap = int(cap * 0.7)
+		rate /= 1.3
 	if game.npcs().filter(func(n): return n.def.ai != "town" and not n.is_critter()).size() >= cap:
 		return
-	if randf() > (1.0 if dungeon else 0.45):
+	if randf() > rate:
 		return
 	if dungeon:
 		# Below the ground before Skeletron is beaten, the Dungeon Guardian

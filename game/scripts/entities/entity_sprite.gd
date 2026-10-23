@@ -51,8 +51,13 @@ func _param(name: String, value) -> void:
 
 ## Seen through whatever's in front of it (bosses: Terraria draws NPCs in
 ## front of the tiles), dimmed and tinted where it's hidden.
-func set_xray(on: bool) -> void:
-	if on == (_xray != null):
+## (`colour`: its tint there, the Hunter Potion's; alpha 0 keeps the shader's.)
+func set_xray(on: bool, colour := Color(0, 0, 0, 0)) -> void:
+	if on and _xray != null:
+		if colour.a > 0.0:
+			_xray.set_shader_parameter("xray_color", colour)
+		return
+	if not on and _xray == null:
 		return
 	if not on:
 		_xray = null
@@ -64,6 +69,8 @@ func set_xray(on: bool) -> void:
 		var v = _mat.get_shader_parameter(u.name)
 		if v != null:
 			_xray.set_shader_parameter(u.name, v)
+	if colour.a > 0.0:
+		_xray.set_shader_parameter("xray_color", colour)
 	material_overlay = _xray
 
 

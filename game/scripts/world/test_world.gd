@@ -662,13 +662,22 @@ func in_ocean(pos: Vector3) -> bool:
 
 
 ## The block gallery: rows of GALLERY_ROW blocks, 2 apart, from GALLERY_Z
-## south of the centre (south of the tower), 3 between rows.
+## south of the centre (south of the tower), 3 between rows; GALLERY_X east
+## of it (clear of the critter pen to the west).
 const GALLERY_Z := 31
-const GALLERY_ROW := 20
+const GALLERY_ROW := 22
+const GALLERY_X := 4
 
 
 static func gallery_pos(c: Vector3i, i: int) -> Vector3i:
-	return Vector3i(c.x - GALLERY_ROW + (i % GALLERY_ROW) * 2, GROUND + 1, c.z + GALLERY_Z + (i / GALLERY_ROW) * 3)
+	return Vector3i(c.x + GALLERY_X - GALLERY_ROW + (i % GALLERY_ROW) * 2, GROUND + 1, c.z + GALLERY_Z + (i / GALLERY_ROW) * 3)
+
+
+## Whether `pos` is in the gallery (its herbs stay as shown: Herbs).
+static func in_gallery(c: Vector3i, pos: Vector3i) -> bool:
+	var rows := ceili(gallery_blocks().size() / float(GALLERY_ROW))
+	return pos.x >= c.x + GALLERY_X - GALLERY_ROW - 2 and pos.x <= c.x + GALLERY_X + GALLERY_ROW + 2 and pos.z >= c.z + GALLERY_Z - 1 \
+			and pos.z <= c.z + GALLERY_Z + rows * 3 - 1 and pos.y >= GROUND and pos.y <= GROUND + 4
 
 
 static func gallery_blocks() -> Array:
@@ -683,8 +692,8 @@ static func gallery_blocks() -> Array:
 func _build_gallery(c: Vector3i) -> void:
 	var names := gallery_blocks()
 	var rows := ceili(names.size() / float(GALLERY_ROW))
-	_box(Vector3i(c.x - GALLERY_ROW - 2, GROUND, c.z + GALLERY_Z - 1), Vector3i(c.x + GALLERY_ROW + 2, GROUND, c.z + GALLERY_Z + rows * 3 - 1), "gray_brick")
-	_label(Vector3(c.x + 0.5, GROUND + 3.5, c.z + GALLERY_Z - 1.5), "One of every block", 24)
+	_box(Vector3i(c.x + GALLERY_X - GALLERY_ROW - 2, GROUND, c.z + GALLERY_Z - 1), Vector3i(c.x + GALLERY_X + GALLERY_ROW + 2, GROUND, c.z + GALLERY_Z + rows * 3 - 1), "gray_brick")
+	_label(Vector3(c.x + GALLERY_X + 0.5, GROUND + 3.5, c.z + GALLERY_Z - 1.5), "One of every block", 24)
 	for i in names.size():
 		var pos := gallery_pos(c, i)
 		if Doors.is_door(Data.block(Data.block_id(names[i]))):
@@ -692,6 +701,10 @@ func _build_gallery(c: Vector3i) -> void:
 			_label(Vector3(pos) + Vector3(0.5, 2.5, 0.5), names[i].replace("_", " "), 14)
 			continue
 		_b(pos, names[i])
+		# Herbs and coral on what they grow on.
+		var soils: Array = Data.block(Data.block_id(names[i])).get("grows_on", [])
+		if not soils.is_empty():
+			_b(pos + Vector3i.DOWN, soils[0])
 		if Data.block(Data.block_id(names[i])).get("wall", false):
 			_b(pos + Vector3i(0, 0, -1), "stone")  # something to hang on (it faces +z)
 		if Data.block(Data.block_id(names[i])).get("interact") == "chest":
@@ -755,13 +768,15 @@ func _build_trees(c: Vector3i) -> void:
 ## scatters them, a sunflower patch, a pond with lily pads and cattails, and a
 ## grassy ledge with vines hanging under it.
 const GARDEN := Vector3i(0, 0, -36)
+## The herb bed, from the garden: a row along x, south of the sunflowers.
+const HERB_BED := Vector3i(-13, 0, -14)
 
 
 func _build_garden(c: Vector3i) -> void:
 	var g := c + GARDEN
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	var ground := ["tall_grass", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "small_rocks", "twigs",
+	var ground := ["tall_grass", "taller_grass", "flowers", "tall_flowers", "mushroom", "small_rocks", "twigs",
 			"large_rocks", "fallen_log"]
 	# The meadow: every ground piece at least twice, then grass and flowers.
 	for x in range(-12, 13):
@@ -798,6 +813,15 @@ func _build_garden(c: Vector3i) -> void:
 				for k in n:
 					_b(la + Vector3i(x, -1 - k, z), "vine_flowers" if rng.randf() < 0.25 else "vines")
 	_label(Vector3(g) + Vector3(0.5, 3.0, -4.0), "Forest plants", 24)
+	# The herb bed: each herb as a sprout, grown and in bloom on its soil
+	# (they grow and bloom here as anywhere: Herbs).
+	for h in Herbs.STYLES.size():
+		for stage in 3:
+			var q := g + HERB_BED + Vector3i(h * 4 + stage, 0, 0)
+			_b(q + Vector3i.DOWN, Data.block(Data.block_id(Herbs.STYLES[h])).grows_on[0])
+			_b(q, Herbs.STYLES[h] + ["_sprout", "_mature", ""][stage])
+		_label(Vector3(g + HERB_BED + Vector3i(h * 4 + 1, 0, 0)) + Vector3(0.5, 1.4, 0.5), Herbs.STYLES[h].capitalize(), 14)
+	_label(Vector3(g + HERB_BED) + Vector3(13.5, 2.6, 0.5), "Herbs: sprout, grown, in bloom", 20)
 
 
 ## South-west of spawn: a stair of wooden platforms up to a floating platform

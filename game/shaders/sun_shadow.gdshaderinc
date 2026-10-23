@@ -38,18 +38,26 @@ global uniform float sun_shade;
 // Toward the sun (or moon), in the world.
 global uniform vec3 sun_dir;
 
+// The Night Owl Potion (0 or 1, the player's nightVision): dim light lifted
+// toward its square root, the dark staying dark, as Terraria's light reaches
+// further with it.
+global uniform float night_vision;
+vec3 sh_nv(vec3 l) {
+	return mix(l, sqrt(max(l, vec3(0.0))), night_vision * 0.35);
+}
+
 varying vec3 v_sh_other;
 varying vec3 v_sh_sun;
 varying float v_sh_floor;
 
 #define SUN_SHADOW_COLOUR(col, other, sun, darkest) \
 	if (SUN_SHADOWS_ON) { \
-		ALBEDO = (col); v_sh_other = (other); v_sh_sun = (sun); v_sh_floor = (darkest); \
+		ALBEDO = (col); v_sh_other = sh_nv(other); v_sh_sun = sh_nv(sun); v_sh_floor = (darkest); \
 		if (GI_ON) { \
-			EMISSION = (col) * (other) * (other); \
+			EMISSION = (col) * v_sh_other * v_sh_other; \
 		} \
 	} else { \
-		vec3 sh_l = max((other), (sun)); \
+		vec3 sh_l = sh_nv(max((other), (sun))); \
 		EMISSION = (col) * max(sh_l * sh_l, vec3(darkest)); \
 		ALBEDO = GI_ON ? (col) : vec3(0.0); \
 	}

@@ -286,6 +286,9 @@ class RecipeReader:
                         arr[1][:] = list(struct.unpack_from("<%di" % len(arr[1]), a.data, o))
             elif name == "M:Recipe.SetIngredients":
                 vals = cargs[0][1] if isinstance(cargs[0], list) else []
+                # One item alone is one of it (Recipe.SetIngredients).
+                if len(vals) == 1:
+                    vals = [vals[0], 1]
                 for q in range(0, len(vals) - 1, 2):
                     cur["req"][len(cur["req"])] = [vals[q], vals[q + 1]]
             elif name == "M:Recipe.SetCraftingStation":

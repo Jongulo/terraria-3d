@@ -51,7 +51,7 @@ func wants_to_come(kind: String) -> bool:
 		"":
 			return true
 		"money":
-			return p.inventory.money() >= 5000
+			return p.money() >= 5000
 		"life":
 			return residents.has("Merchant") and p.life_max > 100
 		"gun":
@@ -262,7 +262,7 @@ func dryad_status() -> String:
 ## for being on fire, more the more bosses you've beaten (like Terraria's).
 func heal_price() -> int:
 	var p := game.player
-	var price := (p.life_max - p.life) + (100 if p.on_fire > 0.0 else 0)
+	var price := (p.life_cap() - p.life) + (100 if p.on_fire > 0.0 else 0)
 	return price * (1 + game.defeated_bosses.size())
 
 
@@ -273,10 +273,10 @@ func nurse_heal() -> String:
 	var line := 0
 	if price <= 0:
 		line = [55, 56, 57][randi() % 3]
-	elif not p.inventory.pay(price):
+	elif not p.pay(price):
 		line = [52, 53, 54][randi() % 3]
 	else:
-		p.heal(p.life_max - p.life)
+		p.heal(p.life_cap() - p.life)
 		p.on_fire = 0.0
 		Audio.play("Item_4")
 		line = [227, 228, 229, 230][randi() % 4]

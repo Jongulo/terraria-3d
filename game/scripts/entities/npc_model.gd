@@ -17,6 +17,7 @@ var _tilts := false
 var _fade := 1.0
 var _xray := false
 static var XRAY := _xray_material()
+var _xray_mat: ShaderMaterial = XRAY
 
 
 static func _xray_material() -> ShaderMaterial:
@@ -85,7 +86,7 @@ func set_fade(v: float) -> void:
 		return
 	_fade = v
 	_mi.set_instance_shader_parameter("fade", v)
-	_mi.material_overlay = XRAY if _xray and v >= 0.5 else null
+	_mi.material_overlay = _xray_mat if _xray and v >= 0.5 else null
 
 
 func set_flash(v: float) -> void:
@@ -94,9 +95,22 @@ func set_flash(v: float) -> void:
 
 ## Seen through whatever's in front of it (bosses), as a tinted silhouette
 ## where it's hidden.
-func set_xray(on: bool) -> void:
+## (`colour`: its tint, the Hunter Potion's; alpha 0 the bosses' own.)
+func set_xray(on: bool, colour := Color(0, 0, 0, 0)) -> void:
 	_xray = on
-	_mi.material_overlay = XRAY if on and _fade >= 0.5 else null
+	_xray_mat = XRAY if colour.a <= 0.0 else _tinted_xray(colour)
+	_mi.material_overlay = _xray_mat if on and _fade >= 0.5 else null
+
+
+static var _tinted := {}
+
+
+static func _tinted_xray(colour: Color) -> ShaderMaterial:
+	if not _tinted.has(colour):
+		var m := _xray_material()
+		m.set_shader_parameter("xray_color", colour)
+		_tinted[colour] = m
+	return _tinted[colour]
 
 
 ## Billboard-only calls: a model faces its heading instead.

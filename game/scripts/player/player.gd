@@ -25,6 +25,8 @@ const BALLOON_JUMP_TICKS := 20
 ## In water and lava: gravity 0.2, maxFallSpeed 5, and you move half as far
 ## (Terraria's WetCollision; honey 0.25, shimmer 0.375).
 const LIQUID_GRAVITY := 30.0
+## The Flipper Potion's swim up (blocks a second).
+const FLIPPER_SWIM := 6.0
 const LIQUID_MAX_FALL := 12.5
 const LIQUID_MOVE := 0.5
 ## In honey: gravity 0.1, maxFallSpeed 3, a quarter as far.
@@ -74,6 +76,10 @@ var accessories := Inventory.new(5)
 var armor := Inventory.new(3)
 ## Terraria's hook equipment slot (miscEquips[4]): the hook the Grapple key throws.
 var hook_slot := Inventory.new(1)
+## Your Piggy Bank's and Safe's 40 slots: every Piggy Bank opens the same
+## one, every Safe the other, in any world (Terraria's bank, bank2).
+var piggy_bank := Inventory.new(40)
+var safe := Inventory.new(40)
 ## The yoyo you have out (Yoyo), or null; hold_use keeps it out without the
 ## mouse (tests).
 var yoyo: Yoyo = null
@@ -107,8 +113,58 @@ var input_enabled := true
 var potion_sickness := 0.0
 ## The Honey buff (seconds left): better natural healing.
 var honey_time := 0.0
-## Potions' buffs (BuffID name -> seconds left): Fishing, Sonar, Crate.
+## Potions' buffs (BuffID name -> seconds left): Fishing, Sonar, Crate,
+## and those in BUFF_EFFECTS.
 var timed_buffs := {}
+## What potions' buffs do (Player.UpdateBuffs), as effects on what you wear
+## (equipment() lists them): Ironskin's 8 defense, Swiftness's 25% speed,
+## Regeneration's lifeRegen 4, Wrath's 10% damage, Rage's 10% crit...
+const BUFF_EFFECTS := {
+	"ObsidianSkin": {"lava_immune": true, "fire_walk": true, "fire_immune": true},
+	"Regeneration": {"regen": 4},
+	"Swiftness": {"move_speed": 25},
+	"Gills": {"gills": true},
+	"Ironskin": {"defense": 8},
+	"ManaRegeneration": {"mana_regen_buff": true},
+	"MagicPower": {"magic_damage": 20},
+	"Featherfall": {"featherfall": true},
+	"Spelunker": {"spelunker": true},
+	"Invisibility": {"invisible": true},
+	"Shine": {"shine": true},
+	"NightOwl": {"night_owl": true},
+	"Battle": {"battle": true},
+	"Thorns": {"thorns_reflect": 1.0},
+	"WaterWalking": {"water_walk": true},
+	"Archery": {"archery": true},
+	"Hunter": {"hunter": true},
+	"Mining": {"mining_speed": 25},
+	"Heartreach": {"heartreach": true},
+	"Calm": {"calm": true},
+	"Builder": {"block_range": 1, "place_speed": 25},
+	"Titan": {"titan": true},
+	"Flipper": {"flipper": true, "ignore_water": true},
+	"Dangersense": {"dangersense": true},
+	"AmmoReservation": {"ammo_save": 20},
+	"Lifeforce": {"lifeforce": true},
+	"Endurance": {"endurance": 10},
+	"Rage": {"crit": 10},
+	"Inferno": {"inferno": true},
+	"Wrath": {"damage": 10},
+	"Warmth": {"warmth": true},
+	# Food (Well Fed, Plenty Satisfied, Exquisitely Stuffed): defense, crit,
+	# damage, melee speed, move speed and mining speed.
+	"WellFed": {"defense": 2, "crit": 2, "damage": 5, "melee_speed": 5, "move_speed": 20, "mining_speed": 5},
+	"WellFed2": {"defense": 3, "crit": 3, "damage": 7.5, "melee_speed": 7.5, "move_speed": 30, "mining_speed": 10},
+	"WellFed3": {"defense": 4, "crit": 4, "damage": 10, "melee_speed": 10, "move_speed": 40, "mining_speed": 15},
+}
+const WELL_FED := ["WellFed", "WellFed2", "WellFed3"]
+## Shine's light (Lighting.AddLight 0.8, 0.95, 1) and Inferno's (0.65, 0.4, 0.1).
+const SHINE_LIGHT := [0.8, 0.95, 1.0]
+const INFERNO_LIGHT := [0.65, 0.4, 0.1]
+## Inferno: 20 damage a second to enemies within 200 px (8.3 blocks).
+const INFERNO_DAMAGE := 20
+const INFERNO_RANGE := 200.0 / 24.0
+var _inferno_t := 0.0
 ## Quests done for the Angler (Terraria's anglerQuestsFinished).
 var angler_quests := 0
 ## What the bobber's last bite check found (Terraria's displayedFishingInfo,
@@ -168,6 +224,9 @@ var _swing_shot_cd := 0.0
 var charging := {}
 ## The Magic Conch's teleport, counting down (< 0: none).
 var _conch_timer := -1.0
+## Where the teleport at the end of _conch_timer goes: "ocean" (the Magic
+## Conch), "home" (the Magic Mirror) or "random" (the Teleportation Potion).
+var _conch_to := "ocean"
 ## Holding on to a rope snake (Snake Charmer's Flute).
 var climbing: Node3D = null
 ## Holding on to a rope or chain (_rope_climb).
@@ -312,7 +371,35 @@ func equipment() -> Array:
 	var bonus := armor_set()
 	if not bonus.is_empty():
 		out.append(bonus)
+	for b in timed_buffs:
+		if BUFF_EFFECTS.has(b):
+			out.append(BUFF_EFFECTS[b])
 	return out
+
+
+## Your money: what you carry and what's in your Piggy Bank and Safe (their
+## coins can be spent in shops).
+func money() -> int:
+	return inventory.money() + piggy_bank.money() + safe.money()
+
+
+## Pays `amount` copper (Player.BuyItem): from what you carry, then the Piggy
+## Bank, then the Safe, change in kind. False (paying nothing) if short.
+func pay(amount: int) -> bool:
+	if money() < amount:
+		return false
+	for inv in [inventory, piggy_bank, safe]:
+		var here: int = inv.money()
+		if here >= amount:
+			return inv.pay(amount)
+		inv.pay(here)
+		amount -= here
+	return amount <= 0
+
+
+## Your maximum life now: Lifeforce adds a fifth (to the 20 below).
+func life_cap() -> int:
+	return life_max + (life_max / 5 / 20 * 20 if has_effect("lifeforce") else 0)
 
 
 ## The armor set the three pieces you wear make ({} if none), like Terraria's.
@@ -344,6 +431,11 @@ func has_effect(effect: String) -> bool:
 		if d.has(effect):
 			return true
 	return false
+
+
+## A weapon's knockback: the Titan Potion's half again (kbBuff).
+func weapon_knockback(def: Dictionary) -> float:
+	return float(def.get("knockback", 0)) * (1.5 if has_effect("titan") else 1.0)
 
 
 func defense() -> int:
@@ -396,6 +488,10 @@ func carried_light() -> Color:
 	# Slashing, the Terragrim shines (Terraria's AddLight at its tip).
 	if slash_out():
 		lights.append(slash.def.slash.get("light"))
+	if has_effect("shine"):
+		lights.append(SHINE_LIGHT)
+	if has_effect("inferno"):
+		lights.append(INFERNO_LIGHT)
 	for l in lights:
 		if l is Array and alive:
 			c = Color(maxf(c.r, l[0]), maxf(c.g, l[1]), maxf(c.b, l[2]))
@@ -501,6 +597,7 @@ func _physics_process(delta: float) -> void:
 	_immune = maxf(0.0, _immune - delta)
 	potion_sickness = maxf(0.0, potion_sickness - delta)
 	_tick_buffs(delta)
+	_inferno(delta, game)
 	_use_timer = maxf(0.0, _use_timer - delta)
 	if _use_timer > 0.0 and _use_def.has("swing_dust"):
 		_swing_dust(delta)
@@ -510,7 +607,14 @@ func _physics_process(delta: float) -> void:
 	if _conch_timer >= 0.0:
 		_conch_timer -= delta
 		if _conch_timer < 0.0:
-			ocean_teleport()
+			match _conch_to:
+				"home": home_teleport()
+				"random": random_teleport()
+				_: ocean_teleport()
+		elif _conch_to == "home":
+			# The mirror's sparkles while you gaze into it.
+			if randf() < delta * 30.0:
+				game.spawn_dust(center() + Vector3(randf_range(-0.4, 0.4), randf_range(-0.8, 0.8), randf_range(-0.4, 0.4)), Color(0.75, 0.6, 1.0), 1)
 
 	target = Doors.raycast(game, camera.global_position, forward(), reach()) if input_enabled else {}
 	_highlight.visible = not target.is_empty() and not game.taking_screenshot
@@ -547,6 +651,7 @@ func update_carried_light() -> void:
 	var c := carried_light()
 	RenderingServer.global_shader_parameter_set("player_light_pos", camera.global_position)
 	RenderingServer.global_shader_parameter_set("player_light_color", Vector3(c.r, c.g, c.b))
+	RenderingServer.global_shader_parameter_set("night_vision", 1.0 if has_effect("night_owl") else 0.0)
 
 
 func _move(delta: float, game) -> void:
@@ -669,6 +774,9 @@ func _move(delta: float, game) -> void:
 		var max_fall := HONEY_MAX_FALL if honey else LIQUID_MAX_FALL
 		if velocity.y < -max_fall:
 			velocity.y = move_toward(velocity.y, -max_fall, 80.0 * delta)
+		# Flippers and the Flipper Potion (accFlipper): jump swims you up.
+		if jump and has_effect("flipper") and in_liquid != LIQ_LAVA:
+			velocity.y = maxf(velocity.y, FLIPPER_SWIM)
 		_fall_start = global_position.y
 	else:
 		var wing := wings()
@@ -689,6 +797,10 @@ func _move(delta: float, game) -> void:
 			# Gliding: a third of gravity, a third of the fall speed, no fall.
 			velocity.y = maxf(velocity.y - GRAVITY / 3.0 * delta, -MAX_FALL / 3.0)
 			_fall_start = global_position.y
+		elif has_effect("featherfall") and not (input_enabled and Input.is_action_pressed("drop_down")):
+			# Featherfall (slowFall): a third of gravity and of the fall speed
+			# (hold Drop down to fall as usual).
+			velocity.y = maxf(velocity.y - GRAVITY / 3.0 * delta, -MAX_FALL / 3.0)
 		else:
 			velocity.y = maxf(velocity.y - GRAVITY * delta, -MAX_FALL)
 	_wall_slide(game, dir)
@@ -715,18 +827,30 @@ func _move(delta: float, game) -> void:
 		return
 	# Holding Drop down falls through platforms (Terraria's down key).
 	var drop := input_enabled and Input.is_action_pressed("drop_down")
-	var step := velocity * delta * ((HONEY_MOVE if in_liquid == LIQ_HONEY else LIQUID_MOVE) if in_liquid != 0 else 1.0)
+	# The Flipper Potion (ignoreWater): not slowed by water or honey.
+	var slowed := in_liquid != 0 and not (has_effect("ignore_water") and in_liquid != LIQ_LAVA)
+	var step := velocity * delta * ((HONEY_MOVE if in_liquid == LIQ_HONEY else LIQUID_MOVE) if slowed else 1.0)
+	# The Water Walking Potion: water and honey bear you like a floor (not
+	# lava; hold Drop down to go in).
+	var walk_on := -INF
+	if has_effect("water_walk") and not drop and velocity.y <= 0.0:
+		walk_on = liquid_top(game.world, global_position)
 	var r: Dictionary = game.world.move_aabb(global_position, half, step, 1.05 if on_floor else 0.0, drop)
 	var was_on_floor := on_floor
 	global_position = r.position
 	on_floor = r.on_floor
+	if global_position.y < walk_on:
+		global_position.y = walk_on
+		on_floor = true
+		velocity.y = 0.0
+		_fall_start = global_position.y
 	var blocked: Vector3i = r.blocked
 	if blocked.y:
 		if velocity.y < 0.0:
 			var fall := _fall_start - global_position.y
 			# Lucky Horseshoe, or landing on a cloud: no fall damage.
 			var below := Vector3i((global_position + Vector3(0, -0.1, 0)).floor())
-			if has_effect("no_fall_damage") or Data.block(game.world.get_block(below)).get("fall_safe", false):
+			if has_effect("no_fall_damage") or has_effect("featherfall") or Data.block(game.world.get_block(below)).get("fall_safe", false):
 				fall = 0.0
 			var tiles := int(fall * 1.5)
 			# The Frog Leg's extraFall: tiles more before a fall hurts.
@@ -1303,6 +1427,52 @@ func _summon_rope_snake(def: Dictionary) -> bool:
 
 ## The Magic Conch: off to the beach of the ocean furthest from you (across
 ## the world from where you are), on the sand by the water.
+## Home: to your bed, or the world's spawn (the Magic Mirror, the Recall
+## Potion).
+func home_teleport() -> void:
+	_teleport(respawn_point())
+
+
+## The Teleportation Potion (Player.TeleportationPotion): somewhere at random
+## in the world, standing on ground clear of lava, liquid and hurting blocks,
+## no more than 100 tiles (here 66 blocks) above it; 1000 tries.
+func random_teleport() -> void:
+	var game := Game.current
+	var size: Vector3i = game.world.get_size()
+	for i in 1000:
+		var spot = random_spot(game.world, Vector3i(randi_range(20, size.x - 21), randi_range(10, size.y - 10), randi_range(20, size.z - 21)))
+		if spot != null:
+			_teleport(spot)
+			return
+
+
+## Down from `p` to a safe floor (for random_teleport), or null.
+static func random_spot(w: VoxelWorld, p: Vector3i):
+	if w.is_solid(p) or w.is_solid(p + Vector3i.UP):
+		return null
+	for i in 66:
+		var below := p + Vector3i.DOWN
+		if below.y < 1 or w.get_liquid(p).y > 0:
+			return null
+		if w.is_solid(below):
+			var under := Data.block(w.get_block(below))
+			if under.has("touch_damage") or under.get("hot", false) or w.is_solid(p + Vector3i.UP):
+				return null
+			return Vector3(p.x + 0.5, p.y, p.z + 0.5)
+		p = below
+	return null
+
+
+func _teleport(to: Vector3) -> void:
+	var game := Game.current
+	game.spawn_dust(center(), Color(0.75, 0.6, 1.0), 16)
+	global_position = to
+	velocity = Vector3.ZERO
+	_fall_start = global_position.y
+	game.spawn_dust(center(), Color(0.75, 0.6, 1.0), 16)
+	Audio.play("Item_6", 0.7)
+
+
 func ocean_teleport() -> void:
 	var game := Game.current
 	var spot = game.far_beach(global_position)
@@ -1374,7 +1544,7 @@ func release_charge() -> void:
 			pierce = int(p[1])
 	var size := lerpf(c.size[0], c.size[1], k)
 	var b := Game.current.spawn_projectile(def.projectile, camera.global_position + forward() * 0.6, forward() * speed,
-			weapon_damage(def, int(round(float(def.damage) * dmg_mult))), float(def.knockback) * maxf(1.0, dmg_mult), float(c.get("gravity", 0.0)), 0.0,
+			weapon_damage(def, int(round(float(def.damage) * dmg_mult))), weapon_knockback(def) * maxf(1.0, dmg_mult), float(c.get("gravity", 0.0)), 0.0,
 			size, true, crit_chance(def))
 	b.penetrate = 1 + pierce
 	b.pierce_falloff = float(c.get("pierce_falloff", 0.0))
@@ -1408,6 +1578,20 @@ func toggle_creative_flight() -> void:
 
 ## Which liquid the body and eyes are in. The eye counts as submerged only
 ## below the cell's surface height.
+## The top of the water or honey you'd stand on at `pos` (its surface, with
+## you no lower than a little under it), or -INF.
+static func liquid_top(w: VoxelWorld, pos: Vector3) -> float:
+	for dy in [0.0, -1.0]:
+		var cell := Vector3i((pos + Vector3(0, dy - 0.01, 0)).floor())
+		var l: Vector2i = w.get_liquid(cell)
+		if l.y <= 0 or l.x == LIQ_LAVA or w.get_liquid(cell + Vector3i.UP).y > 0:
+			continue
+		var top := cell.y + l.y / 63.0 * 0.94
+		if pos.y >= top - 0.3:
+			return top
+	return -INF
+
+
 func _update_liquid(game) -> void:
 	var w: VoxelWorld = game.world
 	var feet: Vector2i = w.get_liquid(Vector3i((global_position + Vector3(0, 0.25, 0)).floor()))
@@ -1447,7 +1631,7 @@ func _liquid_effects(delta: float) -> void:
 	# The Diving Helmet: breath lasts six times as long (breathCD 7 -> 42
 	# ticks), drowning hurts a sixth as much.
 	var diving := 6.0 if has_effect("diving") else 1.0
-	if head_liquid != 0:
+	if head_liquid != 0 and not has_effect("gills"):
 		breath = maxf(0.0, breath - delta / diving)
 	else:
 		breath = minf(BREATH_MAX, breath + delta * 6.0)
@@ -1458,7 +1642,9 @@ func _liquid_effects(delta: float) -> void:
 	var fire_walk := has_effect("fire_walk")
 	# The Lava Charm: lava doesn't hurt while its time lasts; out of lava it
 	# fills back up as fast (a tick a tick).
-	if in_liquid == LIQ_LAVA and lava_time > 0.0:
+	if in_liquid == LIQ_LAVA and has_effect("lava_immune"):
+		pass  # Obsidian Skin: lava doesn't hurt at all
+	elif in_liquid == LIQ_LAVA and lava_time > 0.0:
 		lava_time = maxf(0.0, lava_time - delta)
 	elif in_liquid == LIQ_LAVA:
 		var rose := has_effect("lava_rose")
@@ -1574,11 +1760,29 @@ func has_buff(b: String) -> bool:
 	return timed_buffs.get(b, 0.0) > 0.0
 
 
+## The Inferno Potion's ring: 20 damage a second to the enemies near you.
+func _inferno(delta: float, game) -> void:
+	if not has_effect("inferno"):
+		_inferno_t = 0.0
+		return
+	_inferno_t += delta
+	if _inferno_t < 1.0:
+		return
+	_inferno_t -= 1.0
+	for npc in game.npcs():
+		if npc.def.ai == "town" or npc.is_critter() or npc.def.get("invulnerable", false) or npc.dont_take_damage:
+			continue
+		var to: Vector3 = npc.center() - center()
+		if to.length() < INFERNO_RANGE + npc.half.x:
+			npc.hit(INFERNO_DAMAGE, 0.0, to.normalized(), 0.0)
+
+
 func _tick_buffs(delta: float) -> void:
 	for b in timed_buffs.keys():
 		timed_buffs[b] -= delta
 		if timed_buffs[b] <= 0.0:
 			timed_buffs.erase(b)
+			life = mini(life, life_cap())
 
 
 func _regen(delta: float) -> void:
@@ -1602,15 +1806,16 @@ func _regen(delta: float) -> void:
 	if on_fire > 0.0 or poisoned > 0.0:
 		rate = 0.0
 		_since_hurt = 0.0
-	if life < life_max and rate > 0.0:
+	if life < life_cap() and rate > 0.0:
 		_regen_acc += rate * delta
 		if _regen_acc >= 1.0:
-			life = mini(life_max, life + int(_regen_acc))
+			life = mini(life_cap(), life + int(_regen_acc))
 			_regen_acc = fmod(_regen_acc, 1.0)
 			stats_changed.emit()
 	if mana < mana_cap() and _use_timer <= 0.0:
 		# The Mana Regeneration Band's manaRegenBonus: half a mana a second each.
-		_mana_acc += delta * (4.0 + mana_cap() * 0.05 + stat("mana_regen_bonus") * 0.5)
+		# The Mana Regeneration Potion: as fast as standing still, always (manaRegenBuff).
+		_mana_acc += delta * (4.0 + mana_cap() * 0.05 + stat("mana_regen_bonus") * 0.5) * (2.0 if has_effect("mana_regen_buff") else 1.0)
 		if _mana_acc >= 1.0:
 			mana = mini(mana_cap(), mana + int(_mana_acc))
 			_mana_acc = fmod(_mana_acc, 1.0)
@@ -1663,7 +1868,9 @@ func use_item() -> void:
 			elif def.has("boomerang"):
 				used = _throw_boomerang(def)
 			else:
+				Game.current.regrowth = def.get("regrow", false)
 				_melee(def)
+				Game.current.regrowth = false
 				if def.get("regrow", false):
 					_regrow()
 				used = true
@@ -1682,7 +1889,8 @@ func use_item() -> void:
 				duration = EXTRACT_TIME
 			else:
 				used = _place(def)
-				duration = 0.2
+				# The Builder Potion: 25% faster (tileSpeed).
+				duration = 0.2 / (1.0 + stat("place_speed") / 100.0)
 		"consumable":
 			used = _consume(def)
 		"summon":
@@ -1705,6 +1913,14 @@ func use_item() -> void:
 				used = _throw_rope_coil(def)
 			elif def.has("ocean_teleport"):
 				_conch_timer = float(def.ocean_teleport)
+				_conch_to = "ocean"
+				Audio.play(def.get("sound", "Item_6"), 0.7)
+				used = true
+			elif def.has("recall"):
+				# The Magic and Ice Mirrors: home halfway through the use
+				# (itemTime == itemTimeMax / 2).
+				_conch_timer = float(def.recall)
+				_conch_to = "home"
 				Audio.play(def.get("sound", "Item_6"), 0.7)
 				used = true
 		"wire_tool":
@@ -1942,7 +2158,7 @@ func _melee(def: Dictionary) -> void:
 		var to := aim - origin
 		var dist: float = to.length() - npc.half.x
 		if dist < reach and to.normalized().dot(fwd) > cone:
-			npc.hit(weapon_damage(def), float(def.get("knockback", 0)), to.normalized(), crit_chance(def), armor_penetration(def))
+			npc.hit(weapon_damage(def), weapon_knockback(def), to.normalized(), crit_chance(def), armor_penetration(def))
 			on_melee_hit(npc, def, swing)
 	# Ice Blade: a bolt with the swing, every so often (Terraria's useTime
 	# longer than its useAnimation).
@@ -1950,7 +2166,7 @@ func _melee(def: Dictionary) -> void:
 		var shot: Dictionary = def.swing_shot
 		_swing_shot_cd = float(shot.get("every", 60)) / 60.0
 		var b := game.spawn_projectile(shot.projectile, origin + fwd * 0.6, fwd * float(shot.get("speed", 20)),
-				weapon_damage(def), float(def.get("knockback", 0)), 0.0, 0.0, 0.45, true, crit_chance(def))
+				weapon_damage(def), weapon_knockback(def), 0.0, 0.0, 0.45, true, crit_chance(def))
 		b.armor_pen = armor_penetration(def)
 		if shot.has("light"):
 			b.glow = Color(shot.light[0], shot.light[1], shot.light[2])
@@ -1981,13 +2197,18 @@ func _shoot_ranged(def: Dictionary) -> bool:
 	var pellets: Array = def.get("pellets", [1, 1])
 	var spread := float(def.get("spread", 0.0))
 	var basis := camera.global_transform.basis
+	# The Archery Potion: arrows 20% faster, 10% harder.
+	var archery := is_arrow and has_effect("archery")
+	var speed := float(def.shoot_speed) * (1.2 if archery else 1.0)
+	var dmg := weapon_damage(def, int(def.damage) + int(ammo.get("damage", 0)))
+	if archery:
+		dmg = int(dmg * 1.1)
 	for i in randi_range(int(pellets[0]), int(pellets[1])):
 		var dir := forward()
 		if spread > 0.0:
 			dir = (dir + basis.x * randf_range(-spread, spread) + basis.y * randf_range(-spread, spread)).normalized()
 		var pr := Game.current.spawn_projectile(proj, camera.global_position + forward() * 0.5 + basis.y * -0.1,
-				dir * float(def.shoot_speed), weapon_damage(def, int(def.damage) + int(ammo.get("damage", 0))),
-				float(def.knockback) + float(ammo.get("knockback", 0)), drop, 0.0, 0.7 if is_arrow else 0.25,
+				dir * speed, dmg, weapon_knockback(def) + float(ammo.get("knockback", 0)), drop, 0.0, 0.7 if is_arrow else 0.25,
 				true, crit_chance(def))
 		pr.gravity_delay = float(ammo.get("gravity_delay", 0.0))
 		pr.drag = float(ammo.get("drag", 0.0))
@@ -2014,7 +2235,7 @@ func _cast(def: Dictionary) -> bool:
 	mana -= cost
 	stats_changed.emit()
 	var pr := Game.current.spawn_projectile(def.projectile, camera.global_position + forward() * 0.6, forward() * float(def.shoot_speed),
-			weapon_damage(def), float(def.knockback), 0.0, 0.0, 0.5, true, crit_chance(def))
+			weapon_damage(def), weapon_knockback(def), 0.0, 0.0, 0.5, true, crit_chance(def))
 	if def.get("channel", false):
 		channelled = pr
 		pr.steered_by = self
@@ -2142,7 +2363,7 @@ func mana_cost(def: Dictionary) -> int:
 
 func _throw(def: Dictionary) -> bool:
 	var pr := Game.current.spawn_projectile(def.projectile, camera.global_position + forward() * 0.5, forward() * float(def.shoot_speed),
-			weapon_damage(def), float(def.knockback), float(def.get("gravity", 10.0)), 18.0, 0.45, true, crit_chance(def))
+			weapon_damage(def), weapon_knockback(def), float(def.get("gravity", 10.0)), 18.0, 0.45, true, crit_chance(def))
 	pr.gravity_delay = float(def.get("gravity_delay", 0.0))
 	pr.drag = float(def.get("drag", 0.0))
 	# Through this many enemies (Terraria's penetrate: the Frost Daggerfish's 3).
@@ -2178,6 +2399,8 @@ func _place(def: Dictionary) -> bool:
 		_use_up(selected)
 		Audio.play("Dig_*", 0.6)
 		return true
+	if bdef.has("grows_on"):
+		return _plant_seed(id, bdef)
 	if bdef.get("rope", false):
 		return _place_rope(id, pos, normal)
 	if Doors.is_door(bdef):
@@ -2233,6 +2456,29 @@ func _place(def: Dictionary) -> bool:
 		game.chests.register_new(pos)
 	# Sand placed over a gap falls.
 	game.settle_falling(pos)
+	return true
+
+
+## Herb seeds go in only on their soil (or a clay pot); on a herb ready to
+## harvest they harvest it and go in its place, and they replace grass
+## (Terraria's TryKillingReplaceableTile).
+func _plant_seed(id: int, bdef: Dictionary) -> bool:
+	var game := Game.current
+	var pos: Vector3i = target.block
+	if Data.block(target.id).get("render", "cube") != "cross":
+		pos += target.normal
+	var at := game.world.get_block(pos)
+	var there := Data.block(at)
+	if at != 0 and not (there.get("cut", false) and (not there.has("herb") or game.herbs.harvestable(there, pos))):
+		return false
+	if not Data.block(game.world.get_block(pos + Vector3i.DOWN)).get("name", "") in bdef.grows_on:
+		return false
+	if at != 0:
+		game.break_block(pos)
+	if not game.world.set_block(pos, id):
+		return false
+	_use_up(selected)
+	Audio.play("Dig_*", 0.6)
 	return true
 
 
@@ -2293,7 +2539,7 @@ func _call_star(def: Dictionary) -> void:
 	var target := camera.global_position + forward() * float(hit.get("distance", 18.0))
 	var start := target + Vector3(randf_range(-4.0, 4.0), 22.0, randf_range(-4.0, 4.0))
 	game.spawn_projectile("Starfury", start, (target - start).normalized() * 36.0, weapon_damage(def),
-			float(def.get("knockback", 0)), 0.0, 12.0, 0.7, true, crit_chance(def))
+			weapon_knockback(def), 0.0, 12.0, 0.7, true, crit_chance(def))
 	Audio.play_at("Item_9", start, 0.7)
 
 
@@ -2324,7 +2570,7 @@ func _consume(def: Dictionary) -> bool:
 	var game := Game.current
 	if def.has("heal"):
 		# (Bottled Honey: drunk for its buff at full life too.)
-		if potion_sickness > 0.0 or (life >= life_max and not def.has("honey")):
+		if potion_sickness > 0.0 or (life >= life_cap() and not def.has("honey")):
 			return false
 		heal(int(def.heal))
 		potion_sickness = float(def.get("sickness", POTION_SICKNESS)) if def.internal != "Mushroom" else 0.0
@@ -2347,7 +2593,15 @@ func _consume(def: Dictionary) -> bool:
 		Audio.play("MaxMana")
 	elif def.has("buff"):
 		# A buff potion: its buff for its time (drinking another restarts it).
+		# Food's three kinds of Well Fed replace one another.
+		if def.buff[0] in WELL_FED:
+			for b in WELL_FED:
+				timed_buffs.erase(b)
 		timed_buffs[def.buff[0]] = float(def.buff[1])
+	elif def.get("recall", false):
+		home_teleport()
+	elif def.get("teleport_random", false):
+		random_teleport()
 	else:
 		return false
 	Audio.play(def.get("sound", "Item_3"))
@@ -2518,6 +2772,9 @@ func _interact() -> void:
 		Doors.toggle(Game.current, target.block, global_position)
 	elif bdef.get("interact") == "chest":
 		Game.current.open_chest(target.block)
+	elif bdef.get("interact") == "bank":
+		Audio.play("Menu_Open")
+		Game.current.hud.open_chest(piggy_bank if bdef.get("bank") == "piggy" else safe, target.block)
 	elif bdef.get("interact") == "locked_chest":
 		Game.current.unlock_chest(target.block)
 	elif bdef.get("interact") == "switch":
@@ -2543,7 +2800,7 @@ func _interact() -> void:
 
 func heal(amount: int) -> void:
 	var before := life
-	life = mini(life_max, life + amount)
+	life = mini(life_cap(), life + amount)
 	if life > before:
 		Game.current.floating_text(str(life - before), center() + Vector3(0, 1.3, 0), Color(0.3, 1.0, 0.3))
 	stats_changed.emit()
@@ -2631,12 +2888,12 @@ func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
 	if def.get("volcano", false) and not swing.get("erupted", false) and npc.def.ai != "dummy" and not npc.is_critter():
 		swing["erupted"] = true
 		Game.current.spawn_projectile("Volcano", npc.center(), Vector3(0, 0.01, 0), int(weapon_damage(def) * 0.75),
-				float(def.get("knockback", 0)), 0.0, 0.0, 2.2, true, crit_chance(def))
+				weapon_knockback(def), 0.0, 0.0, 2.2, true, crit_chance(def))
 		Audio.play_at("Custom/dd2_explosive_trap_explode_*", npc.center(), 0.7)
 		for i in 20:
 			Game.current.dust.spawn(6, npc.center() + Vector3(randf_range(-0.4, 0.4), randf_range(-0.4, 0.4), randf_range(-0.4, 0.4)),
 					Vector3(randf_range(-0.6, 0.6), 1.0, randf_range(-0.6, 0.6)) * randf_range(2.0, 7.0), randf_range(1.0, 2.0))
-	if def.get("leech", false) and not swing.get("leeched", false) and life < life_max \
+	if def.get("leech", false) and not swing.get("leeched", false) and life < life_cap() \
 			and npc.def.ai != "dummy" and not npc.is_critter():
 		swing["leeched"] = true
 		heal(1)
@@ -2647,13 +2904,17 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null)
 		return
 	var game := Game.current
 	var dmg := maxi(1, amount - defense() / 2)
+	# The Endurance Potion: 10% less damage taken.
+	if stat("endurance") > 0.0:
+		dmg = maxi(1, int(dmg * (1.0 - stat("endurance") / 100.0)))
 	life -= dmg
 	if has_effect("panic"):
 		_panic = 8.0
 	# Magic Cuffs: the damage you take comes back as mana.
 	if has_effect("magic_cuffs"):
 		mana = mini(mana_cap(), mana + dmg)
-	var thorns := int(stat("thorns"))
+	# The Thorns Potion: the attacker takes what it dealt (thorns 1).
+	var thorns := int(stat("thorns")) + int(amount * stat("thorns_reflect"))
 	if thorns > 0 and attacker != null and is_instance_valid(attacker) and attacker.life > 0:
 		attacker.hit(thorns, 0.0, (attacker.center() - center()).normalized(), 0.0)
 	_since_hurt = 0.0
@@ -2744,11 +3005,14 @@ func save_state() -> Dictionary:
 		"accessories": accessories.to_data(),
 		"armor": armor.to_data(),
 		"hook": hook_slot.to_data(),
+		"piggy_bank": piggy_bank.to_data(),
+		"safe": safe.to_data(),
 		"life": life, "life_max": life_max, "mana": mana, "mana_max": mana_max,
 		"pos": [global_position.x, global_position.y, global_position.z],
 		"yaw": _yaw, "pitch": _pitch, "selected": selected,
 		"bed": [bed.x, bed.y, bed.z],
 		"angler_quests": angler_quests,
+		"buffs": timed_buffs.duplicate(),
 	}
 
 
@@ -2757,7 +3021,13 @@ func load_state(d: Dictionary) -> void:
 	accessories.from_data(d.get("accessories", []))
 	armor.from_data(d.get("armor", []))
 	hook_slot.from_data(d.get("hook", []))
+	piggy_bank.from_data(d.get("piggy_bank", []))
+	safe.from_data(d.get("safe", []))
 	life_max = int(d.get("life_max", 100))
+	timed_buffs = {}
+	var saved_buffs: Dictionary = d.get("buffs", {})
+	for b in saved_buffs:
+		timed_buffs[b] = float(saved_buffs[b])
 	life = int(d.get("life", life_max))
 	mana_max = int(d.get("mana_max", 20))
 	mana = int(d.get("mana", mana_max))

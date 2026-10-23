@@ -66,6 +66,10 @@ var chests := Chests.new()
 var wiring := Wiring.new()
 var wire_view := WireView.new()
 var laser_ruler := LaserRuler.new()
+var senses := Senses.new()
+var herbs := Herbs.new()
+## A Staff of Regrowth swing (Player.staffOfRegrowthBonus): herbs cut give more.
+var regrowth := false
 ## The town NPCs and their homes.
 var town := Town.new()
 ## The Goblin Army (Invasion): on its way, here, beaten.
@@ -250,6 +254,10 @@ func _on_world_ready() -> void:
 	add_child(wire_view)
 	laser_ruler.setup(self)
 	add_child(laser_ruler)
+	senses.setup(self)
+	add_child(senses)
+	herbs.setup(self)
+	add_child(herbs)
 
 	add_child(player)
 	sky.camera = player.camera
@@ -916,7 +924,8 @@ static func roll_loot(table_name: String, lava := false) -> Array:
 		if randf() < float(e[1]):
 			for item in e[0]:
 				out.append([item, 1])
-	return out
+	# Items not in this game (the Gravitation Potion) roll but come to nothing.
+	return out.filter(func(d): return Data.items.has(d[0]))
 
 
 # ------------------------------------------------------------------ blocks
@@ -1043,6 +1052,9 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 		if b.get("on_break") == "pot":
 			for d in roll_loot("pot"):
 				spawn_item(d[0], d[1], c)
+		if b.has("herb"):
+			for d in herbs.drops(b, p, regrowth):
+				spawn_item(d[0], d[1], c)
 		# The Guide to Plant Fiber Cordage: vines (plain, flower and jungle)
 		# drop Vine Rope half the time (Terraria's KillTile_GetItemDrops).
 		if Data.kind_of(id) in CORDAGE_VINES and player != null and player.has_effect("cordage") and randf() < 0.5:
@@ -1121,7 +1133,11 @@ func cut_tile(p: Vector3i) -> bool:
 	var b := Data.block(world.get_block(p))
 	if not b.get("cut", false):
 		return false
-	if int(Data.block(world.get_block(p + Vector3i.DOWN)).get("tile_id", -1)) in [78, 380, 579]:
+	# The Staff of Regrowth cuts only herbs ready to harvest, in pots too.
+	if regrowth and b.has("herb"):
+		if not herbs.harvestable(b, p):
+			return false
+	elif int(Data.block(world.get_block(p + Vector3i.DOWN)).get("tile_id", -1)) in [78, 380, 579]:
 		return false
 	break_block(p)
 	return true

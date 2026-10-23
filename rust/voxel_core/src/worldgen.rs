@@ -264,6 +264,32 @@ pub fn palms(w: &mut World, seed: i32, coast: &Coast, sand: u16) -> usize {
     n
 }
 
+/// Coral on the sea floor (Terraria's tile 81: on sand under the ocean's
+/// water, any of its six looks), 1 in 12 of the floor's cells.
+pub fn corals(w: &mut World, seed: i32, coast: &Coast, sand: u16) -> usize {
+    let looks: Vec<u16> = ["coral", "coral_2", "coral_3", "coral_4", "coral_5", "coral_6"].iter().map(|n| w.id_of(n)).filter(|&i| i != 0).collect();
+    if looks.is_empty() || sand == 0 {
+        return 0;
+    }
+    let mut rng = Rng::new(seed as u64 ^ 0xc0_7a15);
+    let mut n = 0;
+    for z in 0..w.sz {
+        for x in 0..w.sx {
+            if coast.inland(x, z) >= coast.ocean.width || !rng.chance(1.0 / 12.0) {
+                continue;
+            }
+            let y = w.surface_y(x, z);
+            if y + 1 >= w.sy || w.get(x, y, z) != sand || w.get(x, y + 1, z) != 0 || w.liquid_at(x, y + 1, z).1 == 0 {
+                continue;
+            }
+            let i = w.idx(x, y + 1, z);
+            w.blocks[i] = looks[rng.range(0, looks.len() as i32) as usize];
+            n += 1;
+        }
+    }
+    n
+}
+
 /// Gem trees' canopy sheets: CanopyArt.SHEETS 16-22 (Tree_Tops_22-28), in
 /// Terraria's order (tiles 583-589).
 pub const GEM_CANOPY: i32 = 16;
@@ -1344,7 +1370,6 @@ impl Flora {
             (self.flowers, 500),
             (self.tall_flowers, 250),
             (self.mushroom, 40),
-            (self.daybloom, 30),
             (self.small_rocks, 80),
             (self.twigs, 50),
             (self.large_rocks, 15),
@@ -1875,6 +1900,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         }
     }
     palms(w, seed, &coast, ids.sand);
+    corals(w, seed, &coast, ids.sand);
     set_progress(0.7);
 
     // Pass 3-: Terraria's big biomes: Snow, Desert and Jungle regions.
@@ -2131,6 +2157,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         let keep_out = |p: (i32, i32, i32)| rooms.iter().any(|r| p.0 >= r.0 && p.0 <= r.1 && p.1 >= r.2 && p.1 <= r.3 && p.2 >= r.4 && p.2 <= r.5);
         crate::traps::traps_pass(w, &mut Rng::new(seed as u64 ^ 0x7a5_7e47), &l, &keep_out, dungeon.map(|(x, _, z, _)| (x, z)));
     }
+    // Terraria's Herbs pass: herb sprouts on their soils; their own random numbers.
+    crate::alchemy::herbs_pass(w, &mut Rng::new(seed as u64 ^ 0x4e2b_5a17), &l);
     // Springs that were in the rock a cabin now stands in.
     w.decorations.retain(|d| {
         d.kind != "waterfall" || !cabins.iter().flatten().any(|r| {
@@ -2238,6 +2266,7 @@ pub fn tidy_plants(w: &mut World, lo: (i32, i32, i32), hi: (i32, i32, i32), on: 
         "vile_mushroom", "vicious_mushroom"]
         .iter()
         .map(|n| w.id_of(n))
+        .chain(crate::alchemy::HERBS.iter().flat_map(|h| [w.id_of(&format!("{h}_sprout")), w.id_of(&format!("{h}_mature")), w.id_of(h)]))
         .filter(|&b| b != 0)
         .collect();
     for x in lo.0.max(0)..=hi.0.min(w.sx - 1) {
@@ -3657,12 +3686,12 @@ mod tests {
             w.blocks.iter().filter(|&&b| b == id).count()
         };
         for (name, least) in [("tall_grass", 2000), ("taller_grass", 800), ("flowers", 500), ("tall_flowers", 250), ("mushroom", 10),
-                ("daybloom", 5), ("sunflower", 10), ("small_rocks", 20), ("twigs", 10), ("vines", 3)] {
+                ("sunflower", 10), ("small_rocks", 20), ("twigs", 10), ("vines", 3)] {
             assert!(count(name) >= least, "{name}: {} (want {least})", count(name));
         }
         // Plants stand on grass, vines hang; pond plants sit in or on water.
         let (grass, vines, lily, cattail) = (w.id_of("grass"), w.id_of("vines"), w.id_of("lily_pad"), w.id_of("cattail"));
-        for name in ["flowers", "sunflower", "daybloom"] {
+        for name in ["flowers", "sunflower"] {
             let id = w.id_of(name);
             for z in 0..w.sz {
                 for x in 0..w.sx {

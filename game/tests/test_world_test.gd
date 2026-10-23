@@ -458,6 +458,8 @@ func _run() -> void:
 	await _wiring_checks(c)
 	await _wiring_more_checks(c)
 	await _boulder_kind_checks(c)
+	await _alchemy_checks(c)
+	await _potion_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -1472,7 +1474,7 @@ func _flora_checks(c: Vector3i) -> void:
 		for z in range(-11, 9):
 			for y in range(-3, 5):
 				found[Data.block(w.get_block(g + Vector3i(x, y, z))).get("name", "air")] = true
-	var want := ["tall_grass", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "sunflower", "small_rocks",
+	var want := ["tall_grass", "taller_grass", "flowers", "tall_flowers", "mushroom", "sunflower", "small_rocks",
 			"twigs", "large_rocks", "fallen_log", "vines", "vine_flowers", "lily_pad", "cattail", "cattail_stem", "cattail_top"]
 	check(want.all(func(n): return found.has(n)), "the forest garden has every plant (missing %s)" % [want.filter(func(n): return not found.has(n))])
 	check(want.all(func(n): return not Data.block(Data.block_id(n)).get("solid", true)),
@@ -1501,10 +1503,19 @@ func _flora_checks(c: Vector3i) -> void:
 			below += Vector3i.DOWN
 		game.break_block(vine + Vector3i.UP, false)
 		check(w.get_block(vine) == 0 and w.get_block(below) == 0, "vines fall when the grass above them is mined")
-	# Drops: a mushroom, Daybloom and sunflowers.
+	# The herb bed: all seven, each as a sprout, grown and in bloom, on its soil.
+	var bed := []
+	for h in Herbs.STYLES.size():
+		for stage in 3:
+			var q := g + TestWorld.HERB_BED + Vector3i(h * 4 + stage, 0, 0)
+			var b := Data.block(w.get_block(q))
+			if b.has("herb") and int(b.herb) == h and Data.block(w.get_block(q + Vector3i.DOWN)).get("name", "") in b.grows_on:
+				bed.append(b.name)
+	check(bed.size() == 21, "the herb bed has all seven herbs on their soils (%d of 21)" % bed.size())
+	# Drops: a mushroom and sunflowers.
 	var drops := func(name: String) -> int:
 		return game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == name).size()
-	for pair in [["mushroom", "Mushroom"], ["daybloom", "Daybloom"], ["sunflower", "Sunflower"]]:
+	for pair in [["mushroom", "Mushroom"], ["sunflower", "Sunflower"]]:
 		var at := Vector3i(-1, -1, -1)
 		for x in range(-12, 13):
 			for z in range(-11, 0):
@@ -6684,3 +6695,381 @@ func _dungeon_checks(c: Vector3i) -> void:
 			n.queue_free()
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	await frames(5)
+
+
+## What breaking `at` drops: {item: count}.
+func _drops_of(at: Vector3i) -> Dictionary:
+	game._collected_drops = {}
+	game.break_block(at)
+	var d: Dictionary = game._collected_drops
+	game._collected_drops = null
+	return d
+
+
+func _alchemy_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var herbs: Herbs = game.herbs
+	var o := c + Vector3i(30, 45, -30)
+	var grass := Data.block_id("grass")
+	for x in range(-6, 7):
+		for z in range(-6, 7):
+			w.set_block(o + Vector3i(x, -1, z), grass)
+			for y in range(0, 4):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	var name_at := func(at: Vector3i) -> String: return Data.block(w.get_block(at)).get("name", "")
+	# Seeds go in on their soil only.
+	var held := p.selected
+	p.inventory.slots[9] = Inventory.stack("DaybloomSeeds", 5)
+	p.select(9)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.target = {"block": o + Vector3i.DOWN, "normal": Vector3i.UP, "id": grass, "distance": 3.0}
+	p.use_item()
+	check(name_at.call(o) == "daybloom_sprout" and p.inventory.count_of("DaybloomSeeds") == 4, "Daybloom Seeds plant a Daybloom sprout on grass")
+	var stone_at := o + Vector3i(2, -1, 0)
+	w.set_block(stone_at, Data.block_id("stone"))
+	p._use_timer = 0.0
+	p.target = {"block": stone_at, "normal": Vector3i.UP, "id": w.get_block(stone_at), "distance": 3.0}
+	p.use_item()
+	check(w.get_block(stone_at + Vector3i.UP) == 0 and p.inventory.count_of("DaybloomSeeds") == 4, "but not on stone")
+	w.set_block(stone_at, grass)
+	p.inventory.slots[9] = null
+	p.select(held)
+	# A sprout breaks for nothing, and grows (1 in 50 an update, another 1 in
+	# 50 by day for Daybloom).
+	check(_drops_of(o).is_empty(), "a sprout gives nothing")
+	w.set_block(o, Data.block_id("daybloom_sprout"))
+	game.sky.is_day = true
+	var updates := 0
+	while name_at.call(o) == "daybloom_sprout" and updates < 2000:
+		herbs.grow(o)
+		updates += 1
+	check(name_at.call(o) in ["daybloom_mature", "daybloom"] and updates < 2000, "the sprout grows up (%d updates)" % updates)
+	herbs.grow(o)
+	check(name_at.call(o) == "daybloom", "Daybloom blooms by day")
+	game.sky.is_day = false
+	herbs.grow(o)
+	check(name_at.call(o) == "daybloom_mature", "and closes at night")
+	var d := _drops_of(o)
+	check(d.get("Daybloom", 0) == 1 and not d.has("DaybloomSeeds"), "grown, it gives the herb, no seeds")
+	game.sky.is_day = true
+	var seeds := {}
+	for i in 40:
+		w.set_block(o, Data.block_id("daybloom"))
+		d = _drops_of(o)
+		if d.get("Daybloom", 0) != 1:
+			seeds[-1] = true
+		seeds[d.get("DaybloomSeeds", 0)] = true
+	check(seeds.keys().all(func(k): return k >= 1 and k <= 3) and seeds.size() >= 2, "in bloom: the herb and 1-3 seeds %s" % [seeds.keys()])
+	# The Staff of Regrowth cuts only herbs in bloom, for more.
+	game.regrowth = true
+	w.set_block(o, Data.block_id("daybloom_mature"))
+	game.sky.is_day = false
+	check(not game.cut_tile(o) and name_at.call(o) == "daybloom_mature", "the Staff of Regrowth leaves herbs not ready")
+	game.sky.is_day = true
+	var most := [0, 0]
+	for i in 60:
+		w.set_block(o, Data.block_id("daybloom"))
+		game._collected_drops = {}
+		game.cut_tile(o)
+		d = game._collected_drops
+		game._collected_drops = null
+		most = [maxi(most[0], d.get("Daybloom", 0)), maxi(most[1], d.get("DaybloomSeeds", 0))]
+	game.regrowth = false
+	check(most[0] == 2 and most[1] >= 4 and most[1] <= 5, "and harvests them for 1-2 herbs and 1-5 seeds (most %s)" % [most])
+	# Planting on a herb in bloom harvests and replants it.
+	w.set_block(o, Data.block_id("daybloom"))
+	p.inventory.slots[9] = Inventory.stack("DaybloomSeeds", 1)
+	p.select(9)
+	p._use_timer = 0.0
+	p.target = {"block": o, "normal": Vector3i.UP, "id": w.get_block(o), "distance": 3.0}
+	var drops_before := game.entities.get_children().filter(func(e): return e is ItemDrop).size()
+	p.use_item()
+	check(name_at.call(o) == "daybloom_sprout" and game.entities.get_children().filter(func(e): return e is ItemDrop).size() > drops_before,
+			"seeds on a herb in bloom harvest it and go in its place")
+	p.inventory.slots[9] = null
+	p.select(held)
+	# Liquid: water kills Daybloom, not Moonglow.
+	w.set_block(o, Data.block_id("daybloom_mature"))
+	var moon := o + Vector3i(2, 0, 0)
+	w.set_block(moon + Vector3i.DOWN, Data.block_id("jungle_grass"))
+	w.set_block(moon, Data.block_id("moonglow_mature"))
+	w.set_liquid(o, Player.LIQ_WATER, 63)
+	w.set_liquid(moon, Player.LIQ_WATER, 63)
+	herbs.grow(o)
+	herbs.grow(moon)
+	check(w.get_block(o) == 0 and name_at.call(moon).begins_with("moonglow"), "water drowns Daybloom; Moonglow grows in it")
+	w.set_liquid(o, 0, 0)
+	w.set_liquid(moon, 0, 0)
+	# Off its soil it dies.
+	w.set_block(moon + Vector3i.DOWN, grass)
+	herbs.grow(moon)
+	check(w.get_block(moon) == 0, "a herb off its soil dies")
+	# Blinkroot flickers; Shiverthorn blooms and stays.
+	var blink := o + Vector3i(0, 0, 2)
+	w.set_block(blink + Vector3i.DOWN, Data.block_id("dirt"))
+	w.set_block(blink, Data.block_id("blinkroot_mature"))
+	var seen := {}
+	for i in 60:
+		herbs.grow(blink)
+		seen[name_at.call(blink)] = true
+	check(seen.has("blinkroot") and seen.has("blinkroot_mature"), "Blinkroot flickers in and out of bloom")
+	# Fireblossom: from 3:45 PM (40500 ticks) to dusk.
+	var fire := o + Vector3i(0, 0, -2)
+	w.set_block(fire + Vector3i.DOWN, Data.block_id("ash"))
+	w.set_block(fire, Data.block_id("fireblossom_mature"))
+	var t0: float = game.sky.time
+	game.sky.time = 30000.0
+	herbs.grow(fire)
+	var before_bloom: String = name_at.call(fire)
+	game.sky.time = 41000.0
+	herbs.grow(fire)
+	check(before_bloom == "fireblossom_mature" and name_at.call(fire) == "fireblossom", "Fireblossom blooms late in the day")
+	game.sky.time = t0
+	# Deathweed: on full-moon nights.
+	var death := o + Vector3i(-2, 0, 0)
+	w.set_block(death + Vector3i.DOWN, Data.block_id("ebonstone"))
+	w.set_block(death, Data.block_id("deathweed_mature"))
+	var phase: int = game.sky.moon_phase
+	game.sky.is_day = false
+	game.sky.moon_phase = 3
+	herbs.grow(death)
+	var waning: String = name_at.call(death)
+	game.sky.moon_phase = 0
+	herbs.grow(death)
+	check(waning == "deathweed_mature" and name_at.call(death) == "deathweed", "Deathweed blooms under a full moon")
+	game.sky.moon_phase = phase
+	game.sky.is_day = true
+	# Planter Boxes: any herb grows in any of them, and swinging doesn't cut it.
+	var pb := o + Vector3i(4, 0, 4)
+	w.set_block(pb + Vector3i.DOWN, Data.block_id("fireblossom_planter_box"))
+	w.set_block(pb, Data.block_id("moonglow_mature"))
+	herbs.grow(pb)
+	check(name_at.call(pb).begins_with("moonglow") and not game.cut_tile(pb) and name_at.call(pb).begins_with("moonglow"),
+			"Moonglow grows in a Fireblossom Planter Box, and a swing doesn't cut it")
+	w.set_block(pb, 0)
+	w.set_block(pb + Vector3i.DOWN, grass)
+	# Coral drops Coral; it goes on sand only.
+	check(Data.block(Data.block_id("coral_4")).get("drop") == "Coral" and Data.item("Coral").place == "coral", "Coral, from the sea floor")
+	for q in [o, blink, fire, death, moon]:
+		w.set_block(q, 0)
+
+
+func _potion_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var held := p.selected
+	var was_god := p.god_mode
+	p.god_mode = false
+	p.timed_buffs.clear()
+	var drink := func(item: String) -> void:
+		p.inventory.slots[9] = Inventory.stack(item, 1)
+		p.select(9)
+		p._use_timer = 0.0
+		p._use_released = true
+		p.use_item()
+	var def0 := p.defense()
+	drink.call("IronskinPotion")
+	check(p.has_buff("Ironskin") and absf(p.timed_buffs.Ironskin - 480.0) < 0.1 and p.defense() == def0 + 8, "the Ironskin Potion: 8 defense for 8 minutes")
+	var speed0 := p.stat("move_speed")
+	drink.call("SwiftnessPotion")
+	check(p.stat("move_speed") == speed0 + 25.0, "Swiftness: 25 percent faster")
+	drink.call("LifeforcePotion")
+	check(p.life_cap() == p.life_max + p.life_max / 5 / 20 * 20, "Lifeforce: a fifth more life (%d of %d)" % [p.life_cap(), p.life_max])
+	drink.call("EndurancePotion")
+	p.life = p.life_cap()
+	p._immune = 0.0
+	var life0 := p.life
+	p.hurt(100 + p.defense() / 2, Vector3.ZERO, true)
+	check(life0 - p.life == 90, "Endurance: 10%% less damage (%d of 100)" % [life0 - p.life])
+	p.life = p.life_cap()
+	# Obsidian Skin: lava doesn't hurt.
+	drink.call("ObsidianSkinPotion")
+	p.in_liquid = Player.LIQ_LAVA
+	p.lava_time = 0.0
+	p._immune = 0.0
+	life0 = p.life
+	p._liquid_effects(0.1)
+	check(p.life == life0, "Obsidian Skin: lava doesn't hurt")
+	p.in_liquid = 0
+	p.on_fire = 0.0
+	# Gills: no breath lost under water.
+	drink.call("GillsPotion")
+	p.head_liquid = Player.LIQ_WATER
+	p.breath = 5.0
+	p._liquid_effects(1.0)
+	check(p.breath >= 5.0, "Gills: you breathe under water")
+	p.head_liquid = 0
+	# Flippers: jump swims you up in water.
+	p.accessories.slots[0] = Inventory.stack("Flipper", 1)
+	check(p.has_effect("flipper") and not p.has_effect("ignore_water"), "Flippers let you swim (still slowed by the water)")
+	p.accessories.slots[0] = null
+	drink.call("FlipperPotion")
+	check(p.has_effect("flipper") and p.has_effect("ignore_water"), "the Flipper Potion: swimming, not slowed by water")
+	# Titan: knockback half again.
+	var sword := Data.item("WoodenSword")
+	var kb0 := p.weapon_knockback(sword)
+	drink.call("TitanPotion")
+	check(absf(p.weapon_knockback(sword) - kb0 * 1.5) < 0.001, "Titan: knockback x1.5")
+	# The buffs save and load.
+	var saved := p.save_state()
+	p.timed_buffs.clear()
+	p.load_state(saved)
+	check(p.has_buff("Ironskin") and p.has_buff("Titan"), "buffs keep across saving")
+	p.timed_buffs.clear()
+	p.life = mini(p.life, p.life_cap())
+	# Food: Well Fed, and the stronger kinds in its place.
+	var d0 := p.defense()
+	drink.call("CookedFish")
+	check(p.has_buff("WellFed") and p.defense() == d0 + 2 and absf(p.timed_buffs.WellFed - 480.0) < 0.1, "Cooked Fish: Well Fed, 2 defense for 8 minutes")
+	drink.call("GoldenDelight")
+	check(p.has_buff("WellFed3") and not p.has_buff("WellFed") and p.defense() == d0 + 4, "a Golden Delight: Exquisitely Stuffed in its place")
+	p.timed_buffs.clear()
+	var has_recipe := func(result: String, ing: String, station: String) -> bool:
+		return Data.recipes.any(func(r): return r.result == result and r.ingredients.has(ing) and r.get("station", "") == station)
+	check(has_recipe.call("RoastedDuck", "Duck", "cooking_pot") and has_recipe.call("CookedFish", "Bass", "cooking_pot")
+			and has_recipe.call("IronskinPotion", "Daybloom", "bottles") and has_recipe.call("GillsPotion", "Coral", "bottles"),
+			"recipes: critters and fish cooked at a Cooking Pot, potions at a bottle")
+	# The Alchemy Table: each ingredient saved 1 in 3.
+	var lab := c + Vector3i(-30, 60, -30)
+	for x in range(-3, 4):
+		for z in range(-3, 4):
+			w.set_block(lab + Vector3i(x, -1, z), Data.block_id("stone"))
+			for y in range(0, 4):
+				w.set_block(lab + Vector3i(x, y, z), 0)
+	w.set_block(lab + Vector3i(2, 0, 0), Data.block_id("alchemy_table"))
+	p.global_position = Vector3(lab) + Vector3(0.5, 0, 0.5)
+	p._fall_start = p.global_position.y
+	await frames(2)
+	var hud: Hud = game.hud
+	hud._open_inventory()
+	for item in ["BottledWater", "Daybloom", "IronOre"]:
+		p.inventory.add(item, 60)
+	var ironskin: Dictionary = Data.recipes.filter(func(r): return r.result == "IronskinPotion")[0]
+	for i in 60:
+		hud._cursor_stack = null
+		hud.craft(ironskin)
+	hud._cursor_stack = null
+	hud.close_inventory()
+	var used := 60 - p.inventory.count_of("BottledWater")
+	check(used > 25 and used < 55, "by an Alchemy Table a potion's ingredients are often saved (%d of 60 Bottled Water used)" % used)
+	for item in ["BottledWater", "Daybloom", "IronOre"]:
+		p.inventory.remove(item, p.inventory.count_of(item))
+	w.set_block(lab + Vector3i(2, 0, 0), 0)
+	# The Piggy Bank and Safe: your own 40 slots, the same in every one; their
+	# coins spend in shops.
+	var bank_at := lab + Vector3i(-2, 0, 0)
+	w.set_block(bank_at, Data.block_id("piggy_bank"))
+	p.target = {"block": bank_at, "normal": Vector3i.UP, "id": w.get_block(bank_at), "distance": 2.0}
+	p._interact()
+	check(hud._chest == p.piggy_bank and p.piggy_bank.slots.size() == 40, "a Piggy Bank opens your own 40 slots")
+	hud.close_inventory()
+	w.set_block(bank_at, Data.block_id("safe"))
+	p.target = {"block": bank_at, "normal": Vector3i.UP, "id": w.get_block(bank_at), "distance": 2.0}
+	p._interact()
+	check(hud._chest == p.safe and p.safe != p.piggy_bank, "a Safe its own")
+	hud.close_inventory()
+	w.set_block(bank_at, 0)
+	p.piggy_bank.add("GoldCoin", 2)
+	var carried := p.inventory.money()
+	check(p.money() == carried + 20000 and p.pay(carried + 15000) and p.inventory.money() == 0 and p.piggy_bank.money() == 5000,
+			"coins in the Piggy Bank spend in shops, after what you carry")
+	var banked := p.save_state()
+	p.piggy_bank.slots.fill(null)
+	p.load_state(banked)
+	check(p.piggy_bank.money() == 5000, "and stay in it across saving")
+	p.piggy_bank.slots.fill(null)
+	p.inventory.add_money(carried)
+	# Recall Potion, Magic Mirror: home.
+	var home := p.respawn_point()
+	p.global_position = home + Vector3(30, 5, 30)
+	p._fall_start = p.global_position.y
+	drink.call("RecallPotion")
+	check(p.global_position.distance_to(home) < 0.1, "the Recall Potion takes you home")
+	p.global_position = home + Vector3(30, 5, 30)
+	p._fall_start = p.global_position.y
+	p.inventory.slots[9] = Inventory.stack("MagicMirror", 1)
+	p.select(9)
+	p._use_timer = 0.0
+	p.use_item()
+	check(p.global_position.distance_to(home) > 10.0, "the Magic Mirror: not at once")
+	var t := 0.0
+	while p.global_position.distance_to(home) > 0.1 and t < 2.0:
+		await get_tree().physics_frame
+		t += 1.0 / Engine.physics_ticks_per_second
+	check(p.global_position.distance_to(home) < 0.1 and absf(t - 0.75) < 0.1, "but home halfway through its use (%.2f s)" % t)
+	# The Teleportation Potion's spot: on a floor, clear above.
+	var o := c + Vector3i(-30, 60, 30)
+	for y in range(-3, 6):
+		w.set_block(o + Vector3i(0, y, 0), 0)
+	w.set_block(o + Vector3i(0, -3, 0), Data.block_id("stone"))
+	var spot = Player.random_spot(w, o + Vector3i(0, 2, 0))
+	check(spot != null and absf(spot.y - (o.y - 2)) < 0.01, "the Teleportation Potion lands you on a floor")
+	w.set_block(o + Vector3i(0, -3, 0), Data.block_id("spike"))
+	check(Player.random_spot(w, o + Vector3i(0, 2, 0)) == null, "not on spikes")
+	w.set_block(o + Vector3i(0, -3, 0), 0)
+	# Hearts and Stars: picked up, they heal and give mana, not kept.
+	p.life = p.life_cap() - 50
+	var heart := ItemDrop.new()
+	heart.setup("Heart", 1)
+	game.entities.add_child(heart)
+	heart.global_position = p.global_position + Vector3(0, 0.9, 0)
+	heart.age = 10.0
+	var life1 := p.life
+	await frames(3)
+	check(p.life == life1 + 20 and p.inventory.count_of("Heart") == 0 and not is_instance_valid(heart), "a Heart heals 20 and isn't kept")
+	# Heartreach pulls them from further.
+	var h2 := ItemDrop.new()
+	h2.setup("Heart", 1)
+	game.entities.add_child(h2)
+	var r0 := h2.grab_range(p)
+	p.timed_buffs["Heartreach"] = 60.0
+	check(absf(h2.grab_range(p) - r0 - 250.0 / 24.0) < 0.01, "Heartreach: Hearts come from 250 px further")
+	h2.queue_free()
+	p.timed_buffs.clear()
+	p.mana = 0
+	var star := ItemDrop.new()
+	star.setup("Star", 1)
+	game.entities.add_child(star)
+	star.global_position = p.global_position + Vector3(0, 0.9, 0)
+	star.age = 10.0
+	await frames(3)
+	check(p.mana == mini(100, p.mana_cap()) and p.inventory.count_of("Star") == 0, "a Star gives 100 mana")
+	# Chests: potions and Recall Potions; the Magic Mirror among the finds.
+	var found := {}
+	for i in 300:
+		for dd in Game.roll_loot("chest"):
+			found[dd[0]] = true
+	check(found.has("MagicMirror") and found.has("RecallPotion") and found.has("TrapsightPotion") and not found.has("GravitationPotion"),
+			"underground chests: Magic Mirrors, Recall and buff potions (no Gravitation, not in the game)")
+	# Spelunker shows ore through the walls; Hunter shows creatures.
+	var ore_at := o + Vector3i(3, 0, 0)
+	w.set_block(ore_at, Data.block_id("gold_ore"))
+	p.global_position = Vector3(o) + Vector3(0.5, 0, 0.5)
+	p._fall_start = p.global_position.y
+	p.timed_buffs["Spelunker"] = 60.0
+	game.senses._scan_t = 0.0
+	await frames(2)
+	var ores: PackedInt32Array = game.senses._treasure
+	var shown := false
+	for i in range(0, ores.size(), 3):
+		shown = shown or Vector3i(ores[i], ores[i + 1], ores[i + 2]) == ore_at
+	check(shown and game.senses.visible, "Spelunker: ore shows")
+	p.timed_buffs.clear()
+	await frames(2)
+	check(not game.senses.visible, "and not without it")
+	w.set_block(ore_at, 0)
+	var slime := game.spawn_npc("GreenSlime", Vector3(o) + Vector3(4, 0, 0))
+	p.timed_buffs["Hunter"] = 60.0
+	await frames(2)
+	check(slime._hunted == 1, "Hunter: creatures show through the walls, enemies red")
+	p.timed_buffs.clear()
+	await frames(2)
+	check(slime._hunted == 0, "and stop when it wears off")
+	slime.queue_free()
+	p.inventory.slots[9] = null
+	p.select(held)
+	p.god_mode = was_god
+	p.life = p.life_cap()
+

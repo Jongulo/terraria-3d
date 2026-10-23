@@ -834,7 +834,7 @@ func _refresh() -> void:
 		s.queue_redraw()
 	var held := player.held()
 	_item_name.text = held.get("name", "") if not inventory_open else "Inventory"
-	_life_label.text = "Life: %d/%d" % [maxi(player.life, 0), player.life_max]
+	_life_label.text = "Life: %d/%d" % [maxi(player.life, 0), player.life_cap()]
 	# Creative mode, like Minecraft's, has no life or mana to show.
 	_life_label.visible = not player.creative
 	_hearts.visible = not player.creative
@@ -849,7 +849,7 @@ func _refresh() -> void:
 func _draw_hearts() -> void:
 	for c in _hearts.get_children():
 		c.queue_free()
-	var count := player.life_max / HEART_HP
+	var count := player.life_cap() / HEART_HP
 	var tex := Assets.texture("Images/Heart")
 	for i in count:
 		var fill := clampf(float(player.life - i * HEART_HP) / HEART_HP, 0.0, 1.0)
@@ -1432,8 +1432,16 @@ func craft(r: Dictionary) -> void:
 	# Crafted items go onto the cursor, stacking with what's already there.
 	if _cursor_stack != null and (_cursor_stack.item != r.result or _cursor_stack.count + r.count > player.inventory.max_stack(r.result)):
 		return
+	# By an Alchemy Table, a potion's ingredients are each saved 1 in 3, unit
+	# by unit (Recipe.GetIngredientCraftingDiscount).
+	var alchemy: bool = "bottles" in r.get("stations", [r.get("station")]) and Game.current.nearby_stations().has("alchemy_table")
 	for ing in r.ingredients:
-		player.inventory.remove_spec(ing, int(r.ingredients[ing]))
+		var n := int(r.ingredients[ing])
+		if alchemy:
+			for i in int(r.ingredients[ing]):
+				if randi() % 3 == 0:
+					n -= 1
+		player.inventory.remove_spec(ing, n)
 	if _cursor_stack == null:
 		# Crafted one at a time, it rolls a prefix (Terraria's Recipe.Create).
 		_cursor_stack = Inventory.stack(r.result, r.count, Prefixes.roll(Data.item(r.result)) if r.count == 1 else 0)
@@ -1805,7 +1813,7 @@ func reforge_cost() -> int:
 ## or you can't afford it.
 func reforge() -> bool:
 	var s = _reforge_inv.slots[0]
-	if s == null or _reforge_cooldown > 0.0 or not player.inventory.pay(reforge_cost()):
+	if s == null or _reforge_cooldown > 0.0 or not player.pay(reforge_cost()):
 		return false
 	var def := Data.item(s.item)
 	var pre := Prefixes.roll(def, Prefixes.REFORGE)
@@ -1823,7 +1831,7 @@ func reforge() -> bool:
 
 func _refresh_reforge() -> void:
 	_reforge_slot.queue_redraw()
-	_reforge_money.text = "Your money: " + Inventory.money_text(player.inventory.money()) if player != null else ""
+	_reforge_money.text = "Your money: " + Inventory.money_text(player.money()) if player != null else ""
 	for c in _reforge_cost.get_children():
 		_reforge_cost.remove_child(c)
 		c.queue_free()
@@ -1905,7 +1913,9 @@ func open_shop() -> void:
 
 ## Whether a shop item's condition holds (npcs.json town "shop": [item,
 ## condition]): "day" or "night"; "moon0".."moon7" (Terraria's moonPhase, 0
-## the full moon), with "_night" only then; "snow": you're in the snow.
+## the full moon), with "_night" only then; "snow", "mushroom": you're in
+## that biome; "corruption", "crimson": the world's evil; "skeletron": after
+## Skeletron; "bloodmoon": in a Blood Moon.
 static func shop_condition(cond: String) -> bool:
 	var game := Game.current
 	var parts := cond.split("_")
@@ -1922,11 +1932,20 @@ static func shop_condition(cond: String) -> bool:
 			return false
 		if c == "angler" and not game.town.residents.has("Angler"):
 			return false
+		if c == "skeletron" and not game.defeated_bosses.has("SkeletronHead"):
+			return false
+		# (No Blood Moons here yet.)
+		if c == "bloodmoon":
+			return false
+		if c in ["corruption", "crimson"] and game.town.world_evil() != c:
+			return false
+		if c == "mushroom" and game.biome != "mushroom":
+			return false
 	return true
 
 
 func _refresh_shop() -> void:
-	_shop_money.text = "Your money: " + Inventory.money_text(player.inventory.money())
+	_shop_money.text = "Your money: " + Inventory.money_text(player.money())
 	_shop_money.position = Vector2(_shop_title.get_minimum_size().x + 30, 3)
 	for sl in _shop_slots:
 		sl.queue_redraw()
@@ -1977,7 +1996,7 @@ func _shop_clicked(slot: ItemSlot, _button: int) -> void:
 func buy(item: String, to_inventory := false) -> bool:
 	if not to_inventory and _cursor_stack != null and (_cursor_stack.item != item or _cursor_stack.count >= player.inventory.max_stack(item)):
 		return false
-	if not player.inventory.pay(Data.value(item)):
+	if not player.pay(Data.value(item)):
 		message("You can't afford that", Color(1.0, 0.6, 0.5))
 		return false
 	if to_inventory:

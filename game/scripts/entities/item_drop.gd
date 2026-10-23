@@ -4,11 +4,13 @@ extends Node3D
 ## picked up on contact (Terraria's item magnet).
 
 const GRAB_RANGE := 4.5
+const HEARTREACH := 250.0 / 24.0
 const PICKUP_RANGE := 1.3
 const DESPAWN_TIME := 600.0
 const PICKUP_DELAY := 0.6
 
 var item := ""
+var def := {}
 var count := 1
 ## Its prefix (Prefixes), 0 for none.
 var prefix := 0
@@ -22,6 +24,7 @@ var _anim := {}
 
 func setup(item_name: String, n: int, pre := 0) -> void:
 	item = item_name
+	def = Data.item(item_name)
 	count = n
 	prefix = pre
 	var id := Data.item_id(item_name)
@@ -53,7 +56,7 @@ func _physics_process(delta: float) -> void:
 	var to_player := player.global_position + Vector3(0, 0.9, 0) - global_position
 	var dist := to_player.length()
 	# The Treasure Magnet reaches further (Terraria's treasureGrabRange).
-	if player.alive and age > PICKUP_DELAY and dist < GRAB_RANGE + player.stat("grab_range") and player.inventory.count_space(item) > 0:
+	if player.alive and age > PICKUP_DELAY and dist < grab_range(player) and (def.has("pickup_heal") or def.has("pickup_mana") or player.inventory.count_space(item) > 0):
 		if dist < PICKUP_RANGE:
 			_pick_up(player)
 			return
@@ -87,7 +90,27 @@ func _physics_process(delta: float) -> void:
 		sprite.update_light(game.world, game.sky, global_position + Vector3(0, 0.3, 0))
 
 
+## How near you it comes to you from: the Treasure Magnet's further; Hearts
+## the Heartreach Potion's 250 px further (Player.lifeMagnetGrabRange).
+func grab_range(player) -> float:
+	var r: float = GRAB_RANGE + player.stat("grab_range")
+	if def.has("pickup_heal") and player.has_effect("heartreach"):
+		r += HEARTREACH
+	return r
+
+
+## Hearts and Stars aren't kept: they heal (20 life) or give mana (100).
 func _pick_up(player) -> void:
+	if def.has("pickup_heal") or def.has("pickup_mana"):
+		Audio.play("Grab")
+		if def.has("pickup_heal"):
+			player.heal(int(def.pickup_heal))
+		else:
+			player.mana = mini(player.mana_cap(), player.mana + int(def.pickup_mana))
+			Game.current.floating_text(str(def.pickup_mana), player.center() + Vector3(0, 1.3, 0), Color(0.4, 0.5, 1.0))
+			player.stats_changed.emit()
+		queue_free()
+		return
 	var left: int = player.inventory.add(item, count, prefix)
 	var taken := count - left
 	if taken > 0:
