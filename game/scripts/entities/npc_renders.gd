@@ -238,6 +238,23 @@ static func _version_of(file: String, key: String) -> bool:
 	return parts.size() == 2 and parts[0].is_valid_hex_number() and parts[1].is_valid_int()
 
 
+## The material as drawn with the sun's shadows off: the shot has no sun,
+## and with the shadows on the shaders leave the light to it (the renders came
+## out black). A copy, so the game's own material keeps its shadows.
+static var _sunless := {}
+
+
+static func _without_sun(mat: Material) -> Material:
+	if not mat is ShaderMaterial:
+		return mat
+	var id := mat.get_instance_id()
+	if not _sunless.has(id) or not is_instance_valid(_sunless[id]):
+		var m: ShaderMaterial = mat.duplicate()
+		m.set_shader_parameter("no_sun_shadows", true)
+		_sunless[id] = m
+	return _sunless[id]
+
+
 ## One shot of the model, set up off screen (rendered when the batch asks).
 static func _shot(parent: Node, mesh: ArrayMesh, mat: Material, center: Vector3, n: int, apx: float, d: Vector3, up: Vector3) -> SubViewport:
 	var vp := SubViewport.new()
@@ -248,7 +265,7 @@ static func _shot(parent: Node, mesh: ArrayMesh, mat: Material, center: Vector3,
 	vp.msaa_3d = Viewport.MSAA_DISABLED
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
-	mi.material_override = mat
+	mi.material_override = _without_sun(mat)
 	mi.set_instance_shader_parameter("entity_light", Color(1, 1, 1, 1))
 	vp.add_child(mi)
 	var cam := Camera3D.new()

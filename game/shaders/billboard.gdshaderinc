@@ -133,7 +133,7 @@ void fragment() {
 	vec3 sun = vec3(entity_light.a * sky_light) * sky_color;
 	SUN_SHADOW_COLOUR(c.rgb * (1.0 - flash), max(entity_light.rgb, extra_light(NODE_POSITION_WORLD)), sun, 0.04);
 	EMISSION += vec3(flash);
-	if (sun_shadows) {
+	if (SUN_SHADOWS_ON) {
 		vec3 at;
 		if (spherical || dot(axis, axis) > 1e-8) {
 			// (Turned every which way: one look-up, beside it toward the sun.)

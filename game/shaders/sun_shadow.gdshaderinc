@@ -17,6 +17,10 @@
 // before they're squared; darkest: the floor after squaring), and snap the
 // lookup with one of the SNAP_ helpers.
 global uniform bool sun_shadows;
+// Set on a material drawn where there's no sun (the renders baked off
+// screen, NPCRenders): it's drawn as with the shadows off.
+uniform bool no_sun_shadows = false;
+#define SUN_SHADOWS_ON (sun_shadows && !no_sun_shadows)
 // How much of the sunlight is left in a shadow (0..1).
 global uniform float sun_shade;
 // Toward the sun (or moon), in the world.
@@ -27,7 +31,7 @@ varying vec3 v_sh_sun;
 varying float v_sh_floor;
 
 #define SUN_SHADOW_COLOUR(col, other, sun, darkest) \
-	if (sun_shadows) { \
+	if (SUN_SHADOWS_ON) { \
 		ALBEDO = (col); v_sh_other = (other); v_sh_sun = (sun); v_sh_floor = (darkest); \
 	} else { \
 		vec3 sh_l = max((other), (sun)); \
@@ -63,7 +67,7 @@ vec3 sun_snap_uv(vec3 view_pos, vec2 uv, vec2 texels) {
 }
 
 void light() {
-	if (sun_shadows && LIGHT_IS_DIRECTIONAL) {
+	if (SUN_SHADOWS_ON && LIGHT_IS_DIRECTIONAL) {
 		float lit = ATTENUATION;
 #ifdef SUN_FACES
 		// Faces turned from the sun (or nearly edge on to it) are in their

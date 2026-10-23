@@ -10,7 +10,7 @@ void fragment() {
 	VOXEL_SHADED(c.rgb);
 	ALPHA = c.a;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
-	if (sun_shadows) {
+	if (SUN_SHADOWS_ON) {
 		// (Plants and platforms: not all on the block grid.)
 		LIGHT_VERTEX = sun_snap_uv(VERTEX, UV, vec2(layer_art_pixels()));
 	}

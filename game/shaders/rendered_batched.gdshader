@@ -92,7 +92,7 @@ void fragment() {
 	}
 	// Premultiplied shots (crisp: their colour), lit as the block models are.
 	SUN_SHADOW_COLOUR(c.rgb / c.a, max(v_light.rgb, extra_light(v_world)), vec3(v_light.a * sky_light) * sky_color, 0.0);
-	if (sun_shadows) {
+	if (SUN_SHADOWS_ON) {
 		LIGHT_VERTEX = (VIEW_MATRIX * vec4(v_origin + sun_dir * (v_reach + 0.1), 1.0)).xyz;
 	}
 	vec4 clip = PROJECTION_MATRIX * vec4(VERTEX + normalize(-VERTEX) * v_push, 1.0);
