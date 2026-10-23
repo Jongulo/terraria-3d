@@ -26,6 +26,7 @@ static func _xray_material() -> ShaderMaterial:
 
 
 func setup(kind_name: String, m: String) -> void:
+	_mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED  # it moves (see EntitySprite.setup)
 	kind = kind_name
 	method = m
 	frames = int(NPC.look(kind).frames)

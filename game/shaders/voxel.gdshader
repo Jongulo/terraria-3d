@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back, ambient_light_disabled, specular_disabled;
+render_mode cull_back, specular_disabled;
 
 #define SUN_FACES
 #include "res://shaders/voxel_common.gdshaderinc"

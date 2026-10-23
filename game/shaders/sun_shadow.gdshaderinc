@@ -12,6 +12,14 @@
 // With shadows off they look exactly as before: their colour goes out as
 // EMISSION, with no light to add to it.
 //
+// Optional global illumination (Settings → Shaders, GlobalIllumination:
+// Godot's SDFGI and/or screen-space indirect light) adds light bounced off
+// what's lit nearby. It needs the surface's colour as ALBEDO to land on (the
+// environment's ambient is black, so that adds nothing else), and lit
+// surfaces to give light out as EMISSION: with the shadows on, the light
+// that isn't the sun's goes out as EMISSION and the light pass adds the rest
+// (the sun reaches the GI through the shadows' light itself), the same sum.
+//
 // In fragment(): work out the surface's colour and lights as before, then
 // SUN_SHADOW_COLOUR(colour, other light, sunlight, darkest) (lights 0..1,
 // before they're squared; darkest: the floor after squaring), and snap the
@@ -21,6 +29,10 @@ global uniform bool sun_shadows;
 // screen, NPCRenders): it's drawn as with the shadows off.
 uniform bool no_sun_shadows = false;
 #define SUN_SHADOWS_ON (sun_shadows && !no_sun_shadows)
+// Global illumination on (GlobalIllumination; not in the renders baked off
+// screen either).
+global uniform bool gi_on;
+#define GI_ON (gi_on && !no_sun_shadows)
 // How much of the sunlight is left in a shadow (0..1).
 global uniform float sun_shade;
 // Toward the sun (or moon), in the world.
@@ -33,10 +45,13 @@ varying float v_sh_floor;
 #define SUN_SHADOW_COLOUR(col, other, sun, darkest) \
 	if (SUN_SHADOWS_ON) { \
 		ALBEDO = (col); v_sh_other = (other); v_sh_sun = (sun); v_sh_floor = (darkest); \
+		if (GI_ON) { \
+			EMISSION = (col) * (other) * (other); \
+		} \
 	} else { \
 		vec3 sh_l = max((other), (sun)); \
 		EMISSION = (col) * max(sh_l * sh_l, vec3(darkest)); \
-		ALBEDO = vec3(0.0); \
+		ALBEDO = GI_ON ? (col) : vec3(0.0); \
 	}
 
 // The middle of the world-space texel (`per_block` to a block) the fragment
@@ -75,6 +90,7 @@ void light() {
 		lit *= step(0.05, dot(NORMAL, LIGHT));
 #endif
 		vec3 l = max(v_sh_other, v_sh_sun * mix(sun_shade, 1.0, lit));
-		DIFFUSE_LIGHT = max(l * l, vec3(v_sh_floor));
+		// (With the GI on, the other light is already the EMISSION.)
+		DIFFUSE_LIGHT = max(max(l * l, vec3(v_sh_floor)) - (GI_ON ? v_sh_other * v_sh_other : vec3(0.0)), vec3(0.0));
 	}
 }

@@ -56,6 +56,7 @@ const EVIL_SKY := {"corruption": Color(0.34, 0.26, 0.5), "crimson": Color(0.5, 0
 var sky := SkySystem.new()
 ## The sun's and moon's real-time shadows (optional: Settings → Shaders).
 var sun_shadows := SunShadows.new()
+var global_illumination := GlobalIllumination.new()
 var player := Player.new()
 var hud: Hud
 var entities := Node3D.new()
@@ -116,6 +117,9 @@ func start(params: Dictionary) -> void:
 	add_child(sky)
 	sun_shadows.sky = sky
 	add_child(sun_shadows)
+	global_illumination.sky = sky
+	global_illumination.sun_shadows = sun_shadows
+	add_child(global_illumination)
 	add_child(renderer)
 	town.game = self
 	add_child(town)

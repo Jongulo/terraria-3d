@@ -13,6 +13,9 @@ var _xray: ShaderMaterial = null
 ## centre; centred sprites (fliers, projectiles) at the middle.
 func setup(tex: Texture2D, frame_count: int, size: Vector2, centred := false, spherical := false) -> void:
 	frames = frame_count
+	# It moves: out of the SDFGI's picture of the world (it still takes light
+	# from it), or it would leave a trail of light behind.
+	gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
 	if not centred:

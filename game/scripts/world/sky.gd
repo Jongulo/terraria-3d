@@ -116,6 +116,12 @@ func _ready() -> void:
 	sky.sky_material = _sky_mat
 	env.sky = sky
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	# The shaders light themselves: no ambient or sky reflections (the
+	# global illumination, when it's on, is all the engine adds).
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color.BLACK
+	env.ambient_light_energy = 0.0
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_depth_begin = 120.0

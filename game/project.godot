@@ -52,6 +52,10 @@ sun_shadows={
 "type": "bool",
 "value": false
 }
+gi_on={
+"type": "bool",
+"value": false
+}
 sun_shade={
 "type": "float",
 "value": 0.5

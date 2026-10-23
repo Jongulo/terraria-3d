@@ -434,6 +434,36 @@ func _run() -> void:
 	check(not is_instance_valid(sl) or sl.is_queued_for_deletion(), "turned off again, the light is gone")
 	check(not ss.active, "and the shaders draw as before")
 	Settings.set_value("shadow_distance", 64.0)
+	# Optional global illumination: off by default; the environment's ambient
+	# black either way; each mode turns on Godot's SDFGI and/or SSIL and tells
+	# the shaders; the shadows' light then carries the sky's sunlight to it.
+	var gi := game.global_illumination
+	var env: Environment = game.sky.env
+	# (Your own settings may have it on: off, as the defaults have it.)
+	Settings.set_value("gi", Settings.DEFAULTS.gi)
+	await frames(1)
+	check(int(Settings.DEFAULTS.gi) == GlobalIllumination.OFF and not env.sdfgi_enabled and not env.ssil_enabled
+			and env.ambient_light_energy == 0.0 and env.reflected_light_source == Environment.REFLECTION_SOURCE_DISABLED,
+			"global illumination is off by default, the environment adding no light of its own (%s)"
+			% [[Settings.DEFAULTS.gi, env.sdfgi_enabled, env.ssil_enabled, env.ambient_light_energy, env.ambient_light_source, env.reflected_light_source]])
+	var modes := []
+	for m in [GlobalIllumination.SSIL, GlobalIllumination.SDFGI, GlobalIllumination.BOTH]:
+		Settings.set_value("gi", m)
+		await frames(1)
+		modes.append([env.ssil_enabled, env.sdfgi_enabled, gi.mode != GlobalIllumination.OFF])
+	check(modes == [[true, false, true], [false, true, true], [true, true, true]], "its modes: screen space, SDFGI, both (%s)" % [modes])
+	Settings.set_value("shadows", true)
+	Settings.set_value("gi_strength", 1.5)
+	await frames(2)
+	var gl := ss._light
+	check(gl != null and gl.light_color == game.sky.sky_tint and is_equal_approx(gl.light_indirect_energy, game.sky.sky_light)
+			and is_equal_approx(env.sdfgi_energy, 1.5) and is_equal_approx(env.ssil_intensity, 1.5),
+			"with shadows, their light carries the sky's sunlight into the GI; the strength sets both")
+	Settings.set_value("shadows", false)
+	Settings.set_value("gi", GlobalIllumination.OFF)
+	Settings.set_value("gi_strength", 1.0)
+	await frames(2)
+	check(not env.sdfgi_enabled and not env.ssil_enabled and gi.mode == GlobalIllumination.OFF, "turned off again")
 	# Far terrain (LOD): every chunk column within the far view is drawn once,
 	# by the full-detail chunks or exactly one far tile, and the tiles load.
 	var lod := game.lod

@@ -17,7 +17,7 @@
 // look-up beside it toward the sun (its shots don't line up with the shadow
 // map's texel for texel).
 shader_type spatial;
-render_mode ambient_light_disabled, specular_disabled, cull_disabled;
+render_mode specular_disabled, cull_disabled;
 
 uniform sampler2D atlas : source_color, filter_nearest, repeat_disable;
 uniform int yaws = 16;

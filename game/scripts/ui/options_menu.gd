@@ -158,6 +158,13 @@ func _shaders_tab() -> Control:
 	_slider(page, "Shadow distance", "shadow_distance", 32.0, 160.0, 8.0, func(x): return "%d blocks" % int(x))
 	_slider(page, "Shadow detail", "shadow_detail", 1.0, 3.0, 1.0, func(x): return ["Low", "Medium", "High"][clampi(int(x) - 1, 0, 2)])
 	_slider(page, "Shadow darkness", "shadow_shade", 0.0, 0.9, 0.05, func(x): return "%d%%" % roundi((1.0 - x) * 100.0))
+	_slider(page, "Global illumination", "gi", 0.0, 3.0, 1.0, func(x): return GlobalIllumination.NAMES[clampi(int(x), 0, 3)])
+	var gi_hint := Label.new()
+	gi_hint.text = "Light bounced off what's lit nearby. Screen space: cheap, from what's on screen.\nSDFGI: from the world round you (heavier; new tunnels show once you move on)."
+	gi_hint.add_theme_font_size_override("font_size", 18)
+	gi_hint.modulate = Color(1, 1, 1, 0.7)
+	page.add_child(gi_hint)
+	_slider(page, "Bounced light", "gi_strength", 0.25, 2.0, 0.05, func(x): return "%d%%" % roundi(x * 100.0))
 	return page
 
 

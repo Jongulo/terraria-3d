@@ -22,6 +22,10 @@ const DEFAULTS := {
 	"shadow_distance": 64.0,
 	"shadow_detail": 2,
 	"shadow_shade": 0.5,
+	# Global illumination (GlobalIllumination: 0 off, 1 screen space, 2 SDFGI,
+	# 3 both) and how strong the bounced light is.
+	"gi": 0,
+	"gi_strength": 1.0,
 	"autofire": false,
 	"bindings": {},
 }
