@@ -1299,6 +1299,8 @@ func _ai_slime(delta: float, player) -> void:
 			velocity.z = 0.0
 		ai_timer += delta
 		sprite.set_frame(int(ai_timer * 4.0) % 2)
+		if def.has("spikes"):
+			_slime_spikes(delta, player)
 		if ai_timer > 1.6:
 			ai_timer = randf_range(0.0, 0.5)
 			ai_count += 1
@@ -1324,6 +1326,35 @@ func _ai_slime(delta: float, player) -> void:
 				flat *= pow(0.93, ticks)
 			velocity.x = flat.x
 			velocity.z = flat.z
+
+
+## The Spiked Ice Slime's spikes (AI_001): on the ground, with you within
+## 200 px and in sight, it stays put (its next hop 40 ticks off) and every 50
+## ticks shoots an Ice Spike at 4.5 px a tick at a point up to 200 px over
+## your head, which falls once it has flown 5 ticks (the spike's own AI).
+## Dust 76 one tick in 8.
+var _spike_cd := 0.0
+
+func _slime_spikes(delta: float, player) -> void:
+	var sp: Dictionary = def.spikes
+	if randf() < delta * 60.0 / 8.0:
+		Game.current.dust.spawn(76, center() + Vector3(randf_range(-half.x, half.x), randf_range(-half.y, half.y) * 0.5, randf_range(-half.z, half.z)), velocity * 0.15, 1.0)
+	_spike_cd = maxf(0.0, _spike_cd - delta * 60.0)
+	if not player.alive or in_water(center()):
+		return
+	var top: Vector3 = player.global_position + Vector3(0, player.half.y, 0)
+	var to := top - center()
+	if to.length() * PX_PER_BLOCK >= float(sp.range) or not _sees(player):
+		return
+	ai_timer = minf(ai_timer, 1.6 - 40.0 / 60.0)
+	if _spike_cd > 0.0:
+		return
+	_spike_cd = float(sp.cooldown)
+	var aim := to + Vector3(0, randf_range(0.0, float(sp.lift)) / PX_PER_BLOCK, 0)
+	var spike := Game.current.spawn_projectile(sp.projectile, center(), aim.normalized() * float(sp.speed) * PX_TICK, int(sp.damage), 0.0,
+			0.0, 0.0, 0.5, false)
+	Audio.play_at("Item_17", center(), 0.6)
+	spike.gravity_delay = 5.0 / 60.0
 
 
 func _ai_fighter(delta: float, player) -> void:

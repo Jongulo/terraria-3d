@@ -89,6 +89,9 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## (the Fiery Greatsword's, AI 189): where it stands, 10 ticks, Terraria's
 ## 160 px box (here 80 px at 24 a block round it), each enemy once, 3 at most,
 ## On Fire! 3 s every hit.
+## The Spiked Ice Slime's Ice Spike (AI 1): falls at 0.15 px/tick² (24 px
+## a block, as the slime's) from its 6th tick (its shooter sets
+## gravity_delay), at most 16.
 ## npc_poison: [min, max ticks] Poisoned on the enemies it hits (the Hornet
 ## minion's stinger: 4 to 6 s every hit). The minions' shots (AI 1, no
 ## gravity): the Hornet's stinger (scale 0.9) and the Imp's fireball (alpha
@@ -114,6 +117,7 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
 		"PoisonDart": {"poison": 10.0, "life": 60.0},
 		"HornetStinger": {"dust": [18], "size": 0.45, "npc_poison": [240, 360], "life": 5.0},
+		"IceSpike": {"gravity": 22.5, "max_fall": 40.0, "dust": [76], "life": 60.0},
 		"MeteorWhipMeteor": {"ghost": true, "glow": true, "size": 1.5, "radius": 0.6, "dust": [6], "life": 3.0},
 		"ImpFireball": {"hidden": true, "dust": [6], "glow": true, "pierce": 5, "radius": 0.25, "ignite": [1, 180, 360], "life": 2.5},
 		"Boulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "BoulderThatSpawnsPet": {"size": 1.0, "radius": 0.6, "life": 60.0},

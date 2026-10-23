@@ -7407,6 +7407,25 @@ func _summon_checks(c: Vector3i) -> void:
 	await _until(func(): return p._use_timer <= 0.0, 2.0)
 	check(["SlimeWhip", "CobWhip", "CorruptWhip", "CrimsonWhip", "MeteorWhip", "ThornWhip", "BoneWhip"].all(func(w): return made.call(w)),
 			"the whips are crafted (Terraria's recipes)")
+	# The Spiked Ice Slime: near you, it sits and shoots Ice Spikes.
+	stand.call()
+	var spiky := game.spawn_npc("SpikedIceSlime", Vector3(arena) + Vector3(5.5, 0, 0.5))
+	var spikes := func() -> Array:
+		return game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "IceSpike" and not e.friendly)
+	var shot := await _until(func(): return not spikes.call().is_empty(), 4.0)
+	var falls := false
+	if shot:
+		var sp: Projectile = spikes.call()[0]
+		var vy0 := sp.velocity.y
+		await frames(20)
+		falls = is_instance_valid(sp) and sp.velocity.y < vy0
+	var at0 := spiky.global_position
+	await frames(60)
+	check(shot and falls and Vector2(spiky.global_position.x - at0.x, spiky.global_position.z - at0.z).length() < 0.3,
+			"the Spiked Ice Slime sits and shoots Ice Spikes at you, which fall")
+	spiky.queue_free()
+	for e in spikes.call():
+		e.queue_free()
 	# Poisoned enemies: 6 life a second.
 	foe = enemy.call(Vector3i(8, 0, -8))
 	foe.life = 100
