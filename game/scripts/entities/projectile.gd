@@ -54,7 +54,7 @@ const BOMB_RADIUS := 0.18
 ## Hellwing's every 2).
 const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaffShot": {"frames": 4}, "GlacierFangShot": {"frames": 3},
 		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true},
-		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true},
+		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true}, "HornetStinger": {"long": true},
 		"Flamelash": {"frames": 8, "fps": 12}, "Hellwing": {"frames": 5, "right": true, "fps": 30}, "Volcano": {"frames": 5, "fps": 30},
 		"Ghoulder": {"frames": 10}, "RainbowBoulder": {"frames": 100}, "LibrarianSkeletonBook": {"frames": 54}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
@@ -87,6 +87,11 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## (the Fiery Greatsword's, AI 189): where it stands, 10 ticks, Terraria's
 ## 160 px box (here 80 px at 24 a block round it), each enemy once, 3 at most,
 ## On Fire! 3 s every hit.
+## npc_poison: [min, max ticks] Poisoned on the enemies it hits (the Hornet
+## minion's stinger: 4 to 6 s every hit). The minions' shots (AI 1, no
+## gravity): the Hornet's stinger (scale 0.9) and the Imp's fireball (alpha
+## 255: only its fire dust; 2 updates a tick, 300 of them; 5 enemies, each
+## set On Fire! for 3 to 6 s).
 const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"EnchantedBeam": {"dust": [15, 57, 58], "dust_after": 7},
 		"WaterBolt": {"bounce": 10, "pierce": 10, "hidden": true, "dust": [29], "life": 10.0},
@@ -106,6 +111,8 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"FireArrow": {"ignite": [3, 180, 180], "dust": [6], "glow": true},
 		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
 		"PoisonDart": {"poison": 10.0, "life": 60.0},
+		"HornetStinger": {"dust": [18], "size": 0.45, "npc_poison": [240, 360], "life": 5.0},
+		"ImpFireball": {"hidden": true, "dust": [6], "glow": true, "pierce": 5, "radius": 0.25, "ignite": [1, 180, 360], "life": 2.5},
 		"Boulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "BoulderThatSpawnsPet": {"size": 1.0, "radius": 0.6, "life": 60.0},
 		"BouncyBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "LavaBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0},
 		"RainbowBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0, "glow": true},
@@ -854,6 +861,9 @@ func _check_hits(game) -> bool:
 				var fire: Array = _flight.get("ignite", [])
 				if not fire.is_empty() and randi() % int(fire[0]) == 0:
 					npc.ignite(randi_range(int(fire[1]), int(fire[2])) / 60.0)
+				var venom: Array = _flight.get("npc_poison", [])
+				if not venom.is_empty():
+					npc.poison(randi_range(int(venom[0]), int(venom[1])) / 60.0)
 				damage = maxi(1, int(round(damage * (1.0 - pierce_falloff))))
 				penetrate -= 1
 				if penetrate <= 0:

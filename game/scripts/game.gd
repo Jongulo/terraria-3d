@@ -911,6 +911,10 @@ static func roll_loot(table_name: String, lava := false) -> Array:
 				e = alt
 				break
 		out.append([e[0], randi_range(int(e[1]), int(e[2]))])
+		# What comes with it (the Living Wood Wand's Leaf Wand).
+		if e.size() > 3 and e[3] is Array:
+			for w in e[3]:
+				out.append([w[0], randi_range(int(w[1]), int(w[2]))])
 	for e in table.get("extras", []):
 		if randf() < float(e[3]):
 			out.append([e[0], randi_range(int(e[1]), int(e[2]))])

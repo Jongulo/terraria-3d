@@ -116,6 +116,29 @@ var honey_time := 0.0
 ## Potions' buffs (BuffID name -> seconds left): Fishing, Sonar, Crate,
 ## and those in BUFF_EFFECTS.
 var timed_buffs := {}
+## Your minions (Minion), oldest first, and your pet and light pet (null:
+## none). Minions go when you die; pets stay with you.
+var minions: Array = []
+var pet: Minion = null
+var light_pet: Minion = null
+## Terraria's mounts (Mount.Initialize's MountData), by name: buff, height
+## (heightBoost px: you ride that much higher), run / dash speed and
+## acceleration (px/tick, px/tick²: they replace yours, bonuses and all),
+## jump speed and ticks (jumpSpeed, jumpHeight), auto_jump (constantJump:
+## holding jump keeps hopping), fall_damage (the share of it you take) and
+## extra_fall (tiles more before a fall hurts), stomp: falling onto an enemy
+## hurts it (that times your summon damage, knockback 5; each enemy every 10
+## ticks) and bounces you up at 10 px/tick (Terraria's slime mounts), and in
+## water it can jump; sprite: Images/Mount_<sprite>, its frames (running
+## every 12 ticks, frame 1 in the air).
+const MOUNTS := {"slime": {"buff": "SlimeMount", "height": 20, "run": 4.0, "dash": 4.0, "accel": 0.18, "jump_speed": 8.25,
+		"jump_ticks": 12, "auto_jump": true, "fall_damage": 0.5, "extra_fall": 10, "stomp": 40, "sprite": "Slime", "frames": 4}}
+## The mount you ride ("": none) and the item that called it.
+var mount := ""
+var mount_item := {}
+var _mount_sprite: EntitySprite = null
+var _mount_frame := 0.0
+var _stomped := {}  # npc -> seconds before it can be stomped again
 ## What potions' buffs do (Player.UpdateBuffs), as effects on what you wear
 ## (equipment() lists them): Ironskin's 8 defense, Swiftness's 25% speed,
 ## Regeneration's lifeRegen 4, Wrath's 10% damage, Rage's 10% crit...
@@ -286,7 +309,7 @@ func _ready() -> void:
 
 
 func center() -> Vector3:
-	return global_position + Vector3(0, 0.9, 0)
+	return global_position + Vector3(0, half.y / 2.0, 0)
 
 
 func forward() -> Vector3:
@@ -469,7 +492,7 @@ func crit_chance(def: Dictionary) -> float:
 
 
 static func _damage_kind(def: Dictionary) -> String:
-	return {"melee": "melee", "tool": "melee", "ranged": "ranged", "magic": "magic", "thrown": "thrown"}.get(def.get("type", ""), "")
+	return {"melee": "melee", "tool": "melee", "ranged": "ranged", "magic": "magic", "thrown": "thrown", "summon": "summon"}.get(def.get("type", ""), "")
 
 
 ## The light you carry: a held torch, a Mining Helmet or a glowing accessory
@@ -492,6 +515,10 @@ func carried_light() -> Color:
 		lights.append(SHINE_LIGHT)
 	if has_effect("inferno"):
 		lights.append(INFERNO_LIGHT)
+	# A light pet shines on you as it follows (the Shadow Orb).
+	if light_pet != null and is_instance_valid(light_pet):
+		var lc := light_pet.light()
+		lights.append([lc.r, lc.g, lc.b])
 	for l in lights:
 		if l is Array and alive:
 			c = Color(maxf(c.r, l[0]), maxf(c.g, l[1]), maxf(c.b, l[2]))
@@ -591,6 +618,8 @@ func _physics_process(delta: float) -> void:
 	_update_liquid(game)
 	_crack_bricks(game, delta)
 	_move(delta, game)
+	if mount != "":
+		_ride(delta, game)
 	_flower_boots(game)
 	_regen(delta)
 	_liquid_effects(delta)
@@ -687,6 +716,13 @@ func _move(delta: float, game) -> void:
 	var move := 1.0 + stat("move_speed") / 100.0
 	max_run *= move
 	accel *= move
+	# A mount's own run (Terraria's maxRunSpeed, accRunSpeed and
+	# runAcceleration from it, in place of yours and your bonuses).
+	if mount != "":
+		var mt: Dictionary = MOUNTS[mount]
+		max_run = float(mt.run) * 2.5
+		acc_run = float(mt.dash) * 2.5
+		accel = float(mt.accel) * 150.0
 	# Panic Necklace: a burst of speed after being struck.
 	_panic = maxf(0.0, _panic - delta)
 	if _panic > 0.0:
@@ -731,6 +767,17 @@ func _move(delta: float, game) -> void:
 	var jump_ticks := BALLOON_JUMP_TICKS if has_effect("jump_boost") else JUMP_TICKS
 	# The Frog Leg: Terraria's jumpSpeedBoost (px a tick on top of jumpSpeed).
 	jump_speed += stat("jump_speed_boost") * 2.5
+	# A mount's jump instead (the slime's 8.25 px/tick for 12 ticks); holding
+	# jump on the slime keeps you hopping (constantJump), and it jumps out of
+	# water too.
+	var mount_ground := false
+	if mount != "":
+		var mj: Dictionary = MOUNTS[mount]
+		jump_speed = float(mj.jump_speed) * 2.5
+		jump_ticks = int(mj.jump_ticks)
+		if mj.get("auto_jump", false) and on_floor:
+			_jump_held = false
+		mount_ground = mj.has("stomp") and in_liquid != 0 and in_liquid != LIQ_LAVA
 	if webbed:
 		jump_speed /= 5.0
 		jump_ticks /= 10
@@ -739,7 +786,7 @@ func _move(delta: float, game) -> void:
 	# goes half as far, like all movement in liquid (JumpMovement starts a
 	# jump only standing, sliding, with a jump left, or wet with Flippers).
 	if jump and not _jump_held:
-		if on_floor:
+		if on_floor or mount_ground:
 			velocity.y = jump_speed
 			_jump_ticks = jump_ticks
 		elif sliding:
@@ -853,10 +900,15 @@ func _move(delta: float, game) -> void:
 			if has_effect("no_fall_damage") or has_effect("featherfall") or Data.block(game.world.get_block(below)).get("fall_safe", false):
 				fall = 0.0
 			var tiles := int(fall * 1.5)
-			# The Frog Leg's extraFall: tiles more before a fall hurts.
+			# The Frog Leg's extraFall: tiles more before a fall hurts; a
+			# mount's too, and its share of the damage (the slime's half).
 			var safe := SAFE_FALL_TILES + int(stat("extra_fall"))
+			var share := 1.0
+			if mount != "":
+				safe += int(MOUNTS[mount].get("extra_fall", 0))
+				share = float(MOUNTS[mount].get("fall_damage", 1.0))
 			if tiles > safe:
-				hurt((tiles - safe) * 10, Vector3.ZERO, true)
+				hurt(int((tiles - safe) * 10 * share), Vector3.ZERO, true)
 		elif velocity.y > 0.0:
 			_jump_ticks = 0  # a bumped head ends the jump
 		velocity.y = 0.0
@@ -1752,7 +1804,215 @@ func buffs() -> Array:
 		out.append([48, "Honey", honey_time])
 	for b in timed_buffs:
 		out.append([int(Assets.ids.BuffID.get(b, 0)), Assets.ids.names.buffs.get(b, b), timed_buffs[b]])
+	for b in companion_buffs():
+		out.append([int(Assets.ids.BuffID.get(b, 0)), Assets.ids.names.buffs.get(b, b), INF])
 	return out
+
+
+## The buffs your minions and pets give (BuffID names, one for each kind).
+func companion_buffs() -> Array:
+	var out := []
+	for m in minions + [pet, light_pet]:
+		if m != null and is_instance_valid(m) and not m.cfg.buff in out:
+			out.append(m.cfg.buff)
+	if mount != "":
+		out.append(MOUNTS[mount].buff)
+	return out
+
+
+## Cancels a buff (Terraria's right-click on its icon): a potion's, or a
+## minion's or pet's (they go).
+func cancel_buff(b: String) -> void:
+	timed_buffs.erase(b)
+	for m in minions.duplicate():
+		if is_instance_valid(m) and m.cfg.buff == b:
+			_dismiss(m)
+	if pet != null and is_instance_valid(pet) and pet.cfg.buff == b:
+		_dismiss(pet)
+	if light_pet != null and is_instance_valid(light_pet) and light_pet.cfg.buff == b:
+		_dismiss(light_pet)
+	if mount != "" and MOUNTS[mount].buff == b:
+		dismount()
+	stats_changed.emit()
+
+
+## How many minions you can have (Terraria's maxMinions: 1, and more from
+## what you wear: the Bee Headgear's and Breastplate's 1 each).
+func max_minions() -> int:
+	return 1 + int(stat("max_minions"))
+
+
+func _dismiss(m: Minion) -> void:
+	minions.erase(m)
+	if m == pet:
+		pet = null
+	if m == light_pet:
+		light_pet = null
+	m.queue_free()
+	_number_minions()
+
+
+## Terraria's minionPos: each minion's place in line, oldest first.
+func _number_minions() -> void:
+	minions = minions.filter(func(m): return is_instance_valid(m) and not m.is_queued_for_deletion())
+	for i in minions.size():
+		minions[i].index = i
+
+
+func _spawn_companion(proj: String, def: Dictionary, at: Vector3, is_pet: bool) -> Minion:
+	var m := Minion.new()
+	m.setup(self, proj, def, is_pet)
+	Game.current.entities.add_child(m)
+	m.global_position = at - Vector3(0, m.box.y / 2.0, 0)
+	return m
+
+
+## A mount's item: on (if there's room over you for it) or off.
+func _use_mount(def: Dictionary) -> bool:
+	if mount != "":
+		var same: bool = mount == def.mount
+		dismount()
+		if same:
+			return true
+	return ride(def)
+
+
+## Gets on a mount: you ride `height` px higher, your box that much taller
+## (Terraria's heightBoost; no room over you, no mount). False if it can't.
+func ride(def: Dictionary) -> bool:
+	var m: Dictionary = MOUNTS[def.mount]
+	var up := float(m.height) / 24.0
+	var w := Game.current.world
+	var lo := (global_position - Vector3(half.x, -0.01, half.z)).floor()
+	var hi := (global_position + Vector3(half.x, half.y + up, half.z) - Vector3.ONE * 0.001).floor()
+	for x in range(int(lo.x), int(hi.x) + 1):
+		for y in range(int(lo.y), int(hi.y) + 1):
+			for z in range(int(lo.z), int(hi.z) + 1):
+				if w.is_solid(Vector3i(x, y, z)):
+					return false
+	mount = def.mount
+	mount_item = def
+	half.y += up
+	camera.position.y = EYE_HEIGHT + up
+	if _mount_sprite == null:
+		_mount_sprite = EntitySprite.new()
+		var tex := Assets.texture("Images/Mount_%s" % m.sprite)
+		var frames := int(m.frames)
+		_mount_sprite.setup(tex, frames, Vector2(tex.get_width(), tex.get_height() / float(frames)) / 24.0, false, true)
+		add_child(_mount_sprite)
+	_mount_sprite.visible = true
+	_mount_dust()
+	stats_changed.emit()
+	return true
+
+
+func dismount() -> void:
+	if mount == "":
+		return
+	var up := float(MOUNTS[mount].height) / 24.0
+	half.y -= up
+	camera.position.y = EYE_HEIGHT
+	mount = ""
+	mount_item = {}
+	if _mount_sprite != null:
+		_mount_sprite.visible = false
+	_mount_dust()
+	stats_changed.emit()
+
+
+## Terraria's spawnDust as you get on or off (the slime's 56).
+func _mount_dust() -> void:
+	for i in 15:
+		Game.current.dust.spawn(56, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(0.0, 0.8), randf_range(-0.5, 0.5)),
+				Vector3(randf_range(-1, 1), randf_range(0, 1.5), randf_range(-1, 1)), 1.2)
+
+
+## Riding: the slime's stomp, falling onto enemies; its frames.
+func _ride(delta: float, game) -> void:
+	for n in _stomped.keys():
+		_stomped[n] -= delta
+		if _stomped[n] <= 0.0 or not is_instance_valid(n):
+			_stomped.erase(n)
+	var m: Dictionary = MOUNTS[mount]
+	if m.has("stomp") and velocity.y < 0.0 and in_liquid == 0:
+		# Terraria's feet strip: 2 px at the bottom, 12 px wider each side and
+		# 6 px taller each way.
+		var feet := global_position - Vector3(0, 7.0 / 24.0, 0)
+		var strip := Vector3(half.x + 0.5, 14.0 / 24.0, half.z + 0.5)
+		for npc in game.npcs():
+			if _stomped.has(npc) or npc.def.ai == "town" or npc.untouchable or npc.dont_take_damage:
+				continue
+			if not npc.overlaps_box(feet, strip):
+				continue
+			var dir := Vector3(velocity.x, 0, velocity.z).normalized()
+			npc.hit(int(float(m.stomp) * (1.0 + (stat("damage") + stat("summon_damage")) / 100.0)), 5.0, dir, 0.0)
+			_stomped[npc] = 10.0 / 60.0
+			velocity.y = 25.0
+			_immune = maxf(_immune, 6.0 / 60.0)
+			break
+	if _mount_sprite != null:
+		var frames := int(m.frames)
+		if not on_floor:
+			_mount_frame = 1.0
+		elif Vector2(velocity.x, velocity.z).length() > 0.3:
+			_mount_frame = fmod(_mount_frame + delta * 5.0, frames)
+		else:
+			_mount_frame = 0.0
+		_mount_sprite.set_frame(int(_mount_frame))
+		_mount_sprite.update_light(game.world, game.sky, global_position + Vector3(0, 0.4, 0))
+
+
+## A summon staff: its minion where you aim (Terraria: at the mouse), and if
+## that's more than your minion slots, the oldest go (Terraria's
+## Player.FreeUpPetsAndMinions). Item44 like Terraria's.
+func _summon_minion(def: Dictionary) -> bool:
+	var game := Game.current
+	var at := aim_point()
+	# Not in a block: back along your aim until it's clear.
+	var back := forward()
+	var tries := 0
+	while game.world.is_solid(Vector3i(at.floor())) and tries < 12:
+		at -= back * 0.25
+		tries += 1
+	var m := _spawn_companion(def.minion, def, at, false)
+	minions.append(m)
+	var used := 0.0
+	for x in minions:
+		used += x.slots()
+	while used > max_minions() and minions.size() > 1:
+		used -= minions[0].slots()
+		_dismiss(minions[0])
+	_number_minions()
+	Audio.play(def.get("sound", "Item_44"), 0.7)
+	stats_changed.emit()
+	return true
+
+
+## A pet's item: its pet, or away if it's out (Terraria toggles the buff); a
+## new pet sends the old one off (one pet, one light pet).
+func _use_pet(def: Dictionary) -> bool:
+	var light: bool = def.get("light_pet", false)
+	var old: Minion = light_pet if light else pet
+	if old != null and is_instance_valid(old):
+		var same: bool = old.kind == def.pet
+		_dismiss(old)
+		if same:
+			Audio.play(def.get("sound", "Item_2"), 0.6)
+			stats_changed.emit()
+			return true
+	call_pet(def)
+	Audio.play(def.get("sound", "Item_2"), 0.6)
+	stats_changed.emit()
+	return true
+
+
+## Calls the pet of a pet item to your side.
+func call_pet(def: Dictionary) -> void:
+	var m := _spawn_companion(def.pet, def, center() + Vector3(0, 0.5, 0), true)
+	if def.get("light_pet", false):
+		light_pet = m
+	else:
+		pet = m
 
 
 ## Whether a potion's buff (BuffID name) is on.
@@ -1895,6 +2155,10 @@ func use_item() -> void:
 			used = _consume(def)
 		"summon":
 			used = _summon(def)
+		"pet":
+			used = _use_pet(def)
+		"mount":
+			used = _use_mount(def)
 		"bucket":
 			used = _use_bucket(def)
 		"ammo":
@@ -2611,6 +2875,8 @@ func _consume(def: Dictionary) -> bool:
 
 
 func _summon(def: Dictionary) -> bool:
+	if def.has("minion"):
+		return _summon_minion(def)
 	var game := Game.current
 	# The Goblin Battle Standard: the Goblin Army, if you've 200 max life and
 	# none is on (else nothing happens and it isn't used up).
@@ -2941,6 +3207,12 @@ func _die() -> void:
 	on_rope = false
 	for h in hooks():
 		h.queue_free()
+	dismount()
+	# Your minions go (their buffs end with you); pets wait for you.
+	for m in minions:
+		if is_instance_valid(m):
+			m.queue_free()
+	minions.clear()
 	_jump_ticks = 0
 	life = 0
 	respawn_timer = 5.0
@@ -3013,6 +3285,8 @@ func save_state() -> Dictionary:
 		"bed": [bed.x, bed.y, bed.z],
 		"angler_quests": angler_quests,
 		"buffs": timed_buffs.duplicate(),
+		"pets": [pet.item.internal if pet != null and is_instance_valid(pet) else "",
+				light_pet.item.internal if light_pet != null and is_instance_valid(light_pet) else ""],
 	}
 
 
@@ -3040,4 +3314,13 @@ func load_state(d: Dictionary) -> void:
 	var b: Array = d.get("bed", [])
 	bed = Vector3i(int(b[0]), int(b[1]), int(b[2])) if b.size() == 3 else NO_BED
 	angler_quests = int(d.get("angler_quests", 0))
+	# Your pets come back with you (Terraria keeps their buffs).
+	for m in [pet, light_pet]:
+		if m != null and is_instance_valid(m):
+			m.queue_free()
+	pet = null
+	light_pet = null
+	for p_item in d.get("pets", []):
+		if p_item != "" and Data.items.has(p_item) and Data.item(p_item).has("pet"):
+			call_pet(Data.item(p_item))
 	stats_changed.emit()

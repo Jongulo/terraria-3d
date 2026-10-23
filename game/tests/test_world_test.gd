@@ -460,6 +460,7 @@ func _run() -> void:
 	await _boulder_kind_checks(c)
 	await _alchemy_checks(c)
 	await _potion_checks(c)
+	await _summon_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -7073,3 +7074,241 @@ func _potion_checks(c: Vector3i) -> void:
 	p.god_mode = was_god
 	p.life = p.life_cap()
 
+
+
+## Waits up to `limit` seconds for `cond` to hold; true if it did.
+func _until(cond: Callable, limit: float) -> bool:
+	var t := 0.0
+	while not cond.call() and t < limit:
+		await get_tree().physics_frame
+		t += 1.0 / Engine.physics_ticks_per_second
+	return cond.call()
+
+
+## The summoner: minion staffs (slots, summon damage, each minion's AI), pets
+## and the Shadow Orb, the Bee armor, where they come from.
+func _summon_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var held := p.selected
+	var was_god := p.god_mode
+	var worn: Array = p.armor.slots.duplicate()
+	p.god_mode = true
+	var arena := c + Vector3i(30, 60, 30)
+	for x in range(-18, 19):
+		for z in range(-18, 19):
+			w.set_block(arena + Vector3i(x, -1, z), Data.block_id("stone"))
+			for y in range(0, 10):
+				w.set_block(arena + Vector3i(x, y, z), 0)
+	for npc in game.npcs():
+		if npc.def.ai != "town" and npc.global_position.distance_to(Vector3(arena)) < 60.0:
+			npc.queue_free()
+	var stand := func() -> void:
+		p.global_position = Vector3(arena) + Vector3(0.5, 0, 0.5)
+		p._fall_start = p.global_position.y
+		p.velocity = Vector3.ZERO
+	stand.call()
+	await frames(2)
+	var use := func(item: String) -> void:
+		p.inventory.slots[9] = Inventory.stack(item, 1)
+		p.select(9)
+		p._use_timer = 0.0
+		p._use_released = true
+		p.use_item()
+	var enemy := func(at: Vector3i) -> NPC:
+		var n := game.spawn_npc("BlueSlime", Vector3(arena + at) + Vector3(0.5, 0, 0.5))
+		n.damage = 0
+		return n
+	# The Slime Staff: a Baby Slime, a minion slot, its buff.
+	use.call("SlimeStaff")
+	check(p.minions.size() == 1 and p.minions[0].kind == "BabySlime" and p.buffs().any(func(b): return b[0] == 64 and is_inf(b[2])),
+			"the Slime Staff summons a Baby Slime (its buff shown, no time on it)")
+	var first: Minion = p.minions[0]
+	use.call("SlimeStaff")
+	await frames(1)
+	check(p.minions.size() == 1 and p.minions[0] != first and not is_instance_valid(first), "one minion slot: another sends the first off")
+	# The Bee armor: two more slots, and with its set 23% summon damage.
+	p.armor.slots = ["BeeHeadgear", "BeeBreastplate", "BeeGreaves"].map(func(i): return Inventory.stack(i, 1))
+	check(p.max_minions() == 3 and p.weapon_damage(Data.item("SlimeStaff")) == roundi(8 * 1.23) and p.stat("summon_damage") == 23.0,
+			"the Bee armor: 3 minion slots and 23%% summon damage (%d)" % p.weapon_damage(Data.item("SlimeStaff")))
+	use.call("SlimeStaff")
+	use.call("SlimeStaff")
+	use.call("SlimeStaff")
+	await frames(1)
+	check(p.minions.size() == 3 and p.minions.map(func(m): return m.index) == [0, 1, 2], "three Baby Slimes, in line")
+	p.armor.slots = worn.duplicate()
+	p.cancel_buff("BabySlime")
+	await frames(1)
+	check(p.minions.is_empty() and p.companion_buffs().is_empty(), "cancelling the buff sends them off")
+	# A Baby Slime hops after you, and flies back when you're far.
+	use.call("SlimeStaff")
+	var slime: Minion = p.minions[0]
+	slime.global_position = Vector3(arena) + Vector3(9.5, 0, 0.5)
+	var came := await _until(func(): return Vector2(slime.global_position.x - p.global_position.x, slime.global_position.z - p.global_position.z).length() < 3.0, 6.0)
+	check(came and slime.ai0 == 0, "a Baby Slime hops after you")
+	var fwd := p.forward()
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var side := fwd.cross(Vector3.UP)
+	var beside := await _until(func():
+		var off := slime.global_position - p.global_position
+		return absf(off.dot(fwd)) < 0.6 and off.dot(side) > 1.2, 4.0)
+	check(beside, "and stands beside you, on your right (Terraria's line behind you, turned for first person)")
+	slime.global_position = Vector3(arena) + Vector3(0.5, 0, 40.5)
+	await frames(2)
+	check(slime.ai0 == 1, "more than 500 px off it flies")
+	came = await _until(func(): return slime.ai0 == 0 and slime.global_position.distance_to(p.global_position) < 6.0, 8.0)
+	check(came, "back to you, landing near you")
+	# It fights: an enemy it can see, hurt by touching it.
+	var foe: NPC = enemy.call(Vector3i(5, 0, 3))
+	var life0 := foe.life
+	var hurt := await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 6.0)
+	check(hurt, "the Baby Slime goes for an enemy and hurts it")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	p.cancel_buff("BabySlime")
+	await frames(1)
+	# The Hornet: over you, stinging enemies (Poisoned).
+	use.call("HornetStaff")
+	var hornet: Minion = p.minions[0]
+	var hovers := await _until(func(): return hornet.center().distance_to(p.center() + Vector3(0, 2.5, 0)) < 2.5, 4.0)
+	check(hovers, "the Hornet hovers over you")
+	foe = enemy.call(Vector3i(6, 0, -4))
+	var stung := await _until(func(): return not is_instance_valid(foe) or foe.poisoned > 0.0, 6.0)
+	check(stung, "and stings enemies, poisoning them")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	p.cancel_buff("HornetMinion")
+	await frames(1)
+	# The Imp: fireballs (On Fire!).
+	use.call("ImpStaff")
+	foe = enemy.call(Vector3i(-6, 0, 5))
+	var burnt := await _until(func(): return not is_instance_valid(foe) or foe.on_fire > 0.0, 6.0)
+	check(burnt, "the Imp's fireballs set enemies on fire")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	p.cancel_buff("ImpMinion")
+	await frames(1)
+	# The Finch: sits on your head, pecks enemies.
+	use.call("BabyBirdStaff")
+	var bird: Minion = p.minions[0]
+	var sits := await _until(func(): return bird.frame == 4 and bird.vel == Vector3.ZERO, 5.0)
+	check(sits and bird.center().y > p.center().y + 0.8, "the Finch sits on your head")
+	foe = enemy.call(Vector3i(4, 0, 4))
+	life0 = foe.life
+	hurt = await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 6.0)
+	check(hurt, "and pecks enemies")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	p.cancel_buff("BabyBird")
+	await frames(1)
+	# Pets: one at a time, the item again sends it off; the Shadow Orb shines.
+	use.call("EatersBone")
+	check(p.pet != null and p.pet.kind == "BabyEater" and p.buffs().any(func(b): return b[0] == 45), "the Eater's Bone: a Baby Eater")
+	use.call("EatersBone")
+	await frames(1)
+	check(p.pet == null, "used again, it goes")
+	use.call("AmberMosquito")
+	var dino := p.pet
+	dino.global_position = Vector3(arena) + Vector3(8.5, 0, 0.5)
+	came = await _until(func(): return Vector2(dino.global_position.x - p.global_position.x, dino.global_position.z - p.global_position.z).length() < 5.0, 6.0)
+	check(came and dino.on_floor, "the Baby Dinosaur walks after you")
+	use.call("BoneKey")
+	await frames(1)
+	check(p.pet != null and p.pet.kind == "BabySkeletronHead" and not is_instance_valid(dino), "another pet sends the first off")
+	use.call("ShadowOrb")
+	await frames(2)
+	var shine := p.carried_light()
+	check(p.light_pet != null and p.pet != null and shine.b > 0.89 and shine.r > 0.5, "the Shadow Orb: a light pet beside your pet, shining purple")
+	var saved := p.save_state()
+	p.load_state(saved)
+	await frames(1)
+	check(p.pet != null and p.pet.kind == "BabySkeletronHead" and p.light_pet != null and p.light_pet.kind == "ShadowOrb", "pets come back after saving")
+	# Dying: minions go, pets stay.
+	use.call("SlimeStaff")
+	var coins := p.inventory.money()
+	p.inventory.pay(coins)
+	var at := p.global_position
+	p._die()
+	check(p.minions.is_empty() and p.pet != null and is_instance_valid(p.pet), "when you die your minions go, your pets stay")
+	p._respawn()
+	p.global_position = at
+	p._fall_start = at.y
+	p.inventory.add_money(coins)
+	p.cancel_buff("BabySkeletronHead")
+	p.cancel_buff("ShadowOrb")
+	await frames(1)
+	check(p.pet == null and p.light_pet == null, "pets' buffs cancel too")
+	# The Slimy Saddle: riding a slime 20 px higher; its run (4 px/tick), its
+	# jump (8.25 px/tick), and it stomps enemies it lands on.
+	stand.call()
+	var eye0 := p.camera.position.y
+	use.call("SlimySaddle")
+	check(p.mount == "slime" and absf(p.camera.position.y - eye0 - 20.0 / 24.0) < 0.01 and absf(p.half.y - 1.8 - 20.0 / 24.0) < 0.01
+			and p.buffs().any(func(b): return b[0] == 130), "the Slimy Saddle: you ride a slime, 20 px higher")
+	await frames(3)
+	Input.action_press("move_forward")
+	await frames(60)
+	var run := Vector2(p.velocity.x, p.velocity.z).length()
+	Input.action_release("move_forward")
+	check(absf(run - 10.0) < 0.3, "riding, you run at the slime's 4 px a tick (%.2f blocks/s)" % run)
+	stand.call()
+	await frames(10)
+	Input.action_press("jump")
+	await frames(2)
+	var rise := p.velocity.y
+	var hops := await _until(func(): return p.on_floor, 3.0)
+	await frames(3)
+	var again := p.velocity.y > 0.0 or not p.on_floor
+	Input.action_release("jump")
+	check(absf(rise - (8.25 * 2.5 - Player.GRAVITY / 60.0)) < 0.3 and hops and again, "its jump is 8.25 px a tick, and holding jump keeps it hopping (%.1f)" % rise)
+	await _until(func(): return p.on_floor, 3.0)
+	foe = enemy.call(Vector3i(3, 0, 3))
+	await frames(2)
+	life0 = foe.life
+	p.global_position = foe.global_position + Vector3(0, foe.half.y + 0.4, 0)
+	p._fall_start = p.global_position.y
+	p.velocity = Vector3(0, -8.0, 0)
+	var stomped := await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 1.0)
+	check(stomped and p.velocity.y > 0.0, "landing on an enemy hurts it and bounces you up")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	use.call("SlimySaddle")
+	check(p.mount == "" and absf(p.half.y - 1.8) < 0.01 and absf(p.camera.position.y - eye0) < 0.01, "and again: off")
+	stand.call()
+	await frames(5)
+	# Poisoned enemies: 6 life a second.
+	foe = enemy.call(Vector3i(8, 0, -8))
+	foe.life = 100
+	foe.life_max = 100
+	foe.poison(1.0)
+	await _until(func(): return foe.poisoned <= 0.0, 2.0)
+	check(foe.life >= 92 and foe.life <= 95, "Poisoned: 6 life a second (%d left of 100)" % foe.life)
+	foe.queue_free()
+	# Where they come from.
+	var made := func(item: String) -> bool:
+		return Data.recipes.any(func(r): return r.result == item)
+	check(made.call("HornetStaff") and made.call("ImpStaff") and made.call("BeeHeadgear"),
+			"the Hornet and Imp Staffs, the Bee armor are crafted (Terraria's recipes)")
+	var finds := {}
+	var paired := true
+	for i in 120:
+		var got := Game.roll_loot("living_chest").map(func(dd): return dd[0])
+		for g in got:
+			finds[g] = true
+		paired = paired and (got.has("LivingWoodWand") == got.has("LeafWand")) and not (got.has("LivingWoodWand") and got.has("BabyBirdStaff"))
+	check(finds.has("BabyBirdStaff") and finds.has("LivingWoodWand") and paired and Chests.LOOT[27] == "living_chest",
+			"a living tree's chest: a Living Wood and a Leaf Wand, or a Finch Staff")
+	var orb := {}
+	for i in 200:
+		for dd in Game.roll_loot("shadow_orb"):
+			orb[dd[0]] = true
+	check(orb.has("ShadowOrb") and orb.has("Vilethorn"), "a Shadow Orb can hold the Shadow Orb pet")
+	check(Data.npcs.GreenSlime.drops.any(func(dd): return dd[0] == "SlimeStaff" and is_equal_approx(dd[3], 0.0001)),
+			"slimes drop the Slime Staff, 1 in 10000")
+	check(Data.block_textures.get_layers() <= Data.MAX_LAYERS, "block textures fit the GPU (%d layers)" % Data.block_textures.get_layers())
+	p.armor.slots = worn
+	p.inventory.slots[9] = null
+	p.select(held)
+	p.god_mode = was_god
+	p.life = p.life_cap()

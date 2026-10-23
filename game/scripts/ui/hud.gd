@@ -712,6 +712,7 @@ func _update_liquid_ui(delta: float) -> void:
 func _draw_buffs() -> void:
 	for c in _buffs.get_children():
 		c.queue_free()
+	var cancellable := player.companion_buffs() + player.timed_buffs.keys()
 	for b in player.buffs():
 		var box := VBoxContainer.new()
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -720,9 +721,18 @@ func _draw_buffs() -> void:
 		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		icon.tooltip_text = b[1]
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Right-click a potion's, minion's or pet's buff to end it (Terraria's).
+		var key: String = Assets.ids.BuffID.find_key(int(b[0])) if Assets.ids.BuffID.values().has(int(b[0])) else ""
+		if key in cancellable:
+			icon.mouse_filter = Control.MOUSE_FILTER_STOP
+			icon.gui_input.connect(func(e: InputEvent) -> void:
+				if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_RIGHT:
+					player.cancel_buff(key)
+					_draw_buffs())
 		box.add_child(icon)
 		var t := Label.new()
-		t.text = "%ds" % ceili(b[2])
+		# Minions' and pets' buffs last as long as they do: no time shown.
+		t.text = "" if is_inf(b[2]) else "%ds" % ceili(b[2])
 		t.add_theme_font_size_override("font_size", 16)
 		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE

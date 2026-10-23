@@ -54,6 +54,10 @@ var _burn := 0.0
 ## taken (and shown) 5 at a time.
 var hellfire := 0.0
 var _hellburn := 0.0
+## Seconds of Terraria's Poisoned left (the Hornet's stingers): 6 life a
+## second (lifeRegen -12), taken (and shown) 1 at a time.
+var poisoned := 0.0
+var _poison := 0.0
 var _stuck := 0.0
 var _wander := Vector3.ZERO
 ## Which way the last hit came (its gore and death dust fly that way).
@@ -311,7 +315,7 @@ func _physics_process(delta: float) -> void:
 			return
 		if def.ai != "wheel":
 			global_position += velocity * delta
-		if on_fire > 0.0 or hellfire > 0.0:
+		if on_fire > 0.0 or hellfire > 0.0 or poisoned > 0.0:
 			_burn_tick(delta, game)
 			if life <= 0:
 				return
@@ -324,7 +328,7 @@ func _physics_process(delta: float) -> void:
 		_ai_worm(delta, game, player)
 		if is_queued_for_deletion():
 			return
-		if on_fire > 0.0 or hellfire > 0.0:
+		if on_fire > 0.0 or hellfire > 0.0 or poisoned > 0.0:
 			_burn_tick(delta, game)
 			if life <= 0:
 				return
@@ -357,7 +361,7 @@ func _physics_process(delta: float) -> void:
 		"hopper": _ai_hopper(delta)
 		"bee": _ai_bee(delta, player)
 
-	if on_fire > 0.0 or hellfire > 0.0:
+	if on_fire > 0.0 or hellfire > 0.0 or poisoned > 0.0:
 		_burn_tick(delta, game)
 		if life <= 0:
 			return
@@ -3045,6 +3049,11 @@ func ignite(seconds: float) -> void:
 	on_fire = maxf(on_fire, seconds)
 
 
+## Poisons it for `seconds` (Terraria's Poisoned; longer poisons win).
+func poison(seconds: float) -> void:
+	poisoned = maxf(poisoned, seconds)
+
+
 ## Sets it on Hellfire for `seconds` (the fire-immune are immune to both, as
 ## Terraria's Underworld creatures are).
 func ignite_hellfire(seconds: float) -> void:
@@ -3054,7 +3063,7 @@ func ignite_hellfire(seconds: float) -> void:
 
 
 ## Burning: 4 life a second (Terraria's lifeRegen -8), each 1 shown as it
-## goes, and flames all over it (UpdateNPC_BuffApplyVFX: 3 ticks in 4,
+## goes (poison too, 6 a second), and flames all over it (UpdateNPC_BuffApplyVFX: 3 ticks in 4,
 ## rising; drawn at half Terraria's size).
 func _burn_tick(delta: float, game) -> void:
 	if on_fire > 0.0:
@@ -3063,10 +3072,15 @@ func _burn_tick(delta: float, game) -> void:
 	if hellfire > 0.0:
 		hellfire -= delta
 		_hellburn += delta * 3.0  # Hellfire: 15 a second, 5 at a time
-	while _burn >= 0.9999 or _hellburn >= 0.9999:  # (sixty 1/60 s ticks add up to a hair under)
+	if poisoned > 0.0:
+		poisoned -= delta
+		_poison += delta * 6.0
+	while _burn >= 0.9999 or _hellburn >= 0.9999 or _poison >= 0.9999:  # (sixty 1/60 s ticks add up to a hair under)
 		var dmg := 1
 		if _burn >= 0.9999:
 			_burn -= 1.0
+		elif _poison >= 0.9999:
+			_poison -= 1.0
 		else:
 			_hellburn -= 1.0
 			dmg = 5
@@ -3078,13 +3092,19 @@ func _burn_tick(delta: float, game) -> void:
 		if life <= 0:
 			_die(game)
 			return
-	if randf() < delta * 60.0 * 0.75:
+	if (on_fire > 0.0 or hellfire > 0.0) and randf() < delta * 60.0 * 0.75:
 		var at := center() + Vector3(randf_range(-half.x, half.x), randf_range(-half.y, half.y) * 0.5, randf_range(-half.z, half.z))
 		game.dust.spawn(6, at, Vector3(0, 0.9, 0), 1.75 if randf() < 0.75 else 0.875)
+	# Poisoned: a green drop now and then (one tick in 30).
+	if poisoned > 0.0 and randf() < delta * 2.0:
+		var at := center() + Vector3(randf_range(-half.x, half.x), randf_range(-half.y, half.y) * 0.5, randf_range(-half.z, half.z))
+		game.dust.spawn(46, at, Vector3.ZERO, 1.2)
 	if on_fire <= 0.0:
 		_burn = 0.0
 	if hellfire <= 0.0:
 		_hellburn = 0.0
+	if poisoned <= 0.0:
+		_poison = 0.0
 
 
 ## Terraria's knockback (NPC.StrikeNPC_Inner), in its units: the weapon's

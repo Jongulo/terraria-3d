@@ -1306,7 +1306,9 @@ pub fn living_tree_passage(w: &mut World, rng: &mut Rng, base: (i32, i32, i32), 
     if chest != 0 && w.in_bounds(rx + 2, ry + 1, rz) {
         let i = w.idx(rx + 2, ry + 1, rz);
         w.blocks[i] = chest;
-        w.decorations.push(Decoration { kind: "chest".into(), pos: (rx + 2, ry + 1, rz), style: 0 });
+        // Style 27: the Living Wood Chest's loot (Chests.LOOT: a Living Wood
+        // and Leaf Wand, or a Finch Staff).
+        w.decorations.push(Decoration { kind: "chest".into(), pos: (rx + 2, ry + 1, rz), style: 27 });
     }
 }
 
@@ -2120,7 +2122,12 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     vanity_trees(w, seed, ids.grass);
     ash_forest(w, seed, &l);
-    living_trees(w, seed, ids.grass, ids.chest);
+    // Their root rooms hold a Living Wood Chest (Terraria's chest style 12).
+    let living_chest = match w.id_of("living_wood_chest") {
+        0 => ids.chest,
+        c => c,
+    };
+    living_trees(w, seed, ids.grass, living_chest);
     mahogany_trees(w, seed, &l, ids.chest);
     jungle_cave_trees(w, seed, &l);
     // Pass 6a: bee hives and honey patches in the Jungle (Terraria's Hives

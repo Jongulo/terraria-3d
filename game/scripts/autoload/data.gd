@@ -168,6 +168,7 @@ func _load_blocks() -> void:
 	load_placeables()
 	var layers: Array[Image] = []
 	var texels := PackedFloat32Array()
+	var layer_runs := {}  # a face's pictures (Data._load_blocks) -> its first layer
 	blocks = [{"name": "air", "render": 0}]
 	for def in defs:
 		var d: Dictionary = def.duplicate()
@@ -205,18 +206,33 @@ func _load_blocks() -> void:
 			if shared >= 0:
 				d["tex_" + face_name] = shared
 			else:
-				d["tex_" + face_name] = layers.size()
-				made.append([face, layers.size()])
+				var run: Array[Image] = []
+				var run_texels := PackedFloat32Array()
 				for v in variants:
 					if render == 1:
-						layers.append(_cube_layer(face, v))
+						run.append(_cube_layer(face, v))
 						# Its tiles' art pixels, per_face of them across.
 						var tile := _stitch(face, face.frames[0])
-						texels.append(float(int(face.get("per_face", TILES_PER_FACE)) * tile.get_width()) / PixelArt.detect_scale(tile).x)
+						run_texels.append(float(int(face.get("per_face", TILES_PER_FACE)) * tile.get_width()) / PixelArt.detect_scale(tile).x)
 					else:
 						var frame: Array = face.frames[v % face.frames.size()]
-						layers.append(_crop_layer(face, frame, false))
-						texels.append(float(_pixels_per_block(face)) / PixelArt.detect_scale(_stitch(face, frame)).x)
+						run.append(_crop_layer(face, frame, false))
+						run_texels.append(float(_pixels_per_block(face)) / PixelArt.detect_scale(_stitch(face, frame)).x)
+				# The same pictures as another block's face (a chest's wooden
+				# top, a table's): those layers again, so the array keeps
+				# under the GPU's limit.
+				var key := ""
+				for img in run:
+					key += "%s:%d;" % [img.get_size(), hash(img.get_data())]
+				key += str(run_texels)
+				var first: int = layer_runs.get(key, -1)
+				if first < 0:
+					first = layers.size()
+					layer_runs[key] = first
+					layers.append_array(run)
+					texels.append_array(run_texels)
+				d["tex_" + face_name] = first
+				made.append([face, first])
 			if face_name == "side" and render != 1:
 				# The original sprite and its world pixel size, for block models,
 				# plus the sprite at its art resolution (voxel models use that).
@@ -1152,7 +1168,7 @@ func _add_item(name: String, def: Dictionary) -> void:
 	if d.id == 0:
 		push_warning("unknown Terraria item " + name)
 	d["name"] = Assets.item_name(name)
-	d["max_stack"] = d.get("max_stack", 1 if d.get("type", "material") in ["melee", "ranged", "magic", "tool", "accessory", "armor", "fishing_pole", "pet"] else 9999)
+	d["max_stack"] = d.get("max_stack", 1 if d.get("type", "material") in ["melee", "ranged", "magic", "tool", "accessory", "armor", "fishing_pole", "pet", "mount"] else 9999)
 	# Terraria's autoReuse: tools, buckets and blocks keep going while held;
 	# weapons and consumables take a fresh click each time.
 	d["auto_reuse"] = d.get("auto_reuse", d.get("type", "material") in ["tool", "bucket", "block"])
