@@ -42,6 +42,31 @@
 			"depth": 16.0,
 			"no_outline": true
 		},
+		"BoneSerpentBody": {
+			"bevel": "chamfer",
+			"bevel_size": 6.0,
+			"depth": 16.0,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"BoneSerpentHead": {
+			"bevel": "chamfer",
+			"bevel_size": 6.0,
+			"depth": 16.0,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"BoneSerpentTail": {
+			"bevel": "chamfer",
+			"bevel_size": 6.0,
+			"depth": 16.0,
+			"no_outline": true,
+			"one_color": true
+		},
 		"CaveBat": {
 			"bevel": "chamfer",
 			"depth": 5.0,
@@ -123,8 +148,8 @@
 		},
 		"ManEater": {
 			"bevel": "chamfer",
-			"bevel_size": 2,
-			"depth": 5,
+			"bevel_size": 2.0,
+			"depth": 5.0,
 			"no_outline": true,
 			"one_color": true
 		},
@@ -219,6 +244,9 @@
 		}
 	},
 	"methods": {
+		"BoneSerpentBody": "rendered",
+		"BoneSerpentHead": "rendered",
+		"BoneSerpentTail": "rendered",
 		"EaterofWorldsBody": "rendered",
 		"EaterofWorldsHead": "rendered",
 		"EaterofWorldsTail": "rendered",
@@ -240,6 +268,17 @@
 			"outline": true
 		},
 		"BlueSlime": {
+			"model": "extruded",
+			"outline": true
+		},
+		"BoneSerpentBody": {
+			"model": "extruded",
+			"outline": true
+		},
+		"BoneSerpentHead": {
+			"outline": true
+		},
+		"BoneSerpentTail": {
 			"model": "extruded",
 			"outline": true
 		},

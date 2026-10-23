@@ -3833,6 +3833,8 @@ mod tests {
                     if c == b {
                         let (x, y, z) = unflat(&w, i);
                         assert!(w.is_solid(x, y - 1, z), "a {set} {k} on the floor at {:?}", (x, y, z));
+                        // In the Dungeon, not out on the ground by its entrance.
+                        assert!(y < gy, "a {set} {k} under the entrance's floor (y {gy}) at {:?}", (x, y, z));
                         pieces += 1;
                     }
                 }

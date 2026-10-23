@@ -535,7 +535,11 @@ impl<'a> Gen<'a> {
                     if !self.mask.get(p) && y < brick_below {
                         self.set(p, brick);
                     }
-                    if x > lo.0 && x < hi.0 - 1 && y > lo.1 && y < hi.1 - 1 && z > lo.2 && z < hi.2 - 1 {
+                    // Only what's walled is the dungeon: the entrance
+                    // hallway's boxes reach above the ground by the keep,
+                    // and that open air isn't (or its furniture, shelves and
+                    // banners would stand out on the grass).
+                    if x > lo.0 && x < hi.0 - 1 && y > lo.1 && y < hi.1 - 1 && z > lo.2 && z < hi.2 - 1 && y < brick_below {
                         self.mask.set(p);
                     }
                 }
@@ -547,7 +551,9 @@ impl<'a> Gen<'a> {
                     let p = (x, y, z);
                     if self.can_change(p) {
                         self.set(p, 0);
-                        self.mask.set(p);
+                        if y < brick_below || self.in_keep(p) {
+                            self.mask.set(p);
+                        }
                     }
                 }
             }

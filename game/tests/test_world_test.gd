@@ -633,6 +633,16 @@ func _skeletron_checks(c: Vector3i) -> void:
 	var was_time: float = game.sky.time
 	var god := p.god_mode
 	p.god_mode = true
+	# Its furniture is down in it, none out on the grass by the entrance.
+	var outside := []
+	var w: VoxelWorld = game.world
+	for x in range(-45, 46):
+		for z in range(-45, 46):
+			var q := d + Vector3i(x, 1, z)
+			var n: String = Data.block(w.get_block(q)).get("name", "")
+			if (n.begins_with("gothic_") or n.contains("_dungeon_") or n in ["alchemy_table", "bewitching_table"]) and not n.contains("door"):
+				outside.append(n)
+	check(outside.is_empty(), "no Dungeon furniture on the ground outside it (%s)" % [outside])
 	var old_men := game.npcs().filter(func(n): return n.kind == "OldMan")
 	check(old_men.size() == 1, "the Old Man is at the Dungeon")
 	if old_men.size() != 1:
