@@ -118,7 +118,9 @@ pub fn mesh_chunk(w: &World, cx: i32, cy: i32, cz: i32) -> ChunkMesh {
                     RENDER_CROSS => {
                         let l = light_f(w.light_at(x, y, z));
                         let layer = (def.tex[1] + variant) as f32;
-                        add_cross(&mut cutout, p, l, layer);
+                        // Plants and debris ("vary"): mirrored in about half the cells.
+                        let flip = def.vary && (hash3(x, y, z) >> 9) & 1 == 1;
+                        add_cross(&mut cutout, p, l, layer, flip);
                     }
                     RENDER_CUBE if w.shape_at(x, y, z) != SHAPE_FULL => {
                         add_shaped(w, &mut opaque, (x, y, z), p, w.shape_at(x, y, z), def.tex, variant);
@@ -510,13 +512,17 @@ fn add_shaped(w: &World, s: &mut Surface, (x, y, z): (i32, i32, i32), p: [f32; 3
     }
 }
 
-fn add_cross(s: &mut Surface, p: [f32; 3], l: [f32; 4], layer: f32) {
+fn add_cross(s: &mut Surface, p: [f32; 3], l: [f32; 4], layer: f32, flip: bool) {
     let (a, b) = (0.15, 0.85);
     let quads = [
         [[a, 0.0, a], [b, 0.0, b], [b, 1.0, b], [a, 1.0, a]],
         [[b, 0.0, a], [a, 0.0, b], [a, 1.0, b], [b, 1.0, a]],
     ];
-    let uv = [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]];
+    let uv = if flip {
+        [[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]
+    } else {
+        [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]
+    };
     for q in quads {
         let v = q.map(|c| [p[0] + c[0], p[1] + c[1], p[2] + c[2]]);
         s.quad(v, [0.0, 1.0, 0.0], [l; 4], uv, layer, [1.0; 4]);
@@ -556,6 +562,31 @@ mod tests {
         assert!(layer_facing([1.0, 0.0, 0.0]).iter().all(|&l| l == 7.0), "the side down onto grass shows the top");
         assert!(layer_facing([-1.0, 0.0, 0.0]).iter().all(|&l| l == 8.0), "the side down onto stone stays a side");
         assert!(layer_facing([0.0, 0.0, 1.0]).iter().all(|&l| l == 8.0));
+    }
+
+    #[test]
+    fn plants_that_vary_are_mirrored_in_some_cells() {
+        let mut w = test_world();
+        let vary = |w: &mut World, id: u16, vary: bool| w.set_def(id, crate::world::BlockDef { name: format!("plant{id}"), render: RENDER_CROSS, solid: false, opaque: false, variants: 1, vary, ..Default::default() });
+        vary(&mut w, 7, true);
+        vary(&mut w, 8, false);
+        let mut flips = |id: u16| {
+            let mut n = 0;
+            for x in 0..32 {
+                w.set(x, 32, 3, id);
+            }
+            let m = mesh_chunk(&w, 0, 1, 0);
+            // Each cell's first quad: its first corner's u is 1 when mirrored.
+            for q in (0..m.cutout.uvs.len()).step_by(8) {
+                if m.cutout.uvs[q][0] == 1.0 {
+                    n += 1;
+                }
+            }
+            n
+        };
+        let mirrored = flips(7);
+        assert!(mirrored > 4 && mirrored < 28, "about half of a row of plants mirrored ({mirrored} of 32)");
+        assert_eq!(flips(8), 0, "the rest never");
     }
 
     #[test]

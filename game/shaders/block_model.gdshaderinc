@@ -86,7 +86,9 @@ void vertex() {
 		// A z axis longer than the others moves this instance that much
 		// further toward the camera (palm segments: each over the one above).
 		float nudge = length(MODEL_MATRIX[2].xyz) - s;
-		vec3 world = origin + (right * VERTEX.x + vec3(0.0, VERTEX.y, 0.0) + fwd * VERTEX.z) * s + fwd * (billboard_offset + nudge);
+		// A mirrored instance (its transform turned inside out) is drawn flipped.
+		float mirror = determinant(mat3(MODEL_MATRIX)) < 0.0 ? -1.0 : 1.0;
+		vec3 world = origin + (right * VERTEX.x * mirror + vec3(0.0, VERTEX.y, 0.0) + fwd * VERTEX.z) * s + fwd * (billboard_offset + nudge);
 		POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
 		v_world = world;
 		v_origin = origin;

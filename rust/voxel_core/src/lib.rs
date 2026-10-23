@@ -247,6 +247,7 @@ impl VoxelWorld {
             platform: val(&def, "platform").try_to::<bool>().unwrap_or(false),
             better_grass: val(&def, "better_grass").try_to::<bool>().unwrap_or(false),
             variant_of: int_of(&val(&def, "variant_of"), 0).max(0) as u16,
+            vary: val(&def, "vary").try_to::<bool>().unwrap_or(false),
         };
         self.shared.world.write().unwrap().set_def(id as u16, d);
     }

@@ -115,7 +115,8 @@ func chunk_updated(c: Vector3i) -> void:
 			var bd := Data.block(id)
 			kinds[id] = {"trunk": bd.get("trunk", false) and not bd.get("palm", false), "palm": bd.get("palm", false),
 					"cactus": bd.get("cactus", false), "door": Doors.is_part(bd), "method": bd.get("method", "panels"),
-					"wall": bd.get("wall", false), "variants": bd.get("variants", 1), "scatter": float(bd.get("scatter", 0.0))}
+					"wall": bd.get("wall", false), "variants": bd.get("variants", 1), "scatter": float(bd.get("scatter", 0.0)),
+					"vary": bd.get("vary", false)}
 		var k: Dictionary = kinds[id]
 		if k.trunk:
 			trunks.append(pos)  # and on with its own billboard below
@@ -147,7 +148,8 @@ func chunk_updated(c: Vector3i) -> void:
 			if not PlaceableRenders.renders(id).is_empty():
 				if not rendered.has(id):
 					rendered[id] = []
-				rendered[id].append([pos, game.block_rotation(pos), scatter_at(pos, k.scatter)])
+				var turns := game.block_rotation(pos) + (vary_turns(pos) if k.vary else 0)
+				rendered[id].append([pos, turns, scatter_at(pos, k.scatter)])
 				continue
 			_waiting_renders[id] = true
 			method = "billboard"  # until its shots are made
@@ -176,6 +178,8 @@ func chunk_updated(c: Vector3i) -> void:
 			batches[mkey] = {"id": id, "mesh": model.mesh, "textured": model.textured, "items": [],
 					"method": method, "rotation": rotation, "frame": frame}
 		var t := Transform3D(Basis(Vector3.UP, int(model.turn) * PI * 0.5), Vector3(pos) + Vector3(0.5, 0.0, 0.5))
+		if k.vary:
+			t.basis = vary_at(pos) * t.basis
 		if k.scatter > 0.0:
 			var sc := scatter_at(pos, k.scatter)
 			t = Transform3D(sc.basis * t.basis, t.origin + sc.origin)
@@ -317,6 +321,24 @@ static func scatter_at(pos: Vector3i, scatter: float) -> Transform3D:
 	return Transform3D(Basis(Vector3.UP, turn), Vector3(ox, 0.0, oz))
 
 
+## Plants, rocks and debris on the ground ("vary"): turned a quarter, half
+## or three quarters round or not at all, and mirrored or not, the same every
+## time for their cell (a field of one plant doesn't look stamped out).
+static func vary_at(pos: Vector3i) -> Basis:
+	var b := Basis(Vector3.UP, vary_turns(pos) * PI * 0.5)
+	return b * Basis.from_scale(Vector3(-1, 1, 1)) if vary_mirrored(pos) else b
+
+
+## How many quarter turns `vary_at` gives the cell (0-3).
+static func vary_turns(pos: Vector3i) -> int:
+	return absi(hash(pos * 13 + Vector3i(7, 3, 11))) % 4
+
+
+## Whether `vary_at` mirrors the cell.
+static func vary_mirrored(pos: Vector3i) -> bool:
+	return (absi(hash(pos * 13 + Vector3i(7, 3, 11))) / 4) % 2 == 1
+
+
 ## Variant for a block at `pos`: stable, and different between neighbours.
 static func variant_at(pos: Vector3i, variants: int) -> int:
 	if variants <= 1:
@@ -357,9 +379,13 @@ func _billboard_batch(block_id: int, variant: int, positions: Array, keys: Array
 	var bt := Data.block_transform(Data.block(block_id))
 	var bscale := Basis.from_scale(Vector3.ONE * bt.basis.get_scale().x)
 	var scatter := float(Data.block(block_id).get("scatter", 0.0))
+	var vary: bool = Data.block(block_id).get("vary", false)
 	for i in positions.size():
 		var pos: Vector3i = positions[i]
-		var t := Transform3D(bscale, Vector3(pos) + Vector3(0.5, 0.0, 0.5) + bt.origin + scatter_at(pos, scatter).origin)
+		# (A billboard turns to you; a mirrored one is drawn flipped, the shader
+		# seeing its transform turned inside out.)
+		var basis := bscale * Basis.from_scale(Vector3(-1, 1, 1)) if vary and vary_mirrored(pos) else bscale
+		var t := Transform3D(basis, Vector3(pos) + Vector3(0.5, 0.0, 0.5) + bt.origin + scatter_at(pos, scatter).origin)
 		var light := world.get_light(Vector3(pos) + Vector3(0.5, 0.5, 0.5))
 		mm.set_instance_transform(i, t)
 		mm.set_instance_custom_data(i, light)

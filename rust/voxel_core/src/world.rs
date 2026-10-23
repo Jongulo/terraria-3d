@@ -80,6 +80,9 @@ pub struct BlockDef {
     pub better_grass: bool,
     /// One of that block's styles (0: none): scatter_styles picks among them.
     pub variant_of: u16,
+    /// A plant or bit of debris on the ground: its crossed sprite is mirrored
+    /// in some cells (mesher.rs), for variety.
+    pub vary: bool,
 }
 
 #[derive(Clone, Debug)]

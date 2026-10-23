@@ -1086,6 +1086,9 @@ func register_blocks(world: VoxelWorld) -> void:
 			"emit": Color(emit[0], emit[1], emit[2]),
 			"platform": b.get("platform", false),
 			"sun_through": b.get("sun_through", false),
+			# A plant or bit of debris whose crossed sprite is mirrored in some
+			# cells (the chunk mesher; BlockModels turns and mirrors the rest).
+			"vary": b.get("vary", false),
 			# One of that block's styles (worldgen's scatter_styles).
 			"variant_of": block_id(b.variant_of) if b.has("variant_of") else 0,
 			# Grass (its side is dirt under a grass fringe): sides down a slope

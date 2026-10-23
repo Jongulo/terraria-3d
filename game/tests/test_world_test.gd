@@ -406,6 +406,7 @@ func _run() -> void:
 	p.god_mode = god
 
 	await _prop_batch_checks(c)
+	await _vary_checks(c)
 	await _platform_checks(c)
 	await _rope_checks(c)
 	await _hook_checks(c)
@@ -1518,6 +1519,42 @@ func _flora_checks(c: Vector3i) -> void:
 ## Props (block models) are drawn in batches with each block's light in the
 ## instance data, not one node each with a shader instance uniform: those ran
 ## out in big worlds, and props rebuilt after breaking one drew black.
+## Plants, rocks and debris on the ground ("vary") turn and mirror by cell.
+func _vary_checks(c: Vector3i) -> void:
+	var w: VoxelWorld = game.world
+	var bm := game.block_models
+	var o := c + Vector3i(-20, 45, 40)
+	for x in range(0, 24):
+		w.set_block(o + Vector3i(x, -1, 0), Data.block_id("stone"))
+		w.set_block(o + Vector3i(x, 0, 0), Data.block_id("small_rocks"))
+	await frames(12)
+	var looks := {}
+	var drawn := 0
+	var first := []
+	for x in range(0, 24):
+		var m: Dictionary = bm.model_at(o + Vector3i(x, 0, 0))
+		if m.is_empty():
+			continue
+		drawn += 1
+		var b: Basis = m.transform.basis
+		looks[[roundi(b.x.x), roundi(b.x.z), signf(b.determinant())]] = true
+		first.append(m.transform)
+	check(Data.block(Data.block_id("small_rocks")).get("vary", false) and drawn == 24 and looks.size() >= 4,
+			"small rocks lie turned and mirrored every which way (%d looks in %d)" % [looks.size(), drawn])
+	# The same every time for their cell.
+	var chunk := Vector3i(floori(o.x / 32.0), floori(o.y / 32.0), floori(o.z / 32.0))
+	bm.chunk_updated(chunk)
+	var again := []
+	for x in range(0, 24):
+		var m: Dictionary = bm.model_at(o + Vector3i(x, 0, 0))
+		if not m.is_empty():
+			again.append(m.transform)
+	check(again == first, "and the same each time they're drawn")
+	for x in range(0, 24):
+		w.set_block(o + Vector3i(x, 0, 0), 0)
+		w.set_block(o + Vector3i(x, -1, 0), 0)
+
+
 func _prop_batch_checks(c: Vector3i) -> void:
 	var bm := game.block_models
 	var loose := []
