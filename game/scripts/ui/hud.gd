@@ -712,7 +712,7 @@ func _update_liquid_ui(delta: float) -> void:
 func _draw_buffs() -> void:
 	for c in _buffs.get_children():
 		c.queue_free()
-	var cancellable := player.companion_buffs() + player.timed_buffs.keys()
+	var cancellable := player.companion_buffs() + player.timed_buffs.keys().filter(func(b): return not b in Player.DEBUFFS)
 	for b in player.buffs():
 		var box := VBoxContainer.new()
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE

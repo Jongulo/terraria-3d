@@ -116,6 +116,14 @@ var honey_time := 0.0
 ## Potions' buffs (BuffID name -> seconds left): Fishing, Sonar, Crate,
 ## and those in BUFF_EFFECTS.
 var timed_buffs := {}
+## Frostburn: 8 life a second (Terraria's lifeRegen -16).
+const FROSTBURN_DPS := 8.0
+## A slime's carried item's touch: [debuff, min, max ticks].
+const CARRIED_DEBUFFS := {"StoneBlock": ["Stoned", 30, 59], "Cobweb": ["Webbed", 30, 59],
+		"SnowBlock": ["Frostburn", 180, 359], "SlushBlock": ["Frostburn", 180, 359]}
+## Terraria's debuffs among timed_buffs (Main.debuff: no right-clicking
+## them off).
+const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn"]
 ## Your minions (Minion), oldest first, and your pet and light pet (null:
 ## none). Minions go when you die; pets stay with you.
 var minions: Array = []
@@ -150,6 +158,16 @@ var _stomped := {}  # npc -> seconds before it can be stomped again
 ## (equipment() lists them): Ironskin's 8 defense, Swiftness's 25% speed,
 ## Regeneration's lifeRegen 4, Wrath's 10% damage, Rage's 10% crit...
 const BUFF_EFFECTS := {
+	# Debuffs (DEBUFFS): Chilled, a quarter slower (strongestMoveSpeedDebuff
+	# 0.75); Frozen, Stoned and Webbed, held still and helpless (CCed: no
+	# moving, jumping or using anything); Cursed, no using items (noItems);
+	# Frostburn, 8 life a second (lifeRegen -16).
+	"Chilled": {"chilled": true},
+	"Frozen": {"cc": true},
+	"Stoned": {"cc": true},
+	"Webbed": {"cc": true},
+	"Cursed": {"cursed": true},
+	"Frostburn": {"frostburn": true},
 	# Jungle's Fury (the Snapthorn's tag): 12% summon weapon speed.
 	"ThornWhipPlayerBuff": {"whip_speed": 12},
 	"ObsidianSkin": {"lava_immune": true, "fire_walk": true, "fire_immune": true},
@@ -695,7 +713,7 @@ func update_carried_light() -> void:
 
 func _move(delta: float, game) -> void:
 	var input := Vector2.ZERO
-	if input_enabled:
+	if can_act():
 		input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var dir := (transform.basis * Vector3(input.x, 0, input.y)).normalized()
 	# Creative: double-tap jump to start or stop flying, like Minecraft.
@@ -733,6 +751,11 @@ func _move(delta: float, game) -> void:
 		max_run = float(mt.run) * 2.5
 		acc_run = float(mt.dash) * 2.5
 		accel = float(mt.accel) * 150.0
+	# Chilled: a quarter slower (Terraria's strongestMoveSpeedDebuff).
+	if has_effect("chilled"):
+		max_run *= 0.75
+		acc_run *= 0.75
+		accel *= 0.75
 	# Panic Necklace: a burst of speed after being struck.
 	_panic = maxf(0.0, _panic - delta)
 	if _panic > 0.0:
@@ -772,7 +795,7 @@ func _move(delta: float, game) -> void:
 		velocity.x = flat.x
 		velocity.z = flat.y
 
-	var jump := input_enabled and Input.is_action_pressed("jump")
+	var jump := can_act() and Input.is_action_pressed("jump")
 	var jump_speed := BALLOON_JUMP_SPEED if has_effect("jump_boost") else JUMP_SPEED
 	var jump_ticks := BALLOON_JUMP_TICKS if has_effect("jump_boost") else JUMP_TICKS
 	# The Frog Leg: Terraria's jumpSpeedBoost (px a tick on top of jumpSpeed).
@@ -1121,7 +1144,7 @@ func _update_bast(delta: float, game) -> void:
 ## Climbing a rope snake: grab it by jumping into it; jump climbs, Drop down
 ## lets you down, walking off it lets go. True while on it.
 func _climb(delta: float, game, dir: Vector3) -> bool:
-	var jump := input_enabled and Input.is_action_pressed("jump")
+	var jump := can_act() and Input.is_action_pressed("jump")
 	var down := input_enabled and Input.is_action_pressed("drop_down")
 	if climbing != null and (not is_instance_valid(climbing) or not climbing.holds(global_position)):
 		climbing = null
@@ -1179,7 +1202,7 @@ const ROPE_REGRAB := 10.0 / 60.0
 ## while you move leaps off. True while on one.
 func _rope_climb(delta: float, game, dir: Vector3) -> bool:
 	var w: VoxelWorld = game.world
-	var up := input_enabled and Input.is_action_pressed("jump")
+	var up := can_act() and Input.is_action_pressed("jump")
 	var down := input_enabled and Input.is_action_pressed("drop_down")
 	var tapped := dir != Vector3.ZERO and not _rope_dir_held
 	_rope_dir_held = dir != Vector3.ZERO
@@ -1338,7 +1361,7 @@ func _grapple(delta: float, game) -> bool:
 	var held_by := hooks().filter(func(h): return h.latched())
 	if held_by.is_empty():
 		return false
-	var jump := input_enabled and Input.is_action_pressed("jump")
+	var jump := can_act() and Input.is_action_pressed("jump")
 	if jump and not _jump_held:
 		var still := velocity.length() < GRAPPLE_STILL and not (input_enabled and Input.is_action_pressed("drop_down"))
 		for h in hooks():
@@ -1619,7 +1642,7 @@ func release_charge() -> void:
 
 func _fly(delta: float, game, dir: Vector3) -> void:
 	var speed := FLY_SPEED
-	var vertical := float(input_enabled and Input.is_action_pressed("jump")) - float(input_enabled and Input.is_key_pressed(KEY_SHIFT))
+	var vertical := float(can_act() and Input.is_action_pressed("jump")) - float(input_enabled and Input.is_key_pressed(KEY_SHIFT))
 	velocity = velocity.lerp(dir * speed + Vector3(0, vertical * speed, 0), minf(1.0, 10.0 * delta))
 	# Flying passes through platforms both ways.
 	var r: Dictionary = game.world.move_aabb(global_position, half, velocity * delta, 0.0, true)
@@ -1730,6 +1753,8 @@ func _liquid_effects(delta: float) -> void:
 	if poisoned > 0.0:
 		poisoned = maxf(0.0, poisoned - delta)
 		dot += POISON_DPS
+	if has_effect("frostburn"):
+		dot += FROSTBURN_DPS
 	suffocating = buried()
 	if suffocating:
 		dot += SUFFOCATION_DPS
@@ -2041,6 +2066,31 @@ func has_buff(b: String) -> bool:
 	return timed_buffs.get(b, 0.0) > 0.0
 
 
+## Puts a debuff on you for `seconds` (a longer one already on stays):
+## Warmth (resistCold) cuts Chilled to a quarter and Frozen to half
+## (AddBuff_DetermineBuffTimeToAdd). Frozen doesn't take while you're frozen.
+func debuff(b: String, seconds: float) -> void:
+	if not alive:
+		return
+	if has_effect("warmth"):
+		if b == "Chilled":
+			seconds /= 4.0
+		elif b == "Frozen":
+			seconds /= 2.0
+	if b == "Frozen" and has_buff("Frozen"):
+		return
+	timed_buffs[b] = maxf(timed_buffs.get(b, 0.0), seconds)
+	stats_changed.emit()
+
+
+## What an enemy's touch or a shot puts on you (Terraria's StatusFromNPC,
+## StatusPlayer): [[debuff, 1 in n, ticks], ...].
+func take_debuffs(list: Array) -> void:
+	for d in list:
+		if randi() % int(d[1]) == 0:
+			debuff(d[0], float(d[2]) / 60.0)
+
+
 ## The Inferno Potion's ring: 20 damage a second to the enemies near you.
 func _inferno(delta: float, game) -> void:
 	if not has_effect("inferno"):
@@ -2084,7 +2134,7 @@ func _regen(delta: float) -> void:
 		rate += 1.0
 	# On fire or poisoned, no healing, and it starts over (lifeRegen 0,
 	# lifeRegenTime 0).
-	if on_fire > 0.0 or poisoned > 0.0:
+	if on_fire > 0.0 or poisoned > 0.0 or has_effect("frostburn"):
 		rate = 0.0
 		_since_hurt = 0.0
 	if life < life_cap() and rate > 0.0:
@@ -2107,6 +2157,9 @@ func _regen(delta: float) -> void:
 
 func use_item() -> void:
 	if _use_timer > 0.0 or slash_out():
+		return
+	# Frozen, or Cursed (noItems): nothing can be used.
+	if has_effect("cc") or has_effect("cursed"):
 		return
 	# Like Terraria: without autoReuse (or the Autofire setting) holding the
 	# button doesn't use it again; it takes a fresh click.
@@ -2392,6 +2445,12 @@ func talk_target():
 
 func whip_out() -> bool:
 	return whip != null and is_instance_valid(whip) and not whip.is_queued_for_deletion()
+
+
+## Whether you can move and jump: not in a menu, not Frozen, Stoned or
+## Webbed (Terraria's CCed clears your controls).
+func can_act() -> bool:
+	return input_enabled and not has_effect("cc")
 
 
 ## The enemy your aim falls on, up to 60 blocks off and not behind a block
@@ -3086,6 +3145,8 @@ func throw_held() -> void:
 
 
 func _interact() -> void:
+	if has_effect("cc"):
+		return
 	# Holding a summon staff: set your minions on the enemy you aim at (on
 	# it again: let it go).
 	if held().has("minion") or held().has("whip"):
@@ -3245,10 +3306,15 @@ func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
 		heal(1)
 
 
-func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null) -> void:
+## Hurts you; true if it did (not invulnerable or immune).
+func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null) -> bool:
 	if not alive or invulnerable() or (_immune > 0.0 and not ignore_immunity):
-		return
+		return false
 	var game := Game.current
+	var npc_attacker: bool = attacker != null and is_instance_valid(attacker) and attacker is NPC
+	# Warmth (resistCold): cold enemies hit 30% softer.
+	if npc_attacker and attacker.def.get("cold", false) and has_effect("warmth"):
+		amount = int(amount * 0.7)
 	var dmg := maxi(1, amount - defense() / 2)
 	# The Endurance Potion: 10% less damage taken.
 	if stat("endurance") > 0.0:
@@ -3265,6 +3331,14 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null)
 		attacker.hit(thorns, 0.0, (attacker.center() - center()).normalized(), 0.0)
 	_since_hurt = 0.0
 	_immune = IMMUNE_TIME
+	if npc_attacker:
+		take_debuffs(attacker.def.get("contact_debuffs", []))
+		# What a slime carries inside it can hurt too (StatusFromNPC): stone
+		# Stoned, cobweb Webbed, snow and slush Frostburn.
+		var held: String = attacker.carried
+		if held in CARRIED_DEBUFFS:
+			var cd: Array = CARRIED_DEBUFFS[held]
+			debuff(cd[0], randi_range(int(cd[1]), int(cd[2])) / 60.0)
 	game.floating_text(str(dmg), center() + Vector3(0, 1.2, 0) + forward() * 0.8, Color(1.0, 0.25, 0.25))
 	Audio.play("Player_Hit_*")
 	game.hud.flash_damage()
@@ -3277,6 +3351,7 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null)
 	stats_changed.emit()
 	if life <= 0:
 		_die()
+	return true
 
 
 func _die() -> void:

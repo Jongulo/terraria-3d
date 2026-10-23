@@ -89,6 +89,8 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## (the Fiery Greatsword's, AI 189): where it stands, 10 ticks, Terraria's
 ## 160 px box (here 80 px at 24 a block round it), each enemy once, 3 at most,
 ## On Fire! 3 s every hit.
+## debuffs: what it puts on you, [[debuff, 1 in n, ticks]] (Terraria's
+## StatusPlayer: the Ice Spike's Chilled 20 s and 1 in 20 Frozen 1.5 s).
 ## The Spiked Ice Slime's Ice Spike (AI 1): falls at 0.15 px/tick² (24 px
 ## a block, as the slime's) from its 6th tick (its shooter sets
 ## gravity_delay), at most 16.
@@ -117,7 +119,7 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
 		"PoisonDart": {"poison": 10.0, "life": 60.0},
 		"HornetStinger": {"dust": [18], "size": 0.45, "npc_poison": [240, 360], "life": 5.0},
-		"IceSpike": {"gravity": 22.5, "max_fall": 40.0, "dust": [76], "life": 60.0},
+		"IceSpike": {"gravity": 22.5, "max_fall": 40.0, "dust": [76], "life": 60.0, "debuffs": [["Chilled", 1, 1200], ["Frozen", 20, 90]]},
 		"MeteorWhipMeteor": {"ghost": true, "glow": true, "size": 1.5, "radius": 0.6, "dust": [6], "life": 3.0},
 		"ImpFireball": {"hidden": true, "dust": [6], "glow": true, "pierce": 5, "radius": 0.25, "ignite": [1, 180, 360], "life": 2.5},
 		"Boulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "BoulderThatSpawnsPet": {"size": 1.0, "radius": 0.6, "life": 60.0},
@@ -883,13 +885,16 @@ func _check_hits(game) -> bool:
 	elif not _flight.get("book", false) or _launched:
 		var p = game.player
 		if p.alive and p.overlaps_point(global_position, float(_flight.get("radius", 0.2))):
-			p.hurt(damage, global_position)
+			var landed: bool = p.hurt(damage, global_position)
 			if kind in POISONS and randi() % 3 == 0:
 				p.poison(10.0)
 			if _flight.has("poison"):
 				p.poison(float(_flight.poison))
 			if kind in IGNITES and randi() % 3 == 0:
 				p.ignite(7.0)
+			# (Only a hit that lands: Terraria's StatusPlayer.)
+			if landed:
+				p.take_debuffs(_flight.get("debuffs", []))
 			# The Librarian Skeleton's books go on through (penetrate -1).
 			return not _flight.get("book", false)
 	return false

@@ -61,6 +61,12 @@ var _poison := 0.0
 ## A whip's tag on it (Whip: {damage, crit, until: a physics frame, proc}):
 ## your minions' hits do its damage more; {} when untagged.
 var whip_tag := {}
+## What a slime carries inside it ("carries" in its def; Terraria's ai[1]),
+## dropped when it dies: "" none.
+var carried := ""
+var _carry_rolled := false
+var _carry_sprite: EntitySprite = null
+var _roll := 0.0
 var _stuck := 0.0
 var _wander := Vector3.ZERO
 ## Which way the last hit came (its gore and death dust fly that way).
@@ -285,6 +291,10 @@ func overlaps_box(pos: Vector3, h: Vector3) -> bool:
 func _physics_process(delta: float) -> void:
 	var game := Game.current
 	var player = game.player
+	if not _carry_rolled:
+		_carry_rolled = true
+		if def.has("carries"):
+			_roll_carried(game)
 	var to_player: Vector3 = player.global_position - global_position
 	if not boss and not def.get("persistent", false) and not released and to_player.length() > DESPAWN_DISTANCE:
 		# A worm goes all at once, when its head is that far off.
@@ -344,6 +354,7 @@ func _physics_process(delta: float) -> void:
 		"slime": _ai_slime(delta, player)
 		"fighter": _ai_fighter(delta, player)
 		"flyer": _ai_flyer(delta, player)
+		"vulture": _ai_vulture(delta, player)
 		"bat": _ai_bat(delta, player)
 		"harpy": _ai_harpy(delta, player)
 		"swim": _ai_swim(delta, player)
@@ -451,6 +462,19 @@ func _update_sprite(delta: float, game) -> void:
 			sprite.set_flip(look_dir.dot(right) > 0.0)
 		elif Vector2(velocity.x, velocity.z).length() > 0.05:
 			sprite.set_flip(velocity.dot(right) > 0.05)
+	# The Snow Flinx rolls while it's off the ground (AI_003: 0.05 of its
+	# speed a tick), upright again when it lands.
+	if def.get("rolls", false) and sprite is EntitySprite:
+		if on_floor:
+			_roll = 0.0
+		else:
+			_roll -= velocity.dot(right) / PX_TICK * 0.05 * delta * 60.0
+		sprite.set_rotation_angle(_roll)
+	if _carry_sprite != null:
+		# Inside it: at its middle, a hair toward you so it shows.
+		var c := center()
+		_carry_sprite.global_position = c + (game.player.camera.global_position - c).normalized() * 0.03
+		_carry_sprite.update_light(game.world, game.sky, c)
 	_flash = maxf(0.0, _flash - delta * 6.0)
 	sprite.set_flash(_flash)
 	if glowing():
@@ -1418,6 +1442,143 @@ func _ai_flyer(delta: float, player) -> void:
 	_fly_frame()
 	if velocity.length() > 0.1 and not def.get("upright", false):
 		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+
+
+## Slimes carrying items (AI_001's first tick, Terraria's normal world): an
+## ice slime under the surface 1 in 40 a Snow or Slush Block; the other
+## slimes a Jungle Slime's 1 in 20 Hive, Honey Block or Moonglow, else 1 in
+## 20 something from GenerateItemInsideBody (a buff potion or Recall Potion,
+## a torch, rope, bomb or Heart, an ore, coins), else 1 in 40 a block (a
+## Cloud on the surface, dirt, stone or wood underground, deeper stone,
+## cobweb, granite or marble, 1 in 10 a conveyor belt), else underground 1
+## in 500 a Dart Trap. Items not in this game come to nothing.
+## SlimeBodyItemDropRule's stacks.
+const CARRY_STACKS := {"DirtBlock": [10, 25], "StoneBlock": [10, 25], "Wood": [10, 25], "Torch": [5, 10],
+		"IronOre": [3, 13], "CopperOre": [3, 13], "GoldOre": [3, 13], "SilverOre": [3, 13],
+		"TinOre": [3, 13], "LeadOre": [3, 13], "TungstenOre": [3, 13], "PlatinumOre": [3, 13],
+		"CopperCoin": [50, 99], "SilverCoin": [20, 99], "GoldCoin": [1, 2], "Bomb": [2, 6], "Rope": [20, 45],
+		"Cobweb": [10, 25], "SnowBlock": [10, 25], "SlushBlock": [10, 25], "Cloud": [10, 25], "Granite": [10, 25],
+		"Marble": [10, 25], "ConveyorBeltLeft": [10, 25], "Hive": [2, 5], "HoneyBlock": [2, 5], "Moonglow": [2, 5]}
+
+func _roll_carried(game) -> void:
+	var surface: bool = center().y > game.surface_level
+	var rock: bool = center().y < game.cavern_level
+	var pick := ""
+	if def.carries == "ice":
+		if not surface and randi() % 40 == 0:
+			pick = "SnowBlock" if randi() % 2 else "SlushBlock"
+	elif kind == "JungleSlime" and randi() % 20 == 0:
+		pick = ["Hive", "HoneyBlock", "Moonglow"][randi() % 3]
+	elif randi() % 20 == 0:
+		pick = _slime_item()
+	elif randi() % 40 == 0:
+		if surface:
+			pick = "Cloud"
+		elif not rock:
+			pick = ["DirtBlock", "StoneBlock", "Wood"][randi() % 3]
+		elif randi() % 10 == 0:
+			pick = "ConveyorBeltLeft"
+		else:
+			pick = ["StoneBlock", "Cobweb", "Granite", "Marble"][randi() % 4]
+	elif not surface and randi() % 500 == 0:
+		pick = "DartTrap"
+	carry(pick)
+
+
+## AI_001_Slimes_GenerateItemInsideBody (single player).
+static func _slime_item() -> String:
+	match randi() % 4:
+		0:
+			return ["SwiftnessPotion", "IronskinPotion", "SpelunkerPotion", "MiningPotion", "RecallPotion", "RecallPotion", "RecallPotion"][randi() % 7]
+		1:
+			return ["Torch", "Rope", "Bomb", "Heart"][randi() % 4]
+		2:
+			if randi() % 2 == 0:
+				return ["IronOre", "CopperOre", "GoldOre", "SilverOre"][randi() % 4]
+			return ["TinOre", "LeadOre", "TungstenOre", "PlatinumOre"][randi() % 4]
+	return ["CopperCoin", "SilverCoin", "GoldCoin"][randi() % 3]
+
+
+## Puts an item inside it, drawn there (Terraria: at most 22 px across).
+func carry(item: String) -> void:
+	carried = item if Data.items.has(item) else ""
+	if _carry_sprite != null:
+		_carry_sprite.queue_free()
+		_carry_sprite = null
+	if carried == "":
+		return
+	var tex := Assets.item_texture(Data.item_id(carried))
+	var px := Vector2(tex.get_width(), tex.get_height())
+	var k := minf(1.0, 22.0 / maxf(px.x, px.y))
+	_carry_sprite = EntitySprite.new()
+	_carry_sprite.setup(tex, 1, px * k / PX_PER_BLOCK, true, false)
+	add_child(_carry_sprite)
+
+
+## Terraria's vulture (aiStyle 17), in its px/tick: it sits on the ground
+## (falling like anything else) until you come within 100 px of it, it's
+## hurt or something moves it, then it springs up (6 px/tick) and flies:
+## toward you across at 0.1 px/tick² (more turning round) up to 3, and up or
+## down at 0.05 (0.06 turning round) up to 3 toward your head's height, or
+## 100 px over it while you're more than 50 px off across: it circles above
+## and dives. Walls bounce it back; in water it rises (0.5 px/tick², up to 4).
+func _ai_vulture(delta: float, player) -> void:
+	var ticks := delta * 60.0
+	if ai_state == 0:
+		flying = false
+		sprite.set_frame(0)
+		var reach := 100.0 / PX_PER_BLOCK
+		var pp: Vector3 = player.global_position
+		var near: bool = absf(pp.x - global_position.x) < half.x + player.half.x + reach \
+				and absf(pp.z - global_position.z) < half.z + player.half.z + reach \
+				and pp.y < global_position.y + half.y + reach and pp.y + player.half.y > global_position.y - reach
+		var moved := Vector2(velocity.x, velocity.z).length() > 0.0 or velocity.y > 0.0 or velocity.y < -0.3 * PX_TICK
+		if moved or (near and player.alive) or life < life_max:
+			ai_state = 1
+			velocity.y += 6.0 * PX_TICK
+		return
+	flying = true
+	if not player.alive:
+		return
+	var to: Vector3 = player.global_position - global_position
+	var flat := Vector2(to.x, to.z)
+	var dir := flat.normalized() if flat.length() > 0.01 else Vector2.ZERO
+	var v := Vector2(velocity.x, velocity.z) / PX_TICK
+	var along := v.dot(dir)
+	var side := v - dir * along
+	if along < 3.0:
+		along += 0.1 * ticks
+		if along < -3.0:
+			along += 0.1 * ticks
+		elif along < 0.0:
+			along += 0.05 * ticks
+	along = minf(along, 3.0)
+	side = side.move_toward(Vector2.ZERO, 0.1 * ticks)
+	v = dir * along + side
+	velocity.x = v.x * PX_TICK
+	velocity.z = v.y * PX_TICK
+	# Its top toward your head's height less half its own, 100 px higher
+	# while it's more than 50 px off across.
+	var goal: float = player.global_position.y + player.half.y + half.y / 2.0
+	if flat.length() * PX_PER_BLOCK > 50.0:
+		goal += 100.0 / PX_PER_BLOCK
+	var vy := velocity.y / PX_TICK
+	if global_position.y + half.y > goal:
+		vy -= 0.05 * ticks
+		if vy > 0.0:
+			vy -= 0.01 * ticks
+	else:
+		vy += 0.05 * ticks
+		if vy < 0.0:
+			vy += 0.01 * ticks
+	vy = clampf(vy, -3.0, 3.0)
+	if in_water(center()):
+		if vy < 0.0:
+			vy *= pow(0.95, ticks)
+		vy = minf(vy + 0.5 * ticks, 4.0)
+	velocity.y = vy * PX_TICK
+	anim += delta * 8.0
+	_fly_frame()
 
 
 ## Terraria's harpy: hovers above the player, drifting around them, flapping,
@@ -3273,6 +3434,9 @@ func _die(game, drops := true) -> void:
 	if def.ai == "worm":
 		_worm_unlink()
 	Audio.play_at(def.get("death_sound", "NPC_Killed_1"), center())
+	if carried != "" and drops:
+		var n: Array = CARRY_STACKS.get(carried, [1, 1])
+		game.spawn_item(carried, randi_range(int(n[0]), int(n[1])), center())
 	for d in def.get("drops", []) if drops else []:
 		if randf() < float(d[3]):
 			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)

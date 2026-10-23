@@ -7426,6 +7426,107 @@ func _summon_checks(c: Vector3i) -> void:
 	spiky.queue_free()
 	for e in spikes.call():
 		e.queue_free()
+	# Debuffs: Chilled slows you a quarter, Frozen holds you, Cursed stops
+	# items, Frostburn burns 8 a second; Warmth cuts the cold ones.
+	stand.call()
+	await frames(5)
+	var run_speed := func() -> float:
+		stand.call()
+		await frames(3)
+		# (Still speeding up: 0.08 px/tick², a quarter less chilled.)
+		Input.action_press("move_forward")
+		await frames(20)
+		var v := Vector2(p.velocity.x, p.velocity.z).length()
+		Input.action_release("move_forward")
+		await frames(10)
+		return v
+	p.timed_buffs.clear()
+	var free_run: float = await run_speed.call()
+	p.debuff("Chilled", 10.0)
+	var cold_run: float = await run_speed.call()
+	check(p.has_buff("Chilled") and absf(cold_run / free_run - 0.75) < 0.03, "Chilled: a quarter slower (%.2f of %.2f)" % [cold_run, free_run])
+	p.timed_buffs.clear()
+	p.timed_buffs["Warmth"] = 60.0
+	p.debuff("Chilled", 20.0)
+	p.debuff("Frozen", 2.0)
+	check(absf(p.timed_buffs.Chilled - 5.0) < 0.01 and absf(p.timed_buffs.Frozen - 1.0) < 0.01, "Warmth: Chilled a quarter as long, Frozen half")
+	p.timed_buffs.clear()
+	p.debuff("Frozen", 1.0)
+	p.inventory.slots[9] = Inventory.stack("WoodenSword", 1)
+	p.select(9)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(not p.can_act() and p._use_timer == 0.0, "Frozen: you can't move or use anything")
+	p.timed_buffs.clear()
+	p.debuff("Cursed", 1.0)
+	p.use_item()
+	check(p.can_act() and p._use_timer == 0.0 and "Cursed" in Player.DEBUFFS, "Cursed: no using items (and debuffs can't be right-clicked off)")
+	p.timed_buffs.clear()
+	p.god_mode = false
+	p.life = p.life_cap()
+	p._immune = 0.0
+	p.debuff("Frostburn", 1.0)
+	var burn0 := p.life
+	await _until(func(): return not p.has_buff("Frostburn"), 2.0)
+	check(burn0 - p.life >= 7 and burn0 - p.life <= 9, "Frostburn: 8 life a second (%d)" % [burn0 - p.life])
+	# What enemies put on you: the Spiked Ice Slime's touch and its spikes.
+	var cold_slime := game.spawn_npc("SpikedIceSlime", Vector3(arena) + Vector3(2.5, 0, 0.5))
+	cold_slime.set_physics_process(false)
+	p.life = p.life_cap()
+	p._immune = 0.0
+	p.hurt(cold_slime.damage, cold_slime.center(), false, cold_slime)
+	check(p.has_buff("Chilled") and p.timed_buffs.Chilled > 19.0, "a Spiked Ice Slime's touch: Chilled for 20 s")
+	p.timed_buffs.clear()
+	stand.call()
+	await frames(2)
+	p._immune = 0.0
+	var spike_shot := game.spawn_projectile("IceSpike", p.center() + Vector3(0, 0, 1.5), Vector3(0, 0, -10), 18, 0.0, 0.0, 0.0, 0.5, false)
+	await _until(func(): return not is_instance_valid(spike_shot), 1.0)
+	check(p.has_buff("Chilled"), "its Ice Spikes chill you too")
+	p.timed_buffs.clear()
+	# A slime's carried stone: Stoned.
+	cold_slime.carry("StoneBlock")
+	p._immune = 0.0
+	p.hurt(cold_slime.damage, cold_slime.center(), false, cold_slime)
+	check(p.has_buff("Stoned") and not p.can_act(), "a slime carrying stone: Stoned")
+	p.timed_buffs.clear()
+	cold_slime.queue_free()
+	p.god_mode = true
+	p.life = p.life_cap()
+	# Slimes carry items, dropped when they die.
+	var carrier := game.spawn_npc("BlueSlime", Vector3(arena) + Vector3(-3.5, 0, 0.5))
+	carrier.carry("Torch")
+	check(carrier.carried == "Torch" and carrier._carry_sprite != null, "a slime can carry an item, seen inside it")
+	carrier.hit(1000, 0.0, Vector3.FORWARD, 0.0)
+	await frames(2)
+	var torches := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "Torch")
+	check(torches.size() >= 1 and torches[0].count >= 5 and torches[0].count <= 10, "and drops it when it dies (5 to 10 torches)")
+	for e in torches:
+		e.queue_free()
+	var roller := game.spawn_npc("BlueSlime", Vector3(arena) + Vector3(-5.5, 0, 0.5))
+	roller.set_physics_process(false)
+	var carried_counts := {}
+	var rolls := 0
+	for i in 800:
+		roller._roll_carried(game)
+		if roller.carried != "":
+			rolls += 1
+			carried_counts[roller.carried] = carried_counts.get(roller.carried, 0) + 1
+	roller.carry("")
+	roller.queue_free()
+	check(rolls > 30 and rolls < 95 and carried_counts.has("Cloud"), "surface slimes: about 1 in 13 carry something, a Cloud among them (%d of 800: %s)" % [rolls, carried_counts])
+	# The Vulture: perched till you come near, then it flies.
+	stand.call()
+	var vulture := game.spawn_npc("Vulture", Vector3(arena) + Vector3(10.5, 0, 0.5))
+	await frames(60)
+	var perched := vulture.ai_state == 0 and not vulture.flying
+	vulture.global_position = p.global_position + Vector3(2.0, 0, 0)
+	vulture.velocity = Vector3.ZERO
+	var flew := await _until(func(): return vulture.ai_state == 1 and vulture.flying, 1.0)
+	await frames(30)
+	check(perched and flew and vulture.global_position.y > p.global_position.y + 0.5, "the Vulture sits till you come near, then flies up at you")
+	vulture.queue_free()
 	# Poisoned enemies: 6 life a second.
 	foe = enemy.call(Vector3i(8, 0, -8))
 	foe.life = 100
