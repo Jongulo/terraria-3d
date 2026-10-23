@@ -140,11 +140,22 @@ func _show_menu() -> void:
 		_start({"mode": "new", "name": name_edit.text.strip_edges() if name_edit.text.strip_edges() != "" else "World", "seed": seed,
 				"evil": evil_pick.selected, "size": Game.WORLD_SIZES.keys()[size_pick.selected], "creative": mode_pick.selected == 1}))
 	box.add_child(new_btn)
+	# Test worlds: the whole sandbox, or one theme of it (TestWorld.KINDS).
+	var test_row := HBoxContainer.new()
+	var test_pick := OptionButton.new()
+	for k in TestWorld.KINDS:
+		test_pick.add_item(TestWorld.KINDS[k])
+	test_pick.tooltip_text = "Test World: everything at once. Or just NPCs (arena, town, critters), wiring (a wiring lab), biomes, or building (blocks, liquids, houses)"
+	test_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	test_row.add_child(test_pick)
 	var test_btn := Button.new()
-	test_btn.text = "Create Test World"
-	test_btn.tooltip_text = "Flat sandbox with every item, enemy spawners, dummies and liquids"
-	test_btn.pressed.connect(func(): _start({"mode": "test", "name": _unique_name("Test World"), "seed": 1}))
-	box.add_child(test_btn)
+	test_btn.text = "Create"
+	test_btn.tooltip_text = "Flat sandbox with every item in chests, and what the picked kind is for"
+	test_btn.pressed.connect(func():
+		var k: String = TestWorld.KINDS.keys()[test_pick.selected]
+		_start({"mode": "test", "test_kind": k, "name": _unique_name(TestWorld.KINDS[k]), "seed": 1}))
+	test_row.add_child(test_btn)
+	box.add_child(test_row)
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 10)
 	box.add_child(bottom)

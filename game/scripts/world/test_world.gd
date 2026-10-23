@@ -5,9 +5,16 @@ extends Node3D
 ## hammer springs, lava pit), a block gallery, an ore wall, a fall-test tower and
 ## a dark room. Debug hotkeys: F1 help, F2 god mode, F3 fly, F4 day/night,
 ## F5 kill enemies, F6 clear drops, F7 natural spawns, F8 heal.
+##
+## Its kinds (KINDS): the whole thing ("all", the one the tests walk), or one
+## theme of it - NPCs, wiring (a wiring lab of its own), biomes, building -
+## each with the spawn plaza and the chests of every item.
 
 const SIZE := Vector3i(256, 128, 256)
 const GROUND := 64  # top grass block; you stand at GROUND + 1
+## Kind -> its name in the menu and on the plaza.
+const KINDS := {"all": "Test World", "npc": "NPC Test World", "wiring": "Wiring Test World",
+		"biome": "Biome Test World", "building": "Building Test World"}
 const SPAWNER_INTERVAL := 3.0
 const SPAWNER_MAX_ALIVE := 3
 const CATEGORIES := [
@@ -21,30 +28,36 @@ const CATEGORIES := [
 	["Materials", ["material"]],
 	["Coins & Misc", []],
 ]
+## The F1 help: [the themes a line is for ("" every kind), the line].
 const HELP := [
-	"TEST WORLD",
-	"F1  this help",
-	"F2  god mode (no damage, endless air and mana)",
-	"F3  fly (Space up, Shift down)",
-	"F4  day / night",
-	"F5  kill all enemies      F6  clear dropped items",
-	"F7  natural enemy spawns on/off      F8  heal",
-	"Spawners: right-click spawns one, Shift+right-click toggles auto-spawn",
-	"North: every item in chests, crafting by spawn   East: enemy arena",
-	"West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower (rope and chain)",
-	"North-west of the water pool: the fishing pond (deep enough for full fishing power) with a dock",
-	"West of the gallery: the critter pen (a spawner for each critter; catch them with a Bug Net)",
-	"A fishing spot in every biome (signposted): Snow, Desert, Jungle (and honey), Corruption, Crimson,",
-	"  the ocean (far north), the Dungeon (west), lava, the mushroom cavern, underground (shaft by the house), the sky",
-	"North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson",
-	"North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks",
-	"South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)   Far west: the Dungeon",
-	"South-east, down the shaft past the tower: the Glowing Mushroom biome",
-	"North-east, down the shaft in the Jungle: a bee hive (honey, honey blocks, the larva)",
-	"East of the arena: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist, Goblin Tinkerer and Angler (right-click to talk)",
+	["", "F1  this help"],
+	["", "F2  god mode (no damage, endless air and mana)"],
+	["", "F3  fly (Space up, Shift down)"],
+	["", "F4  day / night"],
+	["", "F5  kill all enemies      F6  clear dropped items"],
+	["", "F7  natural enemy spawns on/off      F8  heal"],
+	["", "North: every item in chests, crafting by spawn"],
+	["npc", "Spawners: right-click spawns one, Shift+right-click toggles auto-spawn"],
+	["npc", "East: enemy arena   East of it: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad,"],
+	["npc", "  Demolitionist, Goblin Tinkerer and Angler (right-click to talk)"],
+	["npc", "West of the gallery: the critter pen (a spawner for each critter; catch them with a Bug Net)"],
+	["npc biome", "Far west: the Dungeon (the Old Man by its door)"],
+	["building", "West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower (rope and chain)"],
+	["building", "North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks"],
+	["building", "South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)"],
+	["biome", "North-west of the plaza: the fishing pond (deep enough for full fishing power) with a dock"],
+	["biome", "A fishing spot in every biome (signposted): Snow, Desert, Jungle (and honey), Corruption, Crimson,"],
+	["biome", "  the ocean (far north), the Dungeon (west), lava, the mushroom cavern, underground, the sky"],
+	["biome", "North: Snow (north-west), Desert, Jungle (north-east)   South-west / south-east: Corruption, Crimson"],
+	["biome", "South-east, down the shaft: the Glowing Mushroom biome   Up (F3): floating islands"],
+	["biome", "North-east, down the shaft in the Jungle: a bee hive (honey, honey blocks, the larva)"],
+	["wiring", "South: the wiring lab - levers, pressure plates, actuators, timers, traps, teleporters,"],
+	["wiring", "  a Junction Box, a Wire Bulb and a Pixel Box display (signposted). Hold a wrench to see the wires"],
 ]
 
 var game: Game
+## Which of KINDS this one is.
+var kind := "all"
 var natural_spawns := false
 ## "x,y,z" -> {pos: Vector3i, kind, auto, timer, alive: Array, sprite, label}
 var spawners := {}
@@ -108,41 +121,193 @@ func build() -> void:
 	_b(c + Vector3i(0, 0, -4), "furnace")
 	_b(c + Vector3i(2, 0, -4), "iron_anvil")
 	_label(Vector3(c + Vector3i(0, 1, -4)) + Vector3(0.5, 0.6, 0.5), "Crafting stations")
-	_label(Vector3(c) + Vector3(0.5, 3.2, 0.5), "Test World - press F1 for help", 26)
+	_label(Vector3(c) + Vector3(0.5, 3.2, 0.5), "%s - press F1 for help" % KINDS[kind], 26)
 
 	_build_storage(c)
-	_build_arena(c)
-	_build_dummies(c)
-	_build_liquids(c)
-	_build_fishing(c)
-	_build_fishing_rooms(c)
-	_build_critter_pen(c)
-	_build_gallery(c)
-	_build_tower(c)
-	_build_dark_room(c)
-	_build_trees(c)
-	_build_garden(c)
-	_build_platforms(c)
-	_build_house(c)
-	_build_library(c)
-	_build_hammered(c)
-	_build_town(c)
-	_build_mushroom_cavern(c)
+	if _has("npc"):
+		_build_arena(c)
+		_build_dummies(c)
+		_build_critter_pen(c)
+		_build_town(c)
+	if _has("building"):
+		_build_liquids(c)
+		_build_gallery(c)
+		_build_tower(c)
+		_build_dark_room(c)
+		_build_trees(c)
+		_build_garden(c)
+		_build_platforms(c)
+		_build_house(c)
+		_build_library(c)
+		_build_hammered(c)
+	if _has("biome"):
+		_build_fishing(c)
+		_build_fishing_rooms(c)
+		_build_mushroom_cavern(c)
+	if kind == "wiring":
+		_build_wiring_lab(c)
 
 	w.set_blocks_raw(_blocks)
 	for sh in _shapes:
 		w.set_shape(sh[0], sh[1])
 	w.set_liquids_raw(_liquids)
-	_build_islands(c)
-	_build_evil(c)
-	_build_biomes(c)
-	_build_hive(c)
-	_build_dungeon(c)
-	game.world.generate_mushroom_biome(c + MUSHROOM, 26, 41, false)
-	_build_fishing_spots(c)
+	if _has("biome"):
+		_build_islands(c)
+		_build_evil(c)
+		_build_biomes(c)
+		_build_hive(c)
+	if _has("biome") or _has("npc"):
+		_build_dungeon(c)
+	if _has("biome"):
+		game.world.generate_mushroom_biome(c + MUSHROOM, 26, 41, false)
+		_build_fishing_spots(c)
 	w.relight_all()
 	_blocks = PackedInt32Array()
 	_liquids = PackedInt32Array()
+
+
+## The wiring lab (the wiring test world), south of the plaza on a brick
+## floor, each station signposted:
+## - a lever wired to a door (red), torches (blue) and gemspark (green);
+## - the seven pressure plates, each wired to a torch, with who sets it off;
+## - a lever and a wall of stone with actuators;
+## - timers: a 1 Second and a 1/4 Second one switched on, a 5 Second one off
+##   (right-click to switch);
+## - traps: a gray plate and a Dart Trap down a lane, an orange plate and a
+##   boulder on actuated stone, a Geyser;
+## - two Teleporters and the lever between them;
+## - wires crossing at a Junction Box, each to its own torch;
+## - a Wire Bulb on four levers, one a colour;
+## - a 3 x 3 Pixel Box display: each of three levers is wired to a row (red)
+##   and a column (blue), lighting the box where they cross;
+## - a Projectile Pressure Pad wired to a torch.
+func _build_wiring_lab(c: Vector3i) -> void:
+	_box(c + Vector3i(-30, -1, 8), c + Vector3i(30, -1, 58), "gray_brick")
+	var at := func(x: int, y: int, z: int) -> Vector3i: return c + Vector3i(x, y, z)
+	var sign := func(x: float, z: float, text: String) -> void: _label(Vector3(c) + Vector3(x + 0.5, 3.0, z + 0.5), text, 18)
+	# A lever: a door, torches, gemspark.
+	_b(at.call(-28, 0, 12), "lever")
+	_door(at.call(-20, 0, 12), "wooden_door", 0)
+	for x in range(-26, -23):
+		_b(at.call(x, 0, 14), "torch")
+		_b(at.call(x, 0, 10), "ruby_gemspark_block")
+	_wire(Wiring.RED, [at.call(-28, 0, 12), at.call(-20, 0, 12)])
+	_wire(Wiring.BLUE, [at.call(-28, 0, 12), at.call(-28, 0, 14), at.call(-24, 0, 14)])
+	_wire(Wiring.GREEN, [at.call(-28, 0, 12), at.call(-28, 0, 10), at.call(-24, 0, 10)])
+	sign.call(-24, 12, "Lever: a door (red), torches (blue), gemspark (green)")
+	# The pressure plates.
+	var plates := [["red", "anyone"], ["green", "anyone"], ["gray", "you"], ["brown", "you"], ["blue", "you"], ["yellow", "not you"], ["orange", "you, once"]]
+	for i in plates.size():
+		var x := -28 + 4 * i
+		_b(at.call(x, 0, 20), "%s_pressure_plate" % plates[i][0])
+		_b(at.call(x, 0, 18), "torch")
+		_wire(Wiring.RED, [at.call(x, 0, 20), at.call(x, 0, 18)])
+		_label(Vector3(at.call(x, 0, 20)) + Vector3(0.5, 1.4, 0.5), "%s: %s" % [plates[i][0].capitalize(), plates[i][1]], 14)
+	sign.call(-16, 19, "Pressure plates (each to a torch)")
+	# Actuators.
+	_b(at.call(0, 0, 22), "lever")
+	for x in range(2, 7):
+		for y in range(0, 3):
+			_b(at.call(x, y, 20), "stone")
+			_wire(Wiring.GREEN | Wiring.ACTUATOR, [at.call(x, y, 20)])
+	_wire(Wiring.GREEN, [at.call(0, 0, 22), at.call(2, 0, 22), at.call(2, 0, 20)])
+	sign.call(4, 22, "Actuators: the lever switches the wall")
+	# Timers.
+	_b(at.call(-28, 0, 28), "timer_1s_on")
+	_b(at.call(-20, 0, 28), "timer_quarter_on")
+	_b(at.call(-12, 0, 28), "timer_5s")
+	for x in [-26, -25, -24, -18, -17, -16, -10, -9, -8]:
+		_b(at.call(x, 0, 28), "torch")
+	_wire(Wiring.RED, [at.call(-28, 0, 28), at.call(-24, 0, 28)])
+	_wire(Wiring.RED, [at.call(-20, 0, 28), at.call(-16, 0, 28)])
+	_wire(Wiring.RED, [at.call(-12, 0, 28), at.call(-8, 0, 28)])
+	sign.call(-18, 28, "Timers: 1 s and 1/4 s on, 5 s off (right-click one)")
+	# Traps.
+	_b(at.call(-28, 0, 36), "gray_pressure_plate")
+	_b(at.call(-14, 0, 36), "dart_trap")
+	game.world.add_decoration("rotation", at.call(-14, 0, 36), 3)
+	_wire(Wiring.YELLOW, [at.call(-28, 0, 36), at.call(-14, 0, 36)])
+	_b(at.call(-8, 0, 36), "orange_pressure_plate")
+	for y in [0, 1]:
+		_b(at.call(-8, y, 39), "stone")
+		_wire(Wiring.ACTUATOR, [at.call(-8, y, 39)])
+	_b(at.call(-8, 2, 39), "boulder")
+	_wire(Wiring.RED, [at.call(-8, 0, 36), at.call(-8, 0, 39), at.call(-8, 1, 39)])
+	_b(at.call(-2, 0, 36), "geyser")
+	sign.call(-20, 36, "Traps: a plate and a Dart Trap")
+	sign.call(-6, 37, "a boulder on actuated stone; a Geyser (step on it)")
+	# Teleporters.
+	_b(at.call(4, 0, 36), "teleporter")
+	_b(at.call(16, 0, 36), "teleporter")
+	_b(at.call(10, 0, 38), "lever")
+	_wire(Wiring.YELLOW, [at.call(10, 0, 38), at.call(4, 0, 38), at.call(4, 0, 36)])
+	_wire(Wiring.YELLOW, [at.call(10, 0, 38), at.call(16, 0, 38), at.call(16, 0, 36)])
+	sign.call(10, 36, "Teleporters: stand on one, flip the lever")
+	# A Junction Box.
+	_b(at.call(-22, 0, 44), "junction_box")
+	_b(at.call(-28, 0, 44), "lever")
+	_b(at.call(-22, 0, 50), "lever")
+	_b(at.call(-16, 0, 44), "torch")
+	_b(at.call(-22, 0, 40), "torch")
+	_wire(Wiring.RED, [at.call(-28, 0, 44), at.call(-16, 0, 44)])
+	_wire(Wiring.RED, [at.call(-22, 0, 50), at.call(-22, 0, 40)])
+	sign.call(-22, 46, "Junction Box: crossing wires, each lever its own torch")
+	# A Wire Bulb.
+	_b(at.call(-4, 0, 44), "wire_bulb")
+	var bulb_levers := [[-8, Wiring.RED], [-6, Wiring.BLUE], [-2, Wiring.GREEN], [0, Wiring.YELLOW]]
+	for bl in bulb_levers:
+		_b(at.call(bl[0], 0, 46), "lever")
+		_wire(bl[1], [at.call(bl[0], 0, 46), at.call(bl[0], 0, 44) if bl[0] == -8 else at.call(-4, 0, 46), at.call(-4, 0, 44)])
+	sign.call(-4, 45, "Wire Bulb: a lever for each colour")
+	# The Pixel Box display (rows red, columns blue, crossing in the boxes).
+	for x in range(14, 17):
+		for y in range(1, 4):
+			_b(at.call(x, y, 46), "pixel_box")
+	_wire(Wiring.RED, [at.call(12, 1, 46), at.call(16, 1, 46)])
+	_wire(Wiring.RED, [at.call(14, 2, 46), at.call(18, 2, 46)])
+	_wire(Wiring.RED, [at.call(12, 3, 46), at.call(16, 3, 46)])
+	_wire(Wiring.BLUE, [at.call(14, 0, 46), at.call(14, 3, 46)])
+	_wire(Wiring.BLUE, [at.call(15, 1, 46), at.call(15, 4, 46)])
+	_wire(Wiring.BLUE, [at.call(16, 0, 46), at.call(16, 3, 46)])
+	_b(at.call(10, 0, 50), "lever")
+	_b(at.call(20, 0, 50), "lever")
+	_b(at.call(24, 0, 52), "lever")
+	_wire(Wiring.RED, [at.call(10, 0, 50), at.call(10, 1, 50), at.call(12, 1, 50), at.call(12, 1, 46)])
+	_wire(Wiring.BLUE, [at.call(10, 0, 50), at.call(14, 0, 50), at.call(14, 0, 46)])
+	_wire(Wiring.RED, [at.call(20, 0, 50), at.call(20, 2, 50), at.call(18, 2, 50), at.call(18, 2, 46)])
+	_wire(Wiring.BLUE, [at.call(20, 0, 50), at.call(20, 5, 50), at.call(15, 5, 50), at.call(15, 5, 46), at.call(15, 4, 46)])
+	_wire(Wiring.RED, [at.call(24, 0, 52), at.call(24, 3, 52), at.call(12, 3, 52), at.call(12, 3, 46)])
+	_wire(Wiring.BLUE, [at.call(24, 0, 52), at.call(16, 0, 52), at.call(16, 0, 46)])
+	sign.call(15, 48, "Pixel Box display: each lever crosses a row and a column")
+	# A Projectile Pressure Pad.
+	_b(at.call(-28, 0, 54), "projectile_pressure_pad")
+	_b(at.call(-28, 0, 52), "torch")
+	_wire(Wiring.RED, [at.call(-28, 0, 54), at.call(-28, 0, 52)])
+	sign.call(-26, 54, "Projectile Pressure Pad: shoot it")
+
+
+## Wire of `bits` (colours, ACTUATOR) through `points`, straight from each to
+## the next (as worldgen's: "wire" decorations the wiring loads).
+func _wire(bits: int, points: Array) -> void:
+	var p: Vector3i = points[0]
+	var cells := [p]
+	for q in points.slice(1):
+		while p != q:
+			for axis in 3:
+				if p[axis] != q[axis]:
+					p[axis] += signi(q[axis] - p[axis])
+					break
+			cells.append(p)
+	for cell in cells:
+		if bits & 15:
+			game.world.add_decoration("wire", cell, bits & 15)
+		if bits & Wiring.ACTUATOR:
+			game.world.add_decoration("actuator", cell, 0)
+
+
+## Whether this kind has the theme `theme` (the whole test world has all).
+func _has(theme: String) -> bool:
+	return kind == "all" or kind == theme
 
 
 ## Floating islands (the world generator's) above the plaza: a house island
@@ -861,6 +1026,9 @@ func give_loadout(p: Player) -> void:
 	p.inventory.add("ReinforcedFishingPole", 1)
 	p.inventory.add("MasterBait", 99)
 	p.inventory.add_money(50 * 10000)  # 50 gold, for the town's shops
+	if kind == "wiring":
+		for item in ["Wrench", "BlueWrench", "GreenWrench", "YellowWrench", "WireCutter", "Wire", "Actuator"]:
+			p.inventory.add(item, p.inventory.max_stack(item))
 	p.accessories.slots.fill(null)
 	for i in 3:
 		p.accessories.slots[i] = Inventory.stack(["HermesBoots", "CloudinaBottle", "BandofRegeneration"][i], 1)
@@ -893,7 +1061,7 @@ func activate() -> void:
 		_make_spawner_visual(sp)
 	for d in _dummies:
 		game.spawn_npc("TargetDummy", Vector3(d) + Vector3(0.5, 0, 0.5))
-	if game.town.residents.is_empty():
+	if game.town.residents.is_empty() and _has("npc"):
 		_settle_town()
 	game.spawner.process_mode = Node.PROCESS_MODE_INHERIT if natural_spawns else Node.PROCESS_MODE_DISABLED
 	_build_overlay()
@@ -1038,7 +1206,7 @@ func _process(_delta: float) -> void:
 			flags.append("FLY")
 		if natural_spawns:
 			flags.append("SPAWNS ON")
-		_status.text = "TEST WORLD   F1 help" + ("   [" + "] [".join(flags) + "]" if not flags.is_empty() else "")
+		_status.text = KINDS[kind].to_upper() + "   F1 help" + ("   [" + "] [".join(flags) + "]" if not flags.is_empty() else "")
 
 
 # ------------------------------------------------------------------ hotkeys
@@ -1097,6 +1265,15 @@ func set_night(night: bool) -> void:
 	game.message("It is now " + ("night" if night else "day"), Color(1, 0.9, 0.5))
 
 
+## This kind's help lines.
+func help_lines() -> Array:
+	var out := [KINDS[kind].to_upper()]
+	for h in HELP:
+		if h[0] == "" or Array(h[0].split(" ")).any(func(t): return _has(t)):
+			out.append(h[1])
+	return out
+
+
 func _build_overlay() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 11
@@ -1142,7 +1319,7 @@ func _build_overlay() -> void:
 	sb.set_corner_radius_all(8)
 	_help.add_theme_stylebox_override("panel", sb)
 	var t := Label.new()
-	t.text = "\n".join(HELP)
+	t.text = "\n".join(help_lines())
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_help.add_child(t)
 	_help.visible = false
@@ -1161,10 +1338,11 @@ func save_state() -> Dictionary:
 	var dummies := []
 	for d in _dummies:
 		dummies.append([d.x, d.y, d.z])
-	return {"spawners": sps, "labels": labels, "dummies": dummies, "natural_spawns": natural_spawns}
+	return {"kind": kind, "spawners": sps, "labels": labels, "dummies": dummies, "natural_spawns": natural_spawns}
 
 
 func load_state(d: Dictionary) -> void:
+	kind = d.get("kind", "all")
 	spawners.clear()
 	for s in d.get("spawners", []):
 		var pos := Vector3i(int(s[0][0]), int(s[0][1]), int(s[0][2]))

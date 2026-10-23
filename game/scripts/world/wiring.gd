@@ -12,8 +12,9 @@ extends RefCounted
 ## Triggers (HitSwitch): levers and switches (interact), pressure plates
 ## (Collision.SwitchTiles: red and green by anyone - you, NPCs, boulders;
 ## gray, brown, blue and orange by you, orange then breaking; yellow by
-## anything but you), timers while on (every 1, 3 or 5 s, or 1/2, 1/4), and a
-## Geyser stepped on (it spouts; not a signal).
+## anything but you; the Projectile Pressure Pad by shots), timers while on
+## (every 1, 3 or 5 s, or 1/2, 1/4), and a Geyser stepped on (it spouts; not a
+## signal). Also: Junction Boxes, Wire Bulbs, Teleporters, Pixel Boxes (trip).
 ##
 ## Worldgen lays its wire as "wire" decorations (style: the colours) and
 ## "actuator" ones (wires.rs); the game keeps them here and saves them with
@@ -127,30 +128,60 @@ func remove(p: Vector3i, bits: int) -> void:
 # ------------------------------------------------------------------ signals
 
 ## A trigger at `from` sends its signal (Wiring.TripWire): along each colour
-## of wire in its cell, every cell reached is hit once (the trigger's own
-## cell isn't).
+## of wire in its cell in turn (HitWire), every cell reached is hit once for
+## that colour (the trigger's own cell isn't). A Junction Box or Pixel Box
+## passes it straight on (across, so wires cross there without joining).
+## After each colour, the first two Teleporters it reached swap who stands
+## on them; after them all, a Pixel Box reached both across and up or down
+## switches (PixelBoxPass).
 func trip(game, from: Vector3i) -> void:
-	var hit := {from: true}
-	_objects.clear()
 	var here := mask(from)
+	_pixels.clear()
 	for colour in COLOURS:
 		if here & colour == 0:
 			continue
-		var seen := {from: true}
-		var queue: Array[Vector3i] = [from]
+		var hit := {from: true}
+		_objects.clear()
+		_teleporters.clear()
+		var seen := {[from, -1]: true}
+		var queue: Array = [[from, -1]]
 		var i := 0
 		while i < queue.size():
-			var p: Vector3i = queue[i]
+			var p: Vector3i = queue[i][0]
+			var came: int = queue[i][1]
 			i += 1
-			for d in [Vector3i.RIGHT, Vector3i.LEFT, Vector3i.UP, Vector3i.DOWN, Vector3i.FORWARD, Vector3i.BACK]:
-				var n: Vector3i = p + d
-				if seen.has(n) or mask(n) & colour == 0:
+			var junction: bool = came >= 0 and Data.block(game.world.get_block(p)).get("junction", false)
+			for k in DIRS.size():
+				if junction and k != came:
 					continue
-				seen[n] = true
-				queue.append(n)
+				var n: Vector3i = p + DIRS[k]
+				if mask(n) & colour == 0:
+					continue
+				var nj: bool = Data.block(game.world.get_block(n)).get("junction", false)
+				var state := [n, k if nj else -1]
+				if seen.has(state):
+					continue
+				seen[state] = true
+				queue.append(state)
+				if nj and Data.block(game.world.get_block(n)).get("pixel_box", false):
+					_pixels[n] = int(_pixels.get(n, 0)) | (2 if DIRS[k].y != 0 else 1)
 				if not hit.has(n):
 					hit[n] = true
-					hit_single(game, n)
+					hit_single(game, n, colour)
+		if _teleporters.size() >= 2:
+			_teleport(game, _teleporters[0], _teleporters[1])
+	for p in _pixels:
+		if _pixels[p] == 3:
+			var b: Dictionary = Data.block(game.world.get_block(p))
+			if b.has("toggles_to"):
+				game.world.set_block(p, Data.block_id(b.toggles_to))
+
+
+const DIRS := [Vector3i.RIGHT, Vector3i.LEFT, Vector3i.UP, Vector3i.DOWN, Vector3i.FORWARD, Vector3i.BACK]
+## The Wire Bulb's bit for each colour (its sheet: red, green, blue, yellow).
+const BULB_BITS := {RED: 1, GREEN: 2, BLUE: 4, YELLOW: 8}
+var _teleporters: Array = []
+var _pixels := {}
 
 
 ## Objects of several cells already hit this time (Terraria's SkipWire:
@@ -158,8 +189,8 @@ func trip(game, from: Vector3i) -> void:
 var _objects := {}
 
 
-## A cell the signal reaches (Wiring.HitWireSingle).
-func hit_single(game, p: Vector3i) -> void:
+## A cell the signal reaches (Wiring.HitWireSingle), by wire of `colour`.
+func hit_single(game, p: Vector3i, colour := RED) -> void:
 	var w: VoxelWorld = game.world
 	if mask(p) & ACTUATOR and w.get_block(p) != 0:
 		var off := not w.is_inactive(p)
@@ -180,6 +211,13 @@ func hit_single(game, p: Vector3i) -> void:
 	elif b.has("timer"):
 		w.set_block(p, Data.block_id(b.toggles_to))
 		_timer_left.erase(p)
+	elif b.has("bulb"):
+		# Its light for this colour goes on or off.
+		var st: int = int(b.bulb) ^ int(BULB_BITS[colour])
+		w.set_block(p, Data.block_id("wire_bulb" if st == 0 else "wire_bulb_%d" % st))
+	elif b.get("teleporter", false):
+		if _teleporters.size() < 2 and not _teleporters.has(p):
+			_teleporters.append(p)
 	match b.get("trap", ""):
 		"dart":
 			if _ready_mech(p):
@@ -189,6 +227,34 @@ func hit_single(game, p: Vector3i) -> void:
 			game.explode(Vector3(p) + Vector3(0.5, 0.5, 0.5), EXPLOSIVES_DAMAGE, 10.0, EXPLOSION)
 		"geyser":
 			geyser(game, p)
+
+
+## Wiring.Teleport: whoever stands on each of the two goes to the other (you
+## and NPCs; not bosses, nor what flies through blocks). Not when they're
+## next to each other.
+func _teleport(game, a: Vector3i, b: Vector3i) -> void:
+	if Vector3(b - a).length() < 2.0:
+		return
+	var moves := []
+	for pair in [[a, b], [b, a]]:
+		var on := func(pos: Vector3) -> bool:
+			var c: Vector3i = pair[0]
+			return absf(pos.x - (c.x + 0.5)) < 1.0 and absf(pos.z - (c.z + 0.5)) < 1.0 and pos.y >= c.y - 0.1 and pos.y < c.y + 1.5
+		var off := Vector3(pair[1] - pair[0])
+		var p = game.player
+		if p.alive and on.call(p.global_position):
+			moves.append([p, off])
+		for npc in game.npcs():
+			if npc.boss or npc.def.get("ai", "") in FLOATING or npc.def.get("life", 0) <= 5:
+				continue
+			if on.call(npc.global_position):
+				moves.append([npc, off])
+	for m in moves:
+		m[0].global_position += m[1]
+		if m[0] == game.player:
+			game.player._fall_start = game.player.global_position.y
+	if not moves.is_empty():
+		Audio.play_at("Item_6", Vector3(a) + Vector3(0.5, 0.5, 0.5), 0.6)
 
 
 ## A switch or lever flipped (HitSwitch): its look, Terraria's click, the
@@ -254,6 +320,8 @@ func update(game, delta: float) -> void:
 	for e in game.entities.get_children():
 		if e is Projectile and e.boulder:
 			_step(game, e.get_instance_id(), e.global_position - Vector3(0, 0.5, 0), "projectile")
+		elif e is Projectile and not e.geyser:
+			_step(game, e.get_instance_id(), e.global_position, "shot")
 	for id in _plate_of.keys():
 		if not is_instance_id_valid(id):
 			_plate_of.erase(id)
@@ -282,7 +350,9 @@ func _step(game, id: int, feet: Vector3, who: String) -> void:
 		if who == "player":
 			geyser(game, cell)
 		return
-	var answers := kind == "any" or (kind == "player" and who == "player") or (kind == "not_player" and who != "player")
+	# A shot only sets off the Projectile Pressure Pad, and only shots do.
+	var answers := (kind == "projectile") == (who == "shot") and (kind in ["any", "projectile"] or (kind == "player" and who == "player")
+			or (kind == "not_player" and who != "player"))
 	if not answers:
 		return
 	Audio.play_at("Mech_0", Vector3(cell) + Vector3(0.5, 0.1, 0.5), 0.6)

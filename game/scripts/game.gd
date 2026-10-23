@@ -64,6 +64,7 @@ var chests := Chests.new()
 ## Terraria's wiring: wire, actuators, triggers and what they set off.
 var wiring := Wiring.new()
 var wire_view := WireView.new()
+var laser_ruler := LaserRuler.new()
 ## The town NPCs and their homes.
 var town := Town.new()
 ## The Goblin Army (Invasion): on its way, here, beaten.
@@ -136,6 +137,7 @@ func start(params: Dictionary) -> void:
 	elif params.mode == "test":
 		world.start_generate_flat(int(params.get("seed", 1)), TestWorld.SIZE, TestWorld.GROUND)
 		_make_test_world()
+		test_world.kind = params.get("test_kind", "all")
 	else:
 		world.set_world_evil(int(params.get("evil", 0)))
 		# A size name ("small"...), or exact dimensions (tests).
@@ -242,6 +244,8 @@ func _on_world_ready() -> void:
 	wiring.setup(self)
 	wire_view.setup(self)
 	add_child(wire_view)
+	laser_ruler.setup(self)
+	add_child(laser_ruler)
 
 	add_child(player)
 	sky.camera = player.camera

@@ -455,6 +455,7 @@ func _run() -> void:
 	await _dungeon_enemy_checks(c)
 	await _trap_checks(c)
 	await _wiring_checks(c)
+	await _wiring_more_checks(c)
 	await _boulder_kind_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
@@ -5989,6 +5990,128 @@ func _boulder_kind_checks(c: Vector3i) -> void:
 	p.god_mode = was_god
 
 
+## Junction Boxes, Wire Bulbs, Teleporters, Pixel Boxes, the Projectile
+## Pressure Pad, the Laser Ruler.
+func _wiring_more_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var wr: Wiring = game.wiring
+	var was_god := p.god_mode
+	p.god_mode = true
+	var o := c + Vector3i(-30, 45, -30)
+	var stone := Data.block_id("stone")
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			w.set_block(o + Vector3i(x, -1, z), stone)
+			for y in range(0, 8):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	p.global_position = Vector3(o) + Vector3(-8.5, 0, -8.5)
+	p._fall_start = p.global_position.y
+	var lamp_on := func(at: Vector3i) -> bool: return Data.block(w.get_block(at)).name == "brass_lantern"
+	# Two red wires crossing at a Junction Box don't join.
+	var lever := o + Vector3i(-5, 0, 0)
+	w.set_block(lever, Data.block_id("lever"))
+	var lamp_a := o + Vector3i(5, 0, 0)
+	var lamp_b := o + Vector3i(0, 0, 5)
+	for l in [lamp_a, lamp_b]:
+		w.set_block(l, Data.block_id("brass_lantern"))
+	wr.lay(lever, lamp_a, Wiring.RED)
+	wr.lay(o + Vector3i(0, 0, -5), lamp_b, Wiring.RED)
+	var box := o
+	w.set_block(box, Data.block_id("junction_box"))
+	game.hit_switch(lever)
+	await frames(2)
+	check(not lamp_on.call(lamp_a) and lamp_on.call(lamp_b), "wires crossing at a Junction Box: the signal goes straight on, not round the corner")
+	w.set_block(box, 0)
+	game.hit_switch(lever)
+	await frames(2)
+	check(lamp_on.call(lamp_a) and not lamp_on.call(lamp_b), "without it they join")
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			wr.remove(o + Vector3i(x, 0, z), 31)
+	# A Wire Bulb lights a light for each colour that reaches it.
+	var bulb := o + Vector3i(0, 0, 3)
+	w.set_block(bulb, Data.block_id("wire_bulb"))
+	wr.lay(lever, bulb, Wiring.RED)
+	wr.lay(lever, bulb, Wiring.BLUE)
+	game.hit_switch(lever)
+	await frames(2)
+	check(Data.block(w.get_block(bulb)).name == "wire_bulb_5", "a Wire Bulb on red and blue wire lights both (%s)" % Data.block(w.get_block(bulb)).name)
+	wr.remove(bulb, 31)
+	# Two Teleporters on a wire swap whoever stands on them.
+	var t1 := o + Vector3i(-3, 0, -6)
+	var t2 := o + Vector3i(6, 0, -6)
+	for t in [t1, t2]:
+		w.set_block(t, Data.block_id("teleporter"))
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			wr.remove(o + Vector3i(x, 0, z), 31)
+	wr.lay(lever, t1, Wiring.GREEN)
+	wr.lay(t1, t2, Wiring.GREEN)
+	p.global_position = Vector3(t1) + Vector3(0.5, 0.05, 0.5)
+	p._fall_start = p.global_position.y
+	await frames(2)
+	game.hit_switch(lever)
+	await frames(2)
+	check(p.global_position.distance_to(Vector3(t2) + Vector3(0.5, 0.05, 0.5)) < 0.5, "a signal takes you from one Teleporter to the other")
+	p.global_position = Vector3(o) + Vector3(-8.5, 0, -8.5)
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			for y in range(0, 6):
+				wr.remove(o + Vector3i(x, y, z), 31)
+	# A Pixel Box switches only when a signal reaches it across and up or down
+	# at once.
+	var px := o + Vector3i(2, 2, 2)
+	w.set_block(px, Data.block_id("pixel_box"))
+	wr.lay(lever, px + Vector3i(-1, 0, 0), Wiring.RED)
+	wr.add(px, Wiring.RED)
+	game.hit_switch(lever)
+	await frames(2)
+	var across_only: String = Data.block(w.get_block(px)).name
+	wr.lay(lever, px + Vector3i(0, 3, 0), Wiring.BLUE)
+	wr.lay(px + Vector3i(0, 3, 0), px, Wiring.BLUE)
+	game.hit_switch(lever)
+	await frames(2)
+	check(across_only == "pixel_box" and Data.block(w.get_block(px)).name == "pixel_box_on", "a Pixel Box lights when signals cross in it, not from one way (%s)" % across_only)
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			for y in range(0, 8):
+				wr.remove(o + Vector3i(x, y, z), 31)
+	# The Projectile Pressure Pad: an arrow sets it off.
+	var pad := o + Vector3i(0, 0, -3)
+	w.set_block(pad, Data.block_id("projectile_pressure_pad"))
+	w.set_block(lamp_a, Data.block_id("brass_lantern"))
+	wr.lay(pad, lamp_a, Wiring.RED)
+	p.global_position = Vector3(pad) + Vector3(0.5, 0.05, 0.5)
+	await frames(3)
+	check(lamp_on.call(lamp_a), "standing on the Projectile Pressure Pad does nothing")
+	p.global_position = Vector3(o) + Vector3(-8.5, 0, -8.5)
+	game.spawn_projectile("WoodenArrowFriendly", Vector3(pad) + Vector3(0.5, 0.4, -2.5), Vector3(0, 0, 20), 5, 0.0)
+	for i in 40:
+		await frames(1)
+		if not lamp_on.call(lamp_a):
+			break
+	check(not lamp_on.call(lamp_a), "an arrow through it sets it off")
+	# The Laser Ruler draws its lines through what you aim at.
+	var acc_was = p.accessories.slots[0]
+	p.accessories.slots[0] = Inventory.stack("LaserRuler", 1)
+	p.look_at_yaw_pitch(0.0, -PI / 2.0 + 0.01)
+	await frames(3)
+	check(game.laser_ruler.visible, "the Laser Ruler shows its lines")
+	p.accessories.slots[0] = acc_was
+	await frames(2)
+	check(not game.laser_ruler.visible, "and not once it's off")
+	for e in game.entities.get_children():
+		if e is Projectile or e is ItemDrop:
+			e.queue_free()
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			for y in range(-1, 8):
+				w.set_block(o + Vector3i(x, y, z), 0)
+				wr.remove(o + Vector3i(x, y, z), 31)
+	p.god_mode = was_god
+
+
 ## Terraria's wiring: wrenches, levers, plates, actuators, timers, geysers.
 func _wiring_checks(c: Vector3i) -> void:
 	var p := game.player
@@ -6057,13 +6180,30 @@ func _wiring_checks(c: Vector3i) -> void:
 	check(Doors.is_open(Data.block(w.get_block(Doors.bottom(w, door)))), "its signal opens the door on its red wire")
 	check(Data.block(w.get_block(lamp)).name == "brass_lantern_off", "switches off the lantern on its blue wire")
 	check(w.is_inactive(gate) and not w.is_solid(gate), "and actuates the block on its green wire: it isn't solid")
+	# Torches, candles, chandeliers, gemspark... switch too (Terraria's
+	# Toggle* in HitWireSingle: their off looks).
+	var torch := o + Vector3i(-4, 0, 2)
+	w.set_block(torch, Data.block_id("torch"))
+	var gem := o + Vector3i(-3, 0, 2)
+	w.set_block(gem, Data.block_id("ruby_gemspark_block"))
+	wr.lay(lever, torch, Wiring.YELLOW)
+	wr.add(gem, Wiring.YELLOW)
+	await frames(2)
+	var lit_torch := w.get_light(Vector3(torch) + Vector3(0.5, 0.5, 0.5))
 	game.hit_switch(lever)
 	await frames(2)
 	check(not w.is_inactive(gate) and w.is_solid(gate) and Data.block(w.get_block(lamp)).name == "brass_lantern"
 			and not Doors.is_open(Data.block(w.get_block(Doors.bottom(w, door)))), "flipped back, all back as they were")
+	check(Data.block(w.get_block(torch)).name == "torch_off" and Data.block(w.get_block(gem)).name == "ruby_gemspark_block_off"
+			and w.get_light(Vector3(torch) + Vector3(0.5, 0.5, 0.5)).r < lit_torch.r, "a torch and a gemspark block on the wire switch off (and the torch's light goes)")
+	game.hit_switch(lever)
+	await frames(2)
+	check(Data.block(w.get_block(torch)).name == "torch", "and on again")
+	game.hit_switch(lever)
+	await frames(2)
 	var saved := wr.save_state()
 	wr.load_state(game, saved)
-	check(wr.mask(lever) == Wiring.RED | Wiring.BLUE | Wiring.GREEN and wr.mask(gate) & Wiring.ACTUATOR, "the wiring saves and loads")
+	check(wr.mask(lever) == Wiring.RED | Wiring.BLUE | Wiring.GREEN | Wiring.YELLOW and wr.mask(gate) & Wiring.ACTUATOR, "the wiring saves and loads")
 	# Plates: red by anyone, blue only by you, yellow by anything but you;
 	# orange by you, breaking.
 	var plate := func(kind: String, by_npc: bool) -> bool:

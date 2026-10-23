@@ -171,7 +171,7 @@
 		"ai": "town", "art_height": 1.8, "invulnerable": true, "persistent": true, "talk": "mechanic", "hit_sound": "NPC_Hit_1", "death_sound": "NPC_Killed_1",
 		"town": {"arrives": "freed", "shop": ["Wrench", "BlueWrench", "GreenWrench", "YellowWrench", "WireCutter", "Wire", "Lever", "Switch",
 			"RedPressurePlate", "GreenPressurePlate", "GrayPressurePlate", "BrownPressurePlate", "BluePressurePlate", "YellowPressurePlate", "OrangePressurePlate",
-			"Actuator", "MechanicalLens", "EngineeringHelmet", "Timer5Second", "Timer3Second", "Timer1Second", "TimerOneHalfSecond", "TimerOneFourthSecond",
+			"ProjectilePressurePad", "Actuator", "Teleporter", "WirePipe", "PixelBox", "LaserRuler", "MechanicalLens", "EngineeringHelmet", "WireBulb", "Timer5Second", "Timer3Second", "Timer1Second", "TimerOneHalfSecond", "TimerOneFourthSecond",
 			["MechanicsRod", "angler_moonodd"]]},
 		"drops": [], "coins": 0},
 	"GoblinTinkerer": {"sprite": 107, "frames": 25, "walk_frames": [2, 15], "size": [0.7, 1.8], "life": 250, "damage": 0, "defense": 15, "knockback_resist": 0.5,
