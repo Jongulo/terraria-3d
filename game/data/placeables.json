@@ -241,6 +241,9 @@
 			"noise": "grain",
 			"strength": 0.95
 		},
+		"book": {
+			"one_color": true
+		},
 		"bookcase": {
 			"depth": 9.0,
 			"noise": "grain",
@@ -263,6 +266,14 @@
 			"bevel_size": 6.0,
 			"noise": "speckle",
 			"one_color": true
+		},
+		"brass_shelf": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": false,
+			"strength": 0.6
 		},
 		"cactus": {
 			"bevel": "chamfer",
@@ -1534,6 +1545,23 @@
 			"one_color": true,
 			"strength": 0.85
 		},
+		"geyser": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 5.0,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ghoulder": {
+			"one_color": true
+		},
 		"glass_platform": {
 			"noise": "speckle",
 			"strength": 0.3
@@ -2272,6 +2300,20 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"larva": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 13,
+			"one_color": true,
+			"strength": 0.55
+		},
 		"lead_anvil": {
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
@@ -2279,6 +2321,20 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.75
+		},
+		"lesser_mana_potion_bottle": {
+			"one_color": true
+		},
+		"lever": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"front",
+				"back"
+			],
+			"bevel_size": 5.0,
+			"depth": 16.0,
+			"one_color": true
 		},
 		"life_crystal": {
 			"bevel": "chamfer",
@@ -2489,6 +2545,14 @@
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 1.0
+		},
+		"metal_shelf": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": false,
+			"strength": 0.6
 		},
 		"mug": {
 			"bevel": "chamfer",
@@ -2898,6 +2962,13 @@
 			"noise": "grain",
 			"one_color": false
 		},
+		"projectile_pressure_pad": {
+			"one_color": false
+		},
+		"red_pressure_plate": {
+			"no_outline": false,
+			"one_color": false
+		},
 		"rich_mahogany_platform": {
 			"bevel": "none",
 			"bevel_size": 1.0,
@@ -3088,6 +3159,10 @@
 				"back"
 			],
 			"depth": 5.0,
+			"one_color": true
+		},
+		"switch": {
+			"depth": 3.0,
 			"one_color": true
 		},
 		"sword_in_stone": {
@@ -3585,6 +3660,36 @@
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
 			"depth": 1.0
+		},
+		"teleporter": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 2.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"timer_1s": {
+			"one_color": true
+		},
+		"timer_3s": {
+			"one_color": true
+		},
+		"timer_5s": {
+			"one_color": true
+		},
+		"timer_half": {
+			"one_color": true
+		},
+		"timer_quarter": {
+			"one_color": true
 		},
 		"tinkerers_workshop": {
 			"bevel": "chamfer",
@@ -4857,7 +4962,18 @@
 			"bevel": "chamfer",
 			"depth": 5.0
 		},
+		"water_bolt_book": {
+			"one_color": true
+		},
 		"wood_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": false,
+			"strength": 0.6
+		},
+		"wood_shelf": {
 			"bevel": "none",
 			"bevel_size": 1.0,
 			"depth": 16.0,
@@ -4940,6 +5056,11 @@
 		"bowl": {
 			"one_color": true
 		},
+		"brass_shelf": {
+			"noise": "speckle",
+			"one_color": false,
+			"strength": 0.5
+		},
 		"brown_pressure_plate": {
 			"noise": "speckle",
 			"one_color": true
@@ -4997,6 +5118,13 @@
 		},
 		"furnace": {
 			"one_color": false
+		},
+		"geyser": {
+			"one_color": true
+		},
+		"ghoulder": {
+			"no_outline": false,
+			"one_color": true
 		},
 		"glass_bowl": {
 			"one_color": true
@@ -5056,6 +5184,9 @@
 		"icicle_3": {
 			"one_color": true
 		},
+		"junction_box": {
+			"one_color": true
+		},
 		"jungle_vines": {
 			"one_color": true
 		},
@@ -5068,6 +5199,10 @@
 		"lesser_mana_potion_bottle": {
 			"one_color": true
 		},
+		"lever": {
+			"no_outline": false,
+			"one_color": true
+		},
 		"lily_pad": {
 			"one_color": true
 		},
@@ -5078,7 +5213,9 @@
 			"one_color": true
 		},
 		"metal_shelf": {
-			"one_color": false
+			"noise": "speckle",
+			"one_color": false,
+			"strength": 0.5
 		},
 		"mushroom": {
 			"one_color": true
@@ -5154,8 +5291,16 @@
 			"one_color": true,
 			"strength": 0.3
 		},
+		"projectile_pressure_pad": {
+			"no_outline": false,
+			"one_color": true
+		},
 		"purple_torch": {
 			"one_color": true
+		},
+		"rainbow_boulder": {
+			"no_outline": false,
+			"one_color": false
 		},
 		"red_torch": {
 			"one_color": true
@@ -5198,8 +5343,27 @@
 			"no_outline": false,
 			"one_color": false
 		},
+		"teleporter": {
+			"noise": "grain",
+			"one_color": true
+		},
 		"tiki_torch": {
 			"one_color": true
+		},
+		"timer_1s": {
+			"no_outline": false
+		},
+		"timer_3s": {
+			"no_outline": false
+		},
+		"timer_5s": {
+			"no_outline": false
+		},
+		"timer_half": {
+			"no_outline": false
+		},
+		"timer_quarter": {
+			"no_outline": false
 		},
 		"trash_can": {
 			"one_color": true
@@ -5230,7 +5394,15 @@
 		"wine_glass": {
 			"one_color": true
 		},
+		"wire_bulb": {
+			"one_color": true
+		},
 		"wood_platform": {
+			"noise": "speckle",
+			"one_color": false,
+			"strength": 0.5
+		},
+		"wood_shelf": {
 			"noise": "speckle",
 			"one_color": false,
 			"strength": 0.5
@@ -5252,11 +5424,19 @@
 			"seed": 3.0,
 			"strength": 0.35
 		},
+		"yellow_pressure_plate": {
+			"no_outline": false,
+			"one_color": true
+		},
 		"yellow_torch": {
 			"one_color": true
 		}
 	},
-	"hull_top": {},
+	"hull_top": {
+		"pixel_box": {
+			"one_color": true
+		}
+	},
 	"lathe": {},
 	"methods": {
 		"ash_wood_lamp": "hull",
@@ -5389,6 +5569,7 @@
 		"icicle_3": "hull",
 		"iron_anvil": "extruded",
 		"ivy_chest": "rendered",
+		"junction_box": "hull",
 		"jungle_plants": "hull",
 		"jungle_plants_10": "extruded",
 		"jungle_plants_11": "extruded",
@@ -5445,7 +5626,9 @@
 		"large_rocks_4": "extruded",
 		"large_rocks_5": "extruded",
 		"large_rocks_6": "extruded",
+		"larva": "extruded",
 		"lead_anvil": "extruded",
+		"lever": "hull",
 		"life_crystal": "extruded",
 		"lily_pad": "extruded",
 		"lily_pad_10": "extruded",
@@ -5502,11 +5685,13 @@
 		"pink_dungeon_lamp": "hull",
 		"pink_dungeon_vase": "hull",
 		"pink_vase": "hull",
+		"pixel_box": "hull_top",
 		"platinum_chandelier": "billboard",
 		"pot": "hull",
 		"pot_2": "hull",
 		"pot_3": "hull",
 		"purple_torch": "hull",
+		"red_pressure_plate": "extruded",
 		"red_torch": "hull",
 		"rich_mahogany_chest": "extruded",
 		"rich_mahogany_lamp": "hull",
@@ -5532,7 +5717,6 @@
 		"sunflower": "extruded",
 		"sunflower_2": "extruded",
 		"sunflower_3": "extruded",
-		"switch": "hull",
 		"sword_in_stone": "extruded",
 		"tall_flowers": "extruded",
 		"tall_flowers_10": "extruded",
@@ -5735,6 +5919,7 @@
 		"web_rope": "hull",
 		"white_torch": "hull",
 		"wine_glass": "hull",
+		"wire_bulb": "hull",
 		"work_bench": "hull",
 		"yellow_torch": "hull"
 	},
@@ -6045,6 +6230,9 @@
 		"furnace": {
 			"model": "extruded"
 		},
+		"geyser": {
+			"outline": false
+		},
 		"gold_chandelier": {
 			"model": "extruded"
 		},
@@ -6219,6 +6407,9 @@
 		"lead_anvil": {
 			"model": "extruded"
 		},
+		"lever": {
+			"outline": false
+		},
 		"life_crystal": {
 			"model": "extruded"
 		},
@@ -6392,6 +6583,9 @@
 		},
 		"sunflower_3": {
 			"model": "extruded"
+		},
+		"switch": {
+			"outline": false
 		},
 		"sword_in_stone": {
 			"model": "extruded"
@@ -6774,6 +6968,27 @@
 			"offset": [
 				0.0,
 				-2.0,
+				0.0
+			]
+		},
+		"timer_1s": {
+			"rotation": [
+				0.0,
+				180.0,
+				0.0
+			]
+		},
+		"timer_3s": {
+			"rotation": [
+				0.0,
+				180.0,
+				0.0
+			]
+		},
+		"timer_5s": {
+			"rotation": [
+				0.0,
+				180.0,
 				0.0
 			]
 		},
