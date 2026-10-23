@@ -16,6 +16,10 @@ var _music_a := AudioStreamPlayer.new()
 var _music_b := AudioStreamPlayer.new()
 var _current_track := ""
 var _fade := 1.0
+## An ambience loop (Terraria's rain: its RainAmbience track), at the sound
+## volume.
+var _ambient := AudioStreamPlayer.new()
+var _ambient_track := ""
 
 
 func _ready() -> void:
@@ -32,6 +36,7 @@ func _ready() -> void:
 		_players_3d.append(p)
 	add_child(_music_a)
 	add_child(_music_b)
+	add_child(_ambient)
 	sfx_volume = float(Settings.get_value("sfx_volume"))
 	music_volume = float(Settings.get_value("music_volume"))
 	Settings.changed.connect(func(key):
@@ -39,6 +44,19 @@ func _ready() -> void:
 			sfx_volume = float(Settings.get_value(key))
 		elif key == "music_volume":
 			music_volume = float(Settings.get_value(key)))
+
+
+## Loops an ambience (a MusicID name; "" for none) at `volume` (0..1).
+func set_ambient(track: String, volume := 1.0) -> void:
+	if track != _ambient_track:
+		_ambient_track = track
+		var id: int = Assets.ids.get("MusicID", {}).get(track, 0)
+		_ambient.stream = Assets.music("Music_%d" % id) if id > 0 else null
+		if _ambient.stream != null:
+			_ambient.play()
+		else:
+			_ambient.stop()
+	_ambient.volume_db = linear_to_db(maxf(0.0001, volume * sfx_volume))
 
 
 ## Plays a sound by Terraria name. Names ending in "_*" pick a random variant

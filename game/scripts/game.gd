@@ -34,6 +34,7 @@ var block_models := BlockModels.new()
 var starfall := Starfall.new()
 var torch_flames := TorchFlames.new()
 var falling_leaves := FallingLeaves.new()
+var rain := RainFall.new()
 ## Terraria's dust: what blocks throw off when hit or broken.
 var dust := DustParticles.new()
 ## "x,y,z" -> quarter turns, for directional block models (set when placed).
@@ -134,6 +135,7 @@ func start(params: Dictionary) -> void:
 	add_child(starfall)
 	add_child(torch_flames)
 	add_child(falling_leaves)
+	add_child(rain)
 	add_child(dust)
 	hud = Hud.new()
 	add_child(hud)
@@ -243,6 +245,7 @@ func _on_world_ready() -> void:
 	starfall.setup(self)
 	torch_flames.setup(world, self)
 	falling_leaves.setup(world, self)
+	rain.setup(self)
 	renderer.chunk_updated.connect(block_models.chunk_updated)
 	renderer.chunk_updated.connect(decorations.relight)
 	renderer.chunk_unloaded.connect(block_models.chunk_unloaded)
@@ -526,6 +529,21 @@ func space_level() -> float:
 	return surface_level + space_height
 
 
+## The forest surface's music (Main.UpdateAudio_DecideOnNewMusic): a storm's
+## (the Blood Moon's Eerie in one), by day rain's (Morning Rain its first
+## 3 hours) or a windy day's, by night the Blood Moon's or rain's.
+func surface_music() -> String:
+	if sky.storm:
+		return "Eerie" if sky.blood_moon else "Storm"
+	if sky.is_day:
+		if sky.cloud_alpha > 0.0:
+			return "MorningRain" if sky.time < 10800.0 else "Rain"
+		return "WindyDay" if sky.windy_day else "OverworldDay"
+	if sky.blood_moon:
+		return "Eerie"
+	return "Rain" if sky.cloud_alpha > 0.0 else "OverworldNight"
+
+
 func _update_music(pos: Vector3) -> void:
 	if boss_alive():
 		Audio.set_music(boss().def.get("music", "Boss1"))
@@ -534,17 +552,15 @@ func _update_music(pos: Vector3) -> void:
 	elif pos.y > space_level():
 		Audio.set_music("SpaceDay" if sky.is_day else "SpaceNight")
 	elif biome == "ocean":
-		Audio.set_music("OceanDay" if sky.is_day else "OceanNight")
+		Audio.set_music("Eerie" if sky.blood_moon and not sky.is_day else ("OceanDay" if sky.is_day else "OceanNight"))
 	elif biome != "" and pos.y > underworld_level:
 		Audio.set_music(biome_music(biome, pos.y < surface_level - 15.0))
 	elif pos.y < underworld_level:
 		Audio.set_music("Underworld")
 	elif pos.y < surface_level - 15.0:
 		Audio.set_music("Underground")
-	elif sky.is_day:
-		Audio.set_music("OverworldDay")
 	else:
-		Audio.set_music("OverworldNight")
+		Audio.set_music(surface_music())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -755,11 +771,25 @@ func _on_dawn() -> void:
 	spawner.roll_critter_odds()
 
 
-## Terraria: at dusk a strong enough player may be visited by the Eye of Cthulhu.
+## Terraria's world-event message colour (ChatColors.World).
+const WORLD_COLOR := Color(50 / 255.0, 1.0, 130 / 255.0)
+
+## Dusk (Main.UpdateTime_StartNight): the Eye of Cthulhu comes 1 night in 3
+## for a player with 200 max life and more than 10 defense once 4 town NPCs
+## live here (till it's beaten); else 1 night in 9 a Blood Moon rises (not
+## at a new moon, and only once someone has more than 120 max life).
 func _on_dusk() -> void:
-	if not defeated_bosses.has("EyeofCthulhu") and player.life_max >= 200 and randf() < 0.33:
-		message("You feel an evil presence watching you...", Color(0.2, 0.4, 1.0))
+	if not defeated_bosses.has("EyeofCthulhu") and player.life_max >= 200 and player.defense() > 10 \
+			and randi() % 3 == 0 and town.residents.size() >= 4:
+		message("You feel an evil presence watching you...", WORLD_COLOR)
 		_evil_presence = 20.0
+	elif sky.moon_phase != 4 and randi() % 9 == 0 and player.life_max > 120:
+		start_blood_moon()
+
+
+func start_blood_moon() -> void:
+	sky.blood_moon = true
+	message("The Blood Moon is rising...", WORLD_COLOR)
 
 
 ## `prefix`: the item's prefix, or Prefixes.NATURAL to roll one (enemy, boss

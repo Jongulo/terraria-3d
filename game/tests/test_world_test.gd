@@ -461,6 +461,7 @@ func _run() -> void:
 	await _alchemy_checks(c)
 	await _potion_checks(c)
 	await _summon_checks(c)
+	await _weather_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -3352,7 +3353,7 @@ func _accessory_checks(c: Vector3i) -> void:
 	check(Data.recipes.any(func(r): return r.result == "CopperWatch" and r.ingredients.get("CopperBar") == 10 and r.ingredients.get("Chain") == 1)
 			and Data.recipes.any(func(r): return r.result == "Magiluminescence" and r.ingredients.get("Topaz") == 5), "recipes: watches (10 bars and a Chain), Magiluminescence")
 	# Chests by depth: near the surface Terraria's surface loot.
-	var surface_items := ["Spear", "WoodenBoomerang", "Aglet", "ClimbingClaws", "CordageGuide", "Radar"]
+	var surface_items := ["Spear", "WoodenBoomerang", "Aglet", "ClimbingClaws", "Umbrella", "CordageGuide", "Radar"]
 	var top := Vector3i(c.x + 3, TestWorld.GROUND + 1, c.z + 60)
 	var all_surface := true
 	for i in 12:
@@ -7556,6 +7557,293 @@ func _summon_checks(c: Vector3i) -> void:
 			"slimes drop the Slime Staff, 1 in 10000")
 	check(Data.block_textures.get_layers() <= Data.MAX_LAYERS, "block textures fit the GPU (%d layers)" % Data.block_textures.get_layers())
 	p.armor.slots = worn
+	p.inventory.slots[9] = null
+	p.select(held)
+	p.god_mode = was_god
+	p.life = p.life_cap()
+
+
+## Rain, storms and the Blood Moon (Phase 4), their enemies and drops.
+func _weather_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var sky: SkySystem = game.sky
+	var held := p.selected
+	var was_god := p.god_mode
+	p.god_mode = true
+	var saved := sky.save_state()
+	var arena := c + Vector3i(-30, 60, 30)
+	for x in range(-14, 15):
+		for z in range(-14, 15):
+			w.set_block(arena + Vector3i(x, -1, z), Data.block_id("stone"))
+			for y in range(0, 24):
+				w.set_block(arena + Vector3i(x, y, z), 0)
+	for npc in game.npcs():
+		if npc.def.ai != "town":
+			npc.queue_free()
+	var stand := func() -> void:
+		p.global_position = Vector3(arena) + Vector3(0.5, 0, 0.5)
+		p._fall_start = p.global_position.y
+		p.velocity = Vector3.ZERO
+	stand.call()
+	game.spawner.set_physics_process(false)
+	await frames(2)
+	# Rain's timing and strength (StartRain, ChangeRain).
+	var shortest := 1 << 30
+	var longest := 0
+	var weakest := 1.0
+	var strongest := 0.0
+	sky.cloudiness = 0.3
+	for i in 300:
+		sky.start_rain()
+		shortest = mini(shortest, sky.rain_time)
+		longest = maxi(longest, sky.rain_time)
+		weakest = minf(weakest, sky.max_raining)
+		strongest = maxf(strongest, sky.max_raining)
+	check(sky.raining and shortest >= 8 * 3600 and longest <= int((86400 + 17 * 3600) * 1.5) and longest > 86400,
+			"rain lasts 8 to 24 game hours, often more (%d to %d ticks)" % [shortest, longest])
+	check(weakest >= 0.05 and strongest <= 0.4 and strongest > 0.3, "under few clouds it rains 5 to 40%% hard (%.2f to %.2f)" % [weakest, strongest])
+	sky.cloudiness = 0.95
+	strongest = 0.0
+	weakest = 1.0
+	for i in 300:
+		sky.change_rain()
+		weakest = minf(weakest, sky.max_raining)
+		strongest = maxf(strongest, sky.max_raining)
+	check(weakest >= 0.2 and strongest <= 0.9 and strongest > 0.8, "overcast, 20 to 90%% (%.2f to %.2f)" % [weakest, strongest])
+	# It comes in slowly (0.0005 a tick) and darkens the day.
+	sky.is_day = true
+	sky.time = 30000.0
+	sky.max_raining = 0.6
+	sky.cloud_alpha = 0.0
+	sky.wind_target = 0.0
+	for i in 100:
+		sky.rain_tick()
+	check(is_equal_approx(sky.cloud_alpha, 0.05), "the rain comes in 0.0005 a tick (%.4f after 100)" % sky.cloud_alpha)
+	sky.cloud_alpha = 0.6
+	sky._update_visuals(0.0)
+	var wet_light := sky.sky_light
+	sky.cloud_alpha = 0.0
+	sky._update_visuals(0.0)
+	var dry_light := sky.sky_light
+	sky.raining = true
+	sky.cloud_alpha = 0.6
+	check(absf(wet_light - dry_light * (1.0 - 0.6 * 0.9)) < 0.03, "rain darkens the day by 0.9 x how wet it is (%.2f vs %.2f)" % [wet_light, dry_light])
+	# Storms: wet and windy enough, with lightning and thunder.
+	sky.wind_target = 0.5
+	sky.rain_tick()
+	check(sky.storm, "60% rain and 0.5 wind: a storm")
+	sky.wind_target = 0.36
+	sky.rain_tick()
+	check(sky.storm, "it stays a storm down to 0.34 wind")
+	sky.wind_target = 0.3
+	sky.rain_tick()
+	check(not sky.storm, "and ends below it")
+	sky.wind_target = 0.5
+	sky.rain_tick()
+	var thunder := [0]
+	var on_thunder := func(_d): thunder[0] += 1
+	sky.thunder.connect(on_thunder)
+	sky.new_lightning()
+	var flashed := false
+	for i in 120:
+		sky.rain_tick()
+		flashed = flashed or sky.lightning > 0.9
+	sky.thunder.disconnect(on_thunder)
+	check(flashed and thunder[0] == 1, "lightning flashes, and its thunder follows")
+	check(game.surface_music() == "Storm", "a storm has its music (%s)" % game.surface_music())
+	sky.storm = false
+	sky.wind_target = 0.0
+	sky.time = 5000.0
+	check(game.surface_music() == "MorningRain", "rain in the morning: Morning Rain")
+	sky.time = 30000.0
+	check(game.surface_music() == "Rain", "rain later in the day: Rain")
+	# Raindrops fall round you on the surface, splashing where they land.
+	await frames(60)
+	var drops: int = game.rain._drops.size()
+	var sheet := Assets.texture("Images/Rain")
+	check(drops > 50 and drops <= int(750 * 0.6) and sheet != null, "raindrops fall round you (%d, at most 750 x 60%%)" % drops)
+	check(game.herbs.raining(), "the herbs know it's raining (Waterleaf blooms)")
+	# Rain's enemies: by day Flying Fish and Umbrella Slimes, by night Raincoat Zombies.
+	var counts := {}
+	for i in 4000:
+		var k := Spawner.surface_pick("", false, sky)
+		counts[k] = counts.get(k, 0) + 1
+	check(absf(counts.get("FlyingFish", 0) / 4000.0 - 0.25) < 0.03 and absf(counts.get("UmbrellaSlime", 0) / 4000.0 - 0.375) < 0.03,
+			"a rainy day: 1 in 4 a Flying Fish, then 1 in 2 an Umbrella Slime (%s)" % counts)
+	counts = {}
+	sky.is_day = false
+	sky.moon_phase = 0
+	for i in 4000:
+		var k := Spawner.surface_pick("", true, sky)
+		counts[k] = counts.get(k, 0) + 1
+	check(absf(counts.get("ZombieRaincoat", 0) / 4000.0 - 5.0 / 12.0) < 0.03 and absf(counts.get("DemonEye", 0) / 4000.0 - 1.0 / 6.0) < 0.03,
+			"a rainy night: 1 in 6 a Demon Eye, else half Raincoat Zombies (%s)" % counts)
+	# Underground, no rain.
+	sky.stop_rain()
+	sky.cloud_alpha = 0.0
+	check(not sky.raining and not game.herbs.raining(), "the rain stops")
+	# The Blood Moon: rolled at dusk, red, its music, its enemies, over at dawn.
+	game.start_blood_moon()
+	check(sky.blood_moon and game.surface_music() == "Eerie", "a Blood Moon rises, with Eerie music")
+	await frames(2)
+	check(sky.sky_tint.r > sky.sky_tint.g * 2.0, "the Blood Moon's night is red (%s)" % sky.sky_tint)
+	counts = {}
+	for i in 30000:
+		var k := Spawner.surface_pick("", true, sky)
+		counts[k] = counts.get(k, 0) + 1
+	var bz: float = counts.get("BloodZombie", 0) / 30000.0
+	var dr: float = counts.get("Drippler", 0) / 30000.0
+	check(absf(bz - 1.0 / 6.0) < 0.015 and absf(dr - 1.0 / 6.0) < 0.015 and counts.has("TheGroom") and counts.has("TheBride"),
+			"under a Blood Moon: Blood Zombies and Dripplers (each 1 in 6 of spawns), rarely the Groom and the Bride (%s)" % counts)
+	# (The Eye of Cthulhu, when it comes at dusk, comes instead.)
+	var eye_beaten: bool = game.defeated_bosses.has("EyeofCthulhu")
+	game.defeated_bosses["EyeofCthulhu"] = true
+	var rolls := 0
+	for i in 2700:
+		sky.blood_moon = false
+		game._on_dusk()
+		if sky.blood_moon:
+			rolls += 1
+	check(rolls > 230 and rolls < 375, "at dusk, 1 night in 9 a Blood Moon (%d of 2700)" % rolls)
+	sky.moon_phase = 4
+	rolls = 0
+	for i in 900:
+		sky.blood_moon = false
+		game._on_dusk()
+		rolls += 1 if sky.blood_moon else 0
+	check(rolls == 0, "never at a new moon")
+	if not eye_beaten:
+		game.defeated_bosses.erase("EyeofCthulhu")
+	sky.moon_phase = 0
+	sky.blood_moon = true
+	var bs := sky.save_state()
+	check(bs.blood_moon and bs.has("raining") and bs.has("rain_time"), "the weather and the Blood Moon are saved")
+	sky.time = sky.NIGHT_LENGTH - 1.0
+	await frames(3)
+	check(sky.is_day and not sky.blood_moon, "the Blood Moon is over at dawn")
+	# The Bloody Tear: a Blood Moon at night only, used up only then.
+	var use := func(item: String) -> void:
+		p.inventory.slots[9] = Inventory.stack(item, 1)
+		p.select(9)
+		p._use_timer = 0.0
+		p._use_released = true
+		p.use_item()
+	use.call("BloodMoonStarter")
+	await frames(2)
+	check(not sky.blood_moon and p.inventory.slots[9] != null, "the Bloody Tear does nothing by day (not used up)")
+	sky.is_day = false
+	sky.time = 1000.0
+	sky.moon_phase = 4
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	check(sky.blood_moon and p.inventory.slots[9] == null and sky.moon_phase == 5, "at night it brings the Blood Moon (a new moon turns waxing crescent)")
+	# The new enemies move as Terraria's do.
+	var px := 60.0 / 24.0
+	# (Its top speed: (2.5 - 0.0025 x px away) x 0.8: 1.38 px/tick 13 blocks
+	# off, nearly 2 close.)
+	var zed := game.spawn_npc("BloodZombie", Vector3(arena) + Vector3(13.5, 0, 0.5))
+	zed.damage = 0
+	await frames(30)
+	var far_speed := Vector2(zed.velocity.x, zed.velocity.z).length() / px
+	zed.global_position = Vector3(arena) + Vector3(7.5, 0, 0.5)
+	zed.velocity = Vector3.ZERO
+	var near_speed := 0.0
+	for i in 120:
+		await frames(1)
+		if Vector2(zed.global_position.x - p.global_position.x, zed.global_position.z - p.global_position.z).length() < 1.5:
+			break
+		near_speed = maxf(near_speed, Vector2(zed.velocity.x, zed.velocity.z).length() / px)
+	check(far_speed > 1.2 and far_speed < 1.5 and near_speed > 1.75 and near_speed <= 2.01,
+			"the Blood Zombie quickens as it nears you (%.2f px/tick 13 blocks off, up to %.2f close)" % [far_speed, near_speed])
+	zed.queue_free()
+	var fish := game.spawn_npc("FlyingFish", Vector3(arena) + Vector3(12.5, 4, 0.5))
+	fish.damage = 0
+	var fast := 0.0
+	var climb := 0.0
+	for i in 150:
+		await frames(1)
+		if not is_instance_valid(fish):
+			break
+		fast = maxf(fast, Vector2(fish.velocity.x, fish.velocity.z).length() / px)
+		climb = maxf(climb, absf(fish.velocity.y) / px)
+	check(fast > 2.0 and fast <= 3.05 and climb <= 1.05, "the Flying Fish: up to 3 px/tick across, 1 up or down (%.2f, %.2f)" % [fast, climb])
+	if is_instance_valid(fish):
+		fish.queue_free()
+	var drip := game.spawn_npc("Drippler", Vector3(arena) + Vector3(10.5, 3, 0.5))
+	drip.damage = 0
+	var drift := 0.0
+	var lowest := 100.0
+	for i in 200:
+		await frames(1)
+		drift = maxf(drift, Vector2(drip.velocity.x, drip.velocity.z).length() / px)
+		lowest = minf(lowest, drip.global_position.y - arena.y)
+	check(drift > 1.0 and drift <= 1.55 and lowest > 0.3, "the Drippler drifts at you (up to 1.5 px/tick), hovering off the ground (lowest %.1f)" % lowest)
+	drip.queue_free()
+	# Their drops (Terraria's ItemDropDatabase).
+	var has_drop := func(kind: String, item: String, chance: float) -> bool:
+		return Data.npcs[kind].drops.any(func(dd): return dd[0] == item and absf(float(dd[3]) - chance) < 0.0001)
+	check(has_drop.call("BloodZombie", "SharkToothNecklace", 1.0 / 150.0) and has_drop.call("Drippler", "MoneyTrough", 0.005)
+			and has_drop.call("TheGroom", "TopHat", 1.0) and has_drop.call("FlyingFish", "Fries", 0.02),
+			"the Blood Moon's and rain's enemies drop Terraria's items")
+	var hats := 0
+	var gel := 0
+	var slime := game.spawn_npc("UmbrellaSlime", Vector3(arena) + Vector3(5.5, 0, 0.5))
+	slime.set_physics_process(false)
+	for i in 450:
+		for dd in Data.npcs.UmbrellaSlime.drops_chain:
+			if randf() < float(dd[1]):
+				if dd[0] == "UmbrellaHat":
+					hats += 1
+				else:
+					gel += 1
+				break
+	slime.queue_free()
+	check(hats > 2 and hats < 25 and hats + gel == 450, "the Umbrella Slime: its hat 1 in 45, else gel (%d hats)" % hats)
+	# The Shark Tooth Necklace: 5 armor penetration.
+	var pen := p.armor_penetration(Data.item("WoodenSword"))
+	p.accessories.slots[0] = Inventory.stack("SharkToothNecklace", 1)
+	check(p.armor_penetration(Data.item("WoodenSword")) == pen + 5, "the Shark Tooth Necklace: 5 armor penetration")
+	p.accessories.slots[0] = null
+	# The Umbrella: held, you fall at most 2 px/tick.
+	p.inventory.slots[9] = Inventory.stack("Umbrella", 1)
+	p.select(9)
+	p.global_position = Vector3(arena) + Vector3(0.5, 20, 0.5)
+	p._fall_start = p.global_position.y
+	p.velocity = Vector3.ZERO
+	await frames(60)
+	var fall := -p.velocity.y / px
+	await _until(func(): return p.on_floor, 3.0)
+	check(fall > 1.9 and fall < 2.05 and p.life == p.life_cap(), "holding the Umbrella you fall at 2 px/tick, unhurt (%.2f)" % fall)
+	# The Money Trough: the Flying Piggy Bank, your Piggy Bank in it.
+	stand.call()
+	p.look_at_yaw_pitch(0.0, 0.0)
+	use.call("MoneyTrough")
+	await frames(90)
+	var pigs := game.entities.get_children().filter(func(e): return e is FlyingPiggyBank)
+	check(pigs.size() == 1 and p.inventory.slots[9] != null and pigs[0]._settled, "the Money Trough throws out the Flying Piggy Bank (not used up); it stops and bobs")
+	if pigs.size() == 1:
+		p.look_at_yaw_pitch(0.0, 0.0)
+		var to: Vector3 = pigs[0].global_position - p.camera.global_position
+		p.look_at_yaw_pitch(atan2(-to.x, -to.z), atan2(to.y, Vector2(to.x, to.z).length()))
+		await frames(2)
+		p._interact()
+		check(game.hud._chest == p.piggy_bank, "right-click it: your Piggy Bank")
+		game.hud.close_inventory()
+		use.call("MoneyTrough")
+		await frames(2)
+		check(game.entities.get_children().filter(func(e): return e is FlyingPiggyBank and not e.is_queued_for_deletion()).size() == 1, "one at a time")
+		for e in game.entities.get_children():
+			if e is FlyingPiggyBank:
+				e.queue_free()
+	check(Data.loot.chest_surface.pick_one.any(func(dd): return dd[0] == "Umbrella"), "surface chests can hold the Umbrella")
+	sky.load_state(saved)
+	sky.blood_moon = false
+	sky.stop_rain()
+	sky.cloud_alpha = 0.0
+	game.spawner.set_physics_process(true)
 	p.inventory.slots[9] = null
 	p.select(held)
 	p.god_mode = was_god

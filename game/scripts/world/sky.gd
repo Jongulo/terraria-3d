@@ -97,6 +97,39 @@ var _sea_tex: ImageTexture
 var _sea_at := Vector2.INF
 ## How cloudy today is (0 clear .. 1 overcast); rolled every dawn.
 var cloudiness := 0.5
+## Terraria's rain (Main.UpdateTime, StartRain, ChangeRain, StopRain): while
+## no one has 120 max life it never rains; then each tick 1 in 5.75 days'
+## ticks it starts (1 in 4.25 days' more on an overcast day: Terraria's
+## cloudBGActive, here cloudiness at 0.9 or more), lasting 8 to 24 hours
+## and often more (game hours, 3600 ticks), its strength (max_raining: 0.05
+## to 0.9, heavier the cloudier: Terraria's numClouds is cloudiness x 200)
+## changing 1 tick in 2 hours'. cloud_alpha eases toward it 0.0005 a tick:
+## that's how wet it is (Main.cloudAlpha: it darkens the daylight by
+## 0.9 x itself, Terraria's SetBackColor). A storm: cloud_alpha 0.5 and
+## wind 0.4 or more (0.4 and 0.34 to end one: UpdateWindyDayState), with
+## lightning; a windy day: no rain, 3 to 12 hours into the day, wind 0.4.
+var raining := false
+var rain_time := 0
+var max_raining := 0.0
+var cloud_alpha := 0.0
+var storm := false
+var windy_day := false
+## Lightning: the flash (0..1) and how fast it brightens, its thunder's delay
+## (ticks) and how far off it was.
+var lightning := 0.0
+var _lightning_speed := 0.0
+var _thunder_delay := 0
+var _thunder_distance := 0
+## Terraria's Blood Moon (Main.bloodMoon): rolled at dusk by the game, over
+## at dawn.
+var blood_moon := false
+const RAIN_DAY := 86400
+const RAIN_HOUR := 3600
+const MIN_WIND := 0.34
+const MAX_WIND_STORM := 0.4
+const MIN_RAIN := 0.4
+const MAX_RAIN := 0.5
+signal thunder(distance: int)
 
 var env: Environment
 var _sky_mat := ShaderMaterial.new()
@@ -106,6 +139,8 @@ var _moon: MeshInstance3D
 var _rings: Array = []
 var _clouds: Array = []  # {node, angle, elevation, speed, scale, active}
 var _seconds := 0.0
+## The time of day's light, before rain and the Blood Moon change it.
+var _time_light := 1.0
 
 
 func _ready() -> void:
@@ -313,6 +348,7 @@ func _process(delta: float) -> void:
 		_wind_acc -= 1.0
 		wind_steps += 1
 		wind_tick()
+		rain_tick()
 	time += delta * TICKS_PER_SECOND
 	_seconds += delta
 	if is_day and time >= DAY_LENGTH:
@@ -322,12 +358,120 @@ func _process(delta: float) -> void:
 	elif not is_day and time >= NIGHT_LENGTH:
 		time -= NIGHT_LENGTH
 		is_day = true
+		blood_moon = false
 		moon_phase = (moon_phase + 1) % 8
 		cloudiness = randf_range(0.15, 1.0)
 		for c in _clouds:
 			c.active = float(c.slot) / CLOUD_SLOTS < cloudiness
 		dawn.emit()
 	_update_visuals(delta)
+
+
+## One tick of Terraria's rain and its storms (Main.UpdateTime's rain,
+## UpdateWindyDayState, UpdateWeather's lightning).
+func rain_tick() -> void:
+	if raining:
+		rain_time -= 1
+		if rain_time <= 0:
+			stop_rain()
+		elif randi() % (RAIN_HOUR * 2) == 0:
+			change_rain()
+	elif strongest_life >= 120:
+		if randi() % int(RAIN_DAY * 5.75) == 0:
+			start_rain()
+		elif cloudiness >= 0.9 and randi() % int(RAIN_DAY * 4.25) == 0:
+			start_rain()
+	var target := max_raining if raining else 0.0
+	cloud_alpha = move_toward(cloud_alpha, target, 0.0005)
+	if cloud_alpha == 0.0:
+		storm = false
+		if not is_day or time < 10800.0 or time > 43200.0 or absf(wind_target) < MIN_WIND:
+			windy_day = false
+		elif absf(wind_target) >= MAX_WIND_STORM:
+			windy_day = true
+	else:
+		windy_day = false
+		if cloud_alpha < MIN_RAIN or absf(wind_target) < MIN_WIND:
+			storm = false
+		elif cloud_alpha >= MAX_RAIN and absf(wind_target) >= MAX_WIND_STORM:
+			storm = true
+	_lightning_tick()
+
+
+## StartRain: 8 to 24 hours, often longer, times up to 1.5.
+func start_rain() -> void:
+	var hour := RAIN_DAY / 24
+	var t := randi_range(hour * 8, RAIN_DAY - 1)
+	for step in [[3, 1], [4, 2], [5, 2], [6, 3], [7, 4], [8, 5]]:
+		if randi() % int(step[0]) == 0:
+			t += randi_range(0, hour * int(step[1]) - 1)
+	var k := 1.0
+	for step in [[2, 0.05], [3, 0.1], [4, 0.15], [5, 0.2]]:
+		if randi() % int(step[0]) == 0:
+			k += float(step[1])
+	rain_time = int(t * k)
+	change_rain()
+	raining = true
+
+
+## ChangeRain: how hard it rains, heavier under more clouds.
+func change_rain() -> void:
+	var clouds := cloudiness * 200.0
+	if cloudiness >= 0.9 or clouds > 150.0:
+		max_raining = (randi_range(20, 90) if randi() % 3 == 0 else randi_range(40, 90)) * 0.01
+	elif clouds > 100.0:
+		max_raining = (randi_range(10, 70) if randi() % 3 == 0 else randi_range(20, 60)) * 0.01
+	else:
+		max_raining = (randi_range(5, 40) if randi() % 3 == 0 else randi_range(5, 30)) * 0.01
+
+
+func stop_rain() -> void:
+	rain_time = 0
+	raining = false
+	max_raining = 0.0
+
+
+## Lightning in a storm (UpdateWeather): now and then, more often the harder
+## it rains and blows; the flash brightens over a few ticks and fades, and
+## its thunder follows after a delay for its distance.
+func _lightning_tick() -> void:
+	if _thunder_delay > 0:
+		_thunder_delay -= 1
+		if _thunder_delay == 0:
+			thunder.emit(_thunder_distance)
+	if _lightning_speed > 0.0:
+		lightning = minf(1.0, lightning + _lightning_speed)
+		if lightning >= 1.0:
+			_lightning_speed = 0.0
+		return
+	if lightning > 0.0:
+		lightning = maxf(0.0, lightning - 0.02)
+		return
+	if _thunder_delay > 0 or depth_factor > 0.5 or not storm:
+		return
+	var lo := 600.0
+	var hi := 1600.0
+	for step in [[0.8, 0.6, 0.8], [0.7, 0.7, 0.9], [0.6, 0.8, 0.95]]:
+		if max_raining > step[0]:
+			lo *= step[1]
+			hi *= step[2]
+	for step in [[0.7, 0.6, 0.8], [0.6, 0.7, 0.9], [0.5, 0.8, 0.95]]:
+		if absf(wind_target) > step[0]:
+			lo *= step[1]
+			hi *= step[2]
+	var n := randf_range(lo, hi) * ((1.0 - max_raining) + 1.0) / 2.0 * ((1.0 - wind_target) + 1.0) / 2.0
+	if randi() % maxi(1, int(n)) == 0:
+		new_lightning()
+
+
+## Main.NewLightning: a flash 0.05 to 0.1 a tick brighter, its thunder
+## 1 to 15 ticks... later for each of up to 4 (its distance) away.
+func new_lightning() -> void:
+	if _thunder_delay > 0:
+		return
+	_lightning_speed = randf_range(0.05, 0.1)
+	_thunder_distance = randi_range(1, 4)
+	_thunder_delay = _thunder_distance * 15 + randi_range(0, 14)
 
 
 ## How far away the distant things are: the backdrop rings just beyond the
@@ -348,6 +492,17 @@ func _update_visuals(delta: float) -> void:
 	var k := sky_at(hours())
 	sky_light = k.light
 	sky_tint = k.tint
+	_time_light = sky_light
+	# The Blood Moon: a redder, brighter night (Terraria's SetBackColor:
+	# its night light 75, 15, 15 at midnight where a plain night's is 5).
+	if blood_moon and not is_day:
+		sky_tint = Color(1.0, 0.35, 0.35)
+		sky_light = maxf(sky_light, 0.3)
+	# Rain darkens the daylight (0.9 x how wet it is), and lightning
+	# flashes it back up.
+	sky_light *= 1.0 - cloud_alpha * 0.9 * (1.0 - depth_factor)
+	if lightning > 0.0:
+		sky_light = lerpf(sky_light, 1.0, lightning * 0.8)
 	var top: Color = k.top
 	var horizon: Color = k.horizon
 	var glow: float = k.glow  # sunrise / sunset glow
@@ -358,6 +513,14 @@ func _update_visuals(delta: float) -> void:
 		horizon = horizon.lerp(top, space_factor * 0.5)
 		stars = maxf(stars, space_factor)
 
+	if blood_moon and not is_day:
+		top = top.lerp(Color(0.25, 0.02, 0.02), 0.7)
+		horizon = horizon.lerp(Color(0.45, 0.06, 0.05), 0.7)
+	# Rain clouds: a greyer, darker sky.
+	if cloud_alpha > 0.0:
+		var grey := Color(0.32, 0.34, 0.38) * clampf(sky_light + 0.15, 0.1, 1.0)
+		top = top.lerp(grey, cloud_alpha * 0.8)
+		horizon = horizon.lerp(grey.lightened(0.1), cloud_alpha * 0.8)
 	if evil_amount > 0.0:
 		var ec := evil_color.darkened(1.0 - sky_light)
 		top = top.lerp(ec, evil_amount * 0.7)
@@ -389,6 +552,12 @@ func _update_visuals(delta: float) -> void:
 		_sun.scale = Vector3.ONE * far / 400.0 * 0.6
 		_moon.scale = _sun.scale
 		(_moon.material_override as StandardMaterial3D).uv1_offset = Vector3(0.0, moon_phase / 8.0, 0.0)
+		# The Blood Moon is drawn red (Terraria's moon colour then).
+		(_moon.material_override as StandardMaterial3D).albedo_color = Color(1.0, 0.25, 0.22) if blood_moon else Color.WHITE
+		# Rain brings the clouds in (Terraria: at least 200 x cloudAlpha).
+		var cover := maxf(cloudiness, cloud_alpha)
+		for c in _clouds:
+			c.active = float(c.slot) / CLOUD_SLOTS < cover
 		_update_backdrops(cam, horizon, under, delta)
 		_update_clouds(cam, top, horizon, under, delta)
 
@@ -504,13 +673,19 @@ func _update_clouds(cam: Vector3, top: Color, horizon: Color, under: float, delt
 	# lighter than the sky behind them. All by the light, so they fade too.
 	var dusk_col := Color(1.0, 0.72, 0.6)
 	var col: Color
-	if sky_light >= 0.35:
-		col = dusk_col.lerp(Color.WHITE, clampf((sky_light - 0.35) / 0.4, 0.0, 1.0))
+	var light := _time_light
+	if light >= 0.35:
+		col = dusk_col.lerp(Color.WHITE, clampf((light - 0.35) / 0.4, 0.0, 1.0))
 	else:
-		col = NIGHT_CLOUD.lerp(dusk_col, clampf((sky_light - 0.22) / 0.13, 0.0, 1.0))
-	col = col.lerp(top.lightened(0.3 * clampf((sky_light - 0.22) / 0.13, 0.0, 1.0)), 0.15)
+		col = NIGHT_CLOUD.lerp(dusk_col, clampf((light - 0.22) / 0.13, 0.0, 1.0))
+	col = col.lerp(top.lightened(0.3 * clampf((light - 0.22) / 0.13, 0.0, 1.0)), 0.15)
 	if evil_amount > 0.0:
 		col = col.lerp(evil_color.lightened(0.2), evil_amount * 0.5)
+	# Rain clouds are grey and dark; a Blood Moon's are red.
+	if cloud_alpha > 0.0:
+		col = col.lerp(Color(0.42, 0.44, 0.48) * clampf(light + 0.2, 0.3, 1.0), cloud_alpha)
+	if blood_moon and not is_day:
+		col = col * Color(1.0, 0.4, 0.4)
 	for c in _clouds:
 		c.angle = fmod(c.angle + delta * 0.004 * c.speed, TAU)
 		var mi: MeshInstance3D = c.node
@@ -528,7 +703,8 @@ func _update_clouds(cam: Vector3, top: Color, horizon: Color, under: float, delt
 
 
 func save_state() -> Dictionary:
-	return {"time": time, "is_day": is_day, "moon_phase": moon_phase, "cloudiness": cloudiness}
+	return {"time": time, "is_day": is_day, "moon_phase": moon_phase, "cloudiness": cloudiness,
+			"raining": raining, "rain_time": rain_time, "max_raining": max_raining, "blood_moon": blood_moon}
 
 
 func load_state(d: Dictionary) -> void:
@@ -536,5 +712,10 @@ func load_state(d: Dictionary) -> void:
 	is_day = d.get("is_day", true)
 	moon_phase = int(d.get("moon_phase", 0))
 	cloudiness = float(d.get("cloudiness", cloudiness))
+	raining = bool(d.get("raining", false))
+	rain_time = int(d.get("rain_time", 0))
+	max_raining = float(d.get("max_raining", 0.0))
+	cloud_alpha = max_raining if raining else 0.0
+	blood_moon = bool(d.get("blood_moon", false))
 	for c in _clouds:
 		c.active = float(c.slot) / CLOUD_SLOTS < cloudiness

@@ -49,11 +49,15 @@ func spawn_tick() -> void:
 	var dungeon: bool = game.biome == "dungeon"
 	if dungeon:
 		cap = int(round(cap * 1.8))
+	# The Blood Moon (GetSpawnRate): x1.8 as many, at 0.3 the wait.
+	var blood: bool = game.sky.blood_moon and night and depth == "surface"
+	if blood:
+		cap = int(round(cap * 1.8))
 	if game.boss_alive():
 		cap = 2
 	# The Battle Potion: spawns twice as often, twice as many; the Calming
 	# Potion: 1.3 times as seldom, 0.7 as many (spawnRate, maxSpawns).
-	var rate := 1.0 if dungeon else 0.45
+	var rate := 1.0 if dungeon else (minf(1.0, 0.45 / 0.3) if blood else 0.45)
 	if player.has_effect("battle"):
 		cap *= 2
 		rate *= 2.0
@@ -92,7 +96,9 @@ func spawn_tick() -> void:
 		if kind == "":
 			return
 	else:
-		kind = _pick(_table(depth, night, game.biome))
+		kind = surface_pick(game.biome, night, game.sky) if depth == "surface" else ""
+		if kind == "":
+			kind = _pick(_table(depth, night, game.biome))
 	# Goblin Scouts by day on the outer sixths of the surface (here the outer
 	# third of the island across): 1 in 15, 1 in 5 once an orb is smashed
 	# and the army isn't beaten.
@@ -104,7 +110,7 @@ func spawn_tick() -> void:
 	if depth == "caverns" and game.invasion.downed and not game.town.arrived.has("GoblinTinkerer") and randi() % 20 == 0 \
 			and not game.npcs().any(func(n): return n.kind == "BoundGoblin"):
 		kind = "BoundGoblin"
-	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy"]
+	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy", "flying_fish", "hover"]
 	var pos = _find_water_spot(game, player.global_position, NPC.look(kind).hitbox) if Data.npcs[kind].ai == "swim" \
 			else _find_spot(game, player.global_position, depth in ["underground", "caverns", "underworld"], flying)
 	if pos != null:
@@ -437,6 +443,43 @@ static func underworld_pick(serpent_alive: bool) -> String:
 	if randi() % 3 == 0:
 		return "LavaSlime"
 	return "Hellbat"
+
+
+## Terraria's surface spawns away from the special biomes (Spawner.
+## SpawnAnNPC, before Hardmode), where rain and the Blood Moon come in; ""
+## for the biome's table. By day in the rain: 1 in 4 a Flying Fish, else
+## 1 in 2 an Umbrella Slime (not on the desert's sand: its antlions and
+## vultures come first). At night in the forest: 1 in 6 a Demon Eye (1 in 2
+## more at a new moon); under a Blood Moon (also in the snow and desert)
+## 1 in 300 the Groom, then the Bride, then 2 in 5 a Blood Zombie or a
+## Drippler; in the snow its Zombie Eskimos; in the rain 1 in 2 a Raincoat
+## Zombie; else a Zombie (Terraria's Torch Zombies and zombie kinds not in
+## this game are Zombies).
+static func surface_pick(biome: String, night: bool, sky) -> String:
+	if not biome in ["", "snow", "desert"]:
+		return ""
+	if not night:
+		if biome == "desert" or not sky.raining:
+			return ""
+		if randi() % 4 == 0:
+			return "FlyingFish"
+		if randi() % 2 == 0:
+			return "UmbrellaSlime"
+		return ""
+	if biome == "" and (randi() % 6 == 0 or (sky.moon_phase == 4 and randi() % 2 == 0)):
+		return "DemonEye"
+	if sky.blood_moon:
+		if randi() % 300 == 0:
+			return "TheGroom"
+		if randi() % 300 == 0:
+			return "TheBride"
+		if randi() % 5 < 2:
+			return "BloodZombie" if randi() % 2 == 0 else "Drippler"
+	if biome == "snow":
+		return ""
+	if sky.raining and randi() % 2 == 0:
+		return "ZombieRaincoat"
+	return "Zombie" if biome == "" else ""
 
 
 ## Weighted spawn tables: [kind, weight].

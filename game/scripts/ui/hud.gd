@@ -1944,8 +1944,7 @@ static func shop_condition(cond: String) -> bool:
 			return false
 		if c == "skeletron" and not game.defeated_bosses.has("SkeletronHead"):
 			return false
-		# (No Blood Moons here yet.)
-		if c == "bloodmoon":
+		if c == "bloodmoon" and not game.sky.blood_moon:
 			return false
 		if c in ["corruption", "crimson"] and game.town.world_evil() != c:
 			return false

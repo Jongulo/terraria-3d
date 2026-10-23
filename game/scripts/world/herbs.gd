@@ -131,9 +131,9 @@ func _set_stage(p: Vector3i, style: int, stage: int) -> void:
 	game.world.set_block(p, _stage_ids[style][stage])
 
 
-## Whether it's raining (no rain in this game yet).
+## Whether it's raining (Terraria's Main.raining).
 func raining() -> bool:
-	return false
+	return game.sky.raining
 
 
 ## IsAlchemyPlantHarvestable: whether a grown herb of `style` at `p` is ready.

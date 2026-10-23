@@ -398,6 +398,10 @@ func overlaps_point(p: Vector3, radius: float) -> bool:
 			and p.y > pos.y - radius and p.y < pos.y + half.y + radius
 
 
+## A px/tick in blocks a second (24 px a block).
+const UMBRELLA_PX_TICK := 60.0 / 24.0
+
+
 func held() -> Dictionary:
 	return Data.item_of(inventory.slots[selected])
 
@@ -498,9 +502,11 @@ const BAST_REACH := Vector3i(57, 42, 57)
 const SHARPENED_PEN := 12
 
 
-## Armor penetration of a weapon's hits: the Sharpening Station's 12 for melee.
+## Armor penetration of a weapon's hits: the Sharpening Station's 12 for
+## melee, and what you wear (the Shark Tooth Necklace's 5).
 func armor_penetration(def: Dictionary) -> int:
-	return (SHARPENED_PEN if sharpened and _damage_kind(def) == "melee" else 0) + int(def.get("armor_pen", 0))
+	return (SHARPENED_PEN if sharpened and _damage_kind(def) == "melee" else 0) + int(def.get("armor_pen", 0)) \
+			+ int(stat("armor_pen"))
 
 
 ## A weapon's damage with your bonuses (Terraria adds them: armor's "7%
@@ -884,6 +890,13 @@ func _move(delta: float, game) -> void:
 		else:
 			velocity.y = maxf(velocity.y - GRAVITY * delta, -MAX_FALL)
 	_wall_slide(game, dir)
+	# Holding the Umbrella (Terraria's hold style 2): you fall at most 2
+	# px/tick, and land unhurt (hold Drop down to fall as usual).
+	if held().get("umbrella", false) and velocity.y < -2.0 * UMBRELLA_PX_TICK \
+			and not (input_enabled and Input.is_action_pressed("drop_down")):
+		velocity.y = -2.0 * UMBRELLA_PX_TICK
+	if held().get("umbrella", false):
+		_fall_start = global_position.y
 	if webbed:
 		# Stuck in a web: you sink and climb slowly, and a fall stops there.
 		velocity.y = clampf(velocity.y, -1.0, 1.5)
@@ -3018,6 +3031,29 @@ func _summon(def: Dictionary) -> bool:
 		Audio.play("Roar_0", 0.8)
 		_use_up(selected)
 		return true
+	# The Bloody Tear (Terraria's BloodMoonStarter): a Blood Moon, at night
+	# with none on (else nothing happens and it isn't used up); a new moon
+	# turns waxing crescent.
+	if def.get("event") == "blood_moon":
+		if game.sky.is_day or game.sky.blood_moon:
+			return false
+		Audio.play("Roar_0", 0.8)
+		if game.sky.moon_phase == 4:
+			game.sky.moon_phase = 5
+		game.start_blood_moon()
+		_use_up(selected)
+		return true
+	# The Money Trough: the Flying Piggy Bank, thrown out the way you look
+	# (one at a time; never used up).
+	if def.get("piggy", false):
+		for e in game.entities.get_children():
+			if e is FlyingPiggyBank:
+				e.queue_free()
+		var pig := FlyingPiggyBank.new()
+		game.entities.add_child(pig)
+		pig.setup(camera.global_position + forward() * 0.8, forward())
+		Audio.play("Item_59")
+		return true
 	match def.get("summon_when", "night"):
 		"night":
 			if game.sky.is_day:
@@ -3153,6 +3189,12 @@ func _interact() -> void:
 		var foe = aimed_enemy()
 		if foe != null:
 			minion_target = null if minion_target == foe else foe
+			return
+	# The Flying Piggy Bank: your Piggy Bank.
+	for e in Game.current.entities.get_children():
+		if e is FlyingPiggyBank and e.aimed(camera.global_position, forward(), minf(5.0, float(target.get("distance", 5.0)) + 0.5)):
+			Audio.play("Menu_Open")
+			Game.current.hud.open_chest(piggy_bank, Vector3i(e.global_position.floor()))
 			return
 	var npc = talk_target()
 	if npc != null and npc.kind == "BoundGoblin":

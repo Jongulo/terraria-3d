@@ -152,7 +152,7 @@ static func look(kind_name: String) -> Dictionary:
 	var s: float = sc.scale
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
-	var flier: bool = d.ai in ["flyer", "bat", "harpy", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper",
+	var flier: bool = d.ai in ["flyer", "bat", "harpy", "flying_fish", "hover", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper",
 			"skull", "spike_ball", "wheel"]
 	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
@@ -355,6 +355,8 @@ func _physics_process(delta: float) -> void:
 		"fighter": _ai_fighter(delta, player)
 		"flyer": _ai_flyer(delta, player)
 		"vulture": _ai_vulture(delta, player)
+		"flying_fish": _ai_flying_fish(delta, player)
+		"hover": _ai_hover(delta, player)
 		"bat": _ai_bat(delta, player)
 		"harpy": _ai_harpy(delta, player)
 		"swim": _ai_swim(delta, player)
@@ -407,10 +409,13 @@ func _physics_process(delta: float) -> void:
 	if blocked != Vector3i.ZERO:
 		last_blocked = blocked
 	if flying or swimming:
-		# Fliers (and swimmers) bounce off terrain.
-		if blocked.x: velocity.x *= -0.5
-		if blocked.y: velocity.y *= -0.5
-		if blocked.z: velocity.z *= -0.5
+		# Fliers (and swimmers) bounce off terrain: by half, or by their
+		# own Terraria bounce (its "bounce": [across, up/down, least px/tick
+		# back]).
+		var b: Array = def.get("bounce", [-0.5, -0.5, 0.0])
+		if blocked.x: velocity.x = _bounce(velocity.x, b[0], b[2])
+		if blocked.y: velocity.y = _bounce(velocity.y, b[1], b[2])
+		if blocked.z: velocity.z = _bounce(velocity.z, b[0], b[2])
 	else:
 		if blocked.y:
 			velocity.y = 0.0
@@ -505,6 +510,14 @@ func turn_facing(target: Vector3, delta: float) -> Vector3:
 			axis = _model_facing.cross(Vector3.UP if absf(_model_facing.y) < 0.9 else Vector3.RIGHT)
 		_model_facing = _model_facing.rotated(axis.normalized(), step).normalized()
 	return _model_facing
+
+
+## A velocity off a wall: times `k`, and at least `least` px/tick back.
+static func _bounce(v: float, k: float, least: float) -> float:
+	var out := v * k
+	if absf(out) < least * PX_TICK and v != 0.0:
+		out = -signf(v) * least * PX_TICK
+	return out
 
 
 ## True when daytime should send night creatures away (not in the test world,
@@ -1386,6 +1399,11 @@ func _ai_fighter(delta: float, player) -> void:
 	var dir: Vector3 = player.global_position - global_position
 	dir.y = 0
 	var speed: float = def.get("speed", 2.5)
+	# The Blood Zombie (AI_003) quickens as it nears you: (2.5 less 0.0025
+	# a px away, at most 1.5) x 0.8 px/tick.
+	if def.get("closing", false):
+		var px: float = (player.center() - center()).length() * PX_PER_BLOCK
+		speed = (2.5 - minf(1.5, px * 0.0025)) * 0.8 * PX_TICK
 	# Undead wander off at dawn, as in Terraria.
 	if _flees_day(game) and global_position.y > game.surface_level - 10:
 		if _wander == Vector3.ZERO:
@@ -1579,6 +1597,183 @@ func _ai_vulture(delta: float, player) -> void:
 	velocity.y = vy * PX_TICK
 	anim += delta * 8.0
 	_fly_frame()
+
+
+## Terraria's Flying Fish (aiStyle 44), in its px/tick: it flies at you,
+## across at 0.05 px/tick² (twice as hard turning round from too fast, half
+## again from moving away) up to 3 while more than 30 px off, and up or down
+## at 0.01 (twice that turning round) up to 1 toward your head, aiming 50 px
+## higher while more than 100 px off across. Out of sight for 90 ticks (you
+## in water don't count) it gives up and keeps on its way (x0.8 its top
+## speed, x0.7 its push). Walls send it back at 1 px/tick; in water it
+## leaps up (0.5 px/tick² up to 4).
+var _sight_memory := 90
+
+func _ai_flying_fish(delta: float, player) -> void:
+	var ticks := delta * 60.0
+	if player.in_liquid > 0 or (player.alive and _sees(player)):
+		_sight_memory = 90
+	elif _sight_memory > 0:
+		_sight_memory -= int(round(ticks))
+	var top := 3.0
+	var push := 0.05
+	var up := 0.01
+	var to: Vector3 = player.global_position - global_position
+	var flat := Vector2(to.x, to.z)
+	var dir := flat.normalized() if flat.length() > 0.01 else Vector2.ZERO
+	var goal: float = player.global_position.y + player.half.y
+	var lost: bool = _sight_memory <= 0 or not player.alive
+	if lost:
+		top *= 0.8
+		push *= 0.7
+		var v0 := Vector2(velocity.x, velocity.z)
+		if v0.length() > 0.01:
+			dir = v0.normalized()
+		goal = center().y + (1000.0 if velocity.y > 0.0 else -1000.0) / PX_PER_BLOCK
+	var v := Vector2(velocity.x, velocity.z) / PX_TICK
+	var along := v.dot(dir)
+	var side := v - dir * along
+	if lost or flat.length() * PX_PER_BLOCK > 30.0:
+		if along < top:
+			along += push * ticks
+			if along < -top:
+				along += push * ticks
+			elif along < 0.0:
+				along += push / 2.0 * ticks
+			along = minf(along, top)
+	side = side.move_toward(Vector2.ZERO, push * ticks)
+	v = dir * along + side
+	velocity.x = v.x * PX_TICK
+	velocity.z = v.y * PX_TICK
+	if not lost and flat.length() * PX_PER_BLOCK > 100.0:
+		goal += 50.0 / PX_PER_BLOCK
+	var vy := velocity.y / PX_TICK
+	if center().y > goal:
+		vy -= up * ticks
+		if vy > 0.0:
+			vy -= up * ticks
+	else:
+		vy += up * ticks
+		if vy < 0.0:
+			vy += up * ticks
+	vy = clampf(vy, -1.0, 1.0)
+	if in_water(center()):
+		if vy < 0.0:
+			vy *= pow(0.95, ticks)
+		vy = minf(vy + 0.5 * ticks, 4.0)
+	velocity.y = vy * PX_TICK
+	# Its 4 frames, 6 ticks each, turned along its flight.
+	anim += delta * 10.0
+	sprite.set_frame(int(anim) % int(def.frames))
+	if velocity.length() > 0.05:
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+
+
+## Terraria's hovering AI (aiStyle 22) as the Drippler's, in its px/tick
+## and its 16 px tiles: it drifts at you, across at 0.1 px/tick² up to 1.5,
+## and up or down toward you at 0.04 up to 1, keeping 4 tiles (and one more
+## for each 70 px you're away, up to 12) over whatever's under the spot 2
+## tiles ahead of it: over open air, or above your head, it sinks (0.03 up
+## to 0.75), else it rises while you're above it or it's under 2 tiles up
+## (0.075 up to 0.75). Hanging about one spot (16 px across, 40 up or down)
+## for 30 ticks it sinks; for 60 it turns away from you for 200. By day it
+## wanders off. Off walls it bounces (0.4 back across, 0.25 up or down, at
+## least 1 px/tick).
+var _hover_anchor := Vector3.ZERO
+var _hover_wait := 0.0
+var _hover_dir := Vector2.ZERO
+
+func _ai_hover(delta: float, player) -> void:
+	var game := Game.current
+	var ticks := delta * 60.0
+	var to: Vector3 = player.center() - center()
+	var to_flat := Vector2(to.x, to.z).normalized() if Vector2(to.x, to.z).length() > 0.01 else Vector2.ZERO
+	var dir_y := 1 if to.y > 0.0 else -1
+	var drop := false
+	if _flees_day(game) or not player.alive:
+		if _hover_dir == Vector2.ZERO:
+			_hover_dir = -to_flat if to_flat != Vector2.ZERO else Vector2.RIGHT
+		if Vector2(velocity.x, velocity.z).length() == 0.0:
+			velocity.x = _hover_dir.x * randi_range(-1, 1) * 1.5 * PX_TICK
+	elif _hover_wait >= 0.0:
+		var v := Vector2(velocity.x, velocity.z)
+		var off := global_position - _hover_anchor
+		var near := Vector2(off.x, off.z).length() * PX_PER_BLOCK < 16.0 or v.dot(_hover_dir) < 0.0
+		if near and absf(off.y) * PX_PER_BLOCK < 40.0:
+			_hover_wait += ticks
+			if _hover_wait >= 30.0:
+				drop = true
+			if _hover_wait >= 60.0:
+				_hover_wait = -200.0
+				_hover_dir = -_hover_dir
+				velocity.x = -velocity.x
+				velocity.z = -velocity.z
+		else:
+			_hover_anchor = global_position
+			_hover_wait = 0.0
+		if _hover_wait >= 0.0:
+			_hover_dir = to_flat
+	else:
+		_hover_wait += ticks
+		_hover_dir = -to_flat
+	# How high it keeps: 4 tiles and 1 more each 70 px away (at most 8).
+	var tile := 16.0 / PX_PER_BLOCK
+	var reach := 4 + int(minf(8.0, to.length() * PX_PER_BLOCK / 70.0))
+	var sink := true
+	var lift := false
+	if global_position.y < player.global_position.y + player.half.y:
+		var ahead := global_position + Vector3(_hover_dir.x, 0.0, _hover_dir.y) * 2.0 * tile
+		for i in reach:
+			var cell := Vector3i((ahead - Vector3(0, (i + 0.5) * tile, 0)).floor())
+			if game.world.is_solid(cell) or game.world.get_liquid(cell).y > 0:
+				lift = i <= 1
+				sink = false
+				break
+	if drop:
+		lift = false
+		sink = true
+	var vy := velocity.y / PX_TICK
+	if sink:
+		vy = maxf(vy - 0.03 * ticks, -0.75)
+	else:
+		if dir_y > 0 or lift:
+			vy += 0.075 * ticks
+		vy = minf(vy, 0.75)
+	# Across toward its way, up or down toward you (Terraria's lopsided
+	# pushes: a little less when it's moving the wrong way).
+	var v := Vector2(velocity.x, velocity.z) / PX_TICK
+	var along := v.dot(_hover_dir)
+	var side := v - _hover_dir * along
+	if along < 1.5:
+		along += 0.1 * ticks
+		if along < -1.5:
+			along += 0.1 * ticks
+		elif along < 0.0:
+			along -= 0.05 * ticks
+		along = minf(along, 1.5)
+	side = side.move_toward(Vector2.ZERO, 0.1 * ticks)
+	v = _hover_dir * along + side
+	velocity.x = v.x * PX_TICK
+	velocity.z = v.y * PX_TICK
+	if dir_y > 0 and vy < 1.0:
+		vy += 0.04 * ticks
+		if vy < -1.0:
+			vy += 0.05 * ticks
+		elif vy < 0.0:
+			vy -= 0.03 * ticks
+		vy = minf(vy, 1.0)
+	elif dir_y < 0 and vy > -1.0:
+		vy -= 0.04 * ticks
+		if vy > 1.0:
+			vy -= 0.05 * ticks
+		elif vy > 0.0:
+			vy += 0.03 * ticks
+		vy = maxf(vy, -1.0)
+	velocity.y = vy * PX_TICK
+	# Its frames, 7 ticks each, leaning with its drift.
+	anim += delta * 60.0 / 7.0
+	sprite.set_frame(int(anim) % int(def.frames))
+	sprite.set_rotation_angle(-velocity.dot(player.camera.global_transform.basis.x) / PX_TICK * 0.15)
 
 
 ## Terraria's harpy: hovers above the player, drifting around them, flapping,
