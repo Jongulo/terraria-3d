@@ -354,9 +354,16 @@ fn add_face(w: &World, s: &mut Surface, (x, y, z): (i32, i32, i32), p: [f32; 3],
         }
         lights[k] = sum.map(|v| v / count);
     }
+    // An actuated block is drawn dark (Terraria draws inactive tiles dimmed).
+    if w.is_inactive(x, y, z) {
+        aos = aos.map(|a| a * INACTIVE_SHADE);
+    }
     let nf = [n[0] as f32, n[1] as f32, n[2] as f32];
     s.quad(verts, nf, lights, uvs, layer, aos);
 }
+
+/// How bright an actuated block is drawn.
+const INACTIVE_SHADE: f32 = 0.45;
 
 /// A hammered block (Terraria's half blocks and slopes) in its own shape, with
 /// its block's textures, lit flat by its own cell's light (it lets light in).

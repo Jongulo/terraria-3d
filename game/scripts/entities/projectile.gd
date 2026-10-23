@@ -124,6 +124,9 @@ var bounces := 0
 ## The player steering it while they hold the button (a channelled spell:
 ## the Magic Missile flies toward their crosshair, Terraria's AI 9).
 var steered_by = null
+## A Geyser's spout (Wiring.GeyserTrap: Terraria's projectile 654, AI 126).
+var geyser := false
+var _column := 0.0
 ## A rolling boulder (a trap's: Terraria's AI 25), and the way it rolls.
 var boulder := false
 var _roll := Vector3.ZERO
@@ -274,6 +277,9 @@ func _physics_process(delta: float) -> void:
 	if boulder:
 		_boulder_step(delta, game)
 		return
+	if geyser:
+		_geyser_step(delta, game)
+		return
 	if _aim != Vector3.ZERO:
 		velocity = velocity.lerp(_aim, 1.0 - pow(39.0 / 40.0, delta * 60.0))
 	if _flight.get("book", false):
@@ -419,6 +425,36 @@ func _explosive_step(delta: float, game) -> void:
 	sprite.update_light(game.world, game.sky, global_position)
 	if life <= 0.0:
 		game.explode(global_position, damage, knockback, explosive)
+		queue_free()
+
+
+## The Geyser's spout: a column of fire from it up to the first block, 320 px
+## at most (here 13.3 blocks), for 60 ticks, hurting you (20, doubled as
+## hostile) and each enemy in it once (20).
+func _geyser_step(delta: float, game) -> void:
+	var w: VoxelWorld = game.world
+	if _column == 0.0:
+		var top := 0.0
+		while top < 320.0 / 24.0 and not w.is_solid(Vector3i((global_position + Vector3(0, top + 0.5, 0)).floor())):
+			top += 0.5
+		_column = maxf(top, 0.5)
+		sprite.visible = false
+		Audio.play_at("Item_34", global_position, 0.8)
+	life = minf(life, 1.0) - delta
+	for i in 3:
+		var at := global_position + Vector3(randf_range(-0.3, 0.3), randf() * _column, randf_range(-0.3, 0.3))
+		game.dust.spawn(6, at, Vector3(0, 2.0, 0), 2.0)
+	var p = game.player
+	var mid := global_position + Vector3(0, _column * 0.5, 0)
+	if p.alive and absf(p.global_position.x - mid.x) < p.half.x + 0.31 and absf(p.global_position.z - mid.z) < p.half.z + 0.31 \
+			and p.global_position.y < global_position.y + _column and p.global_position.y + p.half.y > global_position.y:
+		p.hurt(damage, global_position)
+	for npc in game.npcs():
+		if not _hit.has(npc) and absf(npc.global_position.x - mid.x) < 0.8 and absf(npc.global_position.z - mid.z) < 0.8 \
+				and npc.global_position.y < global_position.y + _column and npc.global_position.y > global_position.y - 1.5:
+			_hit[npc] = true
+			npc.hit(damage / 2, knockback, Vector3.UP, 0.0)
+	if life <= 0.0:
 		queue_free()
 
 

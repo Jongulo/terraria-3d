@@ -4,8 +4,8 @@
 //!
 //! From a spot, down to the first solid ground: a pressure plate there (a
 //! cell with room round it and over it, no spikes under it, no lava in it, not
-//! within 20 tiles of mushroom grass) and, wired to it ("trap_wire"
-//! decorations: the plate's cell, the target's offset in the style), one of:
+//! within 20 tiles of mushroom grass) and, wired to it with red wire
+//! (wires.rs), one of:
 //! - **Dart trap** (half the rest): along a line across through the plate
 //!   (here x or z, picked at random), a wall 5-50 tiles off on either side,
 //!   with ground under it and no door or spikes; up to 2 tiles over the
@@ -15,10 +15,9 @@
 //!   plate, 8 tiles and more, to where the rock round the spot is solid
 //!   (5-40 tiles up, under the surface, no Dungeon brick, no chest or
 //!   boulder near): a shaft is cut down from there to the plate, the rock
-//!   round it turns to stone, and in its top a Boulder rests on a plug of
-//!   actuated stone (an orange plate). Stepping on the plate drops the plug.
-//! - **Explosives** (1 in 20): 4-6 tiles down through solid ground beside the
-//!   plate, with solid ground all round it (a gray or brown plate).
+//!   round it turns to stone, and in its top a Boulder rests on two blocks of
+//!   stone with actuators (an orange plate). Stepping on the plate actuates
+//!   them and the boulder drops.
 //!   The boulder is one of Terraria's kinds, tried in its order: a Ghoulder
 //!   (1 in 6 near the Dungeon: on its side of the world, within 1000 of
 //!   Terraria's 4200 tiles of it, here that share of the world's width), a
@@ -28,8 +27,11 @@
 //!   (Terraria's Spider Boulder needs a spider cave's wall within 80 tiles;
 //!   there are no spider caves yet, so it still draws its 1 in 2 and never
 //!   goes in.)
+//! - **Explosives** (1 in 20): 4-6 tiles down through solid ground beside the
+//!   plate, with solid ground all round it (a gray or brown plate).
 //! - **Geyser** (deep down: 30 tiles under the lava line, 1 in 6): on the
-//!   ground with nothing beside it and no water in it, not wired to anything.
+//!   ground with nothing beside it and no water in it, not wired to anything
+//!   (stepping on it sets it off).
 
 use crate::world::{Decoration, World};
 use crate::worldgen::{Layers, Rng};
@@ -103,11 +105,9 @@ impl TrapIds {
     }
 }
 
-/// A "trap_wire" decoration from the plate at `from` to `to`.
+/// Red wire from the plate at `from` to `to` (wires.rs).
 fn wire(w: &mut World, from: P, to: P) {
-    let (dx, dy, dz) = (to.0 - from.0, to.1 - from.1, to.2 - from.2);
-    let style = (dx + 64) | (dz + 64) << 7 | (dy + 64) << 14;
-    w.decorations.push(Decoration { kind: "trap_wire".into(), pos: from, style });
+    crate::wires::lay(w, from, to, crate::wires::RED);
 }
 
 fn set(w: &mut World, (x, y, z): P, id: u16) {
@@ -294,9 +294,13 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
     set(w, p, ids.plates[2]);
     let kind = boulder_kind(w, rng, ids, (bx, top + 2, bz));
     set(w, (bx, top + 2, bz), kind);
-    set(w, (bx, top + 1, bz), ids.plug);
-    set(w, (bx, top, bz), ids.plug);
-    wire(w, p, (bx, top + 2, bz));
+    // The boulder rests on two blocks of stone with actuators, wired to the
+    // plate: stepping on it actuates them and the boulder drops.
+    set(w, (bx, top + 1, bz), ids.stone);
+    set(w, (bx, top, bz), ids.stone);
+    crate::wires::actuator(w, (bx, top + 1, bz));
+    crate::wires::actuator(w, (bx, top, bz));
+    wire(w, p, (bx, top + 1, bz));
     true
 }
 
@@ -468,11 +472,19 @@ pub(crate) mod tests {
         (w, Layers { underworld_top: 6, cavern_top: 50, surface_base: 92, space_top: 95 })
     }
 
+    /// Each trap's wire: (its plate, the far end), the wire joining them.
     fn wires(w: &World) -> Vec<(P, P)> {
-        w.decorations.iter().filter(|d| d.kind == "trap_wire").map(|d| {
-            let s = d.style;
-            (d.pos, (d.pos.0 + (s & 127) - 64, d.pos.1 + (s >> 14) - 64, d.pos.2 + ((s >> 7) & 127) - 64))
-        }).collect()
+        let ids = TrapIds::of(w);
+        let path: Vec<P> = w.decorations.iter().filter(|d| d.kind == "wire").map(|d| d.pos).collect();
+        let mut out = vec![];
+        for (i, &p) in path.iter().enumerate() {
+            if ids.plates.contains(&w.get(p.0, p.1, p.2)) {
+                let end = path[i..].iter().skip(1).take_while(|q| !ids.plates.contains(&w.get(q.0, q.1, q.2))).last().copied().unwrap_or(p);
+                assert!(crate::wires::joined(w, p, end, crate::wires::RED));
+                out.push((p, end));
+            }
+        }
+        out
     }
 
     #[test]
@@ -507,12 +519,14 @@ pub(crate) mod tests {
         let ids = TrapIds::of(&w);
         let mut rng = Rng::new(5);
         assert!(place_trap(&mut w, &mut rng, &l, &ids, (40, 22, 48), 1, 0), "a boulder trap goes in");
-        let (plate, b) = wires(&w)[0];
+        let (plate, plug) = wires(&w)[0];
+        let b = (plug.0, plug.1 + 1, plug.2);
         assert_eq!(w.get(plate.0, plate.1, plate.2), ids.plates[2], "an orange plate");
         assert!(ids.boulders.contains(&w.get(b.0, b.1, b.2)), "wired to the boulder");
         assert!(b.1 - plate.1 > blocks(5), "well over the plate ({} up)", b.1 - plate.1);
-        assert_eq!(w.get(b.0, b.1 - 1, b.2), ids.plug);
-        assert_eq!(w.get(b.0, b.1 - 2, b.2), ids.plug, "resting on its plug");
+        let acts: Vec<_> = w.decorations.iter().filter(|d| d.kind == "actuator").map(|d| d.pos).collect();
+        assert_eq!(acts, vec![(b.0, b.1 - 1, b.2), (b.0, b.1 - 2, b.2)], "resting on two actuated blocks");
+        assert!(crate::wires::joined(&w, plate, (b.0, b.1 - 1, b.2), crate::wires::RED), "wired to the plate");
         for y in plate.1..b.1 - 2 {
             assert!(!w.is_solid(b.0, y, b.2), "the shaft is open down to the tunnel at {y}");
         }

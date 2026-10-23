@@ -115,6 +115,9 @@ pub struct World {
     /// Hammered blocks (Terraria's half blocks and slopes): cell index -> shape
     /// (SHAPE_*). Sparse: only player-shaped cells are listed.
     pub shapes: HashMap<usize, u8>,
+    /// Actuated blocks (Terraria's inactive tiles, switched by an actuator):
+    /// not solid, letting light and liquid through, drawn dark. Sparse.
+    pub inactive: HashSet<usize>,
     /// Per column (x + z * sx): the top opaque cell when the world was made
     /// (-1 none). Sunlight falls freely only above it; dug-out cells at or
     /// below it get sunlight that fades one level per block, like Terraria's
@@ -191,6 +194,7 @@ impl World {
             structures: Vec::new(),
             chunk_version: HashMap::new(),
             shapes: HashMap::new(),
+            inactive: HashSet::new(),
             sky_floor: Vec::new(),
         };
         w.rebuild_tables();
@@ -210,6 +214,7 @@ impl World {
         self.dirty.clear();
         self.chunk_version.clear();
         self.shapes.clear();
+        self.inactive.clear();
         self.sky_floor.clear();
         self.structures.clear();
     }
@@ -283,6 +288,34 @@ impl World {
     #[inline]
     fn opaque_cell(&self, i: usize) -> bool {
         self.is_opaque_id(self.blocks[i]) && (self.shapes.is_empty() || !self.shapes.contains_key(&i))
+            && (self.inactive.is_empty() || !self.inactive.contains(&i))
+    }
+
+    /// An actuated block (see `inactive`).
+    #[inline]
+    pub fn is_inactive(&self, x: i32, y: i32, z: i32) -> bool {
+        !self.inactive.is_empty() && self.in_bounds(x, y, z) && self.inactive.contains(&self.idx(x, y, z))
+    }
+
+    /// Actuates (or restores) the block at a cell; false if there's none.
+    pub fn set_inactive(&mut self, x: i32, y: i32, z: i32, on: bool) -> bool {
+        if !self.in_bounds(x, y, z) {
+            return false;
+        }
+        let i = self.idx(x, y, z);
+        if self.blocks[i] == 0 {
+            return false;
+        }
+        let changed = if on { self.inactive.insert(i) } else { self.inactive.remove(&i) };
+        if changed {
+            if !on && self.is_solid(x, y, z) {
+                self.liquid[i] = 0;
+            }
+            self.mark_dirty(x, y, z);
+            self.relight_cell(x, y, z);
+            self.activate_liquid_around(x, y, z);
+        }
+        true
     }
 
     pub fn set_def(&mut self, id: u16, def: BlockDef) {
@@ -365,16 +398,14 @@ impl World {
         if !self.in_bounds(x, y, z) {
             return y < self.sy;
         }
-        *self
-            .solid
-            .get(self.blocks[self.idx(x, y, z)] as usize)
-            .unwrap_or(&false)
+        let i = self.idx(x, y, z);
+        *self.solid.get(self.blocks[i] as usize).unwrap_or(&false) && (self.inactive.is_empty() || !self.inactive.contains(&i))
     }
 
     /// A platform: its top (y + 1) holds you up from above.
     #[inline]
     pub fn is_platform(&self, x: i32, y: i32, z: i32) -> bool {
-        self.in_bounds(x, y, z) && *self.platform.get(self.blocks[self.idx(x, y, z)] as usize).unwrap_or(&false)
+        self.in_bounds(x, y, z) && *self.platform.get(self.blocks[self.idx(x, y, z)] as usize).unwrap_or(&false) && !self.is_inactive(x, y, z)
     }
 
     #[inline]
@@ -610,6 +641,7 @@ impl World {
         }
         self.blocks[i] = id;
         self.shapes.remove(&i);
+        self.inactive.remove(&i);
         if self.is_solid(x, y, z) {
             self.liquid[i] = 0;
         }
@@ -983,6 +1015,23 @@ pub mod tests {
         w.set(32, 31, 5, 0);
         let d: HashSet<_> = w.take_dirty().into_iter().collect();
         assert!(d.contains(&(0, 0, 0)) && d.contains(&(1, 0, 0)));
+    }
+
+    #[test]
+    fn an_actuated_block_is_passable_and_lets_light_in() {
+        let mut w = World::new();
+        w.set_def(1, BlockDef { name: "stone".into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
+        w.resize(16, 16, 16);
+        w.set(5, 5, 5, 1);
+        assert!(w.is_solid(5, 5, 5) && w.is_opaque(5, 5, 5));
+        assert!(w.set_inactive(5, 5, 5, true));
+        assert!(!w.is_solid(5, 5, 5) && !w.is_opaque(5, 5, 5) && w.is_inactive(5, 5, 5));
+        assert!(!w.set_inactive(6, 6, 6, true), "no block, no actuation");
+        assert!(w.set_inactive(5, 5, 5, false) && w.is_solid(5, 5, 5));
+        w.set_inactive(5, 5, 5, true);
+        w.set(5, 5, 5, 0);
+        w.set(5, 5, 5, 1);
+        assert!(w.is_solid(5, 5, 5), "a new block isn't actuated");
     }
 
     #[test]

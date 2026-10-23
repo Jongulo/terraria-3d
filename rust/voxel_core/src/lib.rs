@@ -19,6 +19,7 @@ pub mod hell;
 pub mod paintings;
 pub mod terrain;
 pub mod traps;
+pub mod wires;
 pub mod world;
 pub mod worldgen;
 
@@ -685,6 +686,29 @@ impl VoxelWorld {
             out.extend_from_slice(&[x, y, z, shape as i32]);
         }
         PackedInt32Array::from(out)
+    }
+
+    /// Actuates the block at `p` (on: not solid, drawn dark) or restores it.
+    #[func]
+    fn set_inactive(&mut self, p: Vector3i, on: bool) -> bool {
+        self.shared.world.write().unwrap().set_inactive(p.x, p.y, p.z, on)
+    }
+
+    #[func]
+    fn is_inactive(&self, p: Vector3i) -> bool {
+        self.world().is_inactive(p.x, p.y, p.z)
+    }
+
+    /// Every actuated block as triples x, y, z (for saving).
+    #[func]
+    fn get_inactive(&self) -> PackedInt32Array {
+        let w = self.world();
+        let mut cells: Vec<(i32, i32, i32)> = w.inactive.iter().map(|&i| {
+            let col = (i / w.sy as usize) as i32;
+            (col % w.sx, (i % w.sy as usize) as i32, col / w.sx)
+        }).collect();
+        cells.sort();
+        flat_cells(&cells)
     }
 
     #[func]

@@ -115,6 +115,11 @@ func _spawn_dungeon(game, p: Vector3) -> void:
 			wall = randi() % 3
 		var spikes_near: bool = game.npcs().any(func(n): return n.kind == "SpikeBall" and absf(n._hang.x - at.x) < SPIKE_BALL_ROOM \
 				and absf(n._hang.y - at.y) < SPIKE_BALL_ROOM and absf(n._hang.z - at.z) < SPIKE_BALL_ROOM)
+		# The Bound Mechanic, 1 in 5 till she's freed (one at a time, not in
+		# water, a fifth of the way from the surface down to the caverns).
+		if bound_mechanic_here(game, at) and randi() % 5 == 0:
+			game.spawn_npc("BoundMechanic", at)
+			return
 		var book = [null]
 		var find_book := func() -> bool:
 			book[0] = _book_near(game, at)
@@ -136,6 +141,18 @@ func _spawn_dungeon(game, p: Vector3) -> void:
 		var flies: bool = Data.npcs[kind].ai in ["skull", "spike_ball", "wheel"]
 		game.spawn_npc(kind, at + (Vector3(0, 1.0, 0) if flies else Vector3.ZERO))
 		return
+
+
+## Whether the Bound Mechanic can turn up at `at` (Terraria: savedMech not
+## set, none about, no water there, below a fifth of the way from the surface
+## to the rock layer).
+static func bound_mechanic_here(game, at: Vector3) -> bool:
+	if game.town.arrived.has("Mechanic") or game.npcs().any(func(n): return n.kind == "BoundMechanic"):
+		return false
+	if game.world.get_liquid(Vector3i(at.floor())).y > 0:
+		return false
+	var l: Dictionary = game.world.get_layers()
+	return at.y < (float(l.surface) * 4.0 + float(l.cavern_top)) / 5.0
 
 
 ## A placed book within 16 blocks of `at` (Terraria's AI_FindNearbyBook over

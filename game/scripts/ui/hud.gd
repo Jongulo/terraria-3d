@@ -1918,6 +1918,10 @@ static func shop_condition(cond: String) -> bool:
 			return false
 		if c == "snow" and game.biome != "snow":
 			return false
+		if c == "moonodd" and game.sky.moon_phase % 2 == 0:
+			return false
+		if c == "angler" and not game.town.residents.has("Angler"):
+			return false
 	return true
 
 

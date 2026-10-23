@@ -1722,8 +1722,7 @@ impl<'a> Gen<'a> {
     }
 
     /// Lights_GenerateSwitch: on a wall within sight, 3-20 below the light and
-    /// up to 12 across. Leaves a "switch" decoration whose style is the
-    /// light's offset (x + 16, z + 16 << 5, -y << 10).
+    /// up to 12 across, red wire from it to the light (wires.rs).
     fn switch_for(&mut self, light: P) -> bool {
         if self.ids.switch == 0 {
             return false;
@@ -1740,8 +1739,7 @@ impl<'a> Gen<'a> {
             self.set(p, self.ids.switch);
             let out = FACING.iter().position(|&f| f == (-wall.0, -wall.2)).unwrap_or(0) as i32;
             self.w.decorations.push(Decoration { kind: "rotation".into(), pos: p, style: out });
-            let style = (light.0 - p.0 + 16) | (light.2 - p.2 + 16) << 5 | (light.1 - p.1) << 10;
-            self.w.decorations.push(Decoration { kind: "switch".into(), pos: p, style });
+            crate::wires::lay(self.w, p, light, crate::wires::RED);
             return true;
         }
         false

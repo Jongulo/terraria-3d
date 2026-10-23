@@ -269,7 +269,9 @@ func touching(flag: String) -> bool:
 ## How far you reach: blocks you hold go a tile further for each Toolbelt
 ## (Terraria's blockRange, a tile is 2/3 of a block).
 func reach() -> float:
-	return REACH + (stat("block_range") * 2.0 / 3.0 if held().get("type") == "block" else 0.0)
+	var def := held()
+	# Wrenches and the Wire Cutter reach 20 tiles further (tileBoost).
+	return REACH + (stat("block_range") * 2.0 / 3.0 if def.get("type") == "block" else 0.0) + float(def.get("tile_boost", 0)) * 2.0 / 3.0
 
 
 ## The point the crosshair is on (the targeted block's face), or REACH ahead.
@@ -1705,6 +1707,8 @@ func use_item() -> void:
 				_conch_timer = float(def.ocean_teleport)
 				Audio.play(def.get("sound", "Item_6"), 0.7)
 				used = true
+		"wire_tool":
+			used = _use_wire_tool(def)
 		"hook":
 			used = fire_hook(def)
 		"fishing_pole":
@@ -1719,6 +1723,50 @@ func use_item() -> void:
 		viewmodel.play(Viewmodel.use_style(def), duration)
 		if def.get("type") in ["tool", "melee"]:
 			Audio.play("Item_1", 0.7)
+
+
+## A wrench lays its colour of wire in the targeted cell (a Wire from your
+## inventory each); the Wire Cutter takes the cell's wire and actuator back
+## (Terraria's KillWire, KillActuator: the Wire and Actuator drop); an
+## Actuator goes onto a solid block.
+func _use_wire_tool(def: Dictionary) -> bool:
+	if target.is_empty():
+		return false
+	var game := Game.current
+	var w: Wiring = game.wiring
+	var cell: Vector3i = target.block
+	var at := Vector3(cell) + Vector3(0.5, 0.5, 0.5)
+	if def.has("wire"):
+		var colour := int(def.wire)
+		if w.mask(cell) & colour or (not creative and not inventory.remove("Wire", 1)):
+			return false
+		w.add(cell, colour)
+		Audio.play_at("Dig_*", at, 0.5)
+		return true
+	if def.get("cut_wire", false):
+		var m := w.mask(cell)
+		if m == 0:
+			return false
+		w.remove(cell, m)
+		if not creative:
+			for c in Wiring.COLOURS:
+				if m & c:
+					game.spawn_item("Wire", 1, at)
+			if m & Wiring.ACTUATOR:
+				game.spawn_item("Actuator", 1, at)
+		if m & Wiring.ACTUATOR and game.world.is_inactive(cell):
+			game.world.set_inactive(cell, false)
+		Audio.play_at("Dig_*", at, 0.5)
+		return true
+	if def.get("actuator", false):
+		if w.mask(cell) & Wiring.ACTUATOR or not Data.block(target.id).get("solid", true):
+			return false
+		if not creative and not inventory.remove("Actuator", 1):
+			return false
+		w.add(cell, Wiring.ACTUATOR)
+		Audio.play_at("Dig_*", at, 0.5)
+		return true
+	return false
 
 
 ## Applies one tool hit to the targeted block. Returns true if a block was hit.
@@ -2451,6 +2499,10 @@ func _interact() -> void:
 		var freed: NPC = Game.current.town.free_goblin(npc)
 		Game.current.hud.open_chat(freed, NPC.dialog(NPC.FREED_LINE))
 		return
+	if npc != null and npc.kind == "BoundMechanic":
+		var mechanic: NPC = Game.current.town.free_mechanic(npc)
+		Game.current.hud.open_chat(mechanic, NPC.dialog(NPC.MECHANIC_FREED_LINE))
+		return
 	if npc != null and npc.kind == "SleepingAngler":
 		# Woken, he's the Angler (Terraria's: one of his thank-you lines).
 		var angler: NPC = Game.current.town.wake_angler(npc)
@@ -2470,6 +2522,8 @@ func _interact() -> void:
 		Game.current.unlock_chest(target.block)
 	elif bdef.get("interact") == "switch":
 		Game.current.hit_switch(target.block)
+	elif bdef.get("interact") == "timer":
+		Game.current.wiring.toggle_timer(Game.current, target.block)
 	elif bdef.get("interact") == "bed":
 		use_bed(target.block)
 	elif bdef.get("interact") == "sign":

@@ -10,7 +10,7 @@ extends Node
 ## Seconds between housing checks (Terraria checks every few seconds too).
 const CHECK_INTERVAL := 4.0
 ## In the order they can move in.
-const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "Clothier", "GoblinTinkerer", "Angler"]
+const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "Clothier", "GoblinTinkerer", "Mechanic", "Angler"]
 
 var game: Game
 ## Kind -> the NPC living here.
@@ -64,7 +64,7 @@ func wants_to_come(kind: String) -> bool:
 			# The Old Man freed of his curse (Terraria's downedBoss3).
 			return game.defeated_bosses.has("SkeletronHead")
 		"freed":
-			return false  # only once you've freed him (free_goblin)
+			return false  # only once you've freed them (free_goblin, free_mechanic)
 		"woken":
 			return false  # only once you've woken him (wake_angler)
 	return false
@@ -127,6 +127,14 @@ func free_goblin(bound: NPC) -> NPC:
 	var at := bound.global_position
 	bound.queue_free()
 	return move_in("GoblinTinkerer", at)
+
+
+## Freeing the Bound Mechanic (Terraria's savedMech): the Mechanic from now
+## on, homeless where she stood until a house is free.
+func free_mechanic(bound: NPC) -> NPC:
+	var at := bound.global_position
+	bound.queue_free()
+	return move_in("Mechanic", at)
 
 
 ## Waking the Sleeping Angler (Terraria's: talking to him saves him): he's

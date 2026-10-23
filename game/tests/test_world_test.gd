@@ -454,6 +454,7 @@ func _run() -> void:
 	await _hellstone_checks(c)
 	await _dungeon_enemy_checks(c)
 	await _trap_checks(c)
+	await _wiring_checks(c)
 	await _boulder_kind_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
@@ -5603,6 +5604,31 @@ func _hellstone_checks(c: Vector3i) -> void:
 	await frames(2)
 
 
+## The Bound Mechanic: where she can turn up, and freed, the Mechanic.
+func _bound_mechanic_checks(c: Vector3i) -> void:
+	var p := game.player
+	var l: Dictionary = game.world.get_layers()
+	var deep := Vector3(c.x + 0.5, (float(l.surface) * 4.0 + float(l.cavern_top)) / 5.0 - 2.0, c.z + 0.5)
+	var shallow := Vector3(c.x + 0.5, float(l.surface) - 1.0, c.z + 0.5)
+	check(Spawner.bound_mechanic_here(game, deep) and not Spawner.bound_mechanic_here(game, shallow),
+			"the Bound Mechanic turns up in the Dungeon below a fifth of the way to the caverns")
+	var bound := game.spawn_npc("BoundMechanic", p.global_position + Vector3(2, 0, 0))
+	await frames(2)
+	check(not Spawner.bound_mechanic_here(game, deep), "one at a time")
+	var mechanic: NPC = game.town.free_mechanic(bound)
+	game.hud.open_chat(mechanic, NPC.dialog(NPC.MECHANIC_FREED_LINE))
+	await frames(2)
+	check(game.town.residents.has("Mechanic") and game.hud._chat_text.text.begins_with("Thanks!") and not Spawner.bound_mechanic_here(game, deep),
+			"freed, she's the Mechanic, and no more Bound Mechanics (%s)" % game.hud._chat_text.text.left(30))
+	check(mechanic.talk_line() != "" and mechanic.talk_line() != "...", "she talks (%s)" % mechanic.talk_line().left(40))
+	var shop: Array = Data.npcs.Mechanic.town.shop
+	check(shop.all(func(e): return Data.items.has(e if e is String else e[0])), "her shop's items all exist (%d)" % shop.size())
+	game.hud.close_chat()
+	mechanic.queue_free()
+	game.town.residents.erase("Mechanic")
+	game.town.arrived.erase("Mechanic")
+
+
 ## The Librarian Skeleton's books and the Water Bolt Mimic, on a stone floor
 ## high over the test world with a book on it.
 func _book_dweller_checks(c: Vector3i) -> void:
@@ -5710,6 +5736,7 @@ func _dungeon_enemy_checks(c: Vector3i) -> void:
 	check(absf(mimic - 0.0833) < 0.008 and absf(librarian - 0.0583) < 0.007 and absf(no_book - 0.1416) < 0.01 and by_book.call("WaterBoltMimic", false) == 0.0,
 			"by a book, Water Bolt Mimics (%.3f) and Librarian Skeletons (%.3f); no book, no spawn (%.3f)" % [mimic, librarian, no_book])
 	await _book_dweller_checks(c)
+	await _bound_mechanic_checks(c)
 	# Its walls by worldgen's parts: the last blob a spot is in.
 	w.add_decoration("dungeon_part", Vector3i(5000, 0, 5000), 1 + 4 * 300)
 	w.add_decoration("dungeon_part", Vector3i(5010, 0, 5000), 2 + 4 * 100)
@@ -5962,6 +5989,153 @@ func _boulder_kind_checks(c: Vector3i) -> void:
 	p.god_mode = was_god
 
 
+## Terraria's wiring: wrenches, levers, plates, actuators, timers, geysers.
+func _wiring_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var wr: Wiring = game.wiring
+	var was_god := p.god_mode
+	p.god_mode = true
+	var o := c + Vector3i(30, 45, -30)
+	var stone := Data.block_id("stone")
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			w.set_block(o + Vector3i(x, -1, z), stone)
+			for y in range(0, 8):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	for e in game.entities.get_children():
+		if e is Projectile or e is ItemDrop:
+			e.queue_free()
+	p.global_position = Vector3(o) + Vector3(-6.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	await frames(2)
+	# A wrench lays red wire on what you aim at, a Wire each.
+	p.inventory.slots[9] = Inventory.stack("Wrench", 1)
+	p.inventory.add("Wire", 5)
+	p.select(9)
+	p.look_at_yaw_pitch(0.0, -PI / 2.0 + 0.01)
+	await frames(3)
+	var aimed: Vector3i = p.target.get("block", Vector3i.ZERO)
+	var wires_before := p.inventory.count_of("Wire")
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	check(wr.mask(aimed) & Wiring.RED and p.inventory.count_of("Wire") == wires_before - 1, "a Wrench lays red wire on the block you aim at, using up a Wire")
+	check(WireView.showing(p) and game.wire_view.visible, "holding it, you see the wiring")
+	p.inventory.slots[9] = Inventory.stack("WireCutter", 1)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	var back := game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "Wire")
+	check(wr.mask(aimed) == 0 and back.size() == 1, "the Wire Cutter takes it back (and the Wire)")
+	for e in back:
+		e.queue_free()
+	p.inventory.slots[9] = null
+	p.inventory.remove("Wire", p.inventory.count_of("Wire"))
+	p.select(0)
+	await frames(2)
+	check(not game.wire_view.visible, "without anything mechanical in hand you don't")
+	# A lever wired to a door, a lantern and an actuated block.
+	var lever := o + Vector3i(-4, 0, 0)
+	w.set_block(lever, Data.block_id("lever"))
+	var door := o + Vector3i(4, 0, 0)
+	w.set_block(door, Data.block_id("wooden_door"))
+	w.set_block(door + Vector3i.UP, Data.block_id("door_top"))
+	var lamp := o + Vector3i(0, 4, 0)
+	w.set_block(lamp, Data.block_id("brass_lantern"))
+	var gate := o + Vector3i(0, 0, 3)
+	w.set_block(gate, stone)
+	wr.lay(lever, door, Wiring.RED)
+	wr.lay(lever, lamp, Wiring.BLUE)
+	wr.lay(lever, gate, Wiring.GREEN)
+	wr.add(gate, Wiring.ACTUATOR)
+	game.hit_switch(lever)
+	await frames(2)
+	check(Data.block(w.get_block(lever)).name == "lever_on", "a lever flips")
+	check(Doors.is_open(Data.block(w.get_block(Doors.bottom(w, door)))), "its signal opens the door on its red wire")
+	check(Data.block(w.get_block(lamp)).name == "brass_lantern_off", "switches off the lantern on its blue wire")
+	check(w.is_inactive(gate) and not w.is_solid(gate), "and actuates the block on its green wire: it isn't solid")
+	game.hit_switch(lever)
+	await frames(2)
+	check(not w.is_inactive(gate) and w.is_solid(gate) and Data.block(w.get_block(lamp)).name == "brass_lantern"
+			and not Doors.is_open(Data.block(w.get_block(Doors.bottom(w, door)))), "flipped back, all back as they were")
+	var saved := wr.save_state()
+	wr.load_state(game, saved)
+	check(wr.mask(lever) == Wiring.RED | Wiring.BLUE | Wiring.GREEN and wr.mask(gate) & Wiring.ACTUATOR, "the wiring saves and loads")
+	# Plates: red by anyone, blue only by you, yellow by anything but you;
+	# orange by you, breaking.
+	var plate := func(kind: String, by_npc: bool) -> bool:
+		var at := o + Vector3i(-2, 0, -4)
+		w.set_block(at, Data.block_id(kind))
+		wr.lay(at, gate, Wiring.YELLOW)
+		var was_off := w.is_inactive(gate)
+		var npc: NPC = null
+		if by_npc:
+			p.global_position = Vector3(o) + Vector3(-8.5, 0, -8.5)
+			npc = game.spawn_npc("BlueSlime", Vector3(at) + Vector3(0.5, 0.05, 0.5))
+			npc.velocity = Vector3.ZERO
+		else:
+			p.global_position = Vector3(at) + Vector3(0.5, 0.05, 0.5)
+		await frames(3)
+		var fired := w.is_inactive(gate) != was_off
+		if npc != null:
+			npc.queue_free()
+		p.global_position = Vector3(o) + Vector3(-8.5, 0, -8.5)
+		await frames(2)
+		wr.remove(at, 31)
+		return fired
+	var red_you: bool = await plate.call("red_pressure_plate", false)
+	var red_npc: bool = await plate.call("red_pressure_plate", true)
+	var blue_you: bool = await plate.call("blue_pressure_plate", false)
+	var blue_npc: bool = await plate.call("blue_pressure_plate", true)
+	var yellow_you: bool = await plate.call("yellow_pressure_plate", false)
+	var yellow_npc: bool = await plate.call("yellow_pressure_plate", true)
+	check(red_you and red_npc and blue_you and not blue_npc and not yellow_you and yellow_npc,
+			"pressure plates: red by anyone, blue by you alone, yellow by anything but you (%s)" % [[red_you, red_npc, blue_you, blue_npc, yellow_you, yellow_npc]])
+	var orange_at := o + Vector3i(-2, 0, -4)
+	var orange: bool = await plate.call("orange_pressure_plate", false)
+	check(orange and w.get_block(orange_at) == 0, "an orange plate goes off once and breaks")
+	w.set_inactive(gate, false)
+	# A timer that's on signals every second: the lantern blinks.
+	var timer := o + Vector3i(2, 1, -2)
+	w.set_block(timer, Data.block_id("timer_1s"))
+	wr.lay(timer, lamp, Wiring.RED)
+	game.wiring.toggle_timer(game, timer)
+	var flips := 0
+	var last := w.get_block(lamp)
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 2500:
+		await frames(1)
+		if w.get_block(lamp) != last:
+			flips += 1
+			last = w.get_block(lamp)
+	check(Data.block(w.get_block(timer)).name == "timer_1s_on" and flips == 2, "a 1 Second Timer switched on signals each second (%d in 2.5 s)" % flips)
+	game.wiring.toggle_timer(game, timer)
+	# A Geyser spouts when you step on it.
+	var gey := o + Vector3i(6, 0, -6)
+	w.set_block(gey, Data.block_id("geyser"))
+	p.global_position = Vector3(gey) + Vector3(0.5, 0.05, 0.5)
+	await frames(3)
+	check(game.entities.get_children().any(func(e): return e is Projectile and e.geyser), "a Geyser spouts fire when you step on it")
+	# A boulder whose ground is dug out rolls.
+	var rock := o + Vector3i(6, 0, 6)
+	w.set_block(rock, Data.block_id("boulder"))
+	w.set_block(rock + Vector3i.DOWN, 0)
+	game.settle_falling(rock)
+	check(w.get_block(rock) == 0 and game.entities.get_children().any(func(e): return e is Projectile and e.boulder), "a boulder with nothing under it falls")
+	for e in game.entities.get_children():
+		if e is Projectile or e is ItemDrop:
+			e.queue_free()
+	for x in range(-10, 11):
+		for z in range(-10, 11):
+			for y in range(-1, 8):
+				w.set_block(o + Vector3i(x, y, z), 0)
+				wr.remove(o + Vector3i(x, y, z), 31)
+	p.god_mode = was_god
+
+
 func _trap_checks(c: Vector3i) -> void:
 	var p := game.player
 	var w: VoxelWorld = game.world
@@ -5989,12 +6163,15 @@ func _trap_checks(c: Vector3i) -> void:
 		w.set_block(shaft_x + Vector3i(0, y, 0), 0)
 	var boulder := shaft_x + Vector3i(0, 9, 0)
 	w.set_block(boulder, Data.block_id("boulder"))
-	w.set_block(boulder + Vector3i.DOWN, Data.block_id("boulder_plug"))
-	w.set_block(boulder + Vector3i.DOWN * 2, Data.block_id("boulder_plug"))
-	game.traps.wires[Chests.key(plate)] = [dart, boulder]
+	# It rests on two blocks of stone with actuators (as worldgen leaves them).
+	for k in [1, 2]:
+		w.set_block(boulder + Vector3i.DOWN * k, stone)
+		game.wiring.add(boulder + Vector3i.DOWN * k, Wiring.ACTUATOR)
+	game.wiring.lay(plate, dart, Wiring.RED)
+	game.wiring.lay(plate, boulder + Vector3i.DOWN, Wiring.RED)
 	var bomb_plate := o + Vector3i(-9, 0, 0)
 	w.set_block(bomb_plate, Data.block_id("brown_pressure_plate"))
-	game.traps.wires[Chests.key(bomb_plate)] = [bomb]
+	game.wiring.lay(bomb_plate, bomb, Wiring.YELLOW)
 	for e in game.entities.get_children():
 		if e is Projectile:
 			e.queue_free()
@@ -6008,13 +6185,8 @@ func _trap_checks(c: Vector3i) -> void:
 	var darts := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "PoisonDart")
 	var rocks := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "Boulder")
 	check(darts.size() == 1 and darts[0].velocity.x < -40.0 and not darts[0].friendly, "a pressure plate fires its dart trap: a Poison Dart down the tunnel (%d)" % darts.size())
-	check(rocks.size() == 1 and w.get_block(boulder) == 0 and w.get_block(boulder + Vector3i.DOWN) == 0, "and drops its boulder, the plug gone")
-	# Off and on again at once: the dart trap is still cooling down.
-	p.global_position = Vector3(o) + Vector3(2.5, 0, 0.5)
-	await frames(1)
-	p.global_position = Vector3(plate) + Vector3(0.5, 0.05, 0.5)
-	await frames(1)
-	check(game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "PoisonDart").size() <= 1, "200 ticks between darts")
+	check(rocks.size() == 1 and w.get_block(boulder) == 0 and w.is_inactive(boulder + Vector3i.DOWN) and w.is_inactive(boulder + Vector3i.DOWN * 2),
+			"and its actuators switch off the stone under the boulder: it drops")
 	p.global_position = Vector3(o) + Vector3(-11.5, 0, 0.5)
 	await frames(1)
 	if rocks.size() == 1:
@@ -6026,6 +6198,12 @@ func _trap_checks(c: Vector3i) -> void:
 				break
 			fastest = maxf(fastest, Vector2(rock.velocity.x, rock.velocity.z).length())
 		check(fastest > 5.0, "the boulder lands and rolls (%.1f blocks/s)" % fastest)
+	# Off and on again soon after: the dart trap is still cooling down.
+	p.global_position = Vector3(o) + Vector3(2.5, 0, 0.5)
+	await frames(1)
+	p.global_position = Vector3(plate) + Vector3(0.5, 0.05, 0.5)
+	await frames(1)
+	check(game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "PoisonDart").size() <= 1, "200 ticks between darts")
 	# Explosives: the blast takes the rock round them.
 	var round_bomb := w.get_block(bomb + Vector3i(1, 0, 0))
 	p.global_position = Vector3(bomb_plate) + Vector3(0.5, 0.05, 0.5)
@@ -6038,8 +6216,10 @@ func _trap_checks(c: Vector3i) -> void:
 		for z in range(-5, 6):
 			for y in range(-6, 14):
 				w.set_block(o + Vector3i(x, y, z), 0)
-	game.traps.wires.erase(Chests.key(plate))
-	game.traps.wires.erase(Chests.key(bomb_plate))
+	for x in range(-14, 15):
+		for z in range(-5, 6):
+			for y in range(-6, 14):
+				game.wiring.remove(o + Vector3i(x, y, z), 31)
 	p.god_mode = was_god
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	p.velocity = Vector3.ZERO
@@ -6234,16 +6414,28 @@ func _dungeon_checks(c: Vector3i) -> void:
 		check(not game.chests.get_inventory(locked).is_empty(), "its loot is inside")
 		game.hud.close_inventory()
 		p.inventory.remove("GoldenKey", 1)
-	# A switch and the light it's wired to.
+	# A switch and the light it's wired to (red wire, worldgen's).
 	var sw := Vector3i(-1, -1, -1)
-	for k in game.wires:
-		if (game.wires[k] - d).length() < 120:
-			var parts: PackedStringArray = k.split(",")
-			sw = Vector3i(int(parts[0]), int(parts[1]), int(parts[2]))
+	var light := Vector3i(-1, -1, -1)
+	for k in game.wiring.cells:
+		if Vector3(k - d).length() < 120 and Data.block(w.get_block(k)).get("interact", "") == "switch":
+			sw = k
 			break
-	check(sw.y >= 0, "the Dungeon's lights have switches")
 	if sw.y >= 0:
-		var light: Vector3i = game.wires[Chests.key(sw)]
+		var reached := {sw: true}
+		var wire_todo: Array = [sw]
+		while not wire_todo.is_empty() and light.y < 0:
+			var wc: Vector3i = wire_todo.pop_back()
+			for dd in [Vector3i.RIGHT, Vector3i.LEFT, Vector3i.UP, Vector3i.DOWN, Vector3i.FORWARD, Vector3i.BACK]:
+				var n: Vector3i = wc + dd
+				if not reached.has(n) and game.wiring.mask(n) & Wiring.RED:
+					reached[n] = true
+					wire_todo.append(n)
+					var nb := Data.block(w.get_block(n))
+					if nb.has("off") or nb.has("lit"):
+						light = n
+	check(sw.y >= 0 and light.y >= 0, "the Dungeon's lights have switches, wired to them")
+	if sw.y >= 0 and light.y >= 0:
 		var before_light := w.get_block(light)
 		var lb := Data.block(before_light)
 		game.hit_switch(sw)

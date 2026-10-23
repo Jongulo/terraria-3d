@@ -1131,9 +1131,11 @@ const DIALOG := {
 	"bound_goblin": {"any": [121]},
 	"goblin_tinkerer": {"any": [122, 123, 125, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]},
 	"sleeping_angler": {"any": [353, 354, 355]},
+	"bound_mechanic": {"any": [156]},
 }
-## What the Goblin Tinkerer says when you free him.
+## What the Goblin Tinkerer says when you free him; the Mechanic.
 const FREED_LINE := 120
+const MECHANIC_FREED_LINE := 156
 ## The Guide's Help button: Terraria's tips that fit this game, in order.
 const GUIDE_HELP := [177, 178, 179, 183, 184, 185, 186, 187, 191, 192, 193, 195, 196, 197, 198, 201, 188, 211, 212,
 		204, 213, 214, 208, 209, 215, 217, 218, 219, 220]
@@ -1144,6 +1146,8 @@ func talk_line() -> String:
 	var game := Game.current
 	if def.get("talk", "") == "angler":
 		return angler_line()
+	if def.get("talk", "") == "mechanic":
+		return mechanic_line()
 	var lines: Dictionary = DIALOG.get(def.get("talk", ""), {})
 	var pool: Array = lines.get("any", []).duplicate()
 	pool.append_array(lines.get("day" if game.sky.is_day else "night", []))
@@ -1194,6 +1198,24 @@ func angler_line() -> String:
 	if game.town.residents.has("Dryad") and randi() % 5 == 0:
 		return dialog(347)
 	return chatter.call("AnglerChatter")
+
+
+## The Mechanic's chat (NPC.GetChat): homeless, complaining you're in her
+## way; with the Goblin Tinkerer or the Arms Dealer about, 1 in 6 about them;
+## else one of her three lines or her chatter. (Her Blood Moon lines wait for
+## the Blood Moon.)
+func mechanic_line() -> String:
+	var game := Game.current
+	if home_key == "":
+		return dialog(randi_range(157, 160))
+	if game.town.residents.has("GoblinTinkerer") and randi() % 6 == 0 and dialog(165) != "":
+		return dialog(165)
+	if game.town.residents.has("ArmsDealer") and randi() % 6 == 0 and dialog(166) != "":
+		return dialog(166)
+	var chatter: Array = Assets.ids.get("names", {}).get("town", {}).get("MechanicChatter", {}).values()
+	var n := randi() % (3 + chatter.size())
+	var text := dialog(167 + n) if n < 3 else fill(chatter[n - 3])
+	return text if text != "" else dialog(167 + randi() % 3)
 
 
 ## Terraria's LegacyDialog line `n` with its {placeholders} filled in, or ""

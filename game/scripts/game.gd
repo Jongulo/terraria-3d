@@ -38,9 +38,6 @@ var falling_leaves := FallingLeaves.new()
 var dust := DustParticles.new()
 ## "x,y,z" -> quarter turns, for directional block models (set when placed).
 var block_rotations := {}
-## Worldgen's switches and the lights they're wired to (dungeon.rs: a "switch"
-## decoration whose style is the light's offset): "x,y,z" -> the light's cell.
-var wires := {}
 ## Where the Dungeon's entrance is (its hall floor), or NO_DUNGEON.
 var dungeon_entrance := NO_DUNGEON
 const NO_DUNGEON := Vector3i(-1, -1, -1)
@@ -64,8 +61,9 @@ var hud: Hud
 var entities := Node3D.new()
 var spawner := Spawner.new()
 var chests := Chests.new()
-## Worldgen's traps and the plates wired to them.
-var traps := Traps.new()
+## Terraria's wiring: wire, actuators, triggers and what they set off.
+var wiring := Wiring.new()
+var wire_view := WireView.new()
 ## The town NPCs and their homes.
 var town := Town.new()
 ## The Goblin Army (Invasion): on its way, here, beaten.
@@ -162,7 +160,7 @@ func _process(delta: float) -> void:
 				_begin_play()
 		State.PLAYING:
 			_update_playing(delta)
-			traps.update(self, delta)
+			wiring.update(self, delta)
 
 
 ## Terraria's Underworld glow (TileLightScanner.ApplyHellLight): open tiles
@@ -241,7 +239,9 @@ func _on_world_ready() -> void:
 	renderer.chunk_updated.connect(torch_flames.chunk_updated)
 	renderer.chunk_unloaded.connect(torch_flames.chunk_unloaded)
 	chests.setup(world)
-	traps.setup(world)
+	wiring.setup(self)
+	wire_view.setup(self)
+	add_child(wire_view)
 
 	add_child(player)
 	sky.camera = player.camera
@@ -265,9 +265,6 @@ func _on_world_ready() -> void:
 			signs[Chests.key(d.pos)] = WORLDGEN_SIGNS[int(d.style) % WORLDGEN_SIGNS.size()]
 		elif d.kind == "dungeon":
 			dungeon_entrance = Vector3i(d.pos)
-		elif d.kind == "switch":
-			var o := int(d.style)
-			wires[Chests.key(d.pos)] = Vector3i(d.pos) + Vector3i((o & 31) - 16, o >> 10, ((o >> 5) & 31) - 16)
 	player.input_enabled = false
 	hud.bind(player)
 	player.died.connect(func(): hud.show_death())
@@ -1062,7 +1059,7 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 ## torch, a plant) only with something under it.
 static func supports_falling(w: VoxelWorld, p: Vector3i) -> bool:
 	var id := w.get_block(p)
-	if id == 0:
+	if id == 0 or w.is_inactive(p):
 		return false
 	var b := Data.block(id)
 	if b.get("solid", true) or b.get("platform", false):
@@ -1081,6 +1078,11 @@ func settle_falling(p: Vector3i) -> void:
 	while true:
 		var id := world.get_block(p)
 		var b := Data.block(id)
+		# A boulder with nothing under it rolls (Terraria's Check2x2 for them).
+		if b.has("boulder") or b.get("trap", "") == "boulder":
+			if not supports_falling(world, p + Vector3i.DOWN):
+				drop_boulder(p)
+			return
 		if not b.get("falls", false) or supports_falling(world, p + Vector3i.DOWN):
 			return
 		var above := Data.block(world.get_block(p + Vector3i.UP))
@@ -1092,6 +1094,16 @@ func settle_falling(p: Vector3i) -> void:
 		entities.add_child(f)
 		f.global_position = Vector3(p)
 		p += Vector3i.UP
+
+
+## A boulder block at `p` comes loose: it falls and rolls (its block's
+## "boulder": Projectile "Boulder", "LavaBoulder", "Ghoulder"...). Terraria's
+## Check2x2: 70 damage (doubled on you as hostile), the Rainbow Boulder's 100.
+func drop_boulder(p: Vector3i) -> void:
+	var kind: String = Data.block(world.get_block(p)).get("boulder", "Boulder")
+	world.set_block(p, 0)
+	var b: Projectile = spawn_projectile(kind, Vector3(p) + Vector3(0.5, 0.5, 0.5), Vector3.ZERO, 100 if kind == "RainbowBoulder" else 70, 10.0, 0.0, 0.0, 1.0, false)
+	b.boulder = true
 
 
 ## Terraria's tile cutting: a block of Main.tileCut (grass, flowers, vines,
@@ -1388,17 +1400,7 @@ func unlock_chest(p: Vector3i) -> bool:
 ## Flips a switch and the light it's wired to (Terraria's Wiring.HitSwitch:
 ## the light goes on or off).
 func hit_switch(p: Vector3i) -> void:
-	var b := Data.block(world.get_block(p))
-	if b.has("toggles_to"):
-		world.set_block(p, Data.block_id(b.toggles_to))
-	Audio.play_at("Mech_0", Vector3(p) + Vector3(0.5, 0.5, 0.5))
-	if not wires.has(Chests.key(p)):
-		return
-	var light: Vector3i = wires[Chests.key(p)]
-	var l := Data.block(world.get_block(light))
-	var twin: String = l.get("off", l.get("lit", ""))
-	if twin != "":
-		world.set_block(light, Data.block_id(twin))
+	wiring.flip(self, p)
 
 
 ## Crafting stations within reach (block names like "work_bench").
@@ -1447,6 +1449,8 @@ func save_world() -> bool:
 	meta["creative"] = creative
 	meta["styles"] = true
 	meta["shapes"] = Array(world.get_shapes())
+	meta["wiring"] = wiring.save_state()
+	meta["inactive"] = Array(world.get_inactive())
 	meta["signs"] = signs
 	meta["town"] = town.save_state()
 	meta["invasion"] = invasion.save_state()
@@ -1469,6 +1473,12 @@ func _apply_meta(meta: Dictionary) -> void:
 	var shapes: Array = meta.get("shapes", [])
 	for i in range(0, shapes.size() - 3, 4):
 		world.set_shape(Vector3i(int(shapes[i]), int(shapes[i + 1]), int(shapes[i + 2])), int(shapes[i + 3]))
+	# Saves from before the wiring keep worldgen's (setup's).
+	if meta.has("wiring"):
+		wiring.load_state(self, meta.wiring)
+	var off: Array = meta.get("inactive", [])
+	for i in range(0, off.size() - 2, 3):
+		world.set_inactive(Vector3i(int(off[i]), int(off[i + 1]), int(off[i + 2])), true)
 
 
 ## Switches the world between creative and survival (the pause menu's game

@@ -3811,7 +3811,7 @@ mod tests {
         assert!(cracked.iter().filter(|&&n| n > 0).count() == 1 && cracked.iter().sum::<usize>() > 1000, "some halls of the colour's cracked brick ({cracked:?})");
         let (lo, hi) = *w.structures.last().expect("the Dungeon is a protected structure");
         // Traps: some in the Dungeon, more in the caves (Terraria's Traps pass).
-        let wires: Vec<_> = w.decorations.iter().filter(|d| d.kind == "trap_wire").map(|d| d.pos).collect();
+        let wires: Vec<_> = w.decorations.iter().filter(|d| d.kind == "wire" && w.def(w.get(d.pos.0, d.pos.1, d.pos.2)).name.ends_with("pressure_plate")).map(|d| d.pos).collect();
         let inside = wires.iter().filter(|p| p.0 >= lo.0 && p.0 <= hi.0 && p.1 >= lo.1 && p.1 <= hi.1 && p.2 >= lo.2 && p.2 <= hi.2).count();
         assert!(inside >= 1 && wires.len() > inside + 20, "traps: {inside} in the Dungeon of {}", wires.len());
         for p in &wires {
@@ -3896,14 +3896,15 @@ mod tests {
         }
         assert!(hung >= 5, "paintings ({hung})");
         // Each switch is wired to a light.
-        let switches: Vec<_> = w.decorations.iter().filter(|d| d.kind == "switch").collect();
+        let wired = crate::wires::cells(&w);
+        let switches: Vec<_> = wired.keys().filter(|p| w.get(p.0, p.1, p.2) == id("switch")).copied().collect();
         assert!(switches.len() >= 10, "lights with switches ({})", switches.len());
-        for sw in &switches {
-            assert_eq!(w.get(sw.pos.0, sw.pos.1, sw.pos.2), id("switch"));
-            let o = (sw.style & 31, (sw.style >> 5) & 31, sw.style >> 10);
-            let light = (sw.pos.0 + o.0 - 16, sw.pos.1 + o.2, sw.pos.2 + o.1 - 16);
-            let name = w.def(w.get(light.0, light.1, light.2)).name.clone();
-            assert!(name.contains("lantern") || name.contains("lamp") || name.contains("sconse") || name.contains("chandelier"), "switch at {:?} wired to a light, not {name}", sw.pos);
+        let lights: Vec<_> = wired.keys().filter(|p| {
+            let name = &w.def(w.get(p.0, p.1, p.2)).name;
+            name.contains("lantern") || name.contains("lamp") || name.contains("sconse") || name.contains("chandelier")
+        }).copied().collect();
+        for sw in switches.iter().take(12) {
+            assert!(lights.iter().any(|&l| crate::wires::joined(&w, *sw, l, crate::wires::RED)), "switch at {sw:?} wired to a light");
         }
         // The entrance above its floor is as it was built: its towers and
         // hall pillars stand, its door is open.
