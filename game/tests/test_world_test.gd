@@ -462,6 +462,7 @@ func _run() -> void:
 	await _potion_checks(c)
 	await _summon_checks(c)
 	await _weather_checks(c)
+	await _slime_rain_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -7720,7 +7721,7 @@ func _weather_checks(c: Vector3i) -> void:
 	var bs := sky.save_state()
 	check(bs.blood_moon and bs.has("raining") and bs.has("rain_time"), "the weather and the Blood Moon are saved")
 	sky.time = sky.NIGHT_LENGTH - 1.0
-	await frames(3)
+	await _until(func(): return sky.is_day, 1.0)
 	check(sky.is_day and not sky.blood_moon, "the Blood Moon is over at dawn")
 	# The Bloody Tear: a Blood Moon at night only, used up only then.
 	var use := func(item: String) -> void:
@@ -7846,5 +7847,120 @@ func _weather_checks(c: Vector3i) -> void:
 	game.spawner.set_physics_process(true)
 	p.inventory.slots[9] = null
 	p.select(held)
+	p.god_mode = was_god
+	p.life = p.life_cap()
+
+
+## Slime Rain: its timing, its falling slimes, King Slime after enough kills.
+func _slime_rain_checks(c: Vector3i) -> void:
+	var p := game.player
+	var sky: SkySystem = game.sky
+	var saved := sky.save_state()
+	var was_god := p.god_mode
+	p.god_mode = true
+	# (On the open ground west of the middle: room overhead for the slimes.)
+	var arena := c + Vector3i(-90, 0, 0)
+	for npc in game.npcs():
+		if npc.def.ai != "town":
+			npc.queue_free()
+	p.global_position = Vector3(arena) + Vector3(0.5, 0, 0.5)
+	p._fall_start = p.global_position.y
+	p.velocity = Vector3.ZERO
+	game.spawner.set_physics_process(false)
+	await frames(2)
+	sky.stop_rain()
+	sky.cloud_alpha = 0.0
+	sky.is_day = true
+	sky.time = 5000.0
+	# Its length and the wait after it.
+	var shortest := 1e9
+	var longest := 0.0
+	var wait_short := 1e9
+	var wait_long := 0.0
+	for i in 200:
+		sky.slime_rain = false
+		sky.slime_rain_time = 0.0
+		sky.start_slime_rain()
+		shortest = minf(shortest, sky.slime_rain_time)
+		longest = maxf(longest, sky.slime_rain_time)
+		sky.stop_slime_rain()
+		wait_short = minf(wait_short, -sky.slime_rain_time)
+		wait_long = maxf(wait_long, -sky.slime_rain_time)
+	check(shortest >= 32400 and longest < 54000 and wait_short >= 302400 and wait_long < 604800,
+			"Slime Rain lasts 9 to 15 minutes (%d to %d ticks), then 3.5 to 7 days pass before another" % [shortest, longest])
+	# No new one while the wait lasts; not in the rain.
+	sky.slime_rain_time = -100.0
+	sky.strongest_life = 400
+	sky.strongest_defense = 20
+	for i in 99:
+		sky.slime_rain_tick()
+	check(not sky.slime_rain and sky.slime_rain_time == -1.0, "the wait counts down a tick at a time, and none comes meanwhile")
+	sky.raining = true
+	sky.start_slime_rain()
+	check(not sky.slime_rain, "never in the rain")
+	sky.raining = false
+	# It starts: its message after 420 ticks, its music.
+	var news := []
+	var on_news := func(started): news.append(started)
+	sky.slime_rain_news.connect(on_news)
+	sky.slime_rain_time = 0.0
+	sky.start_slime_rain()
+	for i in 420:
+		sky.slime_rain_tick()
+	check(sky.slime_rain and news == [true], "Slime is falling from the sky! (420 ticks after it starts)")
+	sky.slime_rain_news.disconnect(on_news)
+	game._update_music(p.global_position)
+	check(game.surface_music() != "" and Audio._current_track == "SlimeRain", "its music plays on the surface (%s)" % Audio._current_track)
+	game._update_playing(0.016)
+	await frames(3)
+	var shown := 0
+	for b in sky._slime_sky._batches:
+		shown += b.multimesh.visible_instance_count
+	check(sky._slime_sky.active and shown > 20, "slimes fall far off in the sky (%d in view)" % shown)
+	# Slimes fall from high over you.
+	var spawned := []
+	for i in 6000:
+		game.spawner.slime_rain_tick()
+		for npc in game.npcs():
+			if npc.def.ai == "slime" and not npc in spawned:
+				spawned.append(npc)
+		if spawned.size() >= 8:
+			break
+	var high := spawned.all(func(npc): return npc.global_position.y - p.global_position.y > 30.0 and npc.kind in Game.SLIME_RAIN_SLIMES)
+	check(spawned.size() >= 8 and high, "slimes start 37 to 75 blocks over you (%d: %s)" % [spawned.size(), spawned.map(func(npc): return npc.kind)])
+	for npc in spawned:
+		npc.queue_free()
+	await frames(1)
+	# (Terraria's picks: 1 in 200 Pinky, 1 in 10 Purple, 2 in 5 Green, else Blue.)
+	check(Data.npcs.has("PurpleSlime") and Data.npcs.has("Pinky") and Data.npcs.Pinky.drops.any(func(dd): return dd[0] == "PinkGel" and dd[1] == 25 and dd[2] == 50),
+			"Purple Slimes and Pinkies (25 to 50 Pink Gel)")
+	# 150 slimes killed: King Slime.
+	var slime := game.spawn_npc("GreenSlime", Vector3(arena) + Vector3(5.5, 0, 0.5))
+	slime.set_physics_process(false)
+	var beaten: bool = game.defeated_bosses.has("KingSlime")
+	game.defeated_bosses.erase("KingSlime")
+	sky.slime_rain_kills = 0
+	for i in 149:
+		game.advance_slime_rain(slime)
+	var before := game.npcs().any(func(npc): return npc.kind == "KingSlime")
+	game.advance_slime_rain(slime)
+	var king := game.npcs().filter(func(npc): return npc.kind == "KingSlime")
+	check(not before and king.size() == 1 and sky.slime_rain_kills == -75, "150 slimes killed in it: King Slime comes (the count starts again at -75)")
+	slime.queue_free()
+	if king.size() == 1:
+		king[0].hit(100000, 0.0, Vector3.FORWARD, 0.0)
+		await frames(3)
+	check(not sky.slime_rain, "beating King Slime ends the Slime Rain")
+	if not beaten:
+		game.defeated_bosses.erase("KingSlime")
+	var bs := sky.save_state()
+	check(bs.has("slime_rain") and bs.has("slime_rain_time") and bs.has("slime_rain_kills"), "Slime Rain is saved with the world")
+	for e in game.entities.get_children():
+		if e is ItemDrop:
+			e.queue_free()
+	sky.load_state(saved)
+	sky.slime_rain = false
+	sky.slime_rain_time = -1000.0
+	game.spawner.set_physics_process(true)
 	p.god_mode = was_god
 	p.life = p.life_cap()

@@ -130,6 +130,24 @@ const MAX_WIND_STORM := 0.4
 const MIN_RAIN := 0.4
 const MAX_RAIN := 0.5
 signal thunder(distance: int)
+## Terraria's Slime Rain (Main.StartSlimeRain, StopSlimeRain, UpdateTime):
+## slime_rain_time counts down the rain (ticks), or up (negative) the wait
+## before another can come; a new world waits 2 to 3 days. On a morning
+## (before 27000 ticks) with no rain, Blood Moon or invasion on and the wait
+## over, it comes 1 tick in 450000 (half that before King Slime is beaten)
+## once someone has more than 140 max life and 8 defense; it lasts 32400 to
+## 54000 ticks, then the wait is 3.5 to 7 days. Its message comes 420 ticks
+## after it starts or stops. slime_rain_kills: slimes killed toward King
+## Slime (Main.slimeRainKillCount).
+var slime_rain := false
+var slime_rain_time := 0.0
+var slime_rain_kills := 0
+var _slime_warning := 0
+var strongest_defense := 0
+var king_slime_beaten := false
+## An invasion on (the Goblin Army): no Slime Rain.
+var invasion_on := false
+signal slime_rain_news(started: bool)
 
 var env: Environment
 var _sky_mat := ShaderMaterial.new()
@@ -139,6 +157,7 @@ var _moon: MeshInstance3D
 var _rings: Array = []
 var _clouds: Array = []  # {node, angle, elevation, speed, scale, active}
 var _seconds := 0.0
+var _slime_sky := SlimeSky.new()
 ## The time of day's light, before rain and the Blood Moon change it.
 var _time_light := 1.0
 
@@ -174,7 +193,10 @@ func _ready() -> void:
 	_sea_tex = ImageTexture.create_from_image(_sea_mask)
 	for i in CLOUD_SLOTS:
 		_clouds.append(_make_cloud(i))
+	add_child(_slime_sky)
 	cloudiness = randf_range(0.25, 0.9)
+	# A new world's wait for its first Slime Rain (WorldGen: 2 to 3 days).
+	slime_rain_time = -randi_range(RAIN_DAY * 2, RAIN_DAY * 3 - 1)
 
 
 ## Sun/moon quad. Depth-tested so terrain (and the backdrop rings) hide it; it
@@ -349,6 +371,7 @@ func _process(delta: float) -> void:
 		wind_steps += 1
 		wind_tick()
 		rain_tick()
+		slime_rain_tick()
 	time += delta * TICKS_PER_SECOND
 	_seconds += delta
 	if is_day and time >= DAY_LENGTH:
@@ -376,7 +399,7 @@ func rain_tick() -> void:
 			stop_rain()
 		elif randi() % (RAIN_HOUR * 2) == 0:
 			change_rain()
-	elif strongest_life >= 120:
+	elif strongest_life >= 120 and not slime_rain:
 		if randi() % int(RAIN_DAY * 5.75) == 0:
 			start_rain()
 		elif cloudiness >= 0.9 and randi() % int(RAIN_DAY * 4.25) == 0:
@@ -429,6 +452,42 @@ func stop_rain() -> void:
 	rain_time = 0
 	raining = false
 	max_raining = 0.0
+
+
+func slime_rain_tick() -> void:
+	if slime_rain_time > 0.0:
+		slime_rain_time -= 1.0
+		if slime_rain_time <= 0.0:
+			stop_slime_rain()
+	elif slime_rain_time < 0.0:
+		slime_rain_time = minf(slime_rain_time + 1.0, 0.0)
+	# (NPC.BusyWithAnyInvasionOfSorts: the wait, a Blood Moon, an invasion.)
+	if not raining and slime_rain_time == 0.0 and not blood_moon and not invasion_on and is_day and time < 27000.0:
+		var n := 450000 if king_slime_beaten else 225000
+		if strongest_life > 140 and strongest_defense > 8 and randi() % n == 0:
+			start_slime_rain()
+	if _slime_warning > 0:
+		_slime_warning -= 1
+		if _slime_warning == 0:
+			slime_rain_news.emit(slime_rain_time > 0.0)
+
+
+func start_slime_rain() -> void:
+	if slime_rain or raining:
+		return
+	if slime_rain_time <= 0.0:
+		slime_rain_time = randi_range(32400, 53999)
+	slime_rain = true
+	slime_rain_kills = 0
+	_slime_warning = 420
+
+
+func stop_slime_rain() -> void:
+	if not slime_rain:
+		return
+	slime_rain_time = -randi_range(3024, 6047) * 100
+	slime_rain = false
+	_slime_warning = 420
 
 
 ## Lightning in a storm (UpdateWeather): now and then, more often the harder
@@ -560,6 +619,12 @@ func _update_visuals(delta: float) -> void:
 			c.active = float(c.slot) / CLOUD_SLOTS < cover
 		_update_backdrops(cam, horizon, under, delta)
 		_update_clouds(cam, top, horizon, under, delta)
+		if slime_rain != _slime_sky.active:
+			if slime_rain:
+				_slime_sky.start()
+			else:
+				_slime_sky.stop()
+		_slime_sky.update(delta, cam, cloud_distance() * 1.05, top, under)
 
 
 ## The biome's background layers, as rings around the viewer, lit by the sky
@@ -704,7 +769,8 @@ func _update_clouds(cam: Vector3, top: Color, horizon: Color, under: float, delt
 
 func save_state() -> Dictionary:
 	return {"time": time, "is_day": is_day, "moon_phase": moon_phase, "cloudiness": cloudiness,
-			"raining": raining, "rain_time": rain_time, "max_raining": max_raining, "blood_moon": blood_moon}
+			"raining": raining, "rain_time": rain_time, "max_raining": max_raining, "blood_moon": blood_moon,
+			"slime_rain": slime_rain, "slime_rain_time": slime_rain_time, "slime_rain_kills": slime_rain_kills}
 
 
 func load_state(d: Dictionary) -> void:
@@ -717,5 +783,8 @@ func load_state(d: Dictionary) -> void:
 	max_raining = float(d.get("max_raining", 0.0))
 	cloud_alpha = max_raining if raining else 0.0
 	blood_moon = bool(d.get("blood_moon", false))
+	slime_rain = bool(d.get("slime_rain", false))
+	slime_rain_time = float(d.get("slime_rain_time", 0.0))
+	slime_rain_kills = int(d.get("slime_rain_kills", 0))
 	for c in _clouds:
 		c.active = float(c.slot) / CLOUD_SLOTS < cloudiness

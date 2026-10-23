@@ -289,6 +289,8 @@ func _on_world_ready() -> void:
 	player.died.connect(func(): hud.show_death())
 	player.respawned.connect(func(): hud.hide_death())
 	sky.dusk.connect(_on_dusk)
+	sky.slime_rain_news.connect(func(started: bool):
+		message("Slime is falling from the sky!" if started else "Slime has stopped falling from the sky.", WORLD_COLOR))
 	sky.dawn.connect(_on_dawn)
 	state = State.STREAMING
 
@@ -336,6 +338,9 @@ func _update_playing(delta: float) -> void:
 	renderer.focus = pos
 	_update_hell_light()
 	sky.strongest_life = player.life_max
+	sky.strongest_defense = player.defense()
+	sky.invasion_on = invasion.active
+	sky.king_slime_beaten = defeated_bosses.has("KingSlime")
 	# Fade the sky and backdrop out underground.
 	sky.depth_factor = clampf((surface_level - 18.0 - pos.y) / 12.0, 0.0, 1.0)
 	_biome_timer -= delta
@@ -549,6 +554,9 @@ func _update_music(pos: Vector3) -> void:
 		Audio.set_music(boss().def.get("music", "Boss1"))
 	elif invasion.near(pos):
 		Audio.set_music("GoblinArmy")
+	elif sky.slime_rain and (sky.is_day or not sky.blood_moon) and pos.y > surface_level - 15.0:
+		# Slime Rain's music on the surface (not on a Blood Moon night).
+		Audio.set_music("SlimeRain")
 	elif pos.y > space_level():
 		Audio.set_music("SpaceDay" if sky.is_day else "SpaceNight")
 	elif biome == "ocean":
@@ -721,6 +729,28 @@ func on_npc_killed(npc: NPC) -> void:
 	if npc.boss:
 		defeated_bosses[npc.kind] = true
 		message("%s has been defeated!" % Assets.npc_name(npc.kind), Color(0.69, 0.29, 1.0))
+		# King Slime beaten: the Slime Rain is over.
+		if npc.kind == "KingSlime":
+			sky.stop_slime_rain()
+		return
+	advance_slime_rain(npc)
+
+
+## The slimes Terraria counts toward King Slime in a Slime Rain (its
+## NPC 1's kinds: Main.slimeRainNPC).
+const SLIME_RAIN_SLIMES := ["GreenSlime", "BlueSlime", "RedSlime", "YellowSlime", "PurpleSlime", "Pinky"]
+
+## A slime killed in a Slime Rain (NPC.DoDeathEvents_AdvanceSlimeRain): at
+## 150 (75 once he's beaten) King Slime comes for you, and the count starts
+## again from minus half that.
+func advance_slime_rain(npc: NPC) -> void:
+	if not sky.slime_rain or not npc.kind in SLIME_RAIN_SLIMES or npcs().any(func(n): return n.kind == "KingSlime"):
+		return
+	var need := 75 if defeated_bosses.has("KingSlime") else 150
+	sky.slime_rain_kills += 1
+	if sky.slime_rain_kills >= need:
+		summon_boss("KingSlime")
+		sky.slime_rain_kills = -need / 2
 
 
 ## The Dungeon's wall at `pos` (worldgen's "dungeon_part" blobs: dungeon.rs

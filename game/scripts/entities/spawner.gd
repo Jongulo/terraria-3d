@@ -6,9 +6,58 @@ extends Node
 const INTERVAL := 1.0
 
 var _timer := 0.0
+var _slime_acc := 0.0
+
+
+## Slime Rain's slimes (Terraria's Spawner.SlimeRainSpawns), a tick at a
+## time: with you on the surface and fewer than 15 enemies about, 1 tick in
+## 45 (more the more there are: 45 + 450 x a fifteenth of them) a slime
+## starts high over you (0.75 to 1.5 of Terraria's screen heights up: 37 to
+## 75 blocks; within 40 blocks across) where there's room and no roof: 1 in
+## 200 a Pinky, else 1 in 10 a Purple Slime, 2 in 5 of the rest a Green
+## Slime, else a Blue Slime.
+func slime_rain_tick() -> void:
+	var game := Game.current
+	if game == null or game.state != Game.State.PLAYING or not game.sky.slime_rain:
+		return
+	var player: Player = game.player
+	if not player.alive or player.global_position.y < game.surface_level - 12.0:
+		return
+	var near := game.npcs().filter(func(n): return n.def.ai != "town" and not n.is_critter() \
+			and n.global_position.distance_to(player.global_position) < 60.0).size()
+	if near > 15:
+		return
+	if randi() % (45 + int(450.0 * near / 15.0)) != 0:
+		return
+	var a := randf() * TAU
+	var r := sqrt(randf()) * 40.0
+	var at := player.global_position + Vector3(cos(a) * r, randf_range(37.0, 75.0), sin(a) * r)
+	var size: Vector3i = game.world.get_size()
+	if at.x < 10 or at.z < 10 or at.x > size.x - 10 or at.z > size.z - 10 or at.y > size.y - 4:
+		return
+	var cell := Vector3i(at.floor())
+	if game.world.surface_y(cell.x, cell.z) >= cell.y:
+		return
+	for x in range(-2, 3):
+		for z in range(-2, 3):
+			for y in range(-3, 2):
+				if game.world.is_solid(cell + Vector3i(x, y, z)):
+					return
+	var kind := "BlueSlime"
+	if randi() % 200 == 0:
+		kind = "Pinky"
+	elif randi() % 10 == 0:
+		kind = "PurpleSlime"
+	elif randi() % 5 < 2:
+		kind = "GreenSlime"
+	game.spawn_npc(kind, at)
 
 
 func _physics_process(delta: float) -> void:
+	_slime_acc = minf(_slime_acc + delta, 0.25)
+	while _slime_acc >= 1.0 / 60.0:
+		_slime_acc -= 1.0 / 60.0
+		slime_rain_tick()
 	_timer -= delta
 	if _timer > 0.0:
 		return
@@ -113,6 +162,10 @@ func spawn_tick() -> void:
 	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy", "flying_fish", "hover"]
 	var pos = _find_water_spot(game, player.global_position, NPC.look(kind).hitbox) if Data.npcs[kind].ai == "swim" \
 			else _find_spot(game, player.global_position, depth in ["underground", "caverns", "underworld"], flying)
+	# Any of Terraria's NPC 1 slimes spawning is a Pinky 1 time in 180
+	# (Spawner.SpawnNPC).
+	if kind in Game.SLIME_RAIN_SLIMES and randi() % 180 == 0:
+		kind = "Pinky"
 	if pos != null:
 		game.spawn_npc(kind, pos)
 

@@ -874,6 +874,7 @@
 		"ShinyRedBalloon": {"value": 15000, "type": "accessory", "jump_boost": true, "tooltip": "Increases jump height"},
 
 		"Gel": {"value": 1, "type": "material"},
+		"PinkGel": {"value": 15, "type": "material"},
 		"Lens": {"value": 300, "type": "material"},
 		"Topaz": {"value": 3750, "type": "material"},
 		"Amethyst": {"value": 1875, "type": "material"},
