@@ -448,7 +448,7 @@ func _table(depth: String, night: bool, biome := "") -> Array:
 	var under := depth in ["underground", "caverns"]
 	if biome == "snow" and depth != "space":
 		if under:
-			return [["IceBat", 4], ["IceSlime", 2], ["SpikedIceSlime", 2]]
+			return [["IceBat", 4], ["IceSlime", 2], ["SpikedIceSlime", 2], ["SnowFlinx", 2]]
 		return [["ZombieEskimo", 5], ["IceSlime", 3]] if night else [["IceSlime", 6]]
 	if biome == "desert" and depth != "space":
 		if under:

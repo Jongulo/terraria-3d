@@ -24,6 +24,8 @@ var _stuck := false
 var _smoke := 0.0
 ## Its ProjectileID name.
 var kind := ""
+## Shot by a minion: its hits are minion hits (whip tags count: Minion.strike).
+var minion_shot := false
 ## Defense its hits ignore (the Sharpening Station's, for melee).
 var armor_pen := 0
 ## Each enemy pierced takes this share off its damage (Glacier Fang: 34%).
@@ -112,6 +114,7 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
 		"PoisonDart": {"poison": 10.0, "life": 60.0},
 		"HornetStinger": {"dust": [18], "size": 0.45, "npc_poison": [240, 360], "life": 5.0},
+		"MeteorWhipMeteor": {"ghost": true, "glow": true, "size": 1.5, "radius": 0.6, "dust": [6], "life": 3.0},
 		"ImpFireball": {"hidden": true, "dust": [6], "glow": true, "pierce": 5, "radius": 0.25, "ignite": [1, 180, 360], "life": 2.5},
 		"Boulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "BoulderThatSpawnsPet": {"size": 1.0, "radius": 0.6, "life": 60.0},
 		"BouncyBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "LavaBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0},
@@ -488,8 +491,8 @@ func _book_step(delta: float, game) -> void:
 ## falling fast (6). For its first 7 ticks it hurts nothing; then it hurts you
 ## (doubled, as hostile) and each enemy it rolls into once.
 ## - Boulder: landing faster than 5 bounces it up a fifth; a wall breaks it.
-## - The boulder that leaves a pet breaks on that landing too (its Friendly
-##   Boulder pet isn't here: no pets yet).
+## - The boulder that leaves a pet breaks on that landing too, leaving its
+##   Friendly Boulder.
 ## - Lava Boulder: trails fire, sets what it hits On Fire! (5 s), breaks in
 ##   any liquid, and where it breaks lava fills 4 tiles round it (here 2.7
 ##   blocks) wherever it can see.
@@ -804,7 +807,9 @@ func _boulder_break(game) -> void:
 			for i in 50:
 				game.dust.spawn(192, global_position + Vector3(randf_range(-0.4, 0.4), randf_range(-0.4, 0.4), randf_range(-0.4, 0.4)), velocity * 0.5 / 3.75 + Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)), 1.5)
 		"BoulderThatSpawnsPet":
+			# Its Friendly Boulder (Projectile.Kill: item 5523).
 			Audio.play_at("Dig_*", global_position)
+			game.spawn_item("BoulderPet", 1, global_position)
 		_:
 			Audio.play_at("Dig_*", global_position)
 			var dust_id: int = {"BouncyBoulder": 243}.get(kind, 1)
@@ -855,7 +860,10 @@ func _check_hits(game) -> bool:
 		for npc in game.npcs():
 			if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
 				_hit[npc] = true
-				npc.hit(damage, knockback, velocity.normalized(), crit, armor_pen)
+				if minion_shot:
+					Minion.strike(game, npc, damage, knockback, velocity.normalized())
+				else:
+					npc.hit(damage, knockback, velocity.normalized(), crit, armor_pen)
 				if _flight.get("melee", false):
 					game.player.on_melee_hit(npc, {})
 				var fire: Array = _flight.get("ignite", [])

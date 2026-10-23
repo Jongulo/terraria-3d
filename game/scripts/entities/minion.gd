@@ -26,6 +26,16 @@ extends Node3D
 ##   bird: AI_158 (the Finch): sits on your head, darts at enemies within
 ##     800 px and pecks them (each every 15 ticks).
 ##   orb: AI_011 (the Shadow Orb): drifts after you at 3 px a tick, shining.
+##   walker: AI_067 on foot (the Flinx, the Vampire Frog; the Crimson Heart
+##     and the Friendly Boulder pets). It walks to its place (a minion beside
+##     you, a pet behind you), hopping onto what's in its way and up toward
+##     its goal, flies back like the others when 500 px off (the pets 200),
+##     and a minion runs at the nearest enemy within 800 px of it or you that
+##     it can see: the Flinx bowls into it (each enemy every 10 ticks, all
+##     Flinxes together), the Vampire Frog leaps at it with a 20-tick
+##     attack, hurting only in the middle of it, and rests 60 ticks after.
+## Right-click an enemy holding a summon staff and every minion goes for it
+## first (Terraria's MinionAttackTargetNPC; again on it to let go).
 
 const PX := 24.0
 const TICK := 1.0 / 60.0
@@ -51,6 +61,19 @@ const KINDS := {
 		"shot": "ImpFireball", "shot_speed": 22.0, "shot_sound": "Item_20"},
 	"BabyBird": {"ai": "bird", "size": [10, 10], "frames": 5, "buff": "BabyBird", "slot": 1, "faces": "right", "contact": 15},
 	"ShadowOrb": {"ai": "orb", "size": [26, 26], "frames": 1, "buff": "ShadowOrb", "scale": 0.8, "light": [0.54, 0.09, 0.9]},
+	# AI_067: home [px behind you past half its width, px more for each
+	# minion], leash (px), walk / hunt [accel, top speed] px/tick, hop:
+	# "moving" (a hop whenever it walks), "hunting" (only after an enemy),
+	# "fast" (above 5 px/tick), "" (only at walls).
+	"FlinxMinion": {"ai": "walker", "size": [26, 26], "frames": 12, "buff": "FlinxMinion", "slot": 1, "faces": "right",
+		"contact": 10, "home": [45, 30], "leash": 500, "walk": [0.5, 4.0], "hunt": [0.65, 5.5], "hop": ""},
+	"VampireFrog": {"ai": "walker", "size": [20, 30], "frames": 24, "buff": "VampireFrog", "slot": 1, "faces": "right",
+		"contact": 10, "home": [35, 40], "leash": 500, "walk": [0.5, 4.0], "hunt": [0.7, 6.0], "hop": "hunting",
+		"attack": [20, 60, 50]},
+	"CrimsonHeart": {"ai": "walker", "size": [16, 16], "frames": 4, "buff": "CrimsonHeart", "scale": 0.8, "faces": "right",
+		"home": [15, 40], "leash": 200, "walk": [0.5, 4.0], "hop": "moving", "light": [0.9, 0.1, 0.3]},
+	"BoulderPet": {"ai": "walker", "size": [32, 32], "frames": 1, "buff": "BoulderPet", "faces": "right",
+		"home": [15, 0], "leash": 200, "walk": [0.5, 4.0], "hop": "fast", "rolls": true},
 }
 ## Terraria's jumps for a wall in the way (AI_026: 5.1 px/tick for a tile,
 ## up to 11.1 for five), and how many blocks each clears (gravity 0.4).
@@ -77,6 +100,9 @@ var spin := 0.0
 ## Hurts what it touches now (Terraria's friendly, the Baby Slime's while
 ## it's fighting).
 var friendly := false
+## The Vampire Frog's attack (Terraria's ai[0] 2): ticks of it left, and of
+## its rest after (below 0).
+var attack_left := 0.0
 var on_floor := false
 var sprite := EntitySprite.new()
 ## Half width, height, half depth in blocks (move_aabb's box).
@@ -109,6 +135,7 @@ func setup(p: Player, proj: String, from_item: Dictionary, is_pet := false) -> v
 	# Its middle where its hitbox's middle is (Terraria draws it there); on
 	# foot its feet on the ground.
 	sprite.position.y = frame_px.y * s / PX / 2.0 if cfg.ai == "ground" else box.y / 2.0
+	attack_left = 0.0
 	add_child(sprite)
 	add_to_group("minions")
 
@@ -144,6 +171,7 @@ func _physics_process(delta: float) -> void:
 			"swarm": _swarm_tick(game)
 			"bird": _bird_tick(game)
 			"orb": _orb_tick(game)
+			"walker": _walker_tick(game)
 		_contact(game)
 	_draw(game)
 
@@ -224,6 +252,58 @@ static func chaseable(npc) -> bool:
 			and not npc.untouchable and not npc.dont_take_damage
 
 
+## A minion's hit (its own, or its shot's): a whip's tag on the enemy adds
+## its damage (before defense) and crit chance (Terraria's
+## WhipTagEffect.ModifyTaggedHit), and the Meteor Whip's waiting meteor
+## falls on it (1.33x the hit, from 280 px above at 8 px a tick).
+static func strike(game, npc, dmg: int, knockback: float, dir: Vector3) -> void:
+	var t: Dictionary = npc.tag()
+	var crit := 0.0
+	if not t.is_empty():
+		dmg += int(t.damage)
+		crit = float(t.crit) / 100.0
+		if t.get("proc", "") == "meteor":
+			t.proc = ""
+			# From 280 px over it, tipped up to an eighth of a turn any way.
+			var tilt := Vector3.RIGHT.rotated(Vector3.UP, randf() * TAU)
+			var from: Vector3 = npc.center() + (Vector3.UP * 280.0 / PX).rotated(tilt, randf_range(-PI / 4.0, PI / 4.0))
+			var meteor: Projectile = game.spawn_projectile("MeteorWhipMeteor", from, (npc.center() - from).normalized() * 8.0 * 60.0 / PX,
+					int(dmg * 1.33), knockback, 0.0, 0.0, 1.0, true, 0.0)
+			meteor.minion_shot = true
+	npc.hit(dmg, knockback, dir, crit)
+
+
+## The enemy you've set your minions on (right-clicking it with a summon
+## staff), if it's still there, within `reach` px of `from` and in sight.
+func _your_target(game, from: Vector3, reach: float):
+	var t = player.minion_target
+	if t == null or not chaseable(t):
+		return null
+	if (t.center() - from).length() * PX > reach or not _sees(game, center(), t.center()):
+		return null
+	return t
+
+
+## Terraria's Minion_FindTargetInRange: your target first, else the nearest
+## enemy within `reach` px of it (or of you) that it can see.
+func _find_target(game, reach: float, of_you := false):
+	var t = _your_target(game, center(), reach * 3.0)
+	if t != null:
+		return t
+	var best = null
+	var best_d := reach
+	for npc in game.npcs():
+		if not chaseable(npc):
+			continue
+		var d: float = (npc.center() - center()).length() * PX
+		if of_you:
+			d = minf(d, (npc.center() - _you()).length() * PX)
+		if d < best_d and _sees(game, center(), npc.center()):
+			best_d = d
+			best = npc
+	return best
+
+
 ## Terraria's |dx| + |dy| (here |dx| + |dy| + |dz|), in px.
 static func _manhattan(a: Vector3, b: Vector3) -> float:
 	var d := (a - b) * PX
@@ -277,7 +357,7 @@ func _contact(game) -> void:
 		if not npc.overlaps_box(global_position, box):
 			continue
 		var dir: Vector3 = (npc.center() - center()).normalized()
-		npc.hit(damage(), player.weapon_knockback(item), dir, 0.0)
+		Minion.strike(game, npc, damage(), player.weapon_knockback(item), dir)
 		if shared:
 			_shared[key] = now + int(cfg.contact)
 		else:
@@ -415,8 +495,14 @@ func _slime_hunt(game):
 	var best_seen_d := 100000.0
 	var best_any = null
 	var best_any_d := 100000.0
+	# Your target first (Terraria's OwnerMinionAttackTargetNPC), if it can
+	# see it.
+	var yours = _your_target(game, center(), 100000.0)
+	if yours != null:
+		best_seen = yours
+		best_seen_d = _manhattan(center(), yours.center())
 	for npc in game.npcs():
-		if not chaseable(npc):
+		if yours != null or not chaseable(npc):
 			continue
 		var d: float = _manhattan(center(), npc.center())
 		if d < best_seen_d:
@@ -608,11 +694,12 @@ func _flier_tick(game) -> void:
 func _swarm_tick(game) -> void:
 	_spread(0.05, float(cfg.size[0]))
 	var you := _you()
-	# An enemy it can see within 2000 px of it, the nearest.
-	var target = null
+	# Your target (within 6000 px), else an enemy it can see within 2000 px
+	# of it, the nearest.
+	var target = _your_target(game, center(), 6000.0)
 	var best := 2000.0
 	for npc in game.npcs():
-		if not chaseable(npc):
+		if target != null or not chaseable(npc):
 			continue
 		var d: float = (npc.center() - center()).length() * PX
 		if d < best and _sees(game, center(), npc.center()):
@@ -681,8 +768,9 @@ func _swarm_tick(game) -> void:
 	if ai0 == 0 and target != null and ai1 == 0.0:
 		ai1 = 1.0
 		var dir: Vector3 = (target.center() - center()).normalized()
-		game.spawn_projectile(cfg.shot, center(), dir * float(cfg.shot_speed) * 60.0 / PX, damage(),
+		var shot: Projectile = game.spawn_projectile(cfg.shot, center(), dir * float(cfg.shot_speed) * 60.0 / PX, damage(),
 				player.weapon_knockback(item), 0.0, 0.0, 0.5, true, 0.0)
+		shot.minion_shot = true
 		Audio.play_at(cfg.shot_sound, center(), 0.5)
 	# Wings: the Hornet's 3 frames, every 2 ticks; the Imp's 4 every 5 ticks,
 	# its casting 4 after a shot.
@@ -704,10 +792,10 @@ func _swarm_tick(game) -> void:
 # ------------------------------------------------------------- AI_158
 
 func _bird_tick(game) -> void:
-	var target = null
+	var target = _your_target(game, center(), 2400.0)
 	var best := 800.0
 	for npc in game.npcs():
-		if not chaseable(npc):
+		if target != null or not chaseable(npc):
 			continue
 		var d: float = (npc.center() - center()).length() * PX
 		if d < best and (npc.center() - _you()).length() * PX <= 800.0 and _sees(game, center(), npc.center()):
@@ -775,6 +863,238 @@ func _bird_tick(game) -> void:
 		frame = int(cfg.frames) - 1
 
 
+# ------------------------------------------------------------- AI_067
+
+func _walker_tick(game) -> void:
+	var you := _you()
+	var target = null if pet else _find_target(game, 800.0, true)
+	friendly = kind == "FlinxMinion"
+	if attack_left > 0.0:
+		_frog_attack(game)
+		return
+	if attack_left < 0.0:
+		attack_left += 1.0
+	if ai0 == 0 and target == null:
+		var to_you := (you - center()) * PX
+		if to_you.length() > 2000.0:
+			_teleport_to_you()
+		elif to_you.length() > float(cfg.leash) or absf(to_you.y) > 300.0:
+			if (to_you.y < 0.0 and vel.y > 0.0) or (to_you.y > 0.0 and vel.y < 0.0):
+				vel.y = 0.0
+			ai0 = 1
+	if ai0 == 1:
+		_walker_fly(game, you)
+		return
+	# Where it goes: at an enemy (the Frog to 20 px short of it), else home,
+	# on the ground under that spot.
+	var goal: Vector3
+	var home: Array = cfg.home
+	if target != null:
+		goal = target.center()
+		if cfg.has("attack"):
+			var back := center() - goal
+			back.y = 0.0
+			goal += back.normalized() * 20.0 / PX if back.length() > 0.01 else Vector3.ZERO
+	else:
+		var first: float = float(home[0]) + float(cfg.size[0]) / 2.0
+		if pet:
+			goal = you - _facing() * (first + float(home[1])) / PX
+		else:
+			goal = you + _beside(index + 1, float(home[1]), first - float(home[1]))
+		var cell := Vector3i(goal.floor())
+		for i in 14:
+			if game.world.is_solid(cell + Vector3i(0, -i - 1, 0)):
+				goal.y = cell.y - i + box.y / 2.0
+				break
+	# Its walk (faster after an enemy, and keeping up with you).
+	var accel := float(cfg.walk[0])
+	var top := float(cfg.walk[1])
+	if target != null and cfg.has("hunt"):
+		accel = float(cfg.hunt[0])
+		top = float(cfg.hunt[1])
+	var cap := top
+	if _your_speed() > cap:
+		cap = _your_speed()
+		accel = 0.7
+	var flat := Vector2(vel.x, vel.z)
+	var to := (goal - center()) * PX
+	var to_flat := Vector2(to.x, to.z)
+	var dir := Vector2.ZERO
+	var hop := false
+	if cfg.get("rolls", false) and to_flat.length() < 50.0:
+		# The boulder rolls to a stop near you, no faster than you go.
+		var yours := _your_speed()
+		if yours >= 0.1 and yours < cap:
+			cap = yours
+		flat *= 0.9
+		if flat.length() < 0.1:
+			flat = Vector2.ZERO
+	elif to_flat.length() > 5.0:
+		dir = to_flat.normalized()
+		var along := flat.dot(dir)
+		var side := flat - dir * along
+		along += accel if along < top else 0.1
+		flat = dir * along + side * 0.9
+		match cfg.hop:
+			"moving": hop = true
+			"hunting": hop = target != null
+			"fast": hop = flat.length() > 5.0
+	else:
+		flat *= 0.9
+		if flat.length() < accel * 2.0:
+			flat = Vector2.ZERO
+	if flat.length() > cap:
+		flat = flat.normalized() * cap
+	vel.x = flat.x
+	vel.z = flat.y
+	if dir != Vector2.ZERO and _wall_ahead(game, dir) > 0:
+		hop = true
+	# Up to an enemy above it (TryJumpingToTarget: sqrt(2 x 0.4 x height),
+	# at most 26), else hopping along and up toward its goal.
+	if target != null and on_floor:
+		var up_t: float = (target.center().y - center().y) * PX
+		if up_t > 30.0:
+			vel.y = minf(sqrt(0.8 * up_t), 26.0)
+	var wet: bool = game.world.get_liquid(Vector3i(center().floor())).y > 0
+	if on_floor and vel.y == 0.0 and hop:
+		var wall := _wall_ahead(game, dir) if dir != Vector2.ZERO else 0
+		vel.y = _jump_for(wall) if wall > 0 else JUMPS[0]
+		var up := to.y
+		if up >= 48.0:
+			for step in [[60.0, 6.0], [80.0, 7.0], [100.0, 8.0], [120.0, 9.0], [140.0, 10.0], [160.0, 11.0], [190.0, 12.0],
+					[210.0, 13.0], [270.0, 14.0], [310.0, 15.0], [INF, 16.0]]:
+				if up < step[0]:
+					vel.y = step[1]
+					break
+		if wet and to.y <= 0.0:
+			vel.y *= 2.0
+	# The Frog's leap: near its enemy, a 20-tick attack.
+	if cfg.has("attack") and target != null and attack_left == 0.0 and to.length() < float(cfg.attack[2]):
+		attack_left = float(cfg.attack[0])
+		if vel.length() > 10.0:
+			vel = vel.normalized() * 10.0
+		_face_target = signf(_screen_x(target.center() - center()))
+	# Gravity 0.4, and heavier rising while its goal is below it.
+	var extra := clampf(-to.y / 100.0, 0.0, 1.0) * clampf((vel.y - 2.0) / 4.0, 0.0, 1.0)
+	vel.y = maxf(vel.y - 0.4 - extra, -10.0)
+	_move(game, true, 1.05)
+	_walker_anim()
+
+
+## The Vampire Frog's attack: hurting in its middle half; then 60 ticks' rest.
+func _frog_attack(game) -> void:
+	var length := float(cfg.attack[0])
+	var p := (length - attack_left) / length
+	friendly = p > 0.25 and p < 0.75
+	var k := int(p * 5.0)
+	if k > 2:
+		k = 4 - k
+	frame = (18 if on_floor else 21) + k
+	if on_floor:
+		vel.x *= 0.8
+		vel.z *= 0.8
+	vel.y = maxf(vel.y - 0.4, -10.0)
+	_move(game, true, 1.05)
+	attack_left -= 1.0
+	if attack_left <= 0.0:
+		attack_left = -float(cfg.attack[1])
+		_face_target = 0.0
+
+
+## Flying back to you through the blocks (10 px a tick, or your speed).
+func _walker_fly(game, you: Vector3) -> void:
+	var speed := maxf(10.0, _your_speed())
+	var d := (you - center()) * PX
+	var dist := d.length()
+	if dist > 2000.0:
+		_teleport_to_you()
+		return
+	if dist < 200.0 and player.on_floor and global_position.y >= player.global_position.y and not _in_solid(game):
+		ai0 = 0
+		vel.y = minf(vel.y, 6.0)
+	if dist >= 60.0:
+		var want := d / dist * speed
+		vel.x = _steer(vel.x, want.x, 0.2)
+		vel.y = _steer(vel.y, want.y, 0.2)
+		vel.z = _steer(vel.z, want.z, 0.2)
+	_move(game, false)
+	match kind:
+		"FlinxMinion":
+			frame_counter += 1
+			if frame_counter > 3:
+				frame += 1
+				frame_counter = 0
+			if frame < 2 or frame >= int(cfg.frames):
+				frame = 2
+			spin += 0.25 * _face
+		"VampireFrog":
+			frame_counter = fmod(frame_counter + 1, 12)
+			frame = 14 + int(frame_counter) / 3
+		"BoulderPet":
+			spin += 0.5 * _face
+		_:
+			_walker_anim()
+
+
+func _walker_anim() -> void:
+	var speed := Vector2(vel.x, vel.z).length()
+	var sx := _screen_x(vel)
+	match kind:
+		"FlinxMinion":
+			if on_floor:
+				spin = move_toward(spin, 0.0, 0.3)
+				if speed < 0.5:
+					frame = 0
+					frame_counter = 0
+				else:
+					frame_counter += speed + 1.0
+					if frame_counter > 10:
+						frame += 1
+						frame_counter = 0
+					if frame < 2 or frame >= int(cfg.frames):
+						frame = 2
+			else:
+				frame = 1
+				frame_counter = 0
+				spin = minf(4.0, -vel.y) * -0.1 * _face
+		"VampireFrog":
+			if on_floor:
+				if speed < 0.5:
+					frame_counter += 1
+					if frame_counter >= 28 and randi() % 50 == 0:
+						frame_counter = 0
+					var f := int(frame_counter) / 4
+					if f >= 4:
+						f = 6 - f
+					frame = 1 + maxi(f, 0)
+				else:
+					frame_counter = fmod(frame_counter + speed + 1.0, 120.0)
+					frame = 5 + int(frame_counter) / 15
+			elif vel.y > 0.0:
+				if frame > 9 or frame < 5:
+					frame = 5
+				elif frame < 9:
+					frame += 1
+			else:
+				if frame > 13 or frame < 9:
+					frame = 9
+					frame_counter = 0
+				frame_counter += 1
+				if frame_counter >= 2 and frame < 11:
+					frame += 1
+					frame_counter = 0
+		"CrimsonHeart":
+			# Its beat: frames 0-3, 6 ticks each (12 on 0 and 2), turning
+			# with its roll.
+			frame_counter += 1
+			if frame_counter >= (12 if frame % 2 == 0 else 6):
+				frame_counter = 0
+				frame = (frame + 1) % int(cfg.frames)
+			spin += sx / 20.0
+		"BoulderPet":
+			spin += sx / 16.0
+
+
 # ------------------------------------------------------------- AI_011
 
 func _orb_tick(_game) -> void:
@@ -819,7 +1139,7 @@ func _draw(game) -> void:
 			# velocity's angle less a quarter turn).
 			if vel.length() > 0.01:
 				sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, vel))
-		"skull", "orb":
+		"skull", "orb", "walker":
 			sprite.set_rotation_angle(-spin)
 		"bird":
 			sprite.set_rotation_angle(-sx * 0.1)
@@ -827,7 +1147,7 @@ func _draw(game) -> void:
 			sprite.set_rotation_angle(-sx * 0.05)
 		_:
 			sprite.set_rotation_angle(0.0)
-	if cfg.has("light"):
+	if cfg.has("light") and cfg.ai == "orb":
 		sprite.set_glow()
 	else:
 		sprite.update_light(game.world, game.sky, center())

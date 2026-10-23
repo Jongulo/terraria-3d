@@ -264,7 +264,7 @@ func _process(delta: float) -> void:
 	# A boomerang in the air leaves your hand empty, unless you can throw another.
 	var idef := Data.item(item) if item != "" else {}
 	var thrown := idef.has("boomerang") and player.boomerangs_out(idef) >= int(idef.boomerang.get("max", 1))
-	_item.visible = item != "" and not player.yoyo_out() and not player.flail_out() and not player.slash_out() and not idef.has("spear") and not thrown
+	_item.visible = item != "" and not player.yoyo_out() and not player.flail_out() and not player.slash_out() and not player.whip_out() and not idef.has("spear") and not thrown
 	# A held torch puffs embers too (Terraria: 1 tick in 40).
 	if _item.visible and _ember_dust >= 0 and not editing and Game.current != null and randf() < delta * 60.0 / 40.0:
 		var top: Vector2 = _flame_info.get("top", Vector2.ZERO)

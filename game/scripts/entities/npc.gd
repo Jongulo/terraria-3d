@@ -58,6 +58,9 @@ var _hellburn := 0.0
 ## second (lifeRegen -12), taken (and shown) 1 at a time.
 var poisoned := 0.0
 var _poison := 0.0
+## A whip's tag on it (Whip: {damage, crit, until: a physics frame, proc}):
+## your minions' hits do its damage more; {} when untagged.
+var whip_tag := {}
 var _stuck := 0.0
 var _wander := Vector3.ZERO
 ## Which way the last hit came (its gore and death dust fly that way).
@@ -3047,6 +3050,13 @@ func ignite(seconds: float) -> void:
 	if def.get("fire_immune", false):
 		return
 	on_fire = maxf(on_fire, seconds)
+
+
+## Its whip tag, if it's still on (else {}).
+func tag() -> Dictionary:
+	if not whip_tag.is_empty() and Engine.get_physics_frames() >= int(whip_tag.until):
+		whip_tag = {}
+	return whip_tag
 
 
 ## Poisons it for `seconds` (Terraria's Poisoned; longer poisons win).

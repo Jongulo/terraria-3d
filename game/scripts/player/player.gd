@@ -121,6 +121,13 @@ var timed_buffs := {}
 var minions: Array = []
 var pet: Minion = null
 var light_pet: Minion = null
+## The enemy you've set your minions on (right-clicking it with a summon
+## staff: Terraria's MinionAttackTargetNPC), or null; marked (Extra_199)
+## while you hold a summon staff.
+var minion_target = null
+## The whip you're cracking (Whip), if one is out.
+var whip: Whip = null
+var _target_marker: EntitySprite = null
 ## Terraria's mounts (Mount.Initialize's MountData), by name: buff, height
 ## (heightBoost px: you ride that much higher), run / dash speed and
 ## acceleration (px/tick, px/tick²: they replace yours, bonuses and all),
@@ -143,6 +150,8 @@ var _stomped := {}  # npc -> seconds before it can be stomped again
 ## (equipment() lists them): Ironskin's 8 defense, Swiftness's 25% speed,
 ## Regeneration's lifeRegen 4, Wrath's 10% damage, Rage's 10% crit...
 const BUFF_EFFECTS := {
+	# Jungle's Fury (the Snapthorn's tag): 12% summon weapon speed.
+	"ThornWhipPlayerBuff": {"whip_speed": 12},
 	"ObsidianSkin": {"lava_immune": true, "fire_walk": true, "fire_immune": true},
 	"Regeneration": {"regen": 4},
 	"Swiftness": {"move_speed": 25},
@@ -620,6 +629,7 @@ func _physics_process(delta: float) -> void:
 	_move(delta, game)
 	if mount != "":
 		_ride(delta, game)
+	_mark_target()
 	_flower_boots(game)
 	_regen(delta)
 	_liquid_effects(delta)
@@ -1962,6 +1972,17 @@ func _ride(delta: float, game) -> void:
 		_mount_sprite.update_light(game.world, game.sky, global_position + Vector3(0, 0.4, 0))
 
 
+## A whip's crack (Whip; Terraria's Item152 as it goes). It isn't held
+## while it's out (Terraria's noUseGraphic): you see the whip itself.
+func _crack_whip(def: Dictionary) -> bool:
+	var w := Whip.new()
+	w.setup(self, def)
+	Game.current.entities.add_child(w)
+	whip = w
+	Audio.play(def.get("sound", "Item_152"), 0.7)
+	return true
+
+
 ## A summon staff: its minion where you aim (Terraria: at the mouse), and if
 ## that's more than your minion slots, the oldest go (Terraria's
 ## Player.FreeUpPetsAndMinions). Item44 like Terraria's.
@@ -2107,6 +2128,9 @@ func use_item() -> void:
 		duration /= 1.0 + stat("melee_speed") / 100.0
 	elif def.has("pick"):
 		duration /= 1.0 + stat("mining_speed") / 100.0
+	elif def.has("whip"):
+		# Summon weapon speed (Jungle's Fury) cracks whips faster.
+		duration /= 1.0 + stat("whip_speed") / 100.0
 	match def.get("type", ""):
 		"tool":
 			# A hamaxe (the Molten Hamaxe) chops trees and hammers the rest.
@@ -2364,6 +2388,53 @@ func talk_target():
 			best = npc
 			best_d = along
 	return best
+
+
+func whip_out() -> bool:
+	return whip != null and is_instance_valid(whip) and not whip.is_queued_for_deletion()
+
+
+## The enemy your aim falls on, up to 60 blocks off and not behind a block
+## (Minion.chaseable ones), or null.
+func aimed_enemy():
+	var origin := camera.global_position
+	var fwd := forward()
+	var best_d := float(Game.current.world.raycast(origin, fwd, 60.0).get("distance", 60.0))
+	var best = null
+	for npc in Game.current.npcs():
+		if not Minion.chaseable(npc):
+			continue
+		var c: Vector3 = npc.center()
+		var along := (c - origin).dot(fwd)
+		if along <= 0.0 or along > best_d:
+			continue
+		var off := origin + fwd * along - c
+		if absf(off.y) < npc.half.y * 0.6 + 0.2 and Vector2(off.x, off.z).length() < npc.half.x + 0.3:
+			best = npc
+			best_d = along
+	return best
+
+
+## The mark on your minions' target: Terraria's Extra_199 (4 frames, 10 a
+## second, white at 0.7 and half see-through), seen through walls, only
+## while you hold a summon staff; gone with the enemy.
+func _mark_target() -> void:
+	if minion_target != null and not Minion.chaseable(minion_target):
+		minion_target = null
+	var show: bool = minion_target != null and (held().has("minion") or held().has("whip")) and alive
+	if show and _target_marker == null:
+		_target_marker = EntitySprite.new()
+		var tex := Assets.texture("Images/Extra_199")
+		_target_marker.setup(tex, 4, Vector2(tex.get_width(), tex.get_height() / 4.0) / 24.0, true, true)
+		_target_marker.set_xray(true)
+		_target_marker.set_tint(Color(0.7, 0.7, 0.7, 0.5))
+		Game.current.entities.add_child(_target_marker)
+	if _target_marker != null:
+		_target_marker.visible = show
+		if show:
+			_target_marker.global_position = minion_target.center()
+			_target_marker.set_frame(int(Time.get_ticks_msec() / 100) % 4)
+			_target_marker.set_glow()
 
 
 ## Which of Player.WALL_NORMALS you are facing most (horizontally).
@@ -2877,6 +2948,8 @@ func _consume(def: Dictionary) -> bool:
 func _summon(def: Dictionary) -> bool:
 	if def.has("minion"):
 		return _summon_minion(def)
+	if def.has("whip"):
+		return _crack_whip(def)
 	var game := Game.current
 	# The Goblin Battle Standard: the Goblin Army, if you've 200 max life and
 	# none is on (else nothing happens and it isn't used up).
@@ -3013,6 +3086,13 @@ func throw_held() -> void:
 
 
 func _interact() -> void:
+	# Holding a summon staff: set your minions on the enemy you aim at (on
+	# it again: let it go).
+	if held().has("minion") or held().has("whip"):
+		var foe = aimed_enemy()
+		if foe != null:
+			minion_target = null if minion_target == foe else foe
+			return
 	var npc = talk_target()
 	if npc != null and npc.kind == "BoundGoblin":
 		# Untied, he's the Goblin Tinkerer.

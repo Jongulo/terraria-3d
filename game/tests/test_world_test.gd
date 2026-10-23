@@ -7277,6 +7277,126 @@ func _summon_checks(c: Vector3i) -> void:
 	check(p.mount == "" and absf(p.half.y - 1.8) < 0.01 and absf(p.camera.position.y - eye0) < 0.01, "and again: off")
 	stand.call()
 	await frames(5)
+	var made := func(item: String) -> bool:
+		return Data.recipes.any(func(r): return r.result == item)
+	# AI_067: the Flinx bowls into enemies, the Vampire Frog leaps at them.
+	use.call("FlinxStaff")
+	foe = enemy.call(Vector3i(5, 0, -3))
+	life0 = foe.life
+	hurt = await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 6.0)
+	check(hurt and p.minions[0].kind == "FlinxMinion", "the Flinx Staff: a Flinx runs into enemies")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	p.cancel_buff("FlinxMinion")
+	await frames(1)
+	use.call("VampireFrogStaff")
+	var frog: Minion = p.minions[0]
+	foe = enemy.call(Vector3i(-5, 0, -3))
+	life0 = foe.life
+	var leapt := false
+	var t_frog := 0.0
+	while t_frog < 6.0 and is_instance_valid(foe) and foe.life >= life0:
+		leapt = leapt or frog.attack_left > 0.0
+		await get_tree().physics_frame
+		t_frog += 1.0 / Engine.physics_ticks_per_second
+	check(leapt and (not is_instance_valid(foe) or foe.life < life0), "the Vampire Frog leaps at enemies and hurts them")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	p.cancel_buff("VampireFrog")
+	await frames(1)
+	# Setting minions on an enemy: right-click it with a staff in hand.
+	p.inventory.slots[9] = Inventory.stack("HornetStaff", 1)
+	p.select(9)
+	var near_foe: NPC = enemy.call(Vector3i(3, 0, 0))
+	var far_foe: NPC = enemy.call(Vector3i(-12, 0, 0))
+	await frames(2)
+	# Held still, so neither strays into the other's stingers.
+	near_foe.set_physics_process(false)
+	far_foe.set_physics_process(false)
+	var aim := far_foe.center() - p.camera.global_position
+	p.look_at_yaw_pitch(atan2(-aim.x, -aim.z), atan2(aim.y, Vector2(aim.x, aim.z).length()))
+	await frames(1)
+	p._interact()
+	await frames(2)
+	check(p.minion_target == far_foe and p._target_marker != null and p._target_marker.visible, "right-clicking an enemy with a summon staff sets your minions on it (marked)")
+	# (Summoned after, so it doesn't sting the nearer one before.)
+	use.call("HornetStaff")
+	var on_far := await _until(func(): return not is_instance_valid(far_foe) or far_foe.poisoned > 0.0, 6.0)
+	check(on_far and is_instance_valid(near_foe) and near_foe.poisoned == 0.0, "the Hornet goes for it, not the nearer enemy")
+	if is_instance_valid(far_foe):
+		p._interact()
+		check(p.minion_target == null, "and right-clicking it again lets it go")
+		far_foe.queue_free()
+	near_foe.queue_free()
+	p.minion_target = null
+	p.cancel_buff("HornetMinion")
+	await frames(1)
+	# The Crimson Heart and the Friendly Boulder.
+	use.call("CrimsonHeart")
+	await frames(2)
+	var heart_light := p.carried_light()
+	check(p.light_pet != null and p.light_pet.kind == "CrimsonHeart" and heart_light.r > 0.89 and heart_light.b < 0.35,
+			"the Crimson Heart: a light pet shining red")
+	p.cancel_buff("CrimsonHeart")
+	use.call("BoulderPet")
+	var rock := p.pet
+	rock.global_position = Vector3(arena) + Vector3(-8.5, 0, 0.5)
+	came = await _until(func(): return Vector2(rock.global_position.x - p.global_position.x, rock.global_position.z - p.global_position.z).length() < 4.0, 6.0)
+	check(came and rock.kind == "BoulderPet", "the Friendly Boulder rolls after you")
+	p.cancel_buff("BoulderPet")
+	await frames(1)
+	var pet_boulder := game.spawn_projectile("BoulderThatSpawnsPet", Vector3(arena) + Vector3(-4.5, 1.5, 4.5), Vector3.ZERO, 70, 7.0)
+	pet_boulder.boulder = true
+	pet_boulder._boulder_break(game)
+	await frames(2)
+	var dropped := game.entities.get_children().any(func(e): return e is ItemDrop and e.item == "BoulderPet")
+	check(dropped, "the boulder that leaves a pet leaves a Friendly Boulder")
+	for e in game.entities.get_children():
+		if e is ItemDrop and e.item == "BoulderPet":
+			e.queue_free()
+	# The Snow Flinx: Flinx Fur for the Flinx Staff and Coat.
+	check(Data.npcs.has("SnowFlinx") and Data.npcs.SnowFlinx.drops[0][0] == "FlinxFur" and made.call("FlinxStaff") and made.call("FlinxFurCoat"),
+			"Snow Flinxes drop Flinx Fur, for the Flinx Staff and Flinx Fur Coat")
+	# Whips: a crack hits what it passes, tags it for your minions.
+	stand.call()
+	await frames(3)
+	foe = enemy.call(Vector3i(3, 0, 0))
+	foe.set_physics_process(false)
+	foe.life_max = 1000
+	foe.life = 1000
+	await frames(1)
+	var to_foe := foe.center() - p.camera.global_position
+	p.look_at_yaw_pitch(atan2(-to_foe.x, -to_foe.z), atan2(to_foe.y, Vector2(to_foe.x, to_foe.z).length()))
+	await frames(1)
+	life0 = foe.life
+	use.call("BlandWhip")
+	var whip_hit := await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 1.5)
+	check(whip_hit and is_instance_valid(foe) and foe.tag().get("damage", 0) == 4 and p.minion_target == foe,
+			"the Leather Whip hits an enemy, tags it (4 tag damage) and sets your minions on it")
+	var tagged_life := foe.life
+	Minion.strike(game, foe, 10, 0.0, Vector3.FORWARD)
+	check(tagged_life - foe.life >= 11, "a minion's hit on it does the tag's damage more (%d)" % [tagged_life - foe.life])
+	await _until(func(): return p._use_timer <= 0.0, 2.0)
+	await frames(2)
+	use.call("ThornWhip")
+	await _until(func(): return p.has_buff("ThornWhipPlayerBuff"), 1.5)
+	check(p.has_buff("ThornWhipPlayerBuff") and p.stat("whip_speed") == 12.0, "the Snapthorn: Jungle's Fury, 12% whip speed")
+	await _until(func(): return p._use_timer <= 0.0, 2.0)
+	await frames(2)
+	use.call("MeteorWhip")
+	await _until(func(): return foe.tag().get("proc", "") == "meteor", 1.5)
+	var meteors := func() -> int:
+		return game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "MeteorWhipMeteor").size()
+	var m0: int = meteors.call()
+	Minion.strike(game, foe, 10, 0.0, Vector3.FORWARD)
+	check(meteors.call() == m0 + 1 and foe.tag().get("proc", "") == "", "the Meteor Whip: your minion's next hit brings down a meteor")
+	foe.life_max = 1
+	foe.queue_free()
+	p.timed_buffs.clear()
+	p.minion_target = null
+	await _until(func(): return p._use_timer <= 0.0, 2.0)
+	check(["SlimeWhip", "CobWhip", "CorruptWhip", "CrimsonWhip", "MeteorWhip", "ThornWhip", "BoneWhip"].all(func(w): return made.call(w)),
+			"the whips are crafted (Terraria's recipes)")
 	# Poisoned enemies: 6 life a second.
 	foe = enemy.call(Vector3i(8, 0, -8))
 	foe.life = 100
@@ -7286,8 +7406,6 @@ func _summon_checks(c: Vector3i) -> void:
 	check(foe.life >= 92 and foe.life <= 95, "Poisoned: 6 life a second (%d left of 100)" % foe.life)
 	foe.queue_free()
 	# Where they come from.
-	var made := func(item: String) -> bool:
-		return Data.recipes.any(func(r): return r.result == item)
 	check(made.call("HornetStaff") and made.call("ImpStaff") and made.call("BeeHeadgear"),
 			"the Hornet and Imp Staffs, the Bee armor are crafted (Terraria's recipes)")
 	var finds := {}
