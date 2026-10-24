@@ -6,6 +6,31 @@ A first-person, voxel 3D take on Terraria built with Godot 4.7 and a Rust voxel 
 using the original game's art, sounds, music and fonts extracted from **your own**
 Terraria install. No Terraria assets are stored in this repository.
 
+The game follows Terraria 1.4.5 as closely as it can: stats, recipes, drops, world generation
+and enemy AI come from Terraria's own code and data, so anything not described here works as it
+does in Terraria. This README covers what's different in 3D, what's in so far, and the tools for
+working on the game.
+
+## Install on Windows
+
+The easiest way to play on Windows is the installer, `Terraria3D-Setup-<version>.exe`. You don't
+need Rust, Python or Godot, but you do need Terraria installed (Steam or GOG): the installer holds
+none of Terraria's assets and copies them from your own install.
+
+1. Run `Terraria3D-Setup-<version>.exe`. It installs for your user only (no admin prompt) to
+   `%LOCALAPPDATA%\Programs\Terraria 3D`.
+2. It finds your Terraria (Steam libraries, then GOG; you can pick another folder) and extracts its
+   assets into `assets\terraria\` next to `Terraria3D.exe`.
+3. Start **Terraria 3D** from the Start menu.
+
+After a Terraria update, or if Terraria wasn't installed when you ran the installer, run
+**Extract Terraria assets** from the Start menu (its log is `extract\extract.log`). Uninstalling
+removes the extracted assets but keeps your worlds and settings
+(`%APPDATA%\Godot\app_userdata\Terraria 3D`).
+
+To make the installer yourself, see [Building the Windows installer](#building-the-windows-installer).
+On Linux, or to work on the game, see [Building from source](#building-from-source).
+
 ## Screenshots
 
 | | |
@@ -19,134 +44,13 @@ Terraria install. No Terraria assets are stored in this repository.
 | ![A glowing mushroom cavern](docs/images/mushroom.jpg) | ![The underworld](docs/images/underworld.jpg) |
 | Glowing Mushroom cavern | The Underworld |
 
-## License
-
-This is an unofficial, noncommercial fan project. It isn't affiliated with or endorsed by
-Re-Logic. Terraria and its art, sounds, music, names and designs belong to Re-Logic, and you
-need your own copy of Terraria to play.
-
-The code in this repository is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE):
-you're welcome to use it, change it, fork it and share it for any noncommercial purpose, as long
-as the license and its `Required Notice:` line go with it. Selling it, or using it commercially in
-any other way, isn't permitted. The license covers only this project's own code and data, not
-anything of Terraria's.
-
-## Setup
-
-Requirements: Godot 4.7, Rust (cargo), ffmpeg, python3, and Terraria installed through Steam.
-
-```sh
-./extract_assets.sh            # or: ./extract_assets.sh /path/to/Terraria
-./build.sh                     # builds rust/voxel_core and installs game/bin/libvoxel_core.so
-godot --path game              # play
-```
-
-On Windows (PowerShell), Rust needs the MSVC toolchain (Visual Studio Build Tools with the
-"Desktop development with C++" workload); `ffmpeg` and `py`/`python` must be on `PATH`:
-
-```powershell
-.\extract_assets.ps1           # finds Terraria in your Steam libraries, or: .\extract_assets.ps1 D:\path\to\Terraria
-.\build.ps1                    # builds rust/voxel_core and installs game/bin/voxel_core.dll
-godot --path game              # play
-```
-
-### Windows installer
-
-`.\package.ps1` (or `.\package.ps1 -Version 0.2.0`) builds `dist\Terraria3D-Setup-<version>.exe`,
-an installer for players who don't have Rust, Python or Godot. It needs what `build.ps1` needs,
-Godot (`$env:GODOT`, else `godot` on `PATH`) and Inno Setup 6 (`winget install JRSoftware.InnoSetup`);
-the first run downloads Godot's export templates, an embeddable Python and an LGPL ffmpeg build
-into `dist\cache`. It exports the game with the "Windows Desktop" preset (`game/export_presets.cfg`),
-stages it with `installer/extract.ps1`, `xnb-extract.exe`, the four `tools/terraria_*.py` the
-extraction runs and the data they read, then runs `installer/terraria3d.iss`.
-
-The installer holds none of Terraria's assets. It installs per user (no admin prompt) to
-`%LOCALAPPDATA%\Programs\Terraria 3D`, finds the player's Terraria (Steam libraries, then GOG;
-they can pick another folder) and extracts its assets into `assets\terraria\` next to
-`Terraria3D.exe`, which is where an exported game looks for them (`Assets.ROOT`). The Start menu's
-"Extract Terraria assets" runs the extraction again (after a Terraria update, or if there was no
-Terraria at install time); its log is `extract\extract.log`. Uninstalling removes the extracted
-assets but not the player's worlds and settings (in `%APPDATA%\Godot\app_userdata\Terraria 3D`).
-An exported game caches tuned models in `user://tuned/`, since it can't write to `res://`.
-
-`extract_assets.sh` converts the XNB/XACT content into `game/assets/terraria/`:
-PNG textures (LZX and DXT decoding, alpha un-premultiplied), WAV sound effects, OGG music
-(MS-ADPCM wave bank via ffmpeg, named by sound bank cue), Terraria's bitmap fonts, and
-`ids.json` with item/NPC/tile/projectile IDs and English names read from `Terraria.exe`'s
-.NET metadata and embedded localization.
-
-### Keep Terraria's assets out of git
-
-Two folders hold Terraria-derived files and must never be committed: `game/assets/terraria/`
-(the extracted assets) and `game/data/tuned/` (tuned models cached whole, coloured from the
-sprites; their patches in `game/data/tuned_patches/` are what's committed). `.gitignore` covers
-both. Check it before committing, after extracting, and whenever `.gitignore` changes:
-
-```sh
-for p in game/assets/terraria game/data/tuned; do
-  git check-ignore -q "$p/x" && echo "ignored: $p" || echo "NOT IGNORED: $p (fix .gitignore before committing)"
-done
-git ls-files game/assets/terraria game/data/tuned | grep . && echo "TRACKED: untrack these (git rm -r --cached)" || echo "nothing from them is tracked"
-```
-
-Both should print `ignored:`, then `nothing from them is tracked`. (`.gitignore` doesn't stop git
-tracking files it already tracks, hence the second check.)
-
 ## Controls
 
 Defaults below; every action except Escape can be rebound under **Settings → Controls**
 (title screen or pause menu). Bindings follow physical key positions, so WASD stays in
 place on any keyboard layout, and the menu shows your layout's labels. Settings also has
-mouse sensitivity, invert Y, field of view, view distance, far view, **UI scale (50–200%)**, volumes and optional shaders.
-
-Better Grass (like OptiFine's, Fancy): a grass block's side shows the grass top when the block
-beside it, one step down, is the same grass, so grassy hillsides are green all the way down their
-steps. Sides over a bigger drop keep Terraria's dirt with a grass fringe. This works for every grass
-(forest, jungle, Corruption, Crimson, ash).
-
-Far terrain (level of detail): past the view distance the world goes on, drawn coarser the farther
-it is, out to the **Far view** distance (Options; 32 chunks by default, off at 0). It comes in rings:
-2-block cells to twice the view distance, then 4-block cells to four times it, then 8-block cells
-beyond, as a quadtree so the rings meet without overlaps or holes, and a ring stays until what
-replaces it has loaded, so nothing blinks out as you move. Far terrain is meshed from the world in
-each block's average colour (grass tops green, dirt sides brown; grass sides green, to match Better
-Grass below), with water surfaces, lit by the
-world's light (dark at night, caves left out), and the haze starts at the full-detail edge so it
-fades into the distance.
-
-Trees and placeables have levels of detail too. Canopies within 64 blocks are drawn with their
-chosen method; farther ones as a single sprite facing you, out to the edge of the far view. Trees
-past the full-detail chunks (whose trunk blocks aren't drawn) get a trunk sprite from the bottom of
-the trunk up to the canopy (leaning to a palm's), so a far forest is Terraria's trees, not bare
-canopies. Placeables more than 2 chunks away with a heavy 3D method (hull, hull top, lathe, Claude, extruded,
-flat) are drawn as their crossed sprite, and switch back as you walk up. On a 1024-block world, view distance 6 with
-far view 48 ran at about 210 FPS where view distance 12 alone ran at 15 (a quarter of the chunks and
-draw calls), while seeing four times as far.
-
-Optional shaders (**Settings → Shaders**, off by default):
-- **Sun and moon shadows:** real-time shadows from the sun by day and the moon by night (a
-  directional light with a shadow map; `world/sun_shadows.gd`, `shaders/sun_shadow.gdshaderinc`).
-  Blocks, plants, trees and their canopies, furniture and other placeables, NPCs, items and
-  projectiles cast them; blocks, block models, NPC models and sprites receive them.
-- **Pixel-aligned:** the shadow is looked up once per art pixel of the surface's own texture, at
-  its middle (LIGHT_VERTEX), so a shadow's edge steps along the texture's pixels instead of cutting
-  across them. Terraria's art is drawn at 2x and the block textures are upscaled, so each block
-  texture layer records its art pixels across a block (`Data.layer_texels`: 16 for a plain block,
-  8 for a face of one tile); block models use their sprite's art scale, sprites Terraria's 2x, and
-  voxel models look it up once per voxel face.
-- **The light model is unchanged:** a shadow cuts only the sunlight, to `Shadow darkness` of it (50%
-  by default), so a torch still lights the shade and caves (no sunlight) are as before.
-- **Steady:** a face turned away from the sun (blocks, plants, models) is simply in its own
-  shadow, never tested against the shadow map, so there's no shadow acne to shimmer as you move.
-  The shadow map's splits aren't blended (no grey part-shadowed pixels where they meet), and the
-  light turns with the sun in steps of a quarter of a degree (about every 1.5 seconds by day), so
-  shadows hold still between steps instead of creeping pixel by pixel.
-- **Sprites:** in the shadow pass a sprite turns to the sun, so its shadow is its outline as the sun
-  sees it, and its own shade is looked up on that sun-facing copy, so it never shades itself.
-  Pre-rendered placeables take one shade for the whole model.
-- **Settings:** shadow distance (32-160 blocks, 64 by default), detail (a 2048, 4096 or 8192
-  shadow map) and darkness. Off, there's no light and no shadow pass, and everything is drawn
-  exactly as before (the shaders put their colour out as emission, with no light to add).
+mouse sensitivity, invert Y, field of view, view distance, far view, **UI scale (50–200%)**,
+volumes and optional shaders.
 
 | Key | Action |
 | --- | --- |
@@ -166,25 +70,6 @@ Optional shaders (**Settings → Shaders**, off by default):
 | MMB (creative) | Pick block: the targeted block into the hotbar |
 
 ### Creative mode
-
-Movement follows Terraria's own code (`Player.Update`, `HorizontalMovement`, `JumpMovement`),
-converted at 1 px/tick = 2.5 blocks/s, since a tile is 2/3 of a block.
-
-- **Running:** you reach 7.5 blocks/s in about 0.6 s. When you let go, you slow by 30 blocks/s
-  every second on the ground, half that in the air.
-- **Boots:** Hermes, Flurry and Dunerider Boots keep speeding up on the ground, slowly, to 15 blocks/s.
-- **Jumping:** a jump keeps its upward speed while you hold jump, for 15 ticks. A full jump goes
-  about 4.1 blocks (6 tiles); a tap goes lower.
-  - Shiny Red Balloon: 7.2 blocks.
-  - Cloud in a Bottle: a double jump of 0.75 of a full jump.
-  - Blizzard in a Bottle: a double jump of 1.5.
-- **Gravity:** 60 blocks/s², with a top falling speed of 25 blocks/s.
-- **Fall damage:** 10 for each tile fallen beyond 25 (16.7 blocks).
-- **Water and lava:** halve how far you move, with half gravity and a slow sink (12.5 blocks/s).
-  Like Terraria, you can't swim: you sink to the bottom and jump only off it (about 2.9 blocks,
-  Terraria's 4.3 tiles) or with a double jump you haven't used yet. Getting out of deep water means
-  climbing out where it's shallow. Terraria's Flippers, which let you swim, aren't in yet.
-- **Ice and cobwebs:** use Terraria's multipliers.
 
 Creative mode works like Minecraft's. You pick **Game mode: Creative** when creating a world,
 or switch any time with the pause menu's game mode button. The mode is saved with the world.
@@ -247,9 +132,9 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 - **Far west:** the Dungeon's entrance (blue brick), its door facing spawn, with the Old Man, and a
   small Dungeon under it (a quarter of the generator's layout steps).
 - **South-west of spawn:** a staircase of wooden platforms up to a floating platform floor.
-- **South:** one of every block, an ore wall labelled with required pickaxe power, a 25-block
-  staircase tower with a water landing pool for fall tests and a rope and a chain down its north
-  wall, and a sealed dark room.
+- **South:** one of every block, an ore wall labelled with required pickaxe power (gem ores in a
+  second row behind), a 25-block staircase tower with a water landing pool for fall tests and a
+  rope and a chain down its north wall, and a sealed dark room.
 
 You start with top-tier gear, max life and mana. Hotkeys: **F1** help, **F2** god mode, **F3** fly
 (Space up, Shift down), **F4** day/night, **F5** remove enemies, **F6** clear dropped items,
@@ -284,141 +169,157 @@ python3 -I tools/terraria_test_world.py template.wld ~/.var/app/com.valvesoftwar
 `tools/terraria_wld.py` reads and writes Terraria 1.4.5 world files (version 326). The world can be
 checked by loading it with the dedicated server and having it save; nothing should change.
 
-## Placeables
+## What's different in 3D
 
-**Styles:** Terraria draws one plant tile in several frames (tall grass in 6, flowers in 38, vines
-in 26...). Here each frame is its own block (`flowers_2` ... `flowers_38`, marked `variant_of` in
-blocks.json), so the placeable picker gives each its own model; the plants, vines, rocks, twigs,
-lily pads, cattails, cobwebs, icicles, stalactites, pots, dungeon books and glowing mushrooms all
-have theirs. Worldgen places the plain block, then as its last step turns each into a random one
-of its styles (the same every time for its spot); everything else treats a style as its block
-(drops, sounds, being replaced when you build). A world saved before this gets its plants' styles
-the first time it's loaded.
+### Scale and movement
 
-Besides the blocks, stations and chests, Terraria's furniture and decor (built from its item and
-tile data, each with Terraria's recipe):
-- **Furniture in every wood** (wood, Boreal, Palm, Rich Mahogany, Ebonwood, Shadewood, Ash,
-  Cactus): tables, chairs, work benches (they all work as a work bench), beds, pianos, dressers
-  (storage), sofas and benches, bathtubs, bookcases, sinks, and the lights: candles, candelabras,
-  chandeliers, lamps, lanterns. Tables and chairs count for housing; lights light rooms.
-- **Blocks:** red, obsidian, hellstone, iridescent, demonite, crimtane, snow, ice, sandstone,
-  ebonstone and crimstone bricks, mudstone, smooth sandstone, and the seven glowing Gemspark blocks.
-- **Lights:** blue, red, green, purple, white, yellow, orange, ice and demon torches (on the
-  ground or a wall, each its colour), heart, skull and Chinese lanterns, campfire, fireplace.
-- **Platforms:** stone, glass, bone, skyware, frozen, cloud, snow and the dungeon bricks'.
-- **Decor:** keg, clay pot, bowls, mug, wine glass, pink vase, banners, picnic tables, bar,
-  banquet table, bar stool, chimney, dungeon and obsidian sinks.
-- **Paintings:** all 243 of Terraria's paintings, trophies and racks (its tiles 240-246: 2x3,
-  3x2, 3x3, 4x3 and 6x4 tiles), each from its item, flat on a wall at Terraria's size (two tiles a
-  block), centred on the block you put it on. Like Terraria's, one needs the wall behind all of it
-  and room in front, nothing else can go where it hangs, and mining a block from behind any part
-  of it brings it down. Worldgen hangs Terraria's own picks: a house painting halfway up a back
-  wall in each cabin room (desert cabins their desert paintings), the Dungeon's paintings in its
-  brick parts and the Wall Skeleton, Hanging Skeleton and Catacombs elsewhere, the Underworld's
-  in the middle of its forts' walls (see the Dungeon and the Underworld below). Bosses drop their
-  trophy 1 time in 10; crates, the Angler and fishing give theirs (the Angler's Life Preserver,
-  Ship's Wheel, Compass Rose, Wall Anchor and fish trophies; crates' paintings; It's Scragglin'
-  Time). The Painter and the Traveling Merchant, who sell most of the rest, aren't in yet: in
-  survival those come from the creative inventory only.
+- **A Terraria tile is 2/3 of a block,** so 1 px/tick is 2.5 blocks/s. Movement, jumps, gravity
+  and fall damage follow Terraria's own code (`Player.Update`, `HorizontalMovement`,
+  `JumpMovement`) at that scale: a full jump is about 4.1 blocks (6 tiles).
+- **You're 2 blocks tall** (3 tiles in Terraria), so doors are 1 block wide and 2 tall. A door
+  swings a quarter turn away from you, or the other way if that side is blocked.
+- **Aiming is first person:** everything you use goes where the crosshair points. Spears thrust
+  along your aim with their tip on the crosshair; the Magic Missile and Flamelash steer toward it
+  while you hold the button. Flails, spears and the Terragrim hit only enemies you can see.
+- **Ropes:** grab one with Space or Shift where your hand reaches it (half a tile over your head);
+  Space climbs, Shift slides down, and jumping while moving leaps off.
+- **Things Terraria does left and right** happen along the line between you and the enemy here
+  (the Queen Bee's charges, for example), and the Spike Ball swings in an upright plane.
 
-Wood variants share their wooden piece's 3D method and settings in the picker below. Every sink and
-bathtub has a hand-made ("Claude") model of its own: a basin you can see into, the faucet against
-the back, the cabinet or pedestal under it; tubs hollow, with their taps, lips, hoops and feet.
+### Worlds
 
-Animated placeables move like Terraria's animated tiles, with its frame counts and speeds
-(Main.AnimateTiles): the Furnace's fire (12 frames), the Campfire's flames (8), the Sawmill's blade
-(2), the Extractinator's hopper (10) and the Life Crystal's shimmer (10). Every frame gets its own model in whatever 3D method the
-block uses (hull, extruded, Claude...), and all of a kind animate together, as in Terraria. The
-placeable picker's previews animate too, every method side by side. A block
-animates once blocks.json gives it an "anim" (frames, how far down its sheet each frame is, and
-ticks per frame).
+- **World sizes** keep Terraria's Small : Medium : Large proportions (4200 : 6400 : 8400 tiles
+  wide), but not its real sizes: a 3D Small world at Terraria's scale would need about 105 GB of
+  memory. The layers (cavern, underworld, space) are shares of the height, as in Terraria. Older
+  512 × 256 × 512 worlds still load.
 
-Torch effects, like Terraria's: torches, candles, candelabras, chandeliers, lamps and lanterns have
-a flickering flame. Terraria draws each one's flame sheet (Flame_N) over it 7 times at random
-offsets that change every tick, added on; here that is a glowing quad round the flame, facing you,
-with each kind's own settings (the Ebonwood set's softer flicker, the Cactus Lamp's 3 copies; no
-flame for the lanterns Terraria draws none for). Torches puff embers of their own colour (their
-dust) 1 tick in 40, which drift up and fade, or a third of them fall. A torch in your hand flickers
-the same way (Terraria's held-item flame) and puffs embers too. The Demon Torch's light pulses like
-Terraria's, from red-pink to violet and back every 3.3 seconds (its light relights the world as it
-changes level), held or placed.
+  | Size | Blocks | Memory | Making it |
+  | --- | --- | --- | --- |
+  | Small | 768 × 384 × 768 | ~1.1 GB | ~10 s |
+  | Medium | 1152 × 576 × 1152 | ~3.8 GB | ~25 s |
+  | Large | 1536 × 768 × 1536 | ~9 GB | ~1 min |
 
-Block dust, as in Terraria.
-- **Which dust:** hitting a block throws 3 specks of its own dust and breaking it throws 10:
-  - green flecks from grass and plants, brown from dirt and wood, grey from stone
-  - pottery shards from pots, sand grains from sand, web from cobwebs
-  - each torch colour its own flame
-- **Where it comes from:** Terraria's own choice of dust for each tile,
-  `WorldGen.KillTile_MakeTileDust` (for walls, `KillWall_MakeWallDust`).
-  - `tools/terraria_dust.py` runs those methods in an IL interpreter for every block, frame
-    by frame, and writes `assets/terraria/tile_dust.json`. `extract_assets.sh` runs it.
-  - **After adding blocks to `blocks.json`, run it again** (or all of `extract_assets.sh`), or
-    the new blocks throw plain specks of their colour instead of Terraria's dust:
-    `python3 -I tools/terraria_dust.py <Terraria>/Terraria.exe game/data/blocks.json game/assets/terraria/tile_dust.json`.
-    The test world test fails while any block drawn from a Terraria tile has no dust.
-  - Like Terraria, tables, chairs, doors, beds, pianos, dressers, bookcases, bathtubs,
-    candles, chandeliers, lamps, banners and the Extractinator make no dust.
-- **How it moves:** the specks come from `Images/Dust` and move by Terraria's rules
-  (`Dust.NewDust` / `UpdateDust`), in its pixels and ticks.
-  - They fly off at up to 2 px/tick, fall at 0.1 px/tick², slow down and shrink until they
-    vanish in about a second and a half.
-  - Flame dusts drift upward and glow; the rest take the light where they are.
+- **Every world is an island.** The sea runs round every edge, deepening toward the edge of the
+  world, with open water past it to the horizon. The Magic Conch takes you to the beach across the
+  world, through its middle.
+- **Terraria's world generation, spread into 3D.** Its passes are ported (`rust/voxel_core/src/`),
+  with its counts per world width applied per 640 × 640 blocks of map. Where a 2D pass can't be
+  copied directly:
+  - **The surface** (`terrain.rs`) is split into regions about 64 blocks apart, each one of
+    Terraria's features (plateau, hill, dale, mountain, valley) at its own level, joined by ramps,
+    instead of Terraria's walk across the world a column at a time. Mountains are massifs with one
+    to three peaks.
+  - **Surface tunnels** are dirt ridges with a walkable tunnel bored through them (Terraria's is a
+    tunnel under a bridge of dirt in its side view).
+  - **The Dungeon** (`dungeon.rs`) is a port of 1.4.5's `DungeonCrawler.MakeDungeon`, its walker's
+    halls running up, down or any of the four ways across. Its entrance is a 3D keep with
+    battlements and a covered porch over Terraria's entrance hallway.
+  - **The Underworld's forts** (`hell.rs`) send each wing along x or z, so a fort is a cross, an L,
+    a T or a line.
+  - **Cabins** are scaled to 2/3 (Terraria's smallest room, 15 × 8 tiles, is 10 × 10 × 6 blocks).
+  - **Enchanted Sword Shrines** always have a shaft open to the sky, with a torch each side of its
+    mouth, so you can find them (Terraria digs one only 1 time in 3, and stops it under the
+    surface). Their flower vines grow in clumps, since a vine from every ceiling tile would be a
+    solid grid in 3D.
+- **There are no background walls.** Ground you dig out keeps Terraria's "background wall" for
+  light: sunlight only seeps in from the opening, fading a level per block, so a shaft goes dark
+  about a dozen blocks down. A room's walls aren't flat as Terraria's back wall is, so paintings
+  look a few blocks round their spot for a flat one. Flower Walls aren't drawn.
+- **Fishing ponds** are measured in the vertical slices through the bobber along x and z (rust
+  `fishing.rs`), the bigger one counting, each cell 2.25 tiles.
+- **Small differences:** snails crawl along the ground, not up walls; the Underworld's critters
+  spawn there now and then (in Terraria only near town NPCs); Goblin Scouts come in the outer
+  third of the world (Terraria's outer sixths); the Compass also shows north or south.
 
-Enemies gib as in Terraria. Each one's gores and blood come from Terraria's own `NPC.HitEffect`:
-`tools/terraria_gore.py` runs it for every enemy in an IL interpreter and writes
-`assets/terraria/npc_gore.json`, and `extract_assets.sh` runs it.
-- **Gores:** when it dies, an enemy breaks into its pieces.
-  - A zombie gives its head, two arms and two legs; a Demon Eye splits in half; a skeleton
-    gives bones.
-  - Town NPCs, sharks, vultures and the rest come apart too.
-  - The pieces start where they were on its body and are flung with its own speed (knockback
-    included), plus Terraria's random kick.
-  - They fall, spin, land and slide to rest, then after 10 s fade away over 4 more
-    (`Gore.Update`).
-- **Blood:** a hit sprays blood dust in proportion to the damage, and a death sprays 50.
-  - Slimes and jellyfish leave no gore, only their own slime dust in their colour.
-  - Eaters of Souls and Hornets bleed their own colours; skeletons throw bone dust.
-  - Critters come apart the same way (see Critters below).
+### Graphics
 
-Enemy knockback works as in Terraria (`NPC.StrikeNPC_Inner`), in its own pixels and ticks.
-- **The push:** the weapon's knockback is multiplied by the enemy's own knockback resistance
-  (Terraria's `knockBackResist` for every enemy, read from Terraria.exe). It eases off above 8,
-  caps at 16, and a crit multiplies it by 1.4.
-- **Strong and weak hits:** a hit doing more than a tenth of the enemy's life adds that speed
-  away from you, and three-quarters of it upward (half for flyers). A weaker hit sets those
-  speeds, with the resistance counting twice.
-- **How far it flies:** that comes from each enemy's own movement, taken from Terraria's AI code:
-  - Zombies and other walkers keep their speed in the air and slide to a stop on the ground
-    (×0.8 a tick).
-  - Slimes slow ×0.93 a tick in the air and ×0.8 on the ground.
-  - Demon Eyes and bats brake by their own steering; bats steer twice a tick (Terraria's
-    aiStyle 14 runs it twice for them), so they're back at you soonest.
-  - Eaters of Souls, Crimeras, Hornets and Servants home back in at their own rate.
-  - Gravity is Terraria's NPC gravity (0.3 px/tick², 45 blocks/s²).
-- **Checked:** at knockback 5 and 8, a test measures how far each kind flies back in 3D against a
-  transcription of Terraria's tick-by-tick rules.
+- **Placeables and NPCs in 3D:** each sprite is turned into a model by a method chosen per block or
+  per NPC (panels, crossed planes, extruded, hulls, lathes, hand-made "Claude" models, models you
+  sculpt, or sprites rendered from every angle). See the [placeable picker](#placeable-picker), the
+  [NPC picker](#npc-picker) and the [model sculptor](#model-sculptor). In the game, a 3D NPC turns
+  to face where it's walking, and fliers point their art along their flight.
+- **Plant styles:** Terraria draws one plant tile in several frames (tall grass in 6, flowers in
+  38...). Here each frame is its own block (`flowers_2` ... `flowers_38`, marked `variant_of` in
+  blocks.json), so each gets its own model. Worldgen places the plain block, then turns each into
+  a random one of its styles; everything else treats a style as its block.
+- **Better Grass** (like OptiFine's, Fancy): a grass block's side shows the grass top when the
+  block beside it, one step down, is the same grass, so grassy hillsides are green all the way down
+  their steps. Bigger drops keep Terraria's dirt with a grass fringe.
+- **Far terrain:** past the view distance the world goes on, drawn coarser the farther it is, out
+  to the **Far view** distance (32 chunks by default, off at 0), in rings of 2-, 4- and 8-block
+  cells coloured by each block's average colour. Far trees are drawn as sprites, and heavy 3D
+  placeables more than 2 chunks away as their crossed sprite. On a 1024-block world, view distance
+  6 with far view 48 ran at about 210 FPS where view distance 12 alone ran at 15.
+- **Sun and moon shadows** (**Settings → Shaders**, off by default): real-time shadows from the sun
+  by day and the moon by night (`world/sun_shadows.gd`, `shaders/sun_shadow.gdshaderinc`). They're
+  looked up once per art pixel, so their edges step along the texture's pixels. A shadow cuts only
+  the sunlight, to `Shadow darkness` of it, so a torch still lights the shade and caves are as
+  before. Shadow distance (32-160 blocks), detail (2048-8192 map) and darkness are settings.
+- **Torch flames** are a glowing quad round the flame, facing you, with each kind's flicker
+  settings from Terraria's Flame_N sheets.
+- **Long projectiles** (arrows, bullets, icicles) lie along their flight, turned to face you. At
+  least 40% of their length always shows, so your own arrow stays in sight as it flies off toward
+  the crosshair. Round and spinning shots stay flat sprites.
+- **Bosses stay in sight:** in Terraria's 2D view NPCs are drawn in front of the tiles. Here a boss
+  hidden by blocks shows through them, dimmed and tinted gold (`shaders/*_xray.gdshader`), and while
+  one is out of view its boss head icon sits at the screen's edge with an arrow toward it
+  (`ui/boss_markers.gd`).
+- **Hammered blocks:** ramps are pixel staircases like Terraria's slopes, 16 one-pixel steps per
+  block, rising away from you; upside-down ramps make arches. Hammered platforms become stairs with
+  Terraria's stair frames up the block's diagonal.
+- **Held weapons in 3D:** a spear rests in your hand pointing at the crosshair. Flails are drawn
+  to the player's pixels (the Sunfury's head is two thirds your height). The Terragrim's flurry lies
+  flat round you at shoulder height, sweeping out the way you aim.
+- **What you can't see in first person:** the inventory shows a picture of you wearing your armor.
+- **Sky:** a gradient that follows the time of day, Terraria's clouds, and its background art in
+  three layers that change with the biome. The backdrops sit just beyond your view distance, and
+  aren't drawn where the open sea reaches the horizon, so no mountains rise out of the water.
+- **Cacti** are one flat sprite facing you, put together from Terraria's pieces.
 
-  | Enemy | Knockback 5 | Knockback 8 |
-  |---|---|---|
-  | Zombie | 1.7 blocks | 4.1 |
-  | Blue Slime | 2.4 | 4.2 |
-  | Demon Eye | 1.1 | 5.4 |
-  | Eater of Souls | 3.2 | 8.3 |
-  | Cave Bat | 3.3 | 4.5 |
-- **Jumps:** with Terraria's gravity, the jumps are Terraria's too.
-  - Slimes hop 6 px/tick up, 2 forward; every third hop is a big one at 8 and 3.
-  - Zombies jump 5–8 px/tick by how tall the wall ahead is.
+## What's in
 
-Falling leaves and wind, like Terraria's. The wind wanders the way Terraria's does (calm spells,
-breezes, gales; light until you have 120 max life), blowing along x. Trees near you drop their own
-leaves (forest, jungle, Corruption, Crimson, palm, gem, Sakura and Willow; snowy pines and ash trees
-none) as often as Terraria's do for the wind: one in a few minutes per tree in still air, every
-few seconds in a gale; leafy branches a third as often, Hallow trees twice, and hardly at all where
-the wind doesn't reach. Living-tree leaf blocks drop them too. A leaf sways from side to side as it
-sinks, tumbling through its frames and blown along by the wind; it drifts through tree trunks,
-slides down walls, lands or floats, and fades after ten seconds.
+Everything here works as it does in Terraria 1.4.5, with its numbers. Recipes, drops, dust, gore
+and fishing catches are read from your Terraria.exe by the scripts in `tools/` (run by
+`extract_assets.sh`); an item is craftable here when everything its Terraria recipe takes exists
+in this game.
 
-## Placeable picker
+- **World:** forest, Snow, Desert, Jungle, Corruption or Crimson, Glowing Mushroom biome, bee hives,
+  ocean, floating islands, the Dungeon, and the Underworld with its ash forests and ruined forts;
+  caves, lakes, gem ores, gem trees, vanity trees, giant living trees and Living Mahogany trees,
+  underground cabins, Enchanted Sword Shrines, traps, pots, life crystals and loot chests, Shadow
+  Chests, and forest plants and debris.
+- **Liquids:** water, lava and honey that fall, level out and settle; waterfalls and lavafalls, and
+  springs you open with a hammer.
+- **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
+  stairs, platforms, doors, furniture in every wood, lights, paintings, signs, beds, containers,
+  falling sand and explosives.
+- **Weapons:** swords, spears, yoyos, boomerangs, flails, bows, guns, magic and thrown weapons, with
+  prefixes and reforging.
+- **Gear:** armor sets and set bonuses, accessories (including the informational ones, which work
+  anywhere in your inventory), grappling hooks, ropes and rope coils, wings, boots, climbing gear,
+  the Tinkerer's Workshop combinations.
+- **Enemies and critters** of every biome above, with Terraria's spawn rules, knockback, gores and
+  blood; the bug net and critters as bait.
+- **Bosses and events:** the Eye of Cthulhu, King Slime, the Eater of Worlds, the Brain of Cthulhu,
+  the Queen Bee, Skeletron (and the Dungeon Guardian), and the Goblin Army.
+- **Town NPCs:** the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist, Clothier, Goblin
+  Tinkerer and Angler, with housing, shops, Terraria's lines and the Angler's quests.
+- **Fishing:** poles, bait, crates, the Angler's quests, and the Extractinator for silt and slush.
+- **Day and night:** the sky, clouds, wind and falling leaves, Fallen Stars, context music and
+  sound effects; saving with autosave.
+
+**Not yet:** Hardmode and the Wall of Flesh; summons and minions, pets, mounts and minecarts;
+alchemy, Well Fed and buff potions; placing wires; the Painter, Traveling Merchant, other town NPCs
+and NPC happiness; Devourers, Blood Crawlers and Giant Worms; Granite and Marble caves and the
+Underground Desert's open caverns; the Topaz, Sapphire, Emerald and Ruby Staves' gem effects;
+Blood Moons; swimming (Flippers); herbs growing from seeds; cages and terrariums; Expert mode.
+
+## Tools
+
+Editors for turning Terraria's sprites into 3D and tuning how things look. Each saves a file under
+`game/data/` that the game reads.
+
+### Placeable picker
 
 ```sh
 ./placeable_picker.sh
@@ -549,7 +450,7 @@ against the wall. The boxes are greyed out while the bevel is *none*. Shortcuts:
 `B` / `Shift+B` next / previous bevel. Sides take their colour from just inside the
 sprite's dark outline.
 
-## Sprite editor
+### Sprite editor
 
 ```sh
 ./sprite_editor.sh
@@ -574,7 +475,7 @@ see every one side by side, with their branches (which take the canopy's setting
 the warp); the settings apply to all of them.
 PageUp/PageDown switch sprite, wheel zooms, middle-drag pans, `F` resets the view, Ctrl+S saves.
 
-## NPC scale editor
+### NPC scale editor
 
 ```sh
 ./npc_scale_editor.sh
@@ -594,7 +495,7 @@ Chooses how big each enemy, boss and town NPC appears in the game, and saves
   the player's (everything on one pixel grid, like Terraria's); "Match all NPCs" does that for every
   NPC (Revert to saved undoes it). The panel shows each NPC's pixel size next to the player's.
 
-## NPC picker
+### NPC picker
 
 ```sh
 ./npc_picker.sh
@@ -674,7 +575,7 @@ shots are made off screen the first time the NPC appears (about five seconds for
 (O), and Extruded, Hull, Hull Top and Lathe have **remove outline** (L), with **add outline** for the
 rendered shots (Shift+L), as in the placeable picker.
 
-## Model sculptor
+### Model sculptor
 
 ```sh
 ./model_sculptor.sh
@@ -719,7 +620,7 @@ Hand-tunes voxel models for the Tuned method of both pickers, for NPCs and place
 - **Editing:** Ctrl+Z and Ctrl+Shift+Z (or Ctrl+Y) undo and redo, Ctrl+S saves every changed
   model, and PageUp/PageDown move to the next model. Closing with unsaved changes asks first.
 
-## Weapon pose editor
+### Weapon pose editor
 
 ```sh
 ./viewmodel_editor.sh
@@ -744,7 +645,69 @@ optional per-item overrides; the hand position and the swing axis/angle are edit
 | Numpad 0 or \` / 1 3 7 / 5 / . | Camera view / front, right, top / ortho / frame item |
 | PageUp / PageDown, T, N, F1 | Previous/next item, item list, sidebar, help |
 
-## Layout
+## Building from source
+
+Requirements: Godot 4.7, Rust (cargo), ffmpeg, python3, and Terraria installed through Steam.
+
+```sh
+./extract_assets.sh            # or: ./extract_assets.sh /path/to/Terraria
+./build.sh                     # builds rust/voxel_core and installs game/bin/libvoxel_core.so
+godot --path game              # play
+```
+
+On Windows (PowerShell), Rust needs the MSVC toolchain (Visual Studio Build Tools with the
+"Desktop development with C++" workload); `ffmpeg` and `py`/`python` must be on `PATH`:
+
+```powershell
+.\extract_assets.ps1           # finds Terraria in your Steam libraries, or: .\extract_assets.ps1 D:\path\to\Terraria
+.\build.ps1                    # builds rust/voxel_core and installs game/bin/voxel_core.dll
+godot --path game              # play
+```
+
+`extract_assets.sh` converts the XNB/XACT content into `game/assets/terraria/`:
+PNG textures (LZX and DXT decoding, alpha un-premultiplied), WAV sound effects, OGG music
+(MS-ADPCM wave bank via ffmpeg, named by sound bank cue), Terraria's bitmap fonts, and
+`ids.json` with item/NPC/tile/projectile IDs and English names read from `Terraria.exe`'s
+.NET metadata and embedded localization.
+
+It also reads each block's dust and each enemy's gores and blood out of Terraria's code
+(`tools/terraria_dust.py`, `tools/terraria_gore.py`, which run `KillTile_MakeTileDust` and
+`NPC.HitEffect` in an IL interpreter). **After adding blocks to `blocks.json`, run the dust script
+again** (or all of `extract_assets.sh`), or the new blocks throw plain specks of their colour:
+`python3 -I tools/terraria_dust.py <Terraria>/Terraria.exe game/data/blocks.json game/assets/terraria/tile_dust.json`.
+The test world test fails while any block drawn from a Terraria tile has no dust.
+
+### Building the Windows installer
+
+`.\package.ps1` (or `.\package.ps1 -Version 0.2.0`) builds `dist\Terraria3D-Setup-<version>.exe`.
+It needs what `build.ps1` needs,
+Godot (`$env:GODOT`, else `godot` on `PATH`) and Inno Setup 6 (`winget install JRSoftware.InnoSetup`);
+the first run downloads Godot's export templates, an embeddable Python and an LGPL ffmpeg build
+into `dist\cache`. It exports the game with the "Windows Desktop" preset (`game/export_presets.cfg`),
+stages it with `installer/extract.ps1`, `xnb-extract.exe`, the four `tools/terraria_*.py` the
+extraction runs and the data they read, then runs `installer/terraria3d.iss`.
+
+An exported game looks for Terraria's assets in `assets\terraria\` next to `Terraria3D.exe`
+(`Assets.ROOT`), and caches tuned models in `user://tuned/`, since it can't write to `res://`.
+
+### Keep Terraria's assets out of git
+
+Two folders hold Terraria-derived files and must never be committed: `game/assets/terraria/`
+(the extracted assets) and `game/data/tuned/` (tuned models cached whole, coloured from the
+sprites; their patches in `game/data/tuned_patches/` are what's committed). `.gitignore` covers
+both. Check it before committing, after extracting, and whenever `.gitignore` changes:
+
+```sh
+for p in game/assets/terraria game/data/tuned; do
+  git check-ignore -q "$p/x" && echo "ignored: $p" || echo "NOT IGNORED: $p (fix .gitignore before committing)"
+done
+git ls-files game/assets/terraria game/data/tuned | grep . && echo "TRACKED: untrack these (git rm -r --cached)" || echo "nothing from them is tracked"
+```
+
+Both should print `ignored:`, then `nothing from them is tracked`. (`.gitignore` doesn't stop git
+tracking files it already tracks, hence the second check.)
+
+### Layout
 
 ```
 tools/xnb-extract/    Rust: XNB (LZX, Texture2D, SoundEffect, ReLogic fonts) + XWB/XSB extractor
@@ -764,7 +727,7 @@ game/shaders/         voxel, cutout, billboard sprite, canopy and highlight shad
 game/tests/           render_test (screenshots) and game_test (scripted end-to-end session)
 ```
 
-## Tests
+### Tests
 
 ```sh
 ./run_tests.sh              # Rust + headless Godot suites (no windows)
@@ -789,1176 +752,15 @@ cd game && godot --audio-driver Dummy --path . res://tests/viewmodel_test.tscn -
 slime, chests, summoning and beating the Eye of Cthulhu, night spawns, and a save/reload
 round trip. It exits non-zero on failure.
 
-## Status (milestone 1 vertical slice)
+## License
 
-Done: asset pipeline; Small / Medium / Large island worlds (surface, underground, caverns, underworld; caves;
-paired ores; trees with Terraria canopies (upscaled 4x with Scale2x and gently warped at load,
-the warp fading out at the trunk stub; each world picks its tree tops like Terraria: the forest
-is split across the world's width into 2 / 3 / 4 zones (Small / Medium / Large) with their own
-leaves out of Terraria's six forest styles, and the snow and jungle get one look each: round
-snowy trees, green or snowy pines, or bare branches; the usual or the bushier jungle leaves;
-branches grown by Terraria's rules, 1 in 10 per trunk cell on either side, leafy 2 in 3 and
-matching the tree top, else a bare stub: fixed cards sticking out of the trunk, so they don't
-swing round as you pass); gem trees in the caves, like Terraria 1.4.5's: every stone floor underground
-gets a 1 in 5 try at one of the seven (topaz, amethyst, sapphire, emerald, ruby, diamond, amber),
-7-12 tall with room for its top and clear of waterfalls, its gem-studded trunk, top and branches
-from Terraria; chopped, each trunk cell drops its gem 1 time in 10, else stone (the gems are
-materials, so the Amethyst Staff and the other gem recipes work); canopies are lit by the light
-where they stand, so a gem tree is as dark as its cave until you bring light; gem ores, like
-Terraria's Gems pass: veins of amethyst, topaz, sapphire, emerald, ruby and diamond (commonest to
-rarest, in Terraria's proportions) wander through the stone from the surface layer's foot down to
-the Underworld, as large a share of the stone as in Terraria's; each mines to its gem, and the ore
-wall in the test world has a row of them; the seven gem staves (Amethyst to Diamond, and Amber) with
-1.4.5's stats and Terraria's recipes, their bolts trailing their gem's dust: the Amethyst's home
-in, the Diamond's go through an enemy more, the Amber's ricochet twice (the other 1.4.5 gem effects,
-the Topaz's burst, the Sapphire's pair, the Emerald's stop and the Ruby's double shot, aren't in
-yet); vanity trees in the
-forest, like Terraria's: 1 in 20 trees on grass grows as a Yellow Willow or a Sakura instead; and
-the Underworld's ash forests: in its outer ring, ash open to the air turns to ash grass, ash trees
-grow on it (they drop Ash Wood: block, door, platform, armor and Terraria's recipes), and the
-Underworld glows a pulsing orange as Terraria's does (open tiles below its top), so you can see
-them; giant living trees, Terraria's GrowLivingTree in 3D: groves of 2-4 in the
-forest (0-2 groves on a Small world), each a round Living Wood trunk 4-5 wide that narrows as it
-puts out branches on alternate sides, branches ending in clusters of Leaf Blocks, a crown of big
-leaf balls, roots spreading through the ground, and in the first tree of each grove a doorway, a
-stair down through the roots and a Living Wood room with a chest; leaf blocks let the sun
-through like Terraria's, so it's light under the trees; mahogany trees in the underground jungle, like
-Terraria's: on its caves' jungle grass, 5-15 tall where there's room, with the underground
-jungle's own trunk, vine-hung top and branches (they drop Rich Mahogany); and Living Mahogany
-trees, Terraria's MahoganyTreeBiome: 6-11 per Small world in the underground jungle, each
-filling a tall cavern (hollowed out where the caves aren't tall enough): a hollow, swaying trunk
-6 across with an Ivy Chest at its foot (Terraria's jungle loot: Feral Claws, Anklet of the Wind,
-Staff of Regrowth or Boomstick, now and then a Fiberglass Fishing Pole or Flower Boots), branches angled up from alternate sides and two at the
-top ending in blotchy balls of mahogany leaves, and four big roots out and down; underground
-cabins, Terraria's CaveHouse builder (about 95 in a 1024 x 1024 world: its 35-40 per small
-world for each 640 x 640 blocks), each built in a cave below the surface and away from chests:
-a main room on the ground (Terraria's smallest, 15 x 8 tiles: 10 x 10 x 6 blocks), sometimes a
-room stacked above and below fitted to the cave (up to 20 x 20 x 7), sunk 2 blocks into the
-ground. Its kind follows the ground round it, as in Terraria: Wood in dirt and stone, Ice in the
-snow, Desert in the underground desert, Jungle in the mud, Mushroom in the Glowing Mushroom biome.
-A frame (Wood, Boreal Wood, Sandstone, Rich Mahogany or Mushroom Blocks) with its wall (Planked,
-Boreal Wood, Sandstone, Rich Mahogany or Mushroom Wall) lining the
-walls and an outer layer of the frame, platform stairs between stacked rooms up through a hatch,
-doors where there's open cave outside, platform hatches in the roof and floor where it's open
-beyond, beams down to the ground (Wooden, Boreal, Rich Mahogany, Mushroom Beams, Sandstone Columns), an unlit
-chandelier (copper, silver, gold, tin, tungsten or platinum; break and replace one to light
-it) and a painting halfway up a back wall in each room (Terraria's house paintings, a desert
-cabin's its desert ones; Terraria's FillRooms only gives a room's first two spots anything, so a
-room has one of each at most), furniture against the walls in the kind's style (table, anvil, work bench, loom, piano, keg,
-bookcase), and the kind's chest. Then each room ages its own way: the wooden cabin gets
-cobwebs, walls gone to dirt in patches and holes in the frame; the Ice cabin's frame goes mostly
-to ice (some snow), icicles hang from the ceiling and the walls go to snow in patches; the Desert
-cabin gets a little hardened sand, sandstone stalactites and patches of hardened sand wall; the
-Jungle cabin's frame goes mostly to jungle grass (some mud), jungle vines hang from the ceiling
-and the walls go to jungle mud in patches; the Mushroom cabin's frame goes to mushroom grass in
-patches, glowing mushrooms grow on its floor and roof, and its wall is gone in places. Chests: a
-Gold Chest or Rich Mahogany Chest
-(underground chest loot); a Frozen Chest (Ice Boomerang, Ice Blade, Ice Skates, Snowball
-Cannon, Blizzard in a Bottle, Flurry Boots or Glacier Fang, now and then an Extractinator); a
-Sandstone Chest (Ancient Chisel, Dunerider Boots, Snake Charmer's Flute or Magic Conch; in the
-deeper desert the Storm Spear, Thunder Zapper or Bast Statue); a Mushroom Chest (a Gold Chest's
-loot, and half the time the Mushroom Hat, Vest and Pants: Terraria's other half, a Shroom
-Minecart, waits for minecarts). The first desert cabins also get
-an Extractinator and a Bast Statue (3 in the world at most), the first jungle cabins a Sharpening
-Station. Terraria's Granite and Marble cabins wait for their biomes, and cabins have
-none of Terraria's statues or rubble piles yet; Enchanted Sword Shrines, Terraria's
-EnchantedSwordBiome with its 2D shapes spun round into 3D (1-2 tries per small world for each 640 x
-640 blocks, each half the time, as in Terraria), 50 to 99 blocks under the surface in the outer
-part of the map, in ground that's mostly dirt and stone with no sand above: a slime-shaped cave
-(Terraria's radius 20, 0.8 to 1.3 as wide, its lower half squashed) lined with grass, a dirt mound
-14 high in it with grass plants and the sword in stone on top, pools of water round the mound,
-flower vines hanging from the ceiling (Terraria hangs one 3-5 long from every ceiling tile, a single
-row seen side on; spread over a 3D ceiling that's a grid of them, so here they grow in clumps, 1 to
-7 long, with bare ceiling between), and a shaft from the cave up through the surface. Terraria
-digs that shaft only 1 time in 3 and stops it 10 tiles under the surface; here every shrine has
-one, open to the sky, so you can find it: its top 8 blocks widen to a round mouth 5 across, with a
-wall torch on each side just under the ground (they glow from afar at night). Mine the sword in stone with a pickaxe for
-the Enchanted Sword, or 1 time in 30 the Terragrim. Terraria's Flower Walls aren't drawn (there
-are no background walls); pots, life crystals, loot chests); colored torch
-lighting (sunlight reaches open ground fully, but ground you dig out keeps Terraria's
-"background wall": sunlight only seeps in from the opening and fades a level per block, so a
-shaft goes dark about a dozen blocks down; chasms and pits the world was made with stay lit);
-day/night with a Terraria-style sky (see Sky below); mining with pickaxe power, axes felling trees (Terraria's numbers: a pickaxe hit does its power,
-blocks have 50% (dirt, sand, mud...) to 200% (ebonstone, hellstone, dungeon brick) hit points, grass
-takes one hit more as it turns to dirt; an axe chop does axe power x 0.24 to a tree tile's 100, so the
-Copper Axe needs 13 chops at 21 ticks each; tool speeds per tier are Terraria's);
-building; inventory, accessories, chests, crafting at stations; melee, bows, guns, magic,
-throwing (Terraria's tile cutting: anything swung that does damage, tools too, cuts the grass,
-flowers, plants, vines, cobwebs, herbs and pots in its swing that no wall hides, and your
-arrows, bullets, bolts, shurikens, boomerangs, yoyos and spears cut what they pass through;
-not plants in a clay pot, and not sunflowers, rocks or life crystals); Slimes, Zombies, Demon Eyes, Cave Bats, Skeletons; the Eye of Cthulhu with both
-phases and Servants; the Eater of Worlds and the Brain of Cthulhu; King Slime; context music and SFX; save/load with autosave.
+This is an unofficial, noncommercial fan project. It isn't affiliated with or endorsed by
+Re-Logic. Terraria and its art, sounds, music, names and designs belong to Re-Logic, and you
+need your own copy of Terraria to play.
 
-Long, thin projectiles (arrows, bullets, the Blood Rain Bow's drops, Glacier Fang icicles) point
-along their flight in 3D: the sprite's length lies along the way they fly, turned round it to face
-you, so one flying across your view shows side-on and one coming at you is foreshortened. Never
-quite end-on, though: at least 40% of its length always shows, pointing where it's going on the
-screen, so your own arrow stays in sight as it flies off toward the crosshair. Round shots (orbs,
-skulls) and spinning ones (shurikens, knives, bombs) stay flat sprites facing you.
+The code in this repository is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE):
+you're welcome to use it, change it, fork it and share it for any noncommercial purpose, as long
+as the license and its `Required Notice:` line go with it. Selling it, or using it commercially in
+any other way, isn't permitted. The license covers only this project's own code and data, not
+anything of Terraria's.
 
-King Slime: Terraria's (AI_015_KingSlime), summoned any time with a Slime Crown (20 Gel and a Gold
-or Platinum Crown at a Demon Altar; the crowns are 5 bars and a Ruby at an anvil).
-- **Body:** 2000 life, 40 damage, 10 defense; knockback doesn't move it. Its crown and the ninja
-  inside are drawn as Terraria draws them, the ninja lagging its bounces.
-- **Hopping:** it hops at you in a cycle (8 px/tick up, 8, 6, then a big 13), winding up between
-  hops, faster as it's hurt. It's 1.25x its size at full life, shrinking to 0.75x.
-- **Teleporting:** when it can't reach you for 5 seconds (no line of sight, or more than 160 px
-  above or below you) it shrinks away in a puff of slime and grows back beside you. If you die or
-  get 3000 px away, it leaves.
-- **Slimes:** each 5% of its life lost, 1-3 Blue Slimes pop out of it.
-- **Loot:** the Solidifier (a crafting station), one Ninja armor piece (2 / 4 / 3 defense, 3% crit
-  each; the set gives 20% movement speed), 5-15 Lesser Healing Potions, 1 gold, and 1 in 7 its
-  mask.
-- **Not in yet:** its other drops (Slimy Saddle, Slime Hook, Slime Gun, Slime Staff: mounts,
-  hooks and minions aren't in yet) and its natural spawning (surface, outer thirds, slime rain).
-
-The Eater of Worlds: Terraria's worm boss (AI_006_Worms), summoned with Worm Food (30 Vile Powder
-and 15 Rotten Chunks at a Demon Altar; it only works in the Corruption) or by smashing a third
-Shadow Orb.
-- **Body:** a head, 65 body segments and a tail, 150 life each (10,050 in all, on one boss bar),
-  damage 22 / 13 / 11 and defense 2 / 4 / 8. Knockback doesn't move it.
-- **Movement:** it comes up out of the ground below you and steers at you through the ground at
-  Terraria's 10 px a tick, accelerating 0.07 px/tick² on each axis. In the open it falls and
-  drifts. The segments trail 38 px apart, the ground crumbling and rumbling as it digs.
-- **Splitting:** kill a middle segment and it splits in two. The segment behind becomes a new head,
-  the one ahead a tail; a head or tail left on its own dies.
-- **Leaving:** leave the Corruption (or die) and it digs straight down and is gone.
-- **Loot:** each segment has a 1 in 2 chance of 1-2 Shadow Scales and of 2-5 Demonite Ore, plus
-  8 silver. The last one killed drops 20-60 more Demonite Ore and, 1 in 20, an Eater's Bone (its
-  pet isn't in yet).
-- **What the scales make:** Shadow Scales make the Shadow armor (6 / 7 / 6 defense, 5% crit each;
-  the set makes you quicker to speed up and stop, and 15% faster), the Nightmare Pickaxe (now its
-  real recipe) and The Breaker (a 55% hammer).
-
-World sizes: chosen under "World size" when creating a world. They keep Terraria's
-Small : Medium : Large proportions (4200 : 6400 : 8400 tiles wide). Terraria's real sizes can't
-be used: a 3D Small world at Terraria's scale would need about 105 GB of memory. The layers
-(cavern, underworld, space) are shares of the height, as in Terraria.
-
-| Size | Blocks | Memory | Making it |
-| --- | --- | --- | --- |
-| Small | 768 × 384 × 768 | ~1.1 GB | ~10 s |
-| Medium | 1152 × 576 × 1152 | ~3.8 GB | ~25 s |
-| Large | 1536 × 768 × 1536 | ~9 GB | ~1 min |
-
-Older 512 × 256 × 512 worlds still load.
-
-Ocean: every new world is an island. The land slopes through a sand beach into a sea that runs
-round every edge, deepening toward the world's edge (no caves under it). Past the edge, open
-water reaches the horizon. Palm trees line the beach, grown like Terraria's (10-20 tall on
-sand, each trunk segment stepping 2 px further along a lean of up to 16 px from a quarter of
-the way up, Tree_Tops_15 leaves on the end), leaning out to sea; chopped, they drop Palm Wood
-(blocks, door, platform, armor and any-wood recipes, all Terraria's). On the coast the ocean biome plays Terraria's Ocean music
-and its enemies spawn:
-- Crabs on the beach.
-- Pink Jellyfish, which drift in pulses and glow when you're close.
-- Sharks, which chase you while you swim and drop Shark Fins.
-
-Biomes: besides the forest, every new world gets Terraria's Snow, Desert and Jungle. The Snow and
-the Jungle lie on opposite sides of spawn and the Desert between them, each with its own blocks,
-music (surface and underground) and enemies:
-
-| Biome | Surface | Underground | Enemies |
-| --- | --- | --- | --- |
-| Snow | Snow-covered ground, boreal trees with snowy pine tops | Snow and slippery ice, narrowing into the caverns | Ice Slimes, Zombie Eskimos at night; Ice Bats and Spiked Ice Slimes below |
-| Desert | Deep sand with cacti | Hardened sand and sandstone | Antlions buried in the sand throwing sand at you, Vultures; Walking Antlions below |
-| Jungle | Mud and jungle grass under dense mahogany trees with Terraria's big jungle canopies, jungle plants and glowing Jungle Spores | Mud all the way down to the Underworld, with jungle grass in its caves | Jungle Slimes and Snatchers (jaws on a vine); Jungle Bats, Hornets that shoot stingers, Man Eaters and Piranhas below |
-
-**The Glowing Mushroom biome**, Terraria's Mushroom Patches pass in 3D (rust `mushroom.rs`):
-
-- **Where:** Terraria's maxTilesX / 700 biomes (6 in a small world) for each 640 x 640 blocks of the
-  map, fewer as the patches grow with the world, 180 blocks apart, in the cavern layer (Terraria's
-  50 tiles below it to 300 above the world's bottom), away from the Jungle, the snow, the deserts,
-  the Dungeon and the ocean. No lava in them.
-- **Shape:** each is six of Terraria's ShroomPatches, one at its spot and five within 40 tiles: a
-  chain of 20-25 flattened balls of mud (2.3 times as wide as tall, about 80-100 tiles across),
-  their middles hollowed out above, drifting a block sideways and half a block up each step, with
-  blobs of mud just below.
-- **Grass:** then, as in Terraria, every mud block below the surface open to the air turns to
-  mushroom grass (so the mud patches through the caverns get some too; not the Jungle's mud), the
-  ground round it is smoothed, and some mud inside the ground turns to mushroom grass too.
-- **Mushrooms:** on every mushroom grass block open above, a Giant Glowing Mushroom where Terraria's
-  GrowShroom fits one (grass on all four sides, 13 blocks clear above; a stem 4-10 tall under its
-  cap, Terraria's Shroom_Tops, a canopy style in the placeable picker), else a small Glowing
-  Mushroom; mushroom vines hang under some of its ceilings.
-- **It glows:** mushroom grass, the mushrooms, their stems, vines and Mushroom Blocks light up blue
-  (Terraria's 0, 0.3, 1).
-- **Drops (Terraria's):** mushroom grass gives mud; small and giant glowing mushrooms 1 in 40
-  Mushroom Grass Seeds, else half the time a Glowing Mushroom; vines half the time a Glowing
-  Mushroom; Mushroom Blocks a Glowing Mushroom. A Glowing Mushroom places a Mushroom Block;
-  Mushroom Grass Seeds turn mud into mushroom grass.
-- **Music and enemies:** its own music ("Mushrooms"). Before Hardmode its enemies are Terraria's:
-  Spore Skeletons and Spore Bats in place of the cavern's Skeletons and bats (a Spore Bat drops the
-  Shroomerang 1 in 40). Its Hardmode enemies (Anomura Fungus, Fungi Bulb, Mushi Ladybug, Fungo
-  Fish) and the Truffle wait for Hardmode.
-- **Mushroom cabins:** see the underground cabins.
-
-**Bee hives**, Terraria's Hives pass in 3D (rust `hives.rs`):
-
-- **Where:** Terraria's 1 + 5-7 hives (x maxTilesX / 4200) for each 640 x 640 blocks of the map,
-  all in the Jungle: from halfway between the surface and the cavern layer down to 100 tiles above
-  the Underworld, only where the ground round the spot (15 tiles) is three quarters mud and jungle
-  grass, not in another structure and not within 150 tiles of the world's evil. Each keeps its
-  100-tile box from the structures after it (cabins, shrines).
-- **Shape:** 2-4 steps of 2-4 tunnels from one point; a tunnel is 10-20 balls 12-20 tiles across,
-  drifting and turning: hollow inside 40% of a ball, hive blocks out to 75% (not where another ball
-  hollowed it), and a third of the hollow fills with honey, laid down settled at the bottom. A
-  honey cube (4 hive blocks a side round 2 of honey) in the shell off each step's end. The larva
-  stands on a 3 x 3 hive floor at the hive's end, above the honey. Terraria's tiles are 2/3 of a
-  block here.
-- **Honey patches:** up to 4 round each hive, 30-90 tiles out on jungle ground: a ball of honey
-  blocks (fewer further out) round a little pool of honey, mud under it.
-- **Honey**, a third liquid: it moves about half as often as lava (Terraria: every 11th update to
-  lava's 6th) and spreads like it. In it you sink slowly (gravity 0.1, at most 3 px a tick) and move
-  a quarter as far; it puts fire out; touching it makes you Honey (buff 48) for 30 s: a life a
-  second more, and natural healing ramping up three times as fast. Honey meeting water makes a
-  honey block where the honey was, meeting lava crispy honey where the lava was (water and lava
-  still make obsidian). An empty bucket scoops a Honey Bucket. Drawn with Terraria's Liquid_11,
-  nearly opaque (its 0.95), its falls with Waterfall_14.
-- **Blocks:** hive (Hive; in the Extractinator it gives a Honey Block, Terraria's mode 5), honey
-  block (sticky: against its side you can't move fast across it and slide slowly down, as in
-  Terraria's StickyMovement; you can still jump off), crispy honey, the larva (Tiles_231, animated)
-  and the hive wall (4 from a Hive at a work bench).
-- **Recipes:** Terraria's "near a liquid" ones now work: water, lava and honey within reach count as
-  crafting stations (Bottled Honey: a Bottle by honey, heals 80 and makes you Honey for 15 s). The
-  Campfire is a crafting station (the Honey Bucket: a Honey Block and an Empty Bucket); Crispy Honey
-  from a Honey Block at a Furnace.
-- **Blocks count as the Jungle:** hive blocks count toward the Jungle biome, as in Terraria's
-  JungleTileCount.
-- **Not yet:** the honey furniture (the Honey Dispenser).
-
-**The Queen Bee**, Terraria's (aiStyle 43, in its px and ticks; `entities/npc.gd`, Queen Bee
-section). Break a bee larva, or use an Abeemination in the Jungle (5 Honey Blocks, a Stinger, 5 Hive
-and a Bottled Honey), and she comes for you to her own music.
-- **Body:** 3400 life, 30 damage, 8 defense, no knockback, flying through blocks. Her charging
-  frames (0-3) show while she charges, her hovering ones (4-11) otherwise.
-- **Attacks,** in turn, never the same one twice running (Terraria's 2D left and right are the
-  line between you on the ground here):
-  - **Charges:** she lines up level with you (within 20 px), keeping 300-600 px off, then dashes
-    at you at 12 px a tick until she's 600 px past you. She slows, turns and goes again: 2 dashes,
-    plus 1 per fury.
-  - **Bees:** she flies to 200 px over your head, then hovers near you. A Bee (20 life) or small
-    bee (10) comes out of her every 40 ticks, 6 in all. Bees home in at up to 5 px a tick with a
-    wobble (aiStyle 5). Their pull starts out backwards and grows over 2 seconds, so they burst
-    out of her and swing back round.
-  - **Stingers:** she flies to 300 px over your head. While she's above you she shoots a stinger
-    every 40 ticks (8 px a tick, 22 damage) for 800 ticks.
-- **Fury:** she gets 1 fury for being above the underground and 1 for you being out of the Jungle.
-  Each makes her faster: dashes +7 px a tick, a bee every 18 ticks sooner, stingers sooner and
-  faster.
-- **Leaving:** 3000 px off she flies straight back to you; with you dead she flies off and is gone.
-- **Poisoned:** stingers (hers and the Hornet's) poison you one hit in three for 10 s. That's 2
-  life a second, and no natural healing meanwhile, as when on fire.
-- **Drops:** 5-15 Bottled Honey, 17-30 Bee Wax, 5 gold, the Bee Mask (1 in 7), the Queen of Bees
-  painting (1 in 15), her trophy (1 in 10), and her gores and dust. Drops not in yet roll but
-  aren't given: one of the Bee Gun, Bee Keeper or Bee's Knees; Beenades (3 in 4, 10-30); the Hive
-  Wand (1 in 3, else a bee vanity piece half the time); the Honey Comb (1 in 3); Nectar and the
-  Honeyed Goggles.
-- **The test world:** spawners for her and her bees in the enemy arena (her fury is 2 there), and
-  the hive's larva.
-
-**The Brain of Cthulhu**, Terraria's (aiStyle 54, its Creepers aiStyle 55, in their px and ticks;
-`entities/npc.gd`, Brain of Cthulhu section). Smash a third Crimson Heart, or use a Bloody Spine in
-the Crimson (30 Vicious Powder and 15 Vertebrae at a Demon or Crimson Altar), and it comes for you
-to Terraria's Boss 3 music.
-- **Body:** 1250 life, 30 damage, 14 defense, flying through blocks; 20 Creepers (100 life, 20
-  damage, 10 defense) come with it. The boss bar counts their life with its own (3250 in all).
-- **First form:** while any Creeper is left it can't be hurt (weapons pass through it). It drifts at
-  you at 1 px a tick. Every 120-420 ticks it fades out (5 alpha a tick), comes back 12-40 tiles off
-  you across and 12-40 up or down (further on ahead if you're moving that way; out of the blocks,
-  where it can see you) and fades back in.
-- **Creepers:** they circle it, easing back when more than 90 px off. Now and then (1 in 200 a
-  tick) one charges at you at 8 px a tick until it's hit or 700 px from the Brain. Each has a 2 in 3
-  chance of 2-5 Tissue Samples and of 5-12 Crimtane Ore.
-- **Second form:** with the Creepers gone its outer brain bursts off (Terraria's gores 392-395) and
-  it comes at you, easing toward 8 px a tick, now open to hits. Every 60-180 ticks it fades out and
-  in fast (25 a tick) to 10-12 tiles off you.
-- **Leaving:** out of the Crimson (or with you dead) it stops and sinks away, faster after a second.
-  6000 px off it's gone.
-- **Drops:** 40-90 Crimtane Ore, 5-15 Lesser Healing Potions, 5 gold, the Brain of Cthulhu Mask (1
-  in 7), the Bone Rattle (1 in 20; its pet isn't in yet), and its gores and dust.
-- **Not here:** Expert mode's illusions (it has no Expert mode), and its trophy.
-- **What Crimtane makes** (Terraria's recipes and stats): the Deathbringer Pickaxe (70% pickaxe
-  power, enough for Dungeon bricks and Hellstone), the Blood Butcherer, the Tendon Bow, the Flesh
-  Grinder, and the Crimson armor (6 / 7 / 6 defense, 3% more damage each). Its set bonus is
-  "Greatly increased life regen": natural healing builds up twice as fast and heals half again as
-  much (Terraria's crimsonRegen). Not yet: the Blood Butcherer's bleeding blades (as Light's Bane's
-  shadow slash).
-
-**Keeping bosses in sight.** Bosses fly through blocks, and in Terraria's 2D view NPCs are drawn in
-front of the tiles, so you never lose one. Here:
-- **Seen through blocks:** wherever blocks hide a boss, it shows through them, dimmed and tinted
-  gold. That covers its bees, Skeletron's hands and arms, the Dungeon Guardian and the Queen Bee's
-  stingers too. A second pass draws only where the scene's depth is in front of the boss
-  (`shaders/*_xray.gdshader`): the sprite as its material overlay, 3D models as a flat silhouette.
-- **Off-screen markers:** while a boss is out of view, its Terraria boss head icon
-  (NPC_Head_Boss_<n>; npcs.json "head_icon", from NPCID.Sets.BossHeadTextures) sits at the screen's
-  edge with an arrow toward it (`ui/boss_markers.gd`). A boss behind you shows along the bottom,
-  on the side you'd turn to. The Eye of Cthulhu's icon changes once it has turned.
-
-**Fishing**, Terraria 1.4.5's (`scripts/items/fishing.gd`, `entities/bobber.gd`, `items/crates.gd`):
-
-- **Casting:** use a fishing pole to cast its bobber where you look; use it again to reel in (no
-  second cast while one is out); switching items takes it in. The bobber is Terraria's aiStyle 61:
-  it flies and falls, floats at the surface of any liquid, and resting there counts toward a bite
-  check (faster with more fishing power). A bite bobs it under for a few seconds; reel in then.
-  The line (each pole's colour) runs from the pole's tip to the bobber.
-- **Fishing power:** pole + bait + fishing skill (the Angler Earring's 10), times
-  Terraria's hour and moon factors (dawn and dusk 1.3x, midday and midnight 0.8x, full moon 1.1x,
-  new moon 0.9x). The bait is the first in your inventory.
-- **The pond:** Terraria measures it in 2D (the bobber's row, then each column down). Here that's
-  done in the vertical slices through the bobber along x and z (rust `fishing.rs`), the bigger one
-  counting, each cell 2.25 tiles. Under 75 tiles nothing bites; under 300 the power drops in
-  proportion (less needed high in the sky).
-- **Catches:** Terraria's catch table, read from Terraria.exe by `tools/terraria_fishing.py` into
-  `data/fishing.json`: the rarity rolls (common to legendary, from fishing power), crates (1 in
-  10), junk in small ponds at low power, then rules by liquid (honey: Honeyfin; lava: only with lava
-  gear), biome (jungle, snow, corruption, crimson, desert, ocean, dungeon after Skeletron, the sky)
-  and height. Bass in a plain forest pond. Catches not in this game skip their rule.
-- **Reeling in a bite** may use the bait (1 in 1 + power/6; less with a Tackle Box; never on junk;
-  a Gold Worm 1 in 20). One time in 7 the line snaps, unless you wear a High Test Fishing Line.
-  Bomb Fish and Frost Daggerfish come in stacks that grow with fishing power.
-- **Crates and oysters:** right-click one in the inventory to open it: Terraria's OpenFishingCrate
-  roll for roll (Wooden, Iron, Golden and the biome crates; no Hardmode loot). Loot not in this
-  game is left out.
-- **Items:** every pre-Hardmode pole (Wooden: 8 wood at a work bench; Reinforced: 8 iron or lead
-  bars; Fisher of Souls / Fleshcatcher: demonite / crimtane bars), bait (Apprentice, Journeyman,
-  Master; the critters as bait items), the fish, junk, crates, the fishing accessories (High Test
-  Fishing Line, Angler Earring, Tackle Box, Angler Tackle Bag, Lavaproof Fishing Hook, Fisherman's
-  Pocket Guide: it shows your fishing power, or what the last bite check said), the
-  Frog Leg (faster jump, more fall resistance), the Balloon Pufferfish, Rockfish, Reaver Shark and
-  Purple Clubberfish.
-- **Not yet:** cooked fish and the alchemy fish potions (no Well Fed or alchemy yet), Blood Moon
-  catches, chum, luck and rain.
-
-**Critters**, Terraria's (npcs.json "critter", their AIs in `entities/npc.gd`, spawning in
-`entities/spawner.gd`):
-
-- **Who:** bunnies, squirrels, mice, frogs, penguins, scorpions, turtles, ducks, grebes and seagulls,
-  birds (Bird, Blue Jay, Cardinal, owls, macaws, cockatiels), fireflies and lightning bugs,
-  butterflies (eight colours, Terraria's odds), worms, grubs (Grubby, Sluggy, Buggy), snails,
-  glowing snails, goldfish and pupfish, grasshoppers, the Underworld's Hell Butterflies, Lavaflies
-  and Magma Snails, and the gold critters (1 in 400).
-- **How they move:** Terraria's AI styles, tick for tick: walkers stand about and wander (and run
-  when hurt), birds sit till you come within 100 px then fly off away from you, fireflies and
-  butterflies drift low over the ground (fireflies blink at night and underground, butterflies flee
-  you and enemies), worms and grubs crawl and rest, snails crawl on (here along the ground, not up
-  walls), ducks paddle on water and fly off when you come near, grasshoppers hop, goldfish only
-  wander. Harmless, 5 life, and they don't take enemies' places.
-- **Where:** Terraria's spawn rules: by day on grass bunnies and squirrels (butterflies on butterfly
-  days, birds in the mornings), penguins on snow, scorpions on sand, macaws and frogs in the Jungle;
-  at night fireflies (their odds rolled each dawn, some nights none); ducks, turtles and grebes on
-  surface water, goldfish in it; worms, mice and snails underground; glowing snails on mushroom
-  grass. In Terraria the Underworld's come only near town NPCs; here they come now and then there.
-- **Plants:** breaking grass now and then lets out a worm (1 in 400) or a grasshopper (1 in 100;
-  tall grass twice as often), jungle plants grubs, ash plants Underworld critters (Terraria's
-  KillTile_DropBait).
-- **Catching:** swing a Bug Net (the Merchant sells it) through a critter for its item, the bait
-  for fishing (Worm 25, Tree Nymph 50, Gold Worm 50...). The Underworld's burn you through a plain
-  Bug Net (1 damage, On Fire!); the Golden and Fireproof ones catch them. Use a critter's item to
-  let it go where you aim.
-- **Killed:** they gib like enemies (their gores and dust are in `npc_gore.json` too). Bunnies,
-  squirrels, birds, ducks, turtles and the like break into their pieces and bleed. Fireflies,
-  butterflies, worms and grasshoppers burst into their own coloured dust, and snails into dust
-  plus their shell. Gold critters burst into gold sparkles (`NPCID.Sets.IsGoldCritter`: 10 a hit,
-  20 when killed).
-- **Not yet:** cages and terrariums, critter statues, dragonflies, ladybugs, water striders, the
-  Truffle Worm, and town critters (pets).
-
-**The Angler**, Terraria's (`scripts/items/angler_quests.gd`, `entities/town.gd`):
-
-- **Finding him:** till he's woken, a spawn in the ocean's water is the Sleeping Angler, asleep and
-  afloat on the surface. Talk to him and he's the Angler (one of his thank-you lines); he moves into
-  a free house like the others.
-- **His quest:** each dawn he wants one of his 41 fish (Terraria's AnglerQuestSwap: not the
-  Hardmode ones, nor the other evil's, nor the sky's till a boss is beaten). The Quest button tells
-  you what and where (Terraria's quest texts, the fish in the chat's corner). That fish then bites
-  where Terraria's catch table has it, till you've one. Hand it in for his rewards (Terraria's
-  GetAnglerReward, roll for roll: the Angler Hat, Vest and Pants at the 10th, 15th and 20th quests, the
-  Bottomless Bucket at the 25th, the Golden Fishing Rod at the 30th; else now and then the Fish Hook,
-  a Bottomless Bucket or Super Absorbant Sponge, or one of his accessories you haven't got - High
-  Test Fishing Line, Angler Earring, Tackle Box, Fisherman's Pocket Guide, Weather Radio, Sextant,
-  Fishing Bobber - or Fishing, Sonar or Crate Potions; and money, maybe bait). Then he's done for
-  the day. His chat is Terraria's (his chatter, his quest count, his prank on the Dryad).
-- **His rewards:** the potions (Fishing: +15 fishing power, Sonar: what's biting shows over the
-  bobber, Crate: crates 1 in 4), the Bottomless Water/Honey/Lava Buckets (never run out) and the
-  Absorbant Sponges (soak up their liquid without filling), the Fish Hook (a two-hook grappling
-  hook), the Weather Radio (the clouds and the wind) and the Sextant (the moon's phase).
-- **Not yet:** Hardmode quests and rewards; rewards this game hasn't got (the Fuzzy Carrot,
-  the Golden Bug Net, vanity, decorations) are left out.
-
-- **Cacti:** drawn like Terraria's, one flat sprite facing you (a trunk with arms, put together from
-  Tiles_80's pieces; Corruption and Crimson ones in their colours), walk-through. Each is a column
-  of cells you aim at, chop (axes do 3x) or mine; any cell brings the whole cactus down, a Cactus
-  per piece, arms included. Its arms come from its height and position.
-- **Crafting:** cactus makes a Cactus Sword and Cactus Pickaxe. Boreal Wood and Rich Mahogany are
-  placeable and count as wood in every wood recipe (Terraria's "Any Wood").
-- **Test world:** a small patch of each biome to the north.
-
-Forest plants and debris: the forest floor gets Terraria's plants and debris, all of which you
-can walk through:
-- **Plants:** short and tall grass; short and tall flowers in all of Terraria's colours; surface
-  mushrooms (they drop Mushrooms); Daybloom (it drops Daybloom); patches of Sunflowers (they drop
-  Sunflowers, which you can plant).
-- **Debris:** small stones, twigs, large rock piles and fallen logs.
-- **Vines and flowering vines:** they hang from the grass under overhangs and in cave mouths, and
-  fall when the block they hang from is mined.
-- **Ponds:** lily pads float on surface ponds, and cattails grow up through shallow water with
-  their heads above it.
-- **Other biomes:** Snow and the Desert clear these, the Jungle and the evil biomes swap the plants
-  for their own, and rocks stay everywhere.
-- **Not yet:** herbs don't grow from seeds (Daybloom only appears at world creation).
-
-The Dungeon: every new world gets one. Its entrance sits on the Snow's side of the world (away
-from the Jungle) near the coast, its door facing the world's centre, built of the world's dungeon
-brick colour (blue, green or pink, like Terraria's).
-- **The keep:** shaped like Terraria's cross-section. A tall 15 x 15 keep with corner towers and
-  battlements between them, holding one tall hall.
-- **The porch:** a long covered porch runs 17 blocks out from the door. Its thick roof has its own
-  battlements and a raised block at the far end, and it stands on pillars, open between them,
-  over a raised brick floor with half-block steps down at its end. Chain lanterns hang under it.
-- **The door:** at floor level in the keep's front, under the porch, with a real arch
-  (upside-down ramps).
-- **The hall:** pillared and hung with two rows of dungeon banners (Marching Bones, Necromantic Sign, Ragged
-  Brotherhood Sigil), lit by chain lanterns and wall torches.
-- **The way down:** the back of the hall's floor opens into the entrance hallway, a wide tunnel
-  stepping down in sloping stretches (Terraria's LegacyEntranceDungeonHall) to where Terraria's
-  dungeon starts: halfway down to the cavern layer, give or take, at least 60 tiles underground.
-- **The Dungeon itself** (rust/voxel_core/src/dungeon.rs, a port of 1.4.5's
-  DungeonCrawler.MakeDungeon with the legacy layout every normal world gets): from there a walker
-  lays rooms and halls of brick, Terraria's sizes a block a tile, its 2D walk spread into 3D (halls
-  run up, down or any of the four ways across). It's sent down until 100 tiles under the cavern
-  layer's top and kept 100 from the underworld (depths mapped onto this world's layers), inside the
-  ocean and within a quarter of the world of where it started, and it stays under the ground.
-  Cabins and Enchanted Sword Shrines keep out of it.
-- **Doors and platforms:** horizontal halls end in doors (2 in 3 the plain Dungeon Door, else the
-  brick colour's) set in a wall of brick across the passage; vertical ones, and halls opening into a
-  room's top or bottom, get a platform of the colour's brick across the shaft.
-- **Furnishings, in Terraria's order and numbers:** spikes (strips on floors, ceilings and walls,
-  every other one sticking 2 out; 60 damage to touch, give or take 15%), shelves (Metal, Brass,
-  Wood or Dungeon Shelf) with books (1 in 50 a Water Bolt, deep down), Water Candles and Lesser
-  Healing / Mana Potions, a chest in each room, lanterns (three of Terraria's seven styles) and the
-  colour's Dungeon Chandeliers hanging from ceilings, each with a switch on a wall nearby that turns
-  it on or off (2 in 3 start off), and banners hanging from the ceiling on the walls: Marching
-  Bones / Necromantic Sign, Rusted Company Standard / Ragged Brotherhood Sigil or Molten Legion Flag /
-  Diabolic Sigil, by which of Terraria's three wall kinds that part of the dungeon would have.
-- **Chests:** Locked Gold Chests hold, in turn, the Muramasa, Cobalt Shield, Aqua Scepter, Blue
-  Moon, Magic Missile, Valor, a Golden Key (in a wooden chest, as is any chest near the surface)
-  and Handgun, with the cavern layer's extras. Right-click one with a Golden Key to open it for good
-  (the key is used up; it becomes a Gold Chest).
-- **The new weapons:** the Muramasa, Valor (a yoyo) and Handgun with Terraria's stats; the Water
-  Bolt bounces off blocks (10 times, through 10 enemies); the Aqua Scepter sprays two streams a use
-  for its mana once, falling as they go; the Magic Missile flies toward your crosshair while you
-  hold the button, one at a time. The Cobalt Shield stops knockback.
-- **Paintings** (DungeonGlobalPaintings, after the lights): 100 tries per 4200 tiles of width,
-  each centred in a passage more than 7 long and 5 tall, on the wall beside it. In the brick parts
-  one of the Dungeon's own (Bone Warp, The Guardian's Gaze, Great Wave, Starry Night and the rest),
-  none within 15; in the slab and tiled parts a Wall Skeleton, Hanging Skeleton or Catacomb, alone,
-  in a row 7 apart along a long passage or a column up a tall shaft, none within 8. A room's walls
-  aren't flat here as Terraria's back wall is, so each looks a few blocks round its spot for one
-  that is.
-- **Cracked bricks:** 1 hall in 6 (Terraria's CrackedBrickChance 0.166, not the entrance
-  hallway) is built of the colour's cracked brick. Run over it or land on it fast enough and it
-  shatters under you (Terraria's CheckCrackedBrickBreak: faster than a random 2-11 px a tick,
-  unless you're also on firm ground), dropping you through; explosions break it too, though not
-  the rest of the Dungeon's brick.
-- **Traps:** 8.4 per 4200 tiles, placed as the caves' are (below).
-- **Biome chests:** Terraria's five, each on the floor at a random spot inside: a Locked Jungle
-  Chest, a Locked Corruption or Crimson Chest (the world's evil), and Locked Hallowed, Frozen and
-  Desert Chests. Their keys and Hardmode loot aren't in yet, so they stay locked.
-- **Furniture** (DungeonGlobalGroundFurniture, 2000 tries per 4200 tiles): at the middle of a run
-  of floor long enough for it and clear to its height, the brick colour's Dungeon furniture in the
-  brick parts and the Gothic set in the slab and tiled parts: tables with a chair each side and,
-  1 time in 2, a candle, a Water Candle or a book on them, work benches with a chair, vases,
-  bookcases, beds, pianos, dressers, sofas, bathtubs, lamps, candelabras and clocks. The first
-  spots go to an Alchemy Table and a Bewitching Table (1 and one per 4200 tiles of width each,
-  none within 15 tiles of another); the Alchemy Table works as a placed Bottle for crafting.
-- **Not yet:** Terraria's Dungeon bookshelves (DungeonGlobalBookshelves), the Bewitching Table's
-  buff (minions aren't in yet).
-- **Bricks:** dungeon brick needs 65% pickaxe power (Nightmare / Deathbringer Pickaxe), as in
-  Terraria.
-- **The Dungeon biome:** inside (under the keep's roof, or among dungeon brick underground) the
-  Dungeon music plays; nothing spawns there yet but the Dungeon Guardian.
-- **The Old Man:** he waits under the porch. Right-click him to talk; he can't be hurt. At night he
-  offers his Curse (Terraria's NPC.SpawnSkeletron): he dies and Skeletron rises where he stood.
-  He's back at dawn if it isn't beaten, and gone for good once it is (the Clothier who'd take his
-  place isn't in yet).
-- **Skeletron** (Terraria's aiStyles 11 and 12, its numbers): a 4400-life head (32 damage, 10
-  defense) with two 600-life hands (20 damage, 14 defense), all flying through blocks. The head
-  keeps 250 px (Terraria's, 24 a block here) over your head and closes on you; every 800 ticks it
-  spins at you for 400, its defense 10 lower. Each hand hangs out to its side below the head and,
-  every 300 ticks, in turn rises over the head and slams down at you (18 px a tick) or swings out
-  500 px and sweeps across at you (17); its arm is Terraria's two bones. By day it's enraged
-  (9999 damage and defense, spinning at you fast); with you dead or far off it sinks away. Kill the
-  head and the hands go with it. It drops 5-15 Healing Potions, 5 gold and, at most one of, the
-  Skeletron Mask (1 in 7), Skeletron Hand or Book of Skulls (each 1 in 7 of what's left; the Hand
-  isn't in yet, being a grappling hook). The Book of Skulls shoots skulls that fly through blocks
-  and home in. Its trophy 1 in 10 and Chippy's Couch 1 in 7; and into a world with no Hellforge
-  left anywhere it drops one, as Terraria's does. Not yet: expert-mode skulls.
-- **The Dungeon Guardian:** go below the ground in the Dungeon before Skeletron is beaten and it
-  comes for you: Skeletron's head always enraged, 9999 damage, at 8 px a tick through the walls.
-  It leaves when you leave the Dungeon.
-- **Its enemies, once Skeletron is beaten** (Terraria's, with its numbers): they spawn 3.3 times
-  as often in the Dungeon, up to 1.8 times as many, by Terraria's chain. Each spawn reads the wall
-  there - the brick, slab and tiled parts worldgen lays out (kept with the world now), 1 time in 7
-  any of them. Roll by roll: 1 in 35 a Dungeon Slime; on slab 1 in 3 a Spike Ball (none within
-  300 px of another), on tiled 1 in 5 a Blazing Wheel, on brick 1 in 7 a Cursed Skull; 1 in 7 a
-  Dark Caster; else Angry Bones.
-  - **Angry Bones** (80 life, 26 damage) walk at you at 1.5 px a tick; 1 in 5 each the big ones
-    (Terraria's three: faster, tougher or armored), else 1 in 4 Big Boned (1.15x, 10% more
-    damage and life) or 1 in 5 Short Bones (0.9x).
-  - **Dark Caster** (50 life): the caster AI (the Goblin Sorcerer's), teleporting in a blue puff
-    and casting Water Spheres (20 damage) that fly through the walls at you.
-  - **Cursed Skull** (40 life, 35 damage): Terraria's aiStyle 10. It flies through the blocks at
-    you, faster the further off (up to 5 px a tick), wobbling round you close up and lunging for
-    50 ticks every 600.
-  - **Dungeon Slime** (150 life): a slime with a Golden Key in it, always dropped.
-  - **Spike Ball** (32 damage) swings on its chain round where it hangs (aiStyle 20: its speeds
-    across and up a triangle, half a swing apart, 6-14 px a tick at the top); here in an upright
-    plane. **Blazing Wheel** (24 damage) rolls along the blocks at 6 px a tick hugging them
-    round every corner (aiStyle 21), glowing. Neither can be hurt.
-  - **Drops:** every bone one rolls in turn a Bone Wand (1 in 250), Tally Counter (1 in 100) or
-    Golden Key (1 in 65), else 1-3 Bones; also the Ancient Necro Helmet (1 in 450, a Necro set
-    head) and the Clothier Voodoo Doll (1 in 300); the Dark Caster the Dark Forebodings painting
-    (1 in 150), the Cursed Skull the Nazar (1 in 100). The Bone Wand places Bone Blocks, using up
-    Bones (Terraria's tile wands). The Tally Counter shows the last creature you hit and how many
-    of its kind you've killed (Terraria's by banner: all the Angry Bones count as one).
-  - **Not yet:** the Bound Mechanic, and 1.4.5's Librarian Skeleton and Water Bolt Mimic (by the
-    Dungeon's books).
-- **New items:** Blue / Green / Pink Brick, the brick platforms, Spikes, Books, Water Candles,
-  the four shelves, the Dungeon Doors, the seven lanterns, the Dungeon Chandeliers, the six banners
-  and the Switch are placeable.
-- **Old worlds:** worlds made before the entrance don't get one; worlds made before the Dungeon
-  keep their sealed shaft.
-
-Sky:
-- **Colours:** a gradient from the horizon up that follows the time of day. The sun's side of the
-  horizon glows warm at sunrise and sunset, and the sun and moon (with its phases) have soft halos.
-- **Fading:** the sky, the light on the world and the clouds follow the clock as one smooth curve:
-  the day brightens over 3.75 hours after sunrise (Terraria's 13,500 ticks) and dims as long before
-  sunset, which glows orange into twilight while the stars come out. Nothing jumps when day turns to
-  night or back.
-- **Stars:** pixel stars twinkle at night. In the Space layer the sky darkens and they show by day
-  too.
-- **Clouds:** Terraria's cloud sprites drift across the sky, with the odd rare shaped cloud. They're
-  white by day, warm at sunrise and sunset and dark blue at night. Each day rolls a new
-  cloudiness, from nearly clear to overcast, which is saved with the world.
-- **Backdrops:** Terraria's background art in three layers: far mountains, nearer mountains or
-  hills, then trees. They change with the biome (forest, Snow, Desert, Jungle, Corruption, Crimson)
-  and dissolve into each other as you cross over. Far layers are hazier, and all of it is lit by
-  the sky.
-- **Over the sea:** where the open sea reaches the horizon (looking out from the coast, or from a
-  height), the backdrop isn't drawn, so no mountains or trees rise out of the water; over land it
-  still shows. The game works out, as you move, how far you see in each direction before the sea.
-- **Distance:** the backdrops, clouds and sun always sit just beyond your view distance, so terrain
-  is always in front of them, whatever the view distance setting.
-
-Furniture: Terraria's early house furniture and the crafting chain behind it.
-
-| Piece | Made from | Made at | What it does |
-| --- | --- | --- | --- |
-| Wooden Table | 8 Wood | Work Bench | Solid on top: stand on it, put a candle on it |
-| Wooden Chair | 4 Wood | Work Bench | Faces you when placed |
-| Bench | 8 any Wood | Sawmill | Faces you when placed |
-| Sawmill | 10 any Wood, 2 Iron/Lead Bars, 1 Chain | Work Bench | Crafting station |
-| Loom | 12 any Wood | Sawmill | Crafting station |
-| Silk | 7 Cobwebs | Loom | |
-| Bed | 15 Wood, 5 Silk | Sawmill | Right-click: your spawn point; again clears it |
-| Barrel | 9 any Wood, 1 Iron/Lead Bar | Sawmill | A container, like a chest |
-| Grandfather Clock | 3 Iron/Lead Bars, 6 Glass, 10 Wood | Sawmill | Right-click: tells the time |
-| Candle | 1 Gold Bar, 1 Torch | Work Bench | Light |
-| Copper / Silver / Gold Chandelier | 4 Copper / Silver / Gold Bars, 4 Torches, 1 Chain | Anvil | Light; hangs from the ceiling |
-| Candelabra | 5 Gold Bars, 3 Torches | Work Bench | Light; stands on tables and dressers |
-| Bookcase | 20 Wood, 10 Books | Sawmill | |
-| Piano | 4 Bones, 15 Wood, 1 Book | Sawmill | Solid on top |
-| Dresser | 16 Wood | Sawmill | A container; solid on top |
-| Trash Can | 8 Iron/Lead Bars | Anvil | A container |
-| Sign | 6 any Wood | Work Bench | Right-click to write on it; aim at it to read it |
-| Lamp Post | 3 Iron/Lead Bars, 2 Glass, 1 Torch | Anvil | Light, three blocks tall |
-| Tiki Torch | 1 Torch, 3 any Wood | Work Bench | Light |
-
-- **Recipes are Terraria's own:** every recipe is read from your Terraria.exe
-  (`tools/terraria_recipes.py`, run by `extract_assets.sh`), so amounts, stations and "any Wood" /
-  "Iron or Lead Bar" are exactly Terraria's. An item is craftable here when everything its Terraria
-  recipe takes exists in this game. Like Terraria, the Candle, Candelabra and chandeliers take one metal each (Terraria has
-  separate Platinum, Tin... versions, not in this game yet), and the plain Work Bench and Wooden
-  Table take plain Wood.
-- **Supporting recipes:** Chain is 15 from 1 Iron or Lead Bar at an anvil, Glass is 2 Sand at a
-  Furnace, Bottles are 2 from 1 Glass at a Furnace, and a Lead Anvil (5 Lead Bars at a work bench)
-  works as an anvil. Place a Bottle to brew potions at it (Lesser Healing Potions: a Mushroom, 2 Gel
-  and 2 Bottles make 2).
-- **Bed:** you respawn at your bed. The bed is saved with your character; if it's gone, you're
-  told and come back at the world spawn.
-- **Books and Bones:** Books sit on the Dungeon's shelves (and, as before, turn up in underground
-  chests). Skeletons drop Bones.
-- **Signs:** the editor closes with Save, or with Cancel or Escape to leave the sign as it was.
-  What's written is saved with the world and goes when the sign is broken.
-- **Cobwebs:** they hang in patches in cave corners. They slow you to a crawl and break your
-  fall, and they drop Cobweb.
-
-Platforms: Wood, Boreal Wood, Rich Mahogany, Ebonwood, Shadewood and Cactus Platforms. One wood
-(or cactus) makes two, with no crafting station needed; the Wood Platform takes plain Wood, as in
-Terraria.
-- **Look:** Terraria's plank, flush with the top of its block (where you stand), a quarter of a
-  block thick.
-- **Moving:** they hold you up from above only. You land on them, jump up through them and walk
-  under them. Hold Shift (Drop down, rebindable) to fall through. Walking into one at your feet
-  steps up onto it, so a diagonal row of them makes a staircase. Flying passes through them.
-- **Others:** enemies and dropped items land on them too.
-- **Placing:** a platform goes next to a block, or off the side of another platform, so a row of
-  them can bridge a gap in mid-air.
-- **Breaking:** platforms stay put when the block under them is mined. Torches and other props
-  can stand on them.
-
-Doors: Wooden, Boreal Wood, Rich Mahogany, Ebonwood, Shadewood and Cactus Doors, each made from
-6 of its wood (or cactus) at a work bench. The Wooden Door takes plain Wood, as in Terraria.
-- **Shape:** a door is 1 block wide and 2 tall, since you are 2 blocks tall here (3 in Terraria).
-  It is drawn from Terraria's door art, given some thickness.
-- **Placing:** it goes on a floor with two free blocks above it, facing you. Its hinge goes on
-  the side of the block you aimed at.
-- **Opening:** right-click either half. It swings a quarter turn away from you; if that side is
-  blocked, it swings the other way.
-- **Closing:** right-click again. A door won't close on anyone standing in the doorway.
-- **Enemies:** a closed door is solid, so enemies that walk can't get through (Terraria's
-  zombies can't open doors either).
-- **Aiming:** you can mine and build through an open doorway; only the door itself gets in the way.
-- **Breaking:** either half breaks the whole door and drops it, and so does mining the floor
-  under it.
-
-Liquids: Terraria-style finite water and lava that fall, level out and settle (only moving
-cells are simulated); cave pools, surface ponds and Underworld lava lakes; lava glows, burns
-and sets you On Fire!, water breaks falls, needs breath (bubbles) and puts fires out;
-water + lava makes obsidian; buckets scoop and pour; items burn in lava; saved with the world.
-Waterfalls: liquid pouring off a ledge renders as an animated falling stream (Terraria's
-Waterfall textures), and worlds get decorative springs on cliffs and cave walls plus lavafalls
-from the Underworld ceiling - visual only like Terraria's, so they never drain or flood - with
-splashes, looping sound, and re-measuring when you build or dig around them. Make your own
-like Terraria's half-block trick: hit a block that has water or lava behind it with a hammer
-(Wooden Hammer from 8 Wood at a work bench, metal hammers at an anvil) to open a spring in that
-face; it runs while the liquid is there, and hammering the face again closes it.
-
-Hammered blocks: like Terraria's, a hammer reshapes the blocks it hits. Each hit moves the block on
-one step:
-1. Full block.
-2. Half block (the bottom half).
-3. Ramp, rising away from you, so you can walk up it in the direction you face. Ramps are pixel
-   staircases like Terraria's slopes: 16 one-pixel steps per block. The side texture follows the
-   slope, so a grass ramp's green edge runs up the steps.
-4. Ramp upside down (a ceiling slope).
-5. Back to full.
-
-- **Moving:** half blocks and ramps hold you up in their shape (on a ramp, the step you see). You walk smoothly up a ramp, step up
-  onto a half block, and a row of ramps makes a staircase. Upside-down ramps make arches.
-- **Light:** shaped blocks let light through.
-- **Which blocks:** any solid cube block can be shaped (not unbreakable ones, torches, plants or
-  furniture). A block with water or lava behind it still gets a spring instead.
-- **Saving:** shapes are saved with the world. Breaking a shaped block and putting a block back
-  gives a whole one.
-
-Stairs: like Terraria's platform stairs, a hammer turns a platform into a stair. The first hit
-makes it rise away from you, the next the other way, the next flat again. A stair is drawn like
-Terraria's: its platform's stair frames (two treads per tile) up the block's diagonal with the
-diagonal beam Terraria draws under a stair that goes on down, so a staircase is one piece (in
-whatever 3D method the platform uses), and you walk up its steps; set them one up and one along each time for a staircase,
-with flat platforms for landings. Like any platform, you jump up through a stair from below and drop
-through it holding Down. Stairs are saved with the world.
-
-The surface, like Terraria's (its TerrainPass; `rust/voxel_core/src/terrain.rs`):
-- **Terraria's way:** it walks across its world a column at a time, in stretches of 5-40 columns,
-  each one feature: a plateau (nearly flat, and up to 6 times longer), a hill or dale (about 1.3
-  tiles up or down a column) or a mountain or valley (about 2; none near spawn, whose middle is
-  flat). Each starts where the last left off, so its surface is long flats at different levels
-  joined by straight slopes.
-- **Here:** the map is split into regions about 64 blocks apart, of many sizes (plateaus larger),
-  their borders warped. Each region is one of those features at its own level: the land's broad
-  rise and fall plus the feature's step up or down. Between regions the ground ramps from one
-  level to the other at the steeper feature's slope (at least 14 blocks across). Inside a region a
-  hill rises to a dome and a valley or dale sinks to a hollow; a mountain is a massif, broad
-  shoulders with one to three peaks round its middle, cones at Terraria's mountain slope (1.6-2
-  blocks a block) that merge into ridges, rounded only at the tips. The middle of the world (2.5%
-  of its width round spawn) is flat, with no mountains or valleys within 10%. On a Small world
-  about 40% of the land is flat and 20% steep (the old rolling noise: 23% and 27%), between 9
-  below the surface line and 5 below the Space layer.
-- **The dirt layer:** like Terraria's, dirt reaches far down from the grass (16 blocks, give or
-  take 10, more under the heights), with stone through it (its Rocks In Dirt, more of it deeper),
-  so hillsides and cave mouths are dirt and grass with stone showing; stone (with dirt in it)
-  below.
-- **Caves and tunnels from the surface** (`rust/voxel_core/src/caves.rs`), dug with a port of
-  Terraria's TileRunner (a ball that wanders, shrinking from its strength to nothing over its
-  steps). Terraria's counts per world width go per 640 x 640 blocks of map, twice over:
-  - **Surface caves** (its SurfaceCaves pass): holes going down from the ground, many small ones
-    (3-6 strong, 5-50 steps), fewer larger (10-15, 50-130), a few huge ones (12-25, 150-500, with two
-    more from the same mouth), and straight shafts (7-12, 150-250). None near the beaches or spawn.
-  - **Mountain caves** (its MountainCaveOpenings): every mountain gets a tunnel from inside it, a
-    little under its top, out through its side (CaveOpenater: 7-12 across, a little uphill, until it
-    breaks out), and a cave winding down into it from there (Cavinator).
-  - **Surface tunnels** (its Tunnels pass): Terraria heaps dirt 11-16 tiles over the ground along a
-    path of 10 points 5-10 apart, a tunnel under a bridge of dirt in its side view. Here a dirt
-    ridge is heaped along a winding path the same length, with a walkable tunnel (4-5 across, its
-    floor at the ground) bored through it; grass covers it and vines hang in its mouths.
-- **Lakes** (Terraria's Lakes pass, SonOfLakinater; `rust/voxel_core/src/surface.rs`): 3-6 per 640 x
-  640 blocks on open, fairly flat ground, away from the mountains, beaches, spawn and each other. Each
-  is dug as Terraria digs one: a basin 15-30 strong (1.3 times that 1 in 5) sinking over 30-60
-  steps, wide and shallow at first and rounder as it goes down, its banks cut back in a slope, any
-  cave it opens into sealed off round it, and flooded to the lowest point of its rim (so it never
-  spills down a slope). Pond plants grow in it as in the ponds.
-- **Stone and ore on the grass** (its SurfaceOreAndStone pass): stone patches (1-7 per 640 x 640
-  blocks, twice over), the ground turned to stone along a short run down from the grass with rubble
-  on it; and ore patches (5-10, 100 apart), the world's first-tier ore (its second 1 in 3) showing at
-  the surface over a vein 8-12 deep.
-- **Forests** (its Trees pass): groves of tall trees (Terraria's GrowEpicTree, 20-30 tall; here
-  18-28) 25-50 blocks round, 0.003 of its width of them per 640 x 640 blocks, twice over (about a
-  quarter of the forest); elsewhere trees wherever there's room, thicker in places and thinner in
-  others, from dense woods to open meadows. No two trunks within 2 blocks (Terraria leaves two
-  columns between), and none on a lake's floor.
-
-The Underworld's ruined houses, like Terraria's (WorldGen.HellFort and AddHellHouses, and its
-Hellforges pass; `rust/voxel_core/src/hell.rs`): across the middle half of the Underworld each way
-(the ash forest has the outer sixth), a fort on the ground every 20-87 blocks (Terraria's 30-129
-tiles, now and then more), the walk along x on lines across z spaced the same way. A fort is
-Terraria's grid of rooms, 5 columns across and 10 rows tall (rows 4-7 blocks high: its 6-11 tiles at
-the cabins' 2/3 scale), the 4th row from the top on the ground and the rows under it dug in; the
-middle column round the spot, the others beside it sharing their walls. Its plan is Terraria's,
-twice over: 1 time in 3 a wing out one way (one column or two) and likewise the other, each wing
-with a shaft up or down its end column 9 times in 10; with no wing, a tower 6 or more rows tall.
-Here each wing heads along x or z, so a fort is a cross, an L, a T or a line; columns where
-another fort already stands are left out, so forts run together in places. Each room is an
-Obsidian Brick frame (1 time in 10 Hellstone Brick) round its brick wall (Terraria's dark back
-wall), drained of lava; Obsidian Doors between neighbouring columns (and 1 time in 3 between other
-neighbours) and out of each end of the fort where it's open; hatches of Obsidian Platforms up
-through the floors between stacked rooms and one in the roof; then half the outer walls facing
-open air crumble from the ceiling down, the corner posts standing. Inside (Terraria's counts per
-its forts): Demon Torches on the walls (none within 8 tiles of another), Obsidian furniture down the
-middle of the rooms' floors (a table with chairs and a candle, a work bench with a chair, a vase,
-bookcase, chair, bed, piano, dresser, sofa, clock, bathtub, lamp or candelabra), and from the
-ceilings the world's three Hell banners (of six), Obsidian Chandeliers and Lanterns; about 9 forts
-in 10 have a Hellforge, the Hellstone Bar's station (it counts as a Furnace too; Terraria's recipes
-made at it work: Hellstone Bars, Obsidian armor, the Fireproof Bug Net). The Obsidian lights pulse
-purple like the Demon Torch. Paintings (Terraria's 100 tries, RandHellPicture: Hand Earth,
-Skelehead, Imp Face, Ominous Presence, Shining Moon, Lake of Fire, Darkness, Dark Soul Reaper,
-Trapped Ghost, Demon's Eye, Living Gore, Flowing Magma) hang in the middle of a room's wall where
-it's more than 7 tiles wide and 5 tall clear, none within 8 tiles of another.
-
-Shadow Chests, Terraria's (its Buried Chests pass, UnderworldChestCount): 10-15 per small world's
-width, here per line of forts (about 80 in a 1024 x 1024 world), each at a random spot in the
-Underworld dropped onto the first solid ground below it (through platforms; in a fort, on its
-floor, or out on the ash), lava or not. They're Locked Shadow Chests: the Shadow Key opens them for
-good and isn't used up. The Dungeon's first chest always holds a Shadow Key, and each after it
-1 time in 3. Terraria shuffles the five main items once a world and deals them out in turn, so a
-world's chests share them evenly: the Dark Lance (spear), Sunfury (flail), Flower of Fire, Flamelash
-and Hellwing Bow. With it: 1 in 5 a Treasure Magnet; 1 in 3 a Dynamite; 1 in 2 15-29 Meteorite or
-Gold Bars; 1 in 2 50-74 Hellfire Arrows or Silver Bullets; 1 in 2 15-20 Restoration Potions; 1 in 4
-Torches; 1 in 2 2-4 Gold Coins. Worldgen chests' bars and Silver Bullets are now the world's own of
-each pair, as in Terraria (Platinum Bars in a Platinum world). Not here yet: the Hellcart, Ornate
-Shadow Key and Hell Cake (no minecarts or pets), the buff and Recall Potions (alchemy) and
-Glowsticks.
-- **Flower of Fire** (48 magic damage, 9 mana): a Ball of Fire that flies straight for 20 ticks,
-  then falls (0.2 px a tick²), bouncing off blocks 5 times and going out on the 6th; 1 in 2 it
-  sets enemies on fire for 5 s.
-- **Flamelash** (32, 21 mana): steered toward your crosshair while you hold the button, like the
-  Magic Missile, through 2 enemies; 1 in 2 it sets them on fire for 4-8 s.
-- **Hellwing Bow** (22 ranged damage, fast): Wooden Arrows become Hellwings, fiery bats that fly on
-  with no drop, each steering gently toward its own way (Terraria's: launched up to 0.1 rad off
-  your aim, turning toward up to 0.2 off it), through every enemy in their path. Other arrows fire
-  as arrows.
-- **Treasure Magnet**: items come to you from 6 blocks further (Terraria's 150 px).
-- **Hellfire Arrows** (13 damage, 8 knockback; 100 from 100 Wooden Arrows and a Hellstone Bar)
-  blow up on what they hit, hurting every other enemy within 64 px. **Silver** and **Tungsten
-  Bullets** (9 damage) and the **Restoration Potion** (90 life, 45 s of potion sickness) come
-  with Terraria's recipes; the **Meteorite Bar** waits for meteorites.
-
-The Underworld's enemies, Terraria's, with its numbers (life, damage, defense, knockback
-resistance, coins, sounds, gores and dust, all from its NPC code):
-- **Spawns:** Terraria's chain below the Underworld's top (before Hardmode), roll by roll: 1 in 8 a
-  lava critter, else 1 in 40 a Bone Serpent (one at a time), 1 in 14 a Fire Imp, 1 in 7 a Demon
-  (1 in 10 of those a Voodoo Demon), 1 in 3 a Lava Slime, else a Hellbat.
-- **Hellbat** (46 life, 35 damage): Terraria's aiStyle 14 bat, as every bat now is. Each tick it
-  steers at you twice (the Hellbat's second pass its own tuning), throwing off fire dust. It's
-  pushed up out of water, bounces off walls, and every 200 ticks looks for you: out of sight, it
-  wanders in a slow swing until it sees you again. Drops the Magma Stone (1 in 150) and the Bat Bat
-  (1 in 300).
-- **Demon** (120 life) and **Voodoo Demon** (140): the same flight, slower when wandering. With you
-  in sight, a Demon throws four Demon Scythes, 20 ticks apart. Each starts slow and speeds up 1.06 a
-  tick from its 30th tick to its 100th, then flies on spinning; they hit for 42 (Terraria doubles
-  enemy shots' damage). It throws again once its count passes 300-600 with you within a screen of
-  it. Demons drop the Demon Scythe (1 in 35); the Voodoo Demon always drops the Guide Voodoo Doll
-  it carries.
-- **Fire Imp** (70 life, 16 defense): the Goblin Sorcerer's AI. It teleports near you every 650
-  ticks and casts a Burning Sphere (30 damage; 1 in 3 sets you on fire for 7 s) 20 ticks after each
-  of its cast times, with you within a screen. Drops the Obsidian Rose (1 in 20) and the Plumber's
-  Hat (1 in 250).
-- **Lava Slime** (50 life, 10 defense): hops a little further than other slimes, glows and throws
-  off fire. It drops nothing, as in Terraria outside the Remix seed.
-- **Bone Serpent**: a worm of 14-22 body segments and a tail. Its segments share one 300-life pool
-  (Terraria's realLife): hit any of them, each with its own defense, and it comes off the whole
-  worm, so it never splits and dies all at once. Through the ground it comes at you at 9 px/tick
-  (0.1 a tick²); in the open it falls, lighter while it's still rising.
-- **Lava:** Terraria's rule now: an NPC in lava takes 50 and 7 s of On Fire! every 30 ticks, unless
-  it's lava-immune (all of these but the Bone Serpent, which, like every worm, never touches
-  it). Underworld enemies can't be set on fire. Your own lava damage is Terraria's 80 and 7 s of
-  On Fire!.
-- **New items:** the Guide Voodoo Doll (an accessory; summoning the Wall of Flesh with it is still
-  to come), the Demon Scythe (35 magic damage, 14 mana; its scythe speeds up like the Demons',
-  through 5 enemies), the Magma Stone (melee hits, swings and melee projectiles alike, set enemies
-  on Hellfire: 15 life a second, 6 s one hit in four, else 4 or 2), the Obsidian Rose (lava does 45
-  less and burns half as long), the Bat Bat (36 melee damage; each swing heals you 1) and the
-  Plumber's Hat. The Bone Serpent's Hotdog waits for food (Well Fed).
-
-The Hellstone gear, Terraria's (Hellstone Bars at an anvil, with its numbers and prices):
-- **Molten Pickaxe** (20 bars): 100% pickaxe power, fire thrown off each swing.
-- **Molten Hamaxe** (15): 150% axe and 70% hammer; it chops trees and hammers everything else.
-- **Fiery Greatsword** (20): 40 damage, a slow swing trailing fire. The first enemy each swing hits
-  erupts (Terraria's Volcano): 75% of the hit again to up to 3 enemies within 80 px, each set on
-  fire for 3 s.
-- **Molten Fury** (15): a bow (31 damage) that turns Wooden Arrows into Flaming Arrows (On Fire!
-  1 in 3 for 3 s; Flaming Arrows also craft from Wooden Arrows and a Torch).
-- **Phoenix Blaster** (a Handgun and 10 bars): 30 damage, fast.
-- The Molten armor and the Flamarang were already in. Not yet: the Imp Staff (summons wait for
-  minions).
-
-The Clothier, Terraria's: he moves in once Skeletron is beaten, with Terraria's lines, and his
-shop changes with the hour and the moon: Black and Pink Thread, the Familiar Wig, Shirt and Pants,
-the Summer Hat by day, the Plumber's Shirt and Pants while the moon is full (and the White Tuxedo
-on those nights), the Doctor's Shirt and Pants while it's waning gibbous, and the Beanie in the
-snow. His Blood Moon, clown, Party and Hardmode items wait for those.
-
-Traps, Terraria's (its Traps pass and WorldGen.placeTrap; `rust/voxel_core/src/traps.rs`): 210
-per small world (here that many in each 640 x 640 blocks, about 540 in 1024 x 1024), in the open
-caves from the surface down to the Underworld, each a pressure plate on the ground wired to:
-- **a Dart Trap** (half of them): in the wall along a line through the plate, 5-50 tiles off,
-  up to 2 over the floor, facing it. Each step onto the plate it shoots a Poison Dart (12 px a
-  tick, 20 damage, doubled on you as Terraria's hostile shots are, and 10 s of Poisoned), 200
-  ticks at least between shots.
-- **a Boulder** (the other half; a dart trap near snow or ice): high in the rock over the plate
-  (5-40 tiles), at the top of a shaft cut down to it, resting on a plug of actuated stone. The
-  plate drops the plug; the boulder falls (bouncing a little if it lands hard), rolls the way with
-  the most floor ahead, speeding up to 7 px a tick, and breaks on the first wall. It hits for 70
-  (140 on you).
-- **Explosives** (1 in 20): 4-6 tiles down under the plate, in solid rock: Terraria's
-  500-damage blast, blocks and all.
-- The plates are the gray and brown ones (the orange one for a boulder), stepped on by players
-  only. Deep down Terraria's are Geysers 1 time in 6; those aren't in yet. Plates, Dart Traps,
-  Boulders and Explosives drop as items and can be placed (there are no wires to place yet).
-
-Floating islands: high in the Space layer, well above the mountains and away from spawn, each a
-lens of grassy dirt with a cloud underside and cloud puffs (some rain clouds), trees, and either a
-Skyware house, a sky lake, or nothing. Houses follow Terraria's: a blue Sunplate shell with gold
-trim on its edges, lined with Disc Wall, glass windows, hanging Skyware lanterns, a World Banner
-and a Skyware chest (Starfury, Lucky Horseshoe or Shiny Red Balloon, and 1 in 40 Fledgling Wings). Clouds break falls, the Lucky Horseshoe stops fall damage, the Shiny Red Balloon
-jumps higher and Starfury calls stars down where you aim. Harpies circle above you in Space and
-throw feathers (they drop Feathers); Space has its own music and Depth Meter layer.
-
-The world evil (Corruption or Crimson; random by seed, or chosen under "World evil" when creating a
-world): 2-3 patches away from spawn where grass, stone, sand, plants and trees turn evil (purple
-ebonwood or red shadewood trees under matching canopies), with veins of ebonstone/crimstone and
-Demonite/Crimtane ore (65% pickaxe for the stone, 55% for the ore). The Corruption sinks deep
-chasms whose side passages end in Shadow Orbs; the Crimson winds tunnels down to a flesh cavern
-whose tendrils end in Crimson Hearts; demon/crimson altars sit at the bottom and through the
-caverns (they can't be smashed yet). Smash orbs and hearts with a hammer for Musket / Vilethorn /
-Band of Starpower or The Undertaker / Crimson Rod / Panic Necklace, with Terraria's warnings.
-Inside a patch the sky and fog take its colour, its music plays, and its enemies spawn: Eater of
-Souls, or Crimera and Face Monsters. The test world has a small patch of each to the south.
-
-Armor: three slots (head, body, legs) left of the accessories in the inventory, with Terraria's
-empty-slot silhouettes, the defense shield under them and a picture of you wearing it beside them
-(Terraria's player sprites and the armor's equip sprites, which you never see in first person).
-Defense takes half its value off each hit. Sets: Wood, Boreal Wood, Rich Mahogany, Ebonwood and
-Shadewood (work bench); Cactus (spines hurt whatever touches you); Copper to Platinum (anvil; the
-set adds 2-4 defense); Mining (chests; Mining Helmet light, faster digging); Jungle (Stingers,
-Jungle Spores and Vines; mana, magic crit, cheaper spells); Necro (Bones and Cobwebs; ranged
-damage and crit); Molten (Hellstone Bars; melee damage, crit and speed; the set: 10% more melee
-damage, and nothing sets you On Fire!). Tooltips and set bonuses use Terraria's own text, read from
-Terraria.exe. Hellstone sets you on fire when you touch it unless you wear the Molten set or an
-Obsidian Skull (20 Obsidian at a furnace) or its kin, Terraria's fireWalk; those don't keep lava
-or burning shots from setting you on fire, as in Terraria. A
-held torch lights your surroundings like the Mining Helmet. Shadow, Crimson and Meteor armor wait
-for the evil bosses and meteorites.
-
-Town NPCs: the Guide is there from the start; the Merchant comes once you carry 50 silver, the
-Nurse once the Merchant lives here and you have over 100 max life, the Arms Dealer once you carry a
-gun or bullets, the Dryad once you've beaten a boss, the Demolitionist once you carry an explosive,
-the Clothier once Skeletron is beaten (the Old Man freed of his curse). Each needs a free home near you and moves in
-with a name from Terraria's lists ("Andrew the Guide has arrived!"). A home is Terraria's: a room
-closed off on every side (floor, walls, ceiling) by blocks, doors and platforms, 18 to 1500 open
-cells, with a door or platform, a light source, a table and a chair. Residents walk about near
-home by day, opening doors and shutting them behind them, and go home at night. They walk paths
-(round their house's walls and out the door, up steps, down short drops, never off a cliff)
-rather than straight lines, so they don't get stuck against walls. Right-click one to
-talk (Terraria's own lines, naming the others who live here): the Merchant (torches, potions,
-arrows, Copper tools, an Iron Anvil, Mining gear), Arms Dealer (Musket Balls, Flintlock Pistol,
-Unholy Arrows at night), Dryad (plants) and Clothier have shops - click to buy, sell anything for a fifth of
-its value; the Guide's Help gives Terraria's tips; the Nurse heals you for a price; the Dryad's
-Status tells how corrupt the world is. Coins join up (100 copper make a silver). Inventory ->
-Housing lists who lives where and checks the room you're in, with Terraria's reasons. The test
-world has a row of houses east of the arena with all six living there.
-
-Yoyos: the Wooden Yoyo (10 wood, 20 cobweb), Malaise (10 Demonite Bars), Artery (10 Crimtane Bars),
-Amazon (Rich Mahogany, Stingers, a Vine, Jungle Spores), and Rally and Code 1 from underground
-chests, with Terraria's damage, reach and spin times. Hold the use button: the yoyo flies out on its
-string to what you aim at (an enemy in your sights, or as far as its reach), spins there and hits
-whatever it touches several times a second, bouncing off; each hit takes a little off its spin, and
-a block between you and it weakens it. Let go, or let the spin run out, and it comes back; like Terraria's, it takes a fresh click to throw
-it again (holding the button as it comes back doesn't). Melee
-speed lengthens its reach; a White String (chests) adds a quarter and 1.9 blocks.
-
-Fallen Stars fall at night, at Terraria's rate: each tick a 10 in 8000 chance on a small world
-(about 40 a night; more on bigger worlds), more on a Starfall night (1 in 10: 3 to 5 times as
-many) or a slightly starry one (1 in 3: up to half as many again). They start high in the sky
-anywhere over the world and come down at a slant; 1 in 15 is a lucky star that falls within 40
-blocks of you, drifting your way. A falling star twinkles and shines, hits enemies it passes for
-1000 (never you or the town's NPCs) and lands as a Fallen Star, which glows, twinkles through its
-animation and fades at sunrise unless you've picked it up. Five make a Mana Crystal; one turns a
-Wooden Boomerang into an Enchanted Boomerang.
-
-Boomerangs: the Wooden Boomerang (chests), Enchanted Boomerang (a Wooden Boomerang and a Fallen
-Star), Thorn Chakram (6 Jungle Spores, 9 Stingers at an anvil), Flamarang (10 Hellstone Bars and an
-Enchanted Boomerang), Trimarang (Enchanted, Ice and Shroomerang at a work bench) and Ice Boomerang
-(Frozen Chests), plus the Shroomerang, Fruitcake Chakram, Bloody Machete and Combat Wrench (creative
-only for now: Spore Bats, the holidays and the Mechanic aren't in yet), with Terraria's stats. A click
-throws it from your hand along your aim; it flies straight for Terraria's 30 ticks (the Wooden
-Boomerang about 12 blocks), or until it hits a block (bouncing off) or an enemy (turning round),
-then homes back to you through blocks at its own return speed, hitting everything it passes, and
-you catch it. One at a time, three Trimarangs; the Bloody Machete drops instead of turning round.
-Melee speed throws it faster and brings it back sooner.
-
-Flails: the Mace (underground chests), Flaming Mace (a Mace and 99 Torches), Ball O' Hurt (Shadow
-Orbs), The Meatball (10 Crimtane Bars and 5 Tissue Samples at an anvil), and the Blue Moon and Sunfury
-(the Blue Moon in the Dungeon's chests, the Sunfury in the Underworld's Shadow Chests), with
-Terraria's stats and its flail AI (AI_015_Flails), in its pixels (16 a block) and ticks:
-- **Spinning:** hold the button and it whirls round over your head, 5 turns a second. After 12 ticks
-  it hits anything within 55 px of you that you can see, each enemy every 15 ticks, for 1.2x damage
-  and 0.35x knockback.
-- **Thrown:** let go and it flies at your aim at its launch speed, plus your own (the Mace 12 px a
-  tick for 13 ticks, about 10 blocks). Then it slows and comes back. Out and back it does 2x damage,
-  which is the damage its tooltip shows, as in Terraria.
-- **Ricochet:** a block in its way bounces it off. It falls for 15 ticks, then it's pulled back.
-- **Dropped:** click while it's out and it drops to the ground. It stays there while you hold the
-  button, with half knockback. Let go (or walk too far) and it's pulled straight back through blocks.
-- **Hits:** knockback always pushes away from you. Melee speed makes it faster all round. Switching
-  items puts it away.
-- **Fire:** the Sunfury (1 hit in 2, for 5 s) and the Flaming Mace (1 in 6, for 2 to 3 s) set enemies
-  On Fire!. They lose 4 life a second, shown 1 at a time, and burn with flames (half the size of Terraria's). The Flaming Mace turns
-  into a plain Mace in water, as in Terraria.
-- **Looks:** each has Terraria's head sprite and chain links (the Flaming Mace's first links glow) and
-  its dust (Corruption motes, blood, blue sparkles, fire). They're drawn to the player's pixels, so
-  the Sunfury's head is two thirds your height; links near your eye are drawn thinner.
-
-The Enchanted Sword, from the sword in stone of an Enchanted Sword Shrine, with Terraria's stats
-(23 melee damage, 4.25 knockback, a 21-tick swing): with a swing it shoots an Enchanted Beam, at
-most every 45 ticks (Terraria's use time). The beam flies point first at 9.5 px a tick, glows,
-trails Terraria's blue and gold dust, and stops at the first enemy or block.
-
-The Terragrim (1 time in 30 from the sword in stone instead of the Enchanted Sword), with Terraria's
-stats (17 melee damage, 3 knockback) and its held slash (projectile AI 75, Projectile 735):
-- **Slashing:** hold the button and it slashes on toward your aim until you let go, with a swing
-  sound every 12 ticks, its green dust and its light (you shine while you slash). Terraria's 28-frame
-  flurry glows on a sheet centred on you, as big as its hitbox, lying flat round you at shoulder
-  height: the slashes arc round you, sweeping out the way you aim (and tilting as you look up or
-  down).
-- **Hits:** its hitbox (68 x 64 px) is centred on you, so it reaches about two blocks round you,
-  even a little behind, hitting what you can see. Each enemy is hit at most every 5 ticks: 12 hits a
-  second at the item's damage (melee speed doesn't change it, as in Terraria). It cuts grass round you.
-
-The world's first Shadow Orb always gives the Musket, as in Terraria (then one of the Musket,
-Vilethorn, Ball O' Hurt and Band of Starpower).
-
-Spears: the Spear (chests), The Rotted Fork (Crimson Hearts), the Storm Spear (deep desert
-cabins' Sandstone Chests), the Dark Lance (the Underworld's Shadow Chests), and the Trident, Slime
-Spear and Swordfish (creative only for now: their Water chests, the Solidifier and fishing aren't in
-yet), with Terraria's damage, speed and knockback. A
-click thrusts the spear out along your aim and pulls it back, its tip going exactly as far as
-Terraria's (the Spear 5 blocks, the Storm Spear 6.7); it hits every enemy the tip touches, each up to
-6 times a second, but only ones you can see. The Dark Lance and Rotted Fork reach a little past
-the tip as they thrust, and the Storm Spear throws a short lightning bolt. The spear is the
-projectile's own sprite in 3D: held, it rests in your hand pointing at the crosshair, and a
-thrust slides it out along that line and back (the hits use Terraria's real tip, which is always
-on the crosshair). Melee speed makes it
-quicker and its reach a little longer.
-
-Cabin loot (Frozen and Sandstone Chests), with Terraria's stats:
-- **Ice Blade:** a sword that shoots an icy bolt with a swing, at most every 55 ticks (Terraria's
-  use time, longer than its swing); the bolt glows and stops at the first enemy or block.
-- **Snowball Cannon:** fires Snowballs (15 from a Snow Block, no station), which you can also
-  throw; they fly straight for a third of a second, then drop (Terraria's thrown projectile AI).
-- **Glacier Fang:** hold the button to charge an icicle lance. 10 mana to start and 10 more a
-  third and two thirds of the way (without the mana it charges at 40%); full after a second, it
-  flies by itself. The longer it charged, the harder it hits (150% to 400%), the faster and bigger
-  it flies, and the more enemies it pierces (1 from half a second, 2 at full), each taking 34%
-  off its damage.
-- **Thunder Zapper:** a staff whose bolt zigzags across its way and fades after a second.
-- **Snake Charmer's Flute:** a rope snake rises from a basket where you aim (or at your feet), up
-  to 67 blocks (Terraria's 100 tiles) or until a block stops it, and stays 30 seconds. Jump into it
-  to grab it: jump climbs, Drop down lets you down, walking away lets go.
-- **Ropes:** Rope, Vine Rope, Silk Rope, Web Rope and Chain, all climbable. Rope comes from
-  chests (50-100, a third of the time), pots (20-40) and the Merchant (10 copper); Web Rope is
-  3 from a Cobweb, Silk Rope 30 from a Silk at a Loom, Chain 15 from an Iron Bar at an anvil. A rope
-  goes beside any block, and placing rope on a rope adds it under the rope's bottom, however far
-  down that is (cutting plants and cobwebs in the way). Grab one with Space or Shift where your
-  hand reaches it (half a tile over your head, like Terraria's): Space climbs, Shift slides down,
-  with Terraria's speeds (quickly up to 7.5 blocks/s, then slowly on to 20 up, or the fall speed
-  down), and letting go of both stops you. You climb until your hand is a tile under the top of
-  the rope, so at the top jump off: jump while moving leaps off with a full jump. A tap sideways
-  moves you to the rope beside you, or lets go. No fall damage from a rope.
-- **Grappling hooks:** Terraria's pre-Hardmode hooks that can be had here, with its numbers
-  (`AI_007_GrapplingHooks`, `QuickGrapple`, `GrappleMovement`): the Grappling Hook (a Hook, which
-  Skeletons drop 1 in 25 and Piranhas 1 in 30, and 3 Chain at an anvil), the Amethyst, Topaz,
-  Sapphire, Emerald, Ruby and Diamond Hooks (15 of the gem; each reaches farther and flies and comes
-  back faster), the Amber Hook (15 Amber), the Ivy Whip (12 Jungle Spores and 3 Vines), the Slime
-  Hook (King Slime, 1 in 3) and Skeletron Hand (Skeletron). Press E (or use the hook you hold) and
-  it flies where you look; touching a block or platform it latches on, and you're pulled to it at
-  27.5 blocks/s with no gravity and no fall damage, then hang there. If nothing is in reach (12.5
-  blocks for the Grappling Hook, up to 18.75 for the Diamond Hook) it comes back. Single hooks let
-  go of the last one when thrown again; the Ivy Whip and Slime Hook hold on with up to three (a
-  fourth latching lets go of the oldest), Skeletron Hand with two. Jump lets go of them all, with a
-  full jump if you were hanging still. Each draws its own Terraria head and chain sprites from your
-  hand out to the hook. The hook slot (under the defense shield, with Terraria's hook silhouette;
-  right-click a hook to put it there) holds the hook E throws, like Terraria's; with it empty, E
-  throws the first hook in your inventory. It's saved with you.
-- **The Goblin Army and the Goblin Tinkerer,** Terraria's (Main.StartInvasion, AI_003 and
-  AI_008, the shop from the wiki):
-  - **Goblin Scouts** (Fighter, 80 life) wander the surface by day in the outer third of the world
-    (Terraria's outer sixths): 1 spawn in 15, 1 in 5 once you've smashed a Shadow Orb or Crimson
-    Heart and before the army is beaten. They always drop 1-2 Tattered Cloth; 10 of it and 5 Wood
-    make a **Goblin Battle Standard** at a Loom.
-  - **The army** comes with the Battle Standard, or at dawn (with an orb or heart smashed and 200 max
-    life: 1 in 3 until it's first beaten, then 1 in 30). "A goblin army is approaching from the
-    west!" (or east): it marches from that edge toward the spawn point a tile a tick, and while
-    you're within 187.5 tiles of it and no more than 67.5 under the surface its goblins spawn round
-    you, up to 10 at once, by Terraria's weights: Goblin Warriors (110 life, the toughest), Archers
-    (shoot arrows when they can see you), Peons, Thieves (the fastest) and Sorcerers, which every
-    10.8 s teleport onto the ground near you and cast three Chaos Balls that fly through blocks.
-    Its music plays and a progress bar with its icon shows how far it's beaten; 120 kills end it
-    ("A goblin army has been defeated!"). It's saved with the world. Goblins drop Spiky Balls (1-5,
-    half the time) and, 1 in 200, a **Harpoon** (shoots its head out on a chain, reeling back when
-    you let go, a hit, or 1000 px out; it pierces 3).
-  - **The Goblin Tinkerer:** once the army is beaten he turns up bound in the caverns (1 spawn in 20
-    there). Right-click to free him ("Thank you for freeing me, human..."): he's a town NPC, homeless
-    until a house is free. He sells Rocket Boots, the Ruler (a shortsword now, as in 1.4.5),
-    the Tinkerer's Workshop, the Grappling Hook, the Toolbelt and Spiky Balls, and reforges (below).
-    The test world's town has him from the start, in a seventh house.
-  - **The Tinkerer's Workshop** makes Terraria's combinations of what you have: Cloud and Blizzard in
-    a Balloon, Blue and White Horseshoe Balloons, Obsidian Horseshoe and Shield, Mana Regeneration
-    Band, Restoration Shield, Magic Cuffs, Tiger Climbing Gear, Spectre, Lightning, Frostspark and
-    Fairy Boots, Magma Skull, Molten Charm and the GPS (a Gold Watch, Depth Meter and Compass in one).
-  - **Rocket Boots** (and the boots made from them): let go of jump in the air and hold it again, and
-    they fly you up in 7 bursts of 10 ticks, refilled on the ground. **Toolbelt:** a tile more
-    reach placing blocks. **Magic Cuffs:** damage taken comes back as mana. The Band of Starpower,
-    Magic Cuffs and Mana Regeneration Band give 40 mana, as in 1.4.5, and life regeneration
-    accessories count as Terraria's (the Band of Regeneration half a life a second).
-- **Prefixes (modifiers),** Terraria's (`game/data/prefixes.json`, read from Item.Prefix,
-  TryGetPrefixStatMultipliersForItem, GetRollablePrefixes and the item sets in Terraria.exe; names
-  from its English text):
-  - Which items take which: swords, tools and other swung weapons (40, Legendary the best),
-    spears, flails, yoyos and boomerangs (the 14 universal ones), bows and guns (35, Unreal), magic
-    weapons (36, Mythical) and accessories (19: Warding's +4 defense, Arcane's +20 mana, Lucky's 4%
-    crit, Menacing's 4% damage, Quick's 4% movement speed, Violent's 4% melee speed). Thrown
-    weapons, hooks, armor, ammo and blocks take none.
-  - What they change: damage, use time, mana (rounded as Terraria rounds, in 32-bit floats with
-    halves to even), knockback, size (melee reach, and the sword in your hand), velocity (shoot
-    speed) and crit; the name ("Legendary Platinum Broadsword") and the value (times the square of
-    the prefix's value multiplier: a Legendary sword is worth over 3 times as much). A prefix that
-    wouldn't change a stat it changes (a Mythical staff whose mana it can't round lower,
-    knockback on a bow with none) can't be had.
-  - Where they come from: crafted one at a time, dropped by enemies and bosses, broken out of
-    tiles (the shrine's Enchanted Sword), smashed out of orbs and found in chests, each rolls one:
-    a quarter of the time none, and the bad ones (Broken, Shoddy, Slow, Annoying...) kept only 1
-    time in 3. Shop items have none.
-  - The tooltip shows the stats with the prefix in, then a line per change in Terraria's words,
-    green for good and red for bad ("+15% damage", "-20% knockback", "+4 defense"); weapons show
-    their crit chance, Terraria's speed words and their knockback in words.
-  - **Reforging:** the Goblin Tinkerer's Reforge button opens a slot by your inventory (Shift-click
-    puts an item in). The hammer rerolls the prefix (always one) for a third of the item's value,
-    with Terraria's sound, or its best-reforge sound when it lands the most valuable prefix the
-    item can have. Closing, the item comes back to your inventory. Saving, what's in the reforge
-    slot or on the cursor goes into your inventory first.
-- **Rope Coils:** 10 of a rope make its coil; thrown, it flies straight for half a second, then
-  drops, and where it hits a block it lays 10 of its rope downward from there (on down from the
-  bottom of a rope it hits), cutting plants. What it can't lay drops as rope, or as the coil if
-  it laid none.
-- **Magic Conch:** after 0.75 s, takes you to the ocean furthest from you. The sea is all round
-  the island here, so it's the beach across the world (through its middle), on the sand by the
-  water.
-- **Accessories:** Ice Skates (you slide much less on ice), Blizzard in a Bottle (a double jump
-  higher than the Cloud's; wearing both, you get both, the Cloud's first), Flurry Boots (run
-  fast, like the Hermes Boots), Dunerider Boots (run fast, and 75% faster on sand, sandstone and
-  hardened sand), Ancient Chisel (25% faster mining).
-- **More accessories,** with Terraria's numbers and sources:
-  - **Aglet** (5% movement speed), **Climbing Claws** and **Guide to Plant Fiber Cordage** (vines
-    drop Vine Rope half the time) and **Radar**: surface chests. Chests within 25 tiles of the surface
-    roll Terraria's surface loot (Spear, Wooden Boomerang, Aglet, Climbing Claws, the Cordage guide,
-    Radar; its others aren't in the game yet), deeper ones the underground loot, now with **Shoe
-    Spikes**; below the lava line a chest's main item is a **Lava Charm** 1 time in 20.
-  - **Climbing Claws / Shoe Spikes:** in the air, press into a wall and you slide slowly down it (0.5
-    px a tick); with both you stick. Shift slides fast; jump pushes you off it with a full jump and
-    gives back your double jumps.
-  - **Lava Charm:** 7 seconds of lava immunity, refilling out of lava as fast as it runs down; while it
-    does, flames take the bubbles' place on the breath meter.
-  - **Fledgling Wings** (sky chests, 1 in 40): hold jump after a jump to fly for 25 ticks (up to 1.5
-    jump speeds), then glide down at a third of the fall speed with no fall damage.
-  - **Magiluminescence** (12 Demonite or Crimtane Bars and 5 Topaz at an anvil): a warm light, and on
-    the ground 15% more speed and 75% more acceleration.
-  - **Shackle** (Zombies, 1 in 50): 1 defense. **Jellyfish Necklace** (Pink Jellyfish, 1 in 100): a
-    faint light, bright under water. **Diving Helmet** (Sharks, 1 in 20; a helmet, 2 defense):
-    breath lasts six times as long and drowning hurts a sixth as much.
-  - **Informational accessories,** which work anywhere in your inventory, like Terraria's: without
-    them there's no clock or depth readout. Watches (10 bars and a Chain at a work bench) tell the
-    time: Copper and Tin to the hour, Silver and Tungsten to the half hour, Gold and Platinum to the
-    minute. The **Depth Meter** (bats, 1 in 100) shows "123' Caverns" (feet from the surface, the
-    layer), the **Compass** (Piranhas, 1 in 75) feet east or west of the world's middle (and here
-    north or south), the **Radar** the enemies within 125 tiles.
-  - Not yet: the Celestial Magnet (no
-    mana stars to pull), the Bezoar (no poison), and those from enemies, chests and NPCs the game
-    doesn't have.
-- **Furniture:** the Bast Statue (+5 defense, The Bast Defense, while one is within Terraria's
-  170 x 125 tiles of you), the Sharpening Station (right-click it: Sharpened, melee weapons ignore
-  12 of an enemy's defense until you die) and the Extractinator (below).
-
-**Silt, slush and the Extractinator.**
-- **Where they are:**
-  - Silt lies in patches through the cavern layer, about 1.5% of its blocks, as in Terraria's own
-    worlds.
-  - Inside the snow biome, silt and mud become slush, as Terraria's slush pass does.
-  - The underground desert has none.
-- **Using the Extractinator:** hold Silt or Slush and use it on an Extractinator. It takes one
-  block every 10 ticks, plays Terraria's sound and drops the result where you aim.
-- **What comes out:** Terraria's own odds (`ExtractinatorHelper.RollExtractinatorDrop`).
-  - About two-thirds coins (copper mostly; now and then silver, gold or even platinum).
-  - About a third ore: copper, tin, iron, lead, silver, tungsten, gold or platinum.
-  - 2% gems, 1% Amber, sometimes several at once.
-  - 1 in 10,000 an Amber Mosquito. It's in as an item, but its Baby Dinosaur pet isn't, since
-    the game has no pets yet.
-- Desert Fossils and fishing junk aren't in the game yet.
-
-**Falling sand.** Sand, ebonsand, crimsand, silt and slush fall when nothing holds them up, as in
-Terraria (`WorldGen.SpawnFallingBlockProjectile`).
-- **When they fall:** when you dig out the block under one, or place one over a gap; a whole
-  column drops together.
-- **The fall:** 0.41 px/tick² up to 10 px/tick. A falling block hits players and enemies it
-  passes for 10 damage (knockback 6).
-- **Landing:** it becomes its block where it lands. If a torch or another object fills that
-  spot, it drops as an item instead.
-- **What holds them up:**
-  - Solid blocks and platforms do; air, actuated blocks and icicles don't.
-  - A torch or plant does only if there's ground under it.
-  - Sand under a chest, dresser, altar, cactus or palm stays put.
-- Sand left over caves by worldgen stays until something disturbs it.
-- **Buried:** if sand lands on you, you're stuck in it with Suffocation (20 life a second) until
-  you dig yourself out.
-
-Explosives: Bombs, Sticky Bombs (Bomb + Gel), Dynamite, Sticky Dynamite and Grenades, thrown
-with the use button. A lit bomb is lobbed, bounces and rolls to a stop (sticky ones stick to the
-first thing they touch) and goes off when its fuse burns down; a grenade also goes off on hitting
-an enemy. The blast hurts enemies in reach and you too (not grenades), and bombs and dynamite blow
-a sphere of blocks away (radius 3.5 / 6), dropping what they drop as one pile per item. Chests,
-dungeon brick, Hellstone, orbs and altars are blastproof. Bombs turn up in pots and chests,
-Dynamite rarely in chests. The Demolitionist moves in once you carry an explosive and sells
-Grenades, Bombs and Dynamite.
-
-Enemy health bars: Terraria's bar (HealthBar1/2, green through yellow to red) floats above an
-enemy's head once it is hurt, facing you; bosses get a bigger one. Town NPCs and target dummies
-have none. Settings → Interface → "Enemy health bars" turns them off.
-
-Not yet: Devourers and Blood Crawlers,
-Giant Worms, the other town NPCs, NPC happiness,
-other biomes and bosses; the ocean's seashells; Granite and Marble caves, the Dungeon's
-traps and furniture, and the Underground Desert's open caverns.
