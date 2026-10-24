@@ -7142,7 +7142,7 @@ func _bee_loot_checks(c: Vector3i) -> void:
 				undefined.append(n)
 	check(undefined.is_empty(), "every enemy's drops are items in the game (undefined: %s)" % [undefined])
 	var qb: Dictionary = Data.npcs.QueenBee
-	check(qb.drops_one_of == ["BeeGun", "BeeKeeper", "BeesKnees"] and qb.drops.any(func(d): return d == ["BeeWax", 17, 30, 1.0])
+	check(qb.drops_one_of == ["BeeGun", "BeeKeeper", "BeesKnees"] and qb.drops.any(func(d): return d[0] == "BeeWax" and int(d[1]) == 17 and int(d[2]) == 30 and float(d[3]) == 1.0)
 			and qb.drops.any(func(d): return d[0] == "Beenade" and d[1] == 10 and d[2] == 30 and is_equal_approx(d[3], 0.75)),
 			"the Queen Bee drops one of the Bee Gun, Beekeeper and Bee's Knees, 17-30 Bee Wax, 3 in 4 10-30 Beenades")
 	var gun := Data.item("BeeGun")
