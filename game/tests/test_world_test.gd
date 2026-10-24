@@ -6888,8 +6888,9 @@ func _alchemy_checks(c: Vector3i) -> void:
 			"blinkroot_planter_box", "waterleaf_planter_box", "shiverthorn_planter_box", "fireblossom_planter_box"]:
 		var pd := Data.block(Data.block_id(n))
 		var faces_opaque := int(pd.render_id) == Data.RENDER.cube
-		for f in ["tex_top", "tex_side", "tex_bottom"]:
-			faces_opaque = faces_opaque and Data.block_textures.get_layer_data(int(pd[f])).detect_alpha() == Image.ALPHA_NONE
+		# (The faces' pictures are rebuilt: headless, the texture array has no data.)
+		for f in ["top", "side", "bottom"]:
+			faces_opaque = faces_opaque and Data._cube_layer(pd.tex[f], 0).detect_alpha() == Image.ALPHA_NONE
 		if not faces_opaque:
 			see_through.append(n)
 	check(see_through.is_empty(), "Planter Boxes are full cubes with no see-through faces %s" % [see_through])
