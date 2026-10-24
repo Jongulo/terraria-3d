@@ -221,6 +221,19 @@
 			"noise": "grain",
 			"strength": 0.4
 		},
+		"blinkroot": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
 		"blue_brick_platform": {
 			"noise": "speckle",
 			"strength": 1.0
@@ -415,6 +428,84 @@
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
 			"depth": 3.0
+		},
+		"coral": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
+		"coral_2": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
+		"coral_3": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
+		"coral_4": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 2,
+			"depth": 5,
+			"one_color": true
+		},
+		"coral_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
+		"coral_6": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
 		},
 		"corrupt_plants_10": {
 			"bevel": "chamfer",
@@ -959,6 +1050,19 @@
 			"bevel_size": 1.0,
 			"depth": 2.0
 		},
+		"deathweed": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
 		"demon_altar": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1035,6 +1139,19 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.8
+		},
+		"fireblossom": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
 		},
 		"fireplace": {
 			"noise": "grain",
@@ -2309,8 +2426,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true,
 			"strength": 0.55
 		},
@@ -2553,6 +2670,19 @@
 			"noise": "grain",
 			"one_color": false,
 			"strength": 0.6
+		},
+		"moonglow": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
 		},
 		"mug": {
 			"bevel": "chamfer",
@@ -2925,6 +3055,19 @@
 			"noise": "grain",
 			"strength": 0.85
 		},
+		"piggy_bank": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
+			"one_color": true
+		},
 		"pink_brick_platform": {
 			"noise": "speckle",
 			"strength": 0.2
@@ -3001,6 +3144,19 @@
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 1.0
+		},
+		"shiverthorn": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
 		},
 		"sign": {
 			"bevel": "chamfer",
@@ -4965,6 +5121,19 @@
 		"water_bolt_book": {
 			"one_color": true
 		},
+		"waterleaf": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1,
+			"depth": 3,
+			"one_color": true
+		},
 		"wood_platform": {
 			"bevel": "none",
 			"bevel_size": 1.0,
@@ -5090,6 +5259,11 @@
 		},
 		"cloud_platform": {
 			"noise": "none"
+		},
+		"cooking_pot": {
+			"no_outline": false,
+			"noise": "speckle",
+			"one_color": true
 		},
 		"demon_torch": {
 			"one_color": true
@@ -5441,6 +5615,7 @@
 	"methods": {
 		"ash_wood_lamp": "hull",
 		"barrel": "extruded",
+		"blinkroot": "extruded",
 		"blue_dungeon_lamp": "hull",
 		"blue_dungeon_sink": "rendered",
 		"blue_dungeon_vase": "hull",
@@ -5461,7 +5636,14 @@
 		"chest": "extruded",
 		"chimney": "hull",
 		"clay_pot": "hull",
+		"cooking_pot": "hull",
 		"copper_chandelier": "billboard",
+		"coral": "extruded",
+		"coral_2": "extruded",
+		"coral_3": "extruded",
+		"coral_4": "extruded",
+		"coral_5": "extruded",
+		"coral_6": "extruded",
 		"corrupt_plants": "hull",
 		"corrupt_plants_10": "extruded",
 		"corrupt_plants_11": "extruded",
@@ -5509,10 +5691,12 @@
 		"crimson_plants_8": "extruded",
 		"crimson_plants_9": "extruded",
 		"daybloom": "extruded",
+		"deathweed": "extruded",
 		"demon_altar": "extruded",
 		"demon_torch": "hull",
 		"ebonwood_lamp": "hull",
 		"extractinator": "extruded",
+		"fireblossom": "extruded",
 		"flowers": "extruded",
 		"flowers_10": "extruded",
 		"flowers_11": "extruded",
@@ -5648,6 +5832,7 @@
 		"lily_pad_7": "extruded",
 		"lily_pad_8": "extruded",
 		"lily_pad_9": "extruded",
+		"moonglow": "extruded",
 		"mug": "extruded",
 		"mushroom_vines_10": "extruded",
 		"mushroom_vines_11": "extruded",
@@ -5682,6 +5867,7 @@
 		"palm_wood_lamp": "hull",
 		"picnic_table": "hull",
 		"picnic_table_with_cloth": "hull",
+		"piggy_bank": "extruded",
 		"pink_dungeon_lamp": "hull",
 		"pink_dungeon_vase": "hull",
 		"pink_vase": "hull",
@@ -5702,6 +5888,7 @@
 		"sandstone_stalactite_3": "hull",
 		"shadewood_lamp": "hull",
 		"shadow_orb": "extruded",
+		"shiverthorn": "extruded",
 		"silk_rope": "hull",
 		"silver_chandelier": "billboard",
 		"skull_lantern": "billboard",
@@ -5916,6 +6103,7 @@
 		"vines_9": "extruded",
 		"wall_torch": "extruded",
 		"water_candle": "hull",
+		"waterleaf": "extruded",
 		"web_rope": "hull",
 		"white_torch": "hull",
 		"wine_glass": "hull",
