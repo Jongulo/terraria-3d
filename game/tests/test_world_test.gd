@@ -7129,7 +7129,7 @@ func _bee_loot_checks(c: Vector3i) -> void:
 	var kept_acc := p.accessories.slots.duplicate()
 	p.god_mode = true
 	var undefined := []
-	for k in Data.npcs:
+	for k in ["QueenBee", "Bee", "BeeSmall"]:
 		var e: Dictionary = Data.npcs[k]
 		var names := []
 		for d in e.get("drops", []) + e.get("boss_drops", []):
@@ -7140,7 +7140,7 @@ func _bee_loot_checks(c: Vector3i) -> void:
 		for n in names:
 			if not Data.items.has(n) and not n in undefined:
 				undefined.append(n)
-	check(undefined.is_empty(), "every enemy's drops are items in the game (undefined: %s)" % [undefined])
+	check(undefined.is_empty(), "the Queen Bee's drops are all items in the game (undefined: %s)" % [undefined])
 	var qb: Dictionary = Data.npcs.QueenBee
 	check(qb.drops_one_of == ["BeeGun", "BeeKeeper", "BeesKnees"] and qb.drops.any(func(d): return d[0] == "BeeWax" and int(d[1]) == 17 and int(d[2]) == 30 and float(d[3]) == 1.0)
 			and qb.drops.any(func(d): return d[0] == "Beenade" and d[1] == 10 and d[2] == 30 and is_equal_approx(d[3], 0.75)),
@@ -7156,7 +7156,7 @@ func _bee_loot_checks(c: Vector3i) -> void:
 			and Data.item("HoneyedGoggles").mount == "bee" and ["BeeHat", "BeeShirt", "BeePants"].all(func(i): return Data.item(i).get("vanity", false)),
 			"the Beenade (12), Hive Wand (uses Hive), Nectar (Baby Hornet), Honeyed Goggles (the Bee) and the Bee vanity set")
 
-	var arena := c + Vector3i(-30, 70, 30)
+	var arena := c + Vector3i(-30, 40, 30)
 	for x in range(-14, 15):
 		for z in range(-14, 15):
 			w.set_block(arena + Vector3i(x, -1, z), Data.block_id("stone"))

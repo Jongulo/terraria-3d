@@ -885,7 +885,7 @@ func _move(delta: float, game) -> void:
 		_fall_start = global_position.y
 	else:
 		var wing := wings()
-		var hovering := mount != "" and MOUNTS[mount].has("hover")
+		var hovering: bool = mount != "" and MOUNTS[mount].has("hover")
 		if hovering:
 			wing = {}
 		if on_floor or sliding:
