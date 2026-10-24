@@ -6881,6 +6881,18 @@ func _alchemy_checks(c: Vector3i) -> void:
 			"Moonglow grows in a Fireblossom Planter Box, and a swing doesn't cut it")
 	w.set_block(pb, 0)
 	w.set_block(pb + Vector3i.DOWN, grass)
+	# Planter Boxes are solid-looking cubes: their top fills the block and no
+	# face can be seen through, and their sides are a 2x2 mosaic like terrain.
+	var see_through := []
+	for n in ["planter_box", "moonglow_planter_box", "corrupt_planter_box", "crimson_planter_box",
+			"blinkroot_planter_box", "waterleaf_planter_box", "shiverthorn_planter_box", "fireblossom_planter_box"]:
+		var pd := Data.block(Data.block_id(n))
+		var faces_opaque := int(pd.render_id) == Data.RENDER.cube
+		for f in ["tex_top", "tex_side", "tex_bottom"]:
+			faces_opaque = faces_opaque and Data.block_textures.get_layer_data(int(pd[f])).detect_alpha() == Image.ALPHA_NONE
+		if not faces_opaque:
+			see_through.append(n)
+	check(see_through.is_empty(), "Planter Boxes are full cubes with no see-through faces %s" % [see_through])
 	# Coral drops Coral; it goes on sand only.
 	check(Data.block(Data.block_id("coral_4")).get("drop") == "Coral" and Data.item("Coral").place == "coral", "Coral, from the sea floor")
 	for q in [o, blink, fire, death, moon]:
