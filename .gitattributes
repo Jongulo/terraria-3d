@@ -1,0 +1,5 @@
+# Godot's shader preprocessor only joins a line ending in `\` when the line
+# ends in LF, so the shaders' multi-line #defines (sun_shadow.gdshaderinc,
+# voxel_common.gdshaderinc) break in a CRLF checkout (Git on Windows).
+*.gdshader text eol=lf
+*.gdshaderinc text eol=lf
