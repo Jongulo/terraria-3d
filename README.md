@@ -132,9 +132,9 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 - **Far west:** the Dungeon's entrance (blue brick), its door facing spawn, with the Old Man, and a
   small Dungeon under it (a quarter of the generator's layout steps).
 - **South-west of spawn:** a staircase of wooden platforms up to a floating platform floor.
-- **South:** one of every block, an ore wall labelled with required pickaxe power, a 25-block
-  staircase tower with a water landing pool for fall tests and a rope and a chain down its north
-  wall, and a sealed dark room.
+- **South:** one of every block, an ore wall labelled with required pickaxe power (gem ores in a
+  second row behind), a 25-block staircase tower with a water landing pool for fall tests and a
+  rope and a chain down its north wall, and a sealed dark room.
 
 You start with top-tier gear, max life and mana. Hotkeys: **F1** help, **F2** god mode, **F3** fly
 (Space up, Shift down), **F4** day/night, **F5** remove enemies, **F6** clear dropped items,
@@ -285,9 +285,9 @@ in this game.
 
 - **World:** forest, Snow, Desert, Jungle, Corruption or Crimson, Glowing Mushroom biome, bee hives,
   ocean, floating islands, the Dungeon, and the Underworld with its ash forests and ruined forts;
-  caves, lakes, gem trees, vanity trees, giant living trees and Living Mahogany trees, underground
-  cabins, Enchanted Sword Shrines, traps, pots, life crystals and loot chests, Shadow Chests, and
-  forest plants and debris.
+  caves, lakes, gem ores, gem trees, vanity trees, giant living trees and Living Mahogany trees,
+  underground cabins, Enchanted Sword Shrines, traps, pots, life crystals and loot chests, Shadow
+  Chests, and forest plants and debris.
 - **Liquids:** water, lava and honey that fall, level out and settle; waterfalls and lavafalls, and
   springs you open with a hammer.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
@@ -311,8 +311,8 @@ in this game.
 **Not yet:** Hardmode and the Wall of Flesh; summons and minions, pets, mounts and minecarts;
 alchemy, Well Fed and buff potions; placing wires; the Painter, Traveling Merchant, other town NPCs
 and NPC happiness; Devourers, Blood Crawlers and Giant Worms; Granite and Marble caves and the
-Underground Desert's open caverns; Blood Moons; swimming (Flippers); herbs growing from seeds;
-cages and terrariums; Expert mode.
+Underground Desert's open caverns; the Topaz, Sapphire, Emerald and Ruby Staves' gem effects;
+Blood Moons; swimming (Flippers); herbs growing from seeds; cages and terrariums; Expert mode.
 
 ## Tools
 

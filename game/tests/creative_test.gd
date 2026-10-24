@@ -356,6 +356,16 @@ func _run() -> void:
 	check(["Amethyst", "Topaz", "Sapphire", "Emerald", "Ruby", "Diamond", "Amber"].all(func(g): return not Data.item(g).is_empty())
 			and Data.recipes.any(func(r): return r.result == "AmethystStaff" and r.ingredients.has("Amethyst")),
 			"the seven gems exist, and their recipes (the Amethyst Staff) work")
+	# Gem ores in the underground's stone (Terraria's Gems pass): each mines to
+	# its gem, the commoner ones commoner; and the gem staves.
+	var gem_names := ["Amethyst", "Topaz", "Sapphire", "Emerald", "Ruby", "Diamond"]
+	var all_counts := w.count_blocks(w.get_size() / 2, w.get_size().x / 2)
+	var ore_counts := gem_names.map(func(g): return all_counts[Data.block_id(g.to_lower() + "_ore")])
+	check(gem_names.all(func(g): return Data.block_drop(Data.block_id(g.to_lower() + "_ore")) == g), "each gem ore drops its gem")
+	check(ore_counts.all(func(c): return c > 0) and ore_counts[0] > ore_counts[5], "the world has every gem ore, amethyst commoner than diamond (%s)" % [ore_counts])
+	check((gem_names + ["Amber"]).all(func(g): return Data.item(g + "Staff").get("type") == "magic" and Data.item(g + "Staff").get("projectile") == g + "Bolt"),
+			"the seven gem staves, each shooting its gem's bolt")
+	check(Data.recipes.any(func(r): return r.result == "DiamondStaff" and r.ingredients.has("Diamond")), "the gem staves' recipes work (the Diamond Staff)")
 	var gt: Dictionary = gem_tops[0]
 	var gpos: Vector3 = game.decorations.canopy_position(Vector3i(gt.pos), int(gt.style)) + Decorations.LIGHT_AT
 	var dark: Color = w.get_light(gpos)
