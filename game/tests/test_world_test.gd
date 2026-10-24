@@ -1027,10 +1027,13 @@ func _cut_checks(c: Vector3i) -> void:
 	check(w.get_block(base + Vector3i(0, 0, -2)) == id.call("tall_grass"), "grass behind a wall isn't cut")
 	# Projectiles: the player's arrow cuts the grass it flies through, an
 	# enemy's doesn't.
-	# (A critter in the way would stop the arrow, as in Terraria.)
+	# (A critter or enemy in the way would stop the arrow, as in Terraria, so
+	# clear them and hold the spawner off while it flies.)
 	for n in game.npcs():
-		if n.is_critter():
+		if n.is_critter() or (n.def.ai != "town" and n.def.get("damage", 0) > 0 and n.global_position.distance_to(Vector3(base)) < 16.0):
 			n.queue_free()
+	var spawner_mode := game.spawner.process_mode
+	game.spawner.process_mode = Node.PROCESS_MODE_DISABLED
 	for z in range(-8, -2):
 		w.set_block(base + Vector3i(3, 0, z), id.call("tall_grass"))
 		w.set_block(base + Vector3i(-3, 0, z), id.call("tall_grass"))
@@ -1043,6 +1046,7 @@ func _cut_checks(c: Vector3i) -> void:
 			break
 	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(3, 0, z)) == 0), "your arrow cuts the grass it flies through (left at z %s; about: %s)" % [range(-8, -2).filter(func(z): return w.get_block(base + Vector3i(3, 0, z)) != 0), game.npcs().filter(func(n): return n.global_position.distance_to(Vector3(base)) < 12.0).map(func(n): return n.kind)])
 	check(range(-8, -2).all(func(z): return w.get_block(base + Vector3i(-3, 0, z)) == id.call("tall_grass")), "an enemy's doesn't")
+	game.spawner.process_mode = spawner_mode
 	p.inventory.slots[9] = null
 	p.select(held)
 	# What the pot and plants dropped (the pot's coins would count as money).
@@ -4672,16 +4676,24 @@ func _king_slime_checks(c: Vector3i) -> void:
 	var ks: NPC = game.boss()
 	check(ks != null and ks.kind == "KingSlime" and p.inventory.slots[9] == null, "the Slime Crown summons King Slime, by day too")
 	p.select(held)
+	# Its summon spot varies (sometimes a ledge or a chest top, where it can
+	# glide in on air control without ever winding up a hop), so the hop check
+	# starts it on the plaza's flat grass, in sight.
+	ks.global_position = Vector3(c) + Vector3(4.5, 0, 23.0)
+	ks.velocity = Vector3.ZERO
 	var d0: float = ks.global_position.distance_to(p.global_position)
 	var jumped := false
 	var states := {}
 	var landed := -1
 	var top_vy := -INF
-	# (Up to 10 s: summoned out of sight it may fall or teleport first.)
+	var grounded := 0
+	# (Up to 10 s: it may still teleport first.)
 	for i in 600:
 		await get_tree().physics_frame
 		states[ks._ks_state] = true
 		top_vy = maxf(top_vy, ks.velocity.y)
+		if ks.on_floor:
+			grounded += 1
 		if ks.on_floor and landed < 0:
 			landed = i
 		if ks.velocity.y > 15.0:
@@ -4689,7 +4701,7 @@ func _king_slime_checks(c: Vector3i) -> void:
 		if jumped and i >= 300 and ks.global_position.distance_to(p.global_position) < d0 - 5.0:
 			break
 	var d1: float = ks.global_position.distance_to(p.global_position)
-	check(jumped and d1 < d0 - 5.0, "it hops at you (%.1f -> %.1f blocks; states %s, landed at tick %d, fastest rise %.1f, at %s, jump timer %.0f, paused %s)" % [d0, d1, states.keys(), landed, top_vy, ks.global_position - Vector3(c), ks._ks_jump, get_tree().paused])
+	check(jumped and d1 < d0 - 5.0, "it hops at you (%.1f -> %.1f blocks; states %s, landed at tick %d, on the floor %d ticks, fastest rise %.1f, at %s, jump timer %.0f, paused %s)" % [d0, d1, states.keys(), landed, grounded, top_vy, ks.global_position - Vector3(c), ks._ks_jump, get_tree().paused])
 	var full: Vector3 = ks.half
 	var slimes_before := game.npcs().filter(func(n): return n.kind == "BlueSlime").size()
 	ks.hit(260, 0.0, Vector3.FORWARD, 0.0)
@@ -7665,10 +7677,15 @@ func _weather_checks(c: Vector3i) -> void:
 	sky.time = 30000.0
 	check(game.surface_music() == "Rain", "rain later in the day: Rain")
 	# Raindrops fall round you on the surface, splashing where they land.
-	await frames(60)
+	# (The rain ticks above may have changed how wet it gets; the cap follows
+	# how wet it is, so check against the wettest it got.)
+	var wettest := sky.cloud_alpha
+	for i in 60:
+		await frames(1)
+		wettest = maxf(wettest, sky.cloud_alpha)
 	var drops: int = game.rain._drops.size()
 	var sheet := Assets.texture("Images/Rain")
-	check(drops > 50 and drops <= int(750 * 0.6) and sheet != null, "raindrops fall round you (%d, at most 750 x 60%%)" % drops)
+	check(drops > 50 and drops <= int(RainFall.MAX_RAIN * wettest) and sheet != null, "raindrops fall round you (%d, at most 750 x %d%%)" % [drops, roundi(wettest * 100.0)])
 	check(game.herbs.raining(), "the herbs know it's raining (Waterleaf blooms)")
 	# Rain's enemies: by day Flying Fish and Umbrella Slimes, by night Raincoat Zombies.
 	var counts := {}
