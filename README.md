@@ -41,6 +41,15 @@ Requirements: Godot 4.7, Rust (cargo), ffmpeg, python3, and Terraria installed t
 godot --path game              # play
 ```
 
+On Windows (PowerShell), Rust needs the MSVC toolchain (Visual Studio Build Tools with the
+"Desktop development with C++" workload); `ffmpeg` and `py`/`python` must be on `PATH`:
+
+```powershell
+.\extract_assets.ps1           # finds Terraria in your Steam libraries, or: .\extract_assets.ps1 D:\path\to\Terraria
+.\build.ps1                    # builds rust/voxel_core and installs game/bin/voxel_core.dll
+godot --path game              # play
+```
+
 `extract_assets.sh` converts the XNB/XACT content into `game/assets/terraria/`:
 PNG textures (LZX and DXT decoding, alpha un-premultiplied), WAV sound effects, OGG music
 (MS-ADPCM wave bank via ffmpeg, named by sound bank cue), Terraria's bitmap fonts, and
@@ -742,6 +751,9 @@ game/tests/           render_test (screenshots) and game_test (scripted end-to-e
 ./run_tests.sh              # Rust + headless Godot suites (no windows)
 ./run_tests.sh --visual     # plus screenshot tests (opens a window briefly; closes itself)
 ```
+
+On Windows, `.\run_tests.ps1` (and `-Visual`) does the same. Point `$env:GODOT` at the
+`*_console.exe` Godot build if it isn't on `PATH` as `godot`.
 
 Individually:
 

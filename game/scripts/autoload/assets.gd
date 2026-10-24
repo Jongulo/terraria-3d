@@ -17,7 +17,7 @@ var _fonts := {}
 func _ready() -> void:
 	var f := FileAccess.open(ROOT + "ids.json", FileAccess.READ)
 	if f == null:
-		push_error("Terraria assets are missing. Run ./extract_assets.sh first.")
+		push_error("Terraria assets are missing. Run ./extract_assets.sh (Windows: .\\extract_assets.ps1) first.")
 		return
 	ids = JSON.parse_string(f.get_as_text())
 
