@@ -50,6 +50,8 @@ varying vec3 v_sh_other;
 varying vec3 v_sh_sun;
 varying float v_sh_floor;
 
+// (Its lines are joined by the `\` at their ends, which needs LF line endings:
+// see .gitattributes.)
 #define SUN_SHADOW_COLOUR(col, other, sun, darkest) \
 	if (SUN_SHADOWS_ON) { \
 		ALBEDO = (col); v_sh_other = sh_nv(other); v_sh_sun = sh_nv(sun); v_sh_floor = (darkest); \

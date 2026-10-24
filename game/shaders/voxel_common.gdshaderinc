@@ -28,7 +28,9 @@ void vertex() {
 }
 
 // Colours the fragment with the voxel light (see voxel_light), through
-// sun_shadow.gdshaderinc so the sun's shadows can cut its sunlight.
+// sun_shadow.gdshaderinc so the sun's shadows can cut its sunlight. (Its lines
+// are joined by the `\` at their ends, which needs LF line endings: see
+// .gitattributes.)
 #define VOXEL_SHADED(col) { \
 	vec3 vs_sun = vec3(v_light.a * sky_light) * sky_color; \
 	vec3 vs_other = max(v_light.rgb, extra_light(v_world)); \
