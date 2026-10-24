@@ -6,3 +6,5 @@ reloadable = true
 [libraries]
 linux.debug.x86_64 = "res://bin/libvoxel_core.so"
 linux.release.x86_64 = "res://bin/libvoxel_core.so"
+windows.debug.x86_64 = "res://bin/voxel_core.dll"
+windows.release.x86_64 = "res://bin/voxel_core.dll"

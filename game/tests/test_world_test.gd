@@ -3863,7 +3863,9 @@ func _furniture_checks(c: Vector3i) -> void:
 	for x in 9:
 		for z in 7:
 			for y in 5:
-				names[Data.block(w.get_block(a + Vector3i(x, y, z))).get("name", "")] = true
+				var d := Data.block(w.get_block(a + Vector3i(x, y, z)))
+				# A town NPC may be walking out through the door: open, it's still the door.
+				names[d.door_closed if Doors.is_open(d) else d.get("name", "")] = true
 	var want := ["wooden_table", "candle", "wooden_chair", "bed", "grandfather_clock", "barrel", "sawmill", "loom", "copper_chandelier", "wooden_door"]
 	check(want.all(func(n): return names.has(n)), "the house has its furniture (missing %s)" % [want.filter(func(n): return not names.has(n))])
 	check(w.get_light(Vector3(a) + Vector3(4.5, 2.5, 3.5)).r > 0.4, "the chandelier and candle light the house (%s)" % w.get_light(Vector3(a) + Vector3(4.5, 2.5, 3.5)))
@@ -6306,9 +6308,12 @@ func _wiring_checks(c: Vector3i) -> void:
 	game.wiring.toggle_timer(game, timer)
 	var flips := 0
 	var last := w.get_block(lamp)
-	var t0 := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < 2500:
+	# Game time, not the wall clock: under --fixed-fps a fast machine runs
+	# several game seconds per real one.
+	var t := 0.0
+	while t < 2.5:
 		await frames(1)
+		t += 1.0 / Engine.physics_ticks_per_second
 		if w.get_block(lamp) != last:
 			flips += 1
 			last = w.get_block(lamp)
