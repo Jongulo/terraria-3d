@@ -1246,9 +1246,9 @@ const TERRARIA_GROUPS := {
 }
 ## Recipe conditions this game doesn't have (graveyards, the Torch God...).
 const UNMET_FLAGS := ["needGraveyardBiome", "needTorchGodsFavor", "needMechdusa", "needSnowBiome"]
-const TERRARIA_RECIPES := "res://assets/terraria/recipes.json"
-const TILE_DUST := "res://assets/terraria/tile_dust.json"
-const NPC_GORE := "res://assets/terraria/npc_gore.json"
+var TERRARIA_RECIPES: String = Assets.ROOT + "recipes.json"
+var TILE_DUST: String = Assets.ROOT + "tile_dust.json"
+var NPC_GORE: String = Assets.ROOT + "npc_gore.json"
 
 
 func _load_npc_gore() -> void:

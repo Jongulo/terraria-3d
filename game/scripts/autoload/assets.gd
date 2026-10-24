@@ -3,7 +3,9 @@ extends Node
 ## (see extract_assets.sh). Files are read straight from disk, not imported,
 ## and cached by name.
 
-const ROOT := "res://assets/terraria/"
+## Where they are: the project's assets/terraria/, or in an exported game
+## (installed by installer/), assets/terraria/ next to the executable.
+var ROOT := root_dir()
 
 ## Terraria ID tables and English names (from tools/terraria_ids.py).
 var ids: Dictionary = {}
@@ -14,10 +16,23 @@ var _streams := {}
 var _fonts := {}
 
 
+static func root_dir() -> String:
+	if OS.has_feature("template"):
+		return OS.get_executable_path().get_base_dir().path_join("assets/terraria") + "/"
+	return "res://assets/terraria/"
+
+
+## How to get the assets, for messages.
+static func how_to_extract() -> String:
+	if OS.has_feature("template"):
+		return "Run \"Extract Terraria assets\" from the Start menu (needs Terraria installed)"
+	return "Run ./extract_assets.sh (Windows: .\\extract_assets.ps1; needs a local Terraria install)"
+
+
 func _ready() -> void:
 	var f := FileAccess.open(ROOT + "ids.json", FileAccess.READ)
 	if f == null:
-		push_error("Terraria assets are missing. Run ./extract_assets.sh (Windows: .\\extract_assets.ps1) first.")
+		push_error("Terraria assets are missing in %s. %s." % [disk_path(""), how_to_extract()])
 		return
 	ids = JSON.parse_string(f.get_as_text())
 

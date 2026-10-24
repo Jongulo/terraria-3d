@@ -50,6 +50,25 @@ On Windows (PowerShell), Rust needs the MSVC toolchain (Visual Studio Build Tool
 godot --path game              # play
 ```
 
+### Windows installer
+
+`.\package.ps1` (or `.\package.ps1 -Version 0.2.0`) builds `dist\Terraria3D-Setup-<version>.exe`,
+an installer for players who don't have Rust, Python or Godot. It needs what `build.ps1` needs,
+Godot (`$env:GODOT`, else `godot` on `PATH`) and Inno Setup 6 (`winget install JRSoftware.InnoSetup`);
+the first run downloads Godot's export templates, an embeddable Python and an LGPL ffmpeg build
+into `dist\cache`. It exports the game with the "Windows Desktop" preset (`game/export_presets.cfg`),
+stages it with `installer/extract.ps1`, `xnb-extract.exe`, the four `tools/terraria_*.py` the
+extraction runs and the data they read, then runs `installer/terraria3d.iss`.
+
+The installer holds none of Terraria's assets. It installs per user (no admin prompt) to
+`%LOCALAPPDATA%\Programs\Terraria 3D`, finds the player's Terraria (Steam libraries, then GOG;
+they can pick another folder) and extracts its assets into `assets\terraria\` next to
+`Terraria3D.exe`, which is where an exported game looks for them (`Assets.ROOT`). The Start menu's
+"Extract Terraria assets" runs the extraction again (after a Terraria update, or if there was no
+Terraria at install time); its log is `extract\extract.log`. Uninstalling removes the extracted
+assets but not the player's worlds and settings (in `%APPDATA%\Godot\app_userdata\Terraria 3D`).
+An exported game caches tuned models in `user://tuned/`, since it can't write to `res://`.
+
 `extract_assets.sh` converts the XNB/XACT content into `game/assets/terraria/`:
 PNG textures (LZX and DXT decoding, alpha un-premultiplied), WAV sound effects, OGG music
 (MS-ADPCM wave bank via ffmpeg, named by sound bank cue), Terraria's bitmap fonts, and
