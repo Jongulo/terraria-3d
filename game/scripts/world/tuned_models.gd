@@ -21,7 +21,8 @@ class_name TunedModels
 ## where its front doesn't show, its most visible face's).
 
 ## Where models are cached whole (not in the repo; tests use other folders).
-static var dir := "res://data/tuned/"
+## An exported game can't write into res://, so it caches in user://.
+static var dir := "user://tuned/" if OS.has_feature("template") else "res://data/tuned/"
 ## Where their patches are saved (in the repo).
 static var patch_dir := "res://data/tuned_patches/"
 ## Face directions: front, back, right, left, top, bottom.

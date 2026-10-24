@@ -9,3 +9,5 @@ target/
 *.import
 __pycache__/
 *.pyc
+# Built by package.ps1 (the exported game and the installer).
+dist/

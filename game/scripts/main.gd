@@ -16,7 +16,7 @@ func _ready() -> void:
 
 func _show_missing_assets() -> void:
 	var l := Label.new()
-	l.text = "Terraria assets not found.\nRun ./extract_assets.sh (Windows: .\\extract_assets.ps1; needs a local Terraria install), then restart."
+	l.text = "Terraria assets not found.\n%s, then restart." % Assets.how_to_extract()
 	l.set_anchors_preset(Control.PRESET_CENTER)
 	l.position = Vector2(-300, -30)
 	add_child(l)
