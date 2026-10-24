@@ -354,6 +354,56 @@ pub fn gem_trees(w: &mut World, seed: i32, l: &Layers) -> usize {
     n
 }
 
+/// The gem ores, and how many veins Terraria's Gems pass runs of each in a
+/// small world (4200 wide: its maxTilesX x 0.5, 0.45, 0.3, 0.25, 0.1, 0.05,
+/// each x 0.2). Amber has no ore (Terraria's comes from sand and fossils).
+pub const GEM_ORES: [(&str, f32); 6] = [("amethyst", 420.0), ("topaz", 378.0), ("sapphire", 252.0), ("emerald", 210.0), ("ruby", 84.0), ("diamond", 42.0)];
+
+/// Terraria's underground and cavern stone in a small world, give or take
+/// (4200 wide, from its world surface ~350 down to its Underworld ~1000).
+const TERRARIA_DEEP_CELLS: f32 = 4200.0 * 650.0;
+
+/// Terraria's Gems pass: for each gem, veins started on stone at random from
+/// the surface layer's foot down (Terraria: worldSurface to the bottom,
+/// re-rolled until it hits stone), each a TileRunner 2-5 strong for 3-6 steps
+/// that turns only stone (not a structure's) into the "<gem>_ore". Terraria's
+/// counts go by its world's width; here they go by the deep stone's volume,
+/// the same share of it as in Terraria's (a vein covers about three times the
+/// cells it does in 2D, so a third as many per cell). Returns how many veins.
+pub fn gems(w: &mut World, seed: i32, l: &Layers, stone: u16) -> usize {
+    let ores: Vec<(u16, f32)> = GEM_ORES.iter().map(|&(g, n)| (w.id_of(&format!("{g}_ore")), n)).collect();
+    if stone == 0 || ores.iter().any(|&(id, _)| id == 0) {
+        return 0;
+    }
+    let mut rng = Rng::new(seed as u64 ^ 0x6e3_0e5);
+    let (lo, hi) = (l.underworld_top + 1, l.surface_base - 4);
+    let cells = w.sx as f32 * w.sz as f32 * (hi - lo) as f32;
+    let boxes = w.structures.clone();
+    let keep = move |x: i32, y: i32, z: i32, b: u16| {
+        b != stone || boxes.iter().any(|&(lo, hi)| x >= lo.0 && x <= hi.0 && y >= lo.1 && y <= hi.1 && z >= lo.2 && z <= hi.2)
+    };
+    let mut n = 0;
+    for &(ore, per_4200) in &ores {
+        let want = (per_4200 * cells / TERRARIA_DEEP_CELLS / 3.0).round() as usize;
+        for _ in 0..want {
+            for _ in 0..50 {
+                let (x, y, z) = (rng.range(2, w.sx - 2), rng.range(lo, hi), rng.range(2, w.sz - 2));
+                if w.get(x, y, z) != stone {
+                    continue;
+                }
+                let strength = rng.range(2, 6) as f32;
+                let steps = rng.range(3, 7);
+                let mut v = || rng.range(-10, 11) as f32 * 0.1;
+                let vel = (v(), v(), v());
+                crate::caves::runner(w, &mut rng, (x as f32 + 0.5, y as f32 + 0.5, z as f32 + 0.5), strength, steps, vel, false, crate::caves::Op::Paint(ore), &keep);
+                n += 1;
+                break;
+            }
+        }
+    }
+    n
+}
+
 /// Vanity trees' canopy sheets (CanopyArt.SHEETS 23 Sakura, 24 Yellow Willow:
 /// Tree_Tops_29-30) and the ash trees' (25: Tree_Tops_31).
 pub const SAKURA_CANOPY: i32 = 23;
@@ -2141,6 +2191,11 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // Gem trees after the Dungeon and the hives, as Terraria grows them late
     // (its Speleothems And Gem Trees pass), and out of them.
     gem_trees(w, seed, &l);
+    // Terraria's Gems pass: gem ore veins in the stone the biomes left, out of
+    // the structures; their own random numbers. (Terraria runs it before its
+    // gem trees, which only take stone floors: here after them, so the trees
+    // come out as they did before there were gem ores.)
+    gems(w, seed, &l, ids.stone);
     // Pass 6c: the Underworld's ruined houses (Terraria's AddHellHouses, at
     // the end of its Underworld pass, and its Hellforges pass), after the
     // Dungeon so neither builds over the other; their own random numbers.
@@ -3287,6 +3342,32 @@ mod tests {
     }
 
     #[test]
+    fn gem_ores_in_the_underground_stone() {
+        let w = gen_world(5);
+        let l = layers(w.sy);
+        let stone = w.id_of("stone");
+        let (mut deep_stone, mut counts) = (0usize, [0usize; 6]);
+        let ids: Vec<u16> = GEM_ORES.iter().map(|(g, _)| w.id_of(&format!("{g}_ore"))).collect();
+        for (i, &b) in w.blocks.iter().enumerate() {
+            let y = i as i32 % w.sy;
+            if let Some(k) = ids.iter().position(|&id| id == b) {
+                assert!(y > l.underworld_top - 4 && y < l.surface_base + 2, "{} ore at height {y}, out of the underground", GEM_ORES[k].0);
+                counts[k] += 1;
+            } else if b == stone && y > l.underworld_top && y < l.surface_base - 4 {
+                deep_stone += 1;
+            }
+        }
+        // Every gem, the commoner ones more so; together a share of the
+        // stone like Terraria's (a few in a thousand).
+        assert!(counts.iter().all(|&c| c > 0), "every gem ({counts:?})");
+        assert!(counts[0] > counts[3] && counts[3] > counts[5], "amethyst commonest, diamond rarest ({counts:?})");
+        let share = counts.iter().sum::<usize>() as f32 / deep_stone as f32;
+        assert!((0.001..0.02).contains(&share), "gems {share} of the deep stone ({counts:?})");
+        // Determinism: the same world again.
+        assert!(gen_world(5).blocks == w.blocks);
+    }
+
+    #[test]
     fn vanity_and_ash_trees() {
         let w = gen_world(5);
         let l = layers(w.sy);
@@ -3600,7 +3681,7 @@ mod tests {
         crate::dungeon::tests::add_dungeon_defs(&mut w);
         crate::traps::tests::add_trap_defs(&mut w);
         crate::mushroom::tests::add_mushroom_defs(&mut w);
-        for name in ["silt", "slush"] {
+        for name in ["silt", "slush", "amethyst_ore", "topaz_ore", "sapphire_ore", "emerald_ore", "ruby_ore", "diamond_ore"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
         }

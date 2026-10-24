@@ -127,7 +127,15 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"RainbowBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0, "glow": true},
 		"Ghoulder": {"size": 1.06, "radius": 0.6, "life": 15.0},
 		"LibrarianSkeletonBook": {"book": true, "ghost": true, "size": 1.0, "radius": 0.35, "life": 7.0},
-		"Volcano": {"ghost": true, "pierce": 3, "radius": 3.33, "size": 2.2, "life": 10.0 / 60.0, "ignite": [1, 180, 180], "glow": true, "melee": true}}
+		"Volcano": {"ghost": true, "pierce": 3, "radius": 3.33, "size": 2.2, "life": 10.0 / 60.0, "ignite": [1, 180, 180], "glow": true, "melee": true},
+		# The gem staves' bolts, trailing their gem's dust (Terraria's GemAmethyst
+		# 86 ... GemDiamond 91, GemAmber 138), with their 1.4.5 gem effects
+		# where they're simple: the Amethyst's homes in, the Diamond's goes
+		# through an enemy more, the Amber's ricochets twice and goes through
+		# two more.
+		"AmethystBolt": {"dust": [86], "home": 0.6}, "TopazBolt": {"dust": [87]}, "SapphireBolt": {"dust": [88]},
+		"EmeraldBolt": {"dust": [89]}, "RubyBolt": {"dust": [90]}, "DiamondBolt": {"dust": [91], "pierce": 2},
+		"AmberBolt": {"dust": [138], "bounce": 2, "pierce": 3}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]

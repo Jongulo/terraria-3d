@@ -804,7 +804,15 @@ gets a 1 in 5 try at one of the seven (topaz, amethyst, sapphire, emerald, ruby,
 7-12 tall with room for its top and clear of waterfalls, its gem-studded trunk, top and branches
 from Terraria; chopped, each trunk cell drops its gem 1 time in 10, else stone (the gems are
 materials, so the Amethyst Staff and the other gem recipes work); canopies are lit by the light
-where they stand, so a gem tree is as dark as its cave until you bring light; vanity trees in the
+where they stand, so a gem tree is as dark as its cave until you bring light; gem ores, like
+Terraria's Gems pass: veins of amethyst, topaz, sapphire, emerald, ruby and diamond (commonest to
+rarest, in Terraria's proportions) wander through the stone from the surface layer's foot down to
+the Underworld, as large a share of the stone as in Terraria's; each mines to its gem, and the ore
+wall in the test world has a row of them; the seven gem staves (Amethyst to Diamond, and Amber) with
+1.4.5's stats and Terraria's recipes, their bolts trailing their gem's dust: the Amethyst's home
+in, the Diamond's go through an enemy more, the Amber's ricochet twice (the other 1.4.5 gem effects,
+the Topaz's burst, the Sapphire's pair, the Emerald's stop and the Ruby's double shot, aren't in
+yet); vanity trees in the
 forest, like Terraria's: 1 in 20 trees on grass grows as a Yellow Willow or a Sakura instead; and
 the Underworld's ash forests: in its outer ring, ash open to the air turns to ash grass, ash trees
 grow on it (they drop Ash Wood: block, door, platform, armor and Terraria's recipes), and the

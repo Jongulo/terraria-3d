@@ -712,14 +712,15 @@ func _build_gallery(c: Vector3i) -> void:
 		if names[i] == "npc_spawner":
 			spawners[_key(pos)] = {"pos": pos, "kind": "BlueSlime", "auto": false, "timer": 0.0, "alive": []}
 		_label(Vector3(pos) + Vector3(0.5, 1.5, 0.5), names[i].replace("_", " "), 14)
-	# Ore wall: 3 wide, 4 high per ore, with the pickaxe power each needs.
+	# Ore wall: 3 wide, 4 high per ore, with the pickaxe power each needs; 12
+	# to a row (the gem ores in a second row behind, clear of the tower).
 	var ores: Array = names.filter(func(n): return n.ends_with("_ore") or n in ["hellstone", "obsidian"])
-	var x := c.x - 34
-	for ore in ores:
-		_box(Vector3i(x, GROUND + 1, c.z + 19), Vector3i(x + 2, GROUND + 4, c.z + 20), ore)
-		var need := int(Data.block(Data.block_id(ore)).get("min_pick", 0))
-		_label(Vector3(x + 1.5, GROUND + 5.6, c.z + 18.5), ore.replace("_", " ") + ("\n%d%% pick" % need if need > 0 else ""), 14)
-		x += 4
+	for i in ores.size():
+		var x := c.x - 34 + (i % 12) * 4
+		var z := c.z + 19 + (i / 12) * 4
+		_box(Vector3i(x, GROUND + 1, z), Vector3i(x + 2, GROUND + 4, z + 1), ores[i])
+		var need := int(Data.block(Data.block_id(ores[i])).get("min_pick", 0))
+		_label(Vector3(x + 1.5, GROUND + 5.6, z - 0.5), ores[i].replace("_", " ") + ("\n%d%% pick" % need if need > 0 else ""), 14)
 
 
 func _build_tower(c: Vector3i) -> void:
