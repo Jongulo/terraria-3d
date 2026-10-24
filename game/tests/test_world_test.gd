@@ -6882,7 +6882,8 @@ func _alchemy_checks(c: Vector3i) -> void:
 	w.set_block(pb, 0)
 	w.set_block(pb + Vector3i.DOWN, grass)
 	# Planter Boxes are solid-looking cubes: their top fills the block and no
-	# face can be seen through; their sides are dark-stained wood blocks.
+	# face can be seen through; their sides are the planter's soil over
+	# dark-stained wood, like grass over dirt.
 	var see_through := []
 	for n in ["planter_box", "moonglow_planter_box", "corrupt_planter_box", "crimson_planter_box",
 			"blinkroot_planter_box", "waterleaf_planter_box", "shiverthorn_planter_box", "fireblossom_planter_box"]:

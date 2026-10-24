@@ -552,6 +552,8 @@ func _pad_with_lower(tile: Image, lower: Dictionary, pick: int) -> Image:
 	var w := tile.get_width()
 	var h := tile.get_height()
 	var under := _stitch(lower, lower.frames[pick % lower.frames.size()])
+	if lower.has("recolor"):
+		under = _recolor(under, lower.recolor)
 	under.resize(w, w * under.get_height() / under.get_width(), Image.INTERPOLATE_NEAREST)
 	var out := Image.create(w, w, false, Image.FORMAT_RGBA8)
 	out.blit_rect(tile, Rect2i(0, 0, w, h), Vector2i.ZERO)
