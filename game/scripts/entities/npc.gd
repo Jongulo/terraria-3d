@@ -58,6 +58,9 @@ var _hellburn := 0.0
 ## second (lifeRegen -12), taken (and shown) 1 at a time.
 var poisoned := 0.0
 var _poison := 0.0
+## Seconds of Terraria's Confused left (the Beekeeper's): walkers, slimes and
+## fliers go the other way across (bosses shrug it off).
+var confused := 0.0
 ## A whip's tag on it (Whip: {damage, crit, until: a physics frame, proc}):
 ## your minions' hits do its damage more; {} when untagged.
 var whip_tag := {}
@@ -1318,7 +1321,7 @@ func dps() -> float:
 
 
 func _ai_slime(delta: float, player) -> void:
-	var dir: Vector3 = player.global_position - global_position
+	var dir: Vector3 = _chase_point(player.global_position) - global_position
 	dir.y = 0
 	var ticks := delta * 60.0
 	# The Lava Slime's fire dust, a speck a tick ("trail_dust").
@@ -1396,7 +1399,7 @@ func _slime_spikes(delta: float, player) -> void:
 
 func _ai_fighter(delta: float, player) -> void:
 	var game := Game.current
-	var dir: Vector3 = player.global_position - global_position
+	var dir: Vector3 = _chase_point(player.global_position) - global_position
 	dir.y = 0
 	var speed: float = def.get("speed", 2.5)
 	# The Blood Zombie (AI_003) quickens as it nears you: (2.5 less 0.0025
@@ -1451,7 +1454,7 @@ func _wall_jump(game, dir: Vector3) -> float:
 
 
 func _ai_flyer(delta: float, player) -> void:
-	var target: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	var target: Vector3 = _chase_point(player.global_position) + Vector3(0, 1.0, 0)
 	var game := Game.current
 	if _flees_day(game) and kind == "DemonEye":
 		target = global_position + Vector3(0, 10, 0)  # flee at dawn
@@ -3446,6 +3449,22 @@ func tag() -> Dictionary:
 	return whip_tag
 
 
+## Confuses it for `seconds` (Terraria's Confused; bosses are immune, as
+## Terraria's buffImmune has them).
+func confuse(seconds: float) -> void:
+	if boss:
+		return
+	confused = maxf(confused, seconds)
+
+
+## Where it heads for to get at `p`: there, or confused, the mirror of it
+## across (Terraria's AIs turn their direction round while confused).
+func _chase_point(p: Vector3) -> Vector3:
+	if confused <= 0.0:
+		return p
+	return Vector3(2.0 * global_position.x - p.x, p.y, 2.0 * global_position.z - p.z)
+
+
 ## Poisons it for `seconds` (Terraria's Poisoned; longer poisons win).
 func poison(seconds: float) -> void:
 	poisoned = maxf(poisoned, seconds)
@@ -3463,6 +3482,7 @@ func ignite_hellfire(seconds: float) -> void:
 ## goes (poison too, 6 a second), and flames all over it (UpdateNPC_BuffApplyVFX: 3 ticks in 4,
 ## rising; drawn at half Terraria's size).
 func _burn_tick(delta: float, game) -> void:
+	confused = maxf(0.0, confused - delta)
 	if on_fire > 0.0:
 		on_fire -= delta
 		_burn += delta * 4.0

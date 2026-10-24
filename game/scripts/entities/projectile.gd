@@ -58,7 +58,8 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 		"EnchantedBeam": {"diagonal": true}, "BookOfSkullsSkull": {"frames": 3, "styles": true},
 		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true}, "HornetStinger": {"long": true},
 		"Flamelash": {"frames": 8, "fps": 12}, "Hellwing": {"frames": 5, "right": true, "fps": 30}, "Volcano": {"frames": 5, "fps": 30},
-		"Ghoulder": {"frames": 10}, "RainbowBoulder": {"frames": 100}, "LibrarianSkeletonBook": {"frames": 54}}
+		"Ghoulder": {"frames": 10}, "RainbowBoulder": {"frames": 100}, "LibrarianSkeletonBook": {"frames": 54},
+		"Bee": {"frames": 3}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
@@ -89,6 +90,9 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## (the Fiery Greatsword's, AI 189): where it stands, 10 ticks, Terraria's
 ## 160 px box (here 80 px at 24 a block round it), each enemy once, 3 at most,
 ## On Fire! 3 s every hit.
+## bee: your bees (Terraria's projectile 181, AI 36; see _bee_step); pierce:
+## the hits and bounces off blocks it has in all (its penetrate). bee_arrow:
+## the Bee's Knees' Bee Arrow (469): no drop, and breaks into bees.
 ## debuffs: what it puts on you, [[debuff, 1 in n, ticks]] (Terraria's
 ## StatusPlayer: the Ice Spike's Chilled 20 s and 1 in 20 Frozen 1.5 s).
 ## The Spiked Ice Slime's Ice Spike (AI 1): falls at 0.15 px/tick² (24 px
@@ -135,7 +139,9 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		# two more.
 		"AmethystBolt": {"dust": [86], "home": 0.6}, "TopazBolt": {"dust": [87]}, "SapphireBolt": {"dust": [88]},
 		"EmeraldBolt": {"dust": [89]}, "RubyBolt": {"dust": [90]}, "DiamondBolt": {"dust": [91], "pierce": 2},
-		"AmberBolt": {"dust": [138], "bounce": 2, "pierce": 3}}
+		"AmberBolt": {"dust": [138], "bounce": 2, "pierce": 3},
+		"Bee": {"bee": true, "pierce": 3, "life": 10.0, "size": 0.45, "radius": 0.3},
+		"BeeArrow": {"bee_arrow": true, "gravity": 0.0, "life": 20.0}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -287,6 +293,8 @@ func _physics_process(delta: float) -> void:
 		if best != null:
 			var speed := velocity.length()
 			velocity = velocity.lerp((best.center() - global_position).normalized() * speed, minf(1.0, float(_flight.home) * delta * 6.0)).normalized() * speed
+	if _flight.get("bee", false) and not _bee_step(delta, game):
+		return
 	if steered_by != null:
 		if is_instance_valid(steered_by) and steered_by.alive and steered_by.use_down():
 			var to: Vector3 = steered_by.aim_point() - global_position
@@ -347,9 +355,15 @@ func _physics_process(delta: float) -> void:
 		if friendly and damage > 0:
 			game.cut_tiles_at(global_position, 0.25)
 		if not _flight.get("ghost", false) and game.world.is_solid(Vector3i(global_position.floor())):
-			if bounces > 0:
+			# A bee's bounce uses up one of its hits (Terraria's OnTileCollide:
+			# penetrate less one, gone at none).
+			var bee: bool = _flight.get("bee", false)
+			if bounces > 0 or (bee and penetrate > 1):
 				# Back out and turn round on the axes that ran into the block.
-				bounces -= 1
+				if bee:
+					penetrate -= 1
+				else:
+					bounces -= 1
 				var sub := step / maxi(n, 1)
 				global_position -= sub
 				var turned := false
@@ -377,6 +391,12 @@ func _physics_process(delta: float) -> void:
 	if spin != 0.0:
 		_angle += spin * delta
 		sprite.set_rotation_angle(_angle)
+	elif _flight.get("bee", false):
+		# Upright, facing the way it flies (its art faces right), tipped a
+		# little with its speed across (rotation 0.1 x its speed).
+		var across := velocity.dot(cam.global_transform.basis.x) / 3.75
+		sprite.set_flip(across < 0.0)
+		sprite.set_rotation_angle(-across * 0.1)
 	elif _axial:
 		sprite.set_axis(velocity)
 	else:
@@ -448,8 +468,22 @@ func _explosive_step(delta: float, game) -> void:
 	sprite.set_rotation_angle(_angle)
 	sprite.update_light(game.world, game.sky, global_position)
 	if life <= 0.0:
-		game.explode(global_position, damage, knockback, explosive)
+		if explosive.has("bees"):
+			_burst_into_bees(game)
+		else:
+			game.explode(global_position, damage, knockback, explosive)
 		queue_free()
+
+
+## The Beenade going off (Projectile.Kill, 183): no blast, only its sound,
+## smoke and a swarm of bees, each as strong as the Beenade (and 1 in 2 one
+## more), that can't crit.
+func _burst_into_bees(game) -> void:
+	Audio.play_at("Item_14", global_position)
+	for i in 6:
+		game.spawn_dust(global_position + Vector3(randf_range(-0.4, 0.4), randf_range(-0.4, 0.4), randf_range(-0.4, 0.4)), Color(0.55, 0.55, 0.55), 3)
+	var n: Array = explosive.bees
+	release_bees(game, randi_range(int(n[0]), int(n[1])), global_position, Vector3.ZERO, damage, 0.0)
 
 
 ## The Geyser's spout: a column of fire from it up to the first block, 320 px
@@ -853,8 +887,10 @@ func _lava_pool(game) -> void:
 
 ## Gone: a Hellfire Arrow's blast first ("blast": Terraria's Kill grows it to
 ## 64 px and Damage()s every enemy in that, the one it hit being immune just
-## then), with Item14.
+## then), with Item14. A Bee Arrow breaks into bees.
 func _die(game) -> void:
+	if _flight.get("bee_arrow", false) and friendly:
+		_bee_arrow_bees(game)
 	if _flight.has("blast") and friendly:
 		var r := float(_flight.blast)
 		Audio.play_at("Item_14", global_position, 0.6)
@@ -869,11 +905,97 @@ func _die(game) -> void:
 	queue_free()
 
 
+## Your bees (Terraria's AI 36, in its px a tick: 16 a block for shots, so
+## x3.75 for blocks a second). After 30 ticks a bee goes for the nearest enemy
+## it can see within 800 px across plus up (here 50 blocks, all three ways),
+## changing to a nearer one as they come; else it keeps on its way. It
+## steers each way on its own toward 6 px a tick at its goal, 0.1 px a tick
+## faster each tick, twice that while still going the other way. Water or
+## lava (not honey) kills it. False when it's gone.
+const BEE_SPEED := 6.0
+const BEE_ACCEL := 0.1
+const BEE_SEEK_AFTER := 30.0
+const BEE_RANGE := 50.0
+## Ticks before a bee can sting the same enemy again (Terraria's npc.immune).
+const BEE_REHIT := 10.0 / 60.0
+var _bee_ticks := 0.0
+
+func _bee_step(delta: float, game) -> bool:
+	var liquid: Vector2i = game.world.get_liquid(Vector3i(global_position.floor()))
+	if liquid.y > 0 and liquid.x != Player.LIQ_HONEY:
+		queue_free()
+		return false
+	var ticks := delta * 60.0
+	_bee_ticks += ticks
+	var goal := velocity.normalized()
+	if _bee_ticks > BEE_SEEK_AFTER:
+		var best = null
+		var best_d := INF
+		for npc in game.npcs():
+			if npc.def.ai in ["town", "dummy"] or npc.is_critter() or npc.untouchable or npc.dont_take_damage or npc.def.get("invulnerable", false):
+				continue
+			var to: Vector3 = npc.center() - global_position
+			var d := absf(to.x) + absf(to.y) + absf(to.z)
+			if d >= BEE_RANGE or d >= best_d:
+				continue
+			if not game.world.raycast(global_position, to.normalized(), to.length()).is_empty():
+				continue
+			best = npc
+			best_d = d
+		if best != null:
+			goal = (best.center() - global_position).normalized()
+	var want := goal * BEE_SPEED
+	var v := velocity / 3.75
+	var step := BEE_ACCEL * ticks
+	for a in 3:
+		if v[a] < want[a]:
+			v[a] = minf(want[a], v[a] + (step * 2.0 if v[a] < 0.0 and want[a] > 0.0 else step))
+		elif v[a] > want[a]:
+			v[a] = maxf(want[a], v[a] - (step * 2.0 if v[a] > 0.0 and want[a] < 0.0 else step))
+	velocity = v * 3.75
+	return true
+
+
+## Bees let loose at `pos` (Terraria's beeType, beeDamage, beeKB: plain bees,
+## each `damage` and 1 in 2 one more, no knockback): `count` of them, each
+## off at `vel` (blocks a second) give or take 0.7 px a tick each way, through
+## `pierce` hits and bounces in all; `crit` their crit chance.
+static func release_bees(game, count: int, pos: Vector3, vel: Vector3, damage: int, crit: float, pierce := 3, spread := 0.7) -> Array:
+	var out := []
+	for i in count:
+		var jitter := Vector3(randf_range(-spread, spread), randf_range(-spread, spread), randf_range(-spread, spread)) * 3.75
+		var b: Projectile = game.spawn_projectile("Bee", pos, vel + jitter, damage + randi() % 2, 0.0, 0.0, 0.0, 0.45, true, crit)
+		b.penetrate = pierce
+		out.append(b)
+	return out
+
+
+## A Bee Arrow breaking (Projectile.Kill, 469): three bees, and three more
+## at 1 in 3 each, strung out back along its flight 8 px apart (the Bee's
+## Knees' "column of bees"), each going a sixth of its speed give or take
+## 0.35 px a tick, with a third of its damage, through 2 hits or bounces.
+func _bee_arrow_bees(game) -> void:
+	var back := velocity.normalized()
+	# (Its last step may be inside the block it hit.)
+	var from := global_position - back * 0.3
+	for i in 6:
+		if i % 2 == 1 and randi() % 3 != 0:
+			continue
+		var at := from - back * 0.5 * i
+		if game.world.is_solid(Vector3i(at.floor())):
+			at = from
+		release_bees(game, 1, at, velocity / 6.0, damage / 3, crit, 2, 0.35)
+
+
 func _check_hits(game) -> bool:
 	if friendly:
+		var bee: bool = _flight.get("bee", false)
 		for npc in game.npcs():
-			if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
-				_hit[npc] = true
+			# A bee can sting the same enemy again once its 10 ticks of
+			# immunity are up (Terraria's npc.immune); other shots hit each once.
+			var again: bool = bee and _hit.has(npc) and _age - float(_hit[npc]) >= BEE_REHIT
+			if (not _hit.has(npc) or again) and npc.overlaps_point(global_position, radius):
+				_hit[npc] = _age
 				if minion_shot:
 					Minion.strike(game, npc, damage, knockback, velocity.normalized())
 				else:
@@ -893,7 +1015,7 @@ func _check_hits(game) -> bool:
 	elif not _flight.get("book", false) or _launched:
 		var p = game.player
 		if p.alive and p.overlaps_point(global_position, float(_flight.get("radius", 0.2))):
-			var landed: bool = p.hurt(damage, global_position)
+			var landed: bool = p.hurt(damage, global_position, false, null, "shot")
 			if kind in POISONS and randi() % 3 == 0:
 				p.poison(10.0)
 			if _flight.has("poison"):

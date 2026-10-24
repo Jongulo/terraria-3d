@@ -17,7 +17,8 @@ extends Node3D
 ##     up to it) and hurts what it touches (each enemy every 12 ticks, all
 ##     Baby Slimes together).
 ##   eater / skull / fish: AI_026's fliers (the Baby Eater, the Baby
-##     Skeletron Head, the Zephyr Fish): through the blocks after you,
+##     Skeletron Head, the Zephyr Fish and Baby Hornet: speed, accel [mid,
+##     near, far] px/tick² their own): through the blocks after you,
 ##     steering each axis toward a speed at you.
 ##   swarm: AI_062 (the Hornet, the Imp): flies over you (the Imp in line
 ##     beside you), to an enemy it can see within 2000 px, shooting at it
@@ -55,6 +56,9 @@ const KINDS := {
 	"BabyEater": {"ai": "eater", "size": [34, 34], "frames": 2, "buff": "BabyEater"},
 	"BabySkeletronHead": {"ai": "skull", "size": [42, 42], "frames": 1, "buff": "BabySkeletronHead"},
 	"ZephyrFish": {"ai": "fish", "size": [26, 26], "frames": 4, "buff": "ZephyrFish"},
+	# The Nectar's Baby Hornet: the Zephyr Fish's flight, faster (14 px a
+	# tick; 0.4 px/tick², 0.1 near you, 0.6 far off), tipped as it goes.
+	"BabyHornet": {"ai": "fish", "size": [26, 26], "frames": 4, "buff": "BabyHornet", "speed": 14.0, "accel": [0.4, 0.1, 0.6], "tilt": true},
 	"Hornet": {"ai": "swarm", "size": [24, 26], "frames": 3, "buff": "HornetMinion", "slot": 1,
 		"shot": "HornetStinger", "shot_speed": 10.0, "shot_sound": "Item_17"},
 	"FlyingImp": {"ai": "swarm", "size": [34, 26], "frames": 8, "buff": "ImpMinion", "slot": 1,
@@ -616,6 +620,10 @@ func _anim_fly() -> void:
 
 # ------------------------------------------------------------- AI_026 fliers
 
+## The Zephyr Fish's acceleration [mid, under 100 px, over 300 px].
+const FISH_ACCEL := [0.3, 0.1, 0.4]
+
+
 ## The Baby Eater (7 px a tick at you, 0.1 px/tick²: 0.2 beyond 300 px; near
 ## you, 150 px, gently), the Baby Skeletron Head (3, and 14 once it's been
 ## 500 px off, spinning), the Zephyr Fish (over your shoulder: 60 px behind
@@ -628,8 +636,8 @@ func _flier_tick(game) -> void:
 	if cfg.ai == "fish":
 		goal = you - _facing() * 60.0 / PX + Vector3(0, 60.0, 0) / PX \
 				+ Vector3(randf_range(-10, 20), randf_range(-20, 10), randf_range(-10, 20)) / PX
-		speed = 6.0
-		accel = 0.3
+		speed = float(cfg.get("speed", 6.0))
+		accel = float(cfg.get("accel", FISH_ACCEL)[0])
 	elif cfg.ai == "skull":
 		speed = 3.0
 		if (you - center()).length() * PX > 500.0:
@@ -656,7 +664,8 @@ func _flier_tick(game) -> void:
 			d = d.clamp(Vector3(-2, -2, -2), Vector3(2, 2, 2))
 	else:
 		if cfg.ai == "fish":
-			accel = 0.1 if dist < 100.0 else (0.4 if dist > 300.0 else 0.3)
+			var a: Array = cfg.get("accel", FISH_ACCEL)
+			accel = float(a[1]) if dist < 100.0 else (float(a[2]) if dist > 300.0 else float(a[0]))
 		elif dist > 300.0:
 			accel = 0.2
 		d *= speed / dist
@@ -1144,6 +1153,8 @@ func _draw(game) -> void:
 		"bird":
 			sprite.set_rotation_angle(-sx * 0.1)
 		"swarm":
+			sprite.set_rotation_angle(-sx * 0.05)
+		"fish" when cfg.get("tilt", false):
 			sprite.set_rotation_angle(-sx * 0.05)
 		_:
 			sprite.set_rotation_angle(0.0)
