@@ -35,6 +35,9 @@ const HONEY_MAX_FALL := 7.5
 const HONEY_MOVE := 0.25
 ## Touching honey makes you Honey (Terraria's buff 48) for 1800 ticks.
 const HONEY_TIME := 30.0
+## The Honey Comb's bees' damage, and its Honey (Terraria's 300 ticks).
+const HONEY_COMB_BEE_DAMAGE := 13
+const HONEY_COMB_HONEY := 5.0
 ## A honey block's side (Terraria's StickyMovement): 1 px a tick across and
 ## down at most, 5 up.
 const HONEY_STICK_ACROSS := 2.5
@@ -145,9 +148,21 @@ var _target_marker: EntitySprite = null
 ## hurts it (that times your summon damage, knockback 5; each enemy every 10
 ## ticks) and bounces you up at 10 px/tick (Terraria's slime mounts), and in
 ## water it can jump; sprite: Images/Mount_<sprite>, its frames (running
-## every 12 ticks, frame 1 in the air).
+## every 12 ticks, frame 1 in the air; or run_frames / air_frames [first,
+## last]), dust (spawnDust, getting on and off). hover: a flying mount
+## (usesHover: _hover) with flight and fatigue ticks (flightTimeMax,
+## fatigueMax); no_extra_jumps (blockExtraJumps); no_water: gone under water
+## (the Bee).
 const MOUNTS := {"slime": {"buff": "SlimeMount", "height": 20, "run": 4.0, "dash": 4.0, "accel": 0.18, "jump_speed": 8.25,
-		"jump_ticks": 12, "auto_jump": true, "fall_damage": 0.5, "extra_fall": 10, "stomp": 40, "sprite": "Slime", "frames": 4}}
+		"jump_ticks": 12, "auto_jump": true, "fall_damage": 0.5, "extra_fall": 10, "stomp": 40, "sprite": "Slime", "frames": 4},
+	"bee": {"buff": "BeeMount", "height": 16, "run": 2.0, "dash": 2.0, "accel": 0.16, "jump_speed": 4.0, "jump_ticks": 10,
+		"fall_damage": 0.0, "hover": [320, 320], "no_extra_jumps": true, "no_water": true, "sprite": "Bee", "frames": 12,
+		"run_frames": [0, 4], "air_frames": [5, 7], "dust": 152}}
+## A hovering mount's flight left and fatigue (Terraria's _flyTime, _fatigue),
+## in ticks.
+var _fly_time := 0.0
+var _fatigue := 0.0
+var _last_mount_dust := 56
 ## The mount you ride ("": none) and the item that called it.
 var mount := ""
 var mount_item := {}
@@ -757,6 +772,10 @@ func _move(delta: float, game) -> void:
 		max_run = float(mt.run) * 2.5
 		acc_run = float(mt.dash) * 2.5
 		accel = float(mt.accel) * 150.0
+		# The Bee flying: 4 px/tick faster, less as it tires (Mount.RunSpeed).
+		if mt.has("hover") and not on_floor:
+			max_run += 4.0 * (1.0 - _fatigue / float(mt.hover[1])) * 2.5
+			acc_run = max_run
 	# Chilled: a quarter slower (Terraria's strongestMoveSpeedDebuff).
 	if has_effect("chilled"):
 		max_run *= 0.75
@@ -866,6 +885,9 @@ func _move(delta: float, game) -> void:
 		_fall_start = global_position.y
 	else:
 		var wing := wings()
+		var hovering := mount != "" and MOUNTS[mount].has("hover")
+		if hovering:
+			wing = {}
 		if on_floor or sliding:
 			_wing_time = float(wing.get("time", 0)) / 60.0
 			_rocket_time = ROCKET_TIME
@@ -873,7 +895,9 @@ func _move(delta: float, game) -> void:
 			_rocket_release = false
 		elif not jump:
 			_rocket_release = true
-		if not wing.is_empty() and jump and _wing_time > 0.0 and _jump_ticks == 0 and not on_floor:
+		if hovering and not on_floor:
+			_hover(delta, jump)
+		elif not wing.is_empty() and jump and _wing_time > 0.0 and _jump_ticks == 0 and not on_floor:
 			_wing_flight(delta, wing)
 		elif _rocketing(jump, wing):
 			_wing_flight(delta, {"lift_max": 1.5})
@@ -954,7 +978,8 @@ func _move(delta: float, game) -> void:
 				safe += int(MOUNTS[mount].get("extra_fall", 0))
 				share = float(MOUNTS[mount].get("fall_damage", 1.0))
 			if tiles > safe:
-				hurt(int((tiles - safe) * 10 * share), Vector3.ZERO, true)
+				if share > 0.0:
+					hurt(int((tiles - safe) * 10 * share), Vector3.ZERO, true, null, "fall")
 		elif velocity.y > 0.0:
 			_jump_ticks = 0  # a bumped head ends the jump
 		velocity.y = 0.0
@@ -1028,6 +1053,44 @@ func _wing_flight(delta: float, wings: Dictionary) -> void:
 		velocity.y += k
 	velocity.y = minf(velocity.y, JUMP_SPEED * float(wings.get("lift_max", 1.5)))
 	_wing_time -= delta
+
+
+## A hovering mount in the air (Terraria's Mount.Hover, the Bee; px a tick,
+## its y down turned up here). Its flight time runs out first, then it
+## tires (a tick a tick; a third as fast with Featherfall). Tiring, f of the
+## way: left alone it sinks at 4f (fresh, it hangs still); holding jump it
+## climbs (not once worn out) up to 2 + 6(1 - f); holding Drop down it
+## sinks up to 8; it reaches those speeds 0.16 a tick. On the ground it
+## gets its flight back and rests off 2 fatigue a tick (ResetFlightTime,
+## FatigueRecovery).
+func _hover(delta: float, rise: bool) -> void:
+	var hv: Array = MOUNTS[mount].hover
+	var ticks := delta * 60.0
+	var can_rise := true
+	if _fly_time > 0.0:
+		_fly_time = maxf(0.0, _fly_time - ticks)
+	elif _fatigue < float(hv[1]):
+		_fatigue = minf(float(hv[1]), _fatigue + ticks * (1.0 / 3.0 if has_effect("featherfall") else 1.0))
+	else:
+		can_rise = false
+	var f := _fatigue / float(hv[1])
+	var accel := float(MOUNTS[mount].accel)
+	var top := -4.0 * f  # fastest climb (px/tick, up); left alone, its sink
+	var bottom := -4.0 * f  # fastest fall
+	var vy := velocity.y / 2.5
+	var down := input_enabled and Input.is_action_pressed("drop_down")
+	if rise and can_rise:
+		top = 2.0 + 6.0 * (1.0 - f)
+		vy += accel * ticks
+	elif down:
+		bottom = -8.0
+		vy -= accel * ticks
+	if vy > top:
+		vy = top if vy - top < accel * ticks else vy - accel * ticks
+	elif vy < bottom:
+		vy = bottom if bottom - vy < accel * ticks else vy + accel * ticks
+	velocity.y = vy * 2.5
+	_fall_start = global_position.y
 
 
 ## Rocket boots (Terraria's): 7 bursts of 10 ticks of the wings' lift, once
@@ -1132,6 +1195,8 @@ const EXTRA_JUMPS := {"cloud": 0.75, "blizzard": 1.5}
 ## Cloud's first, like Terraria's).
 func extra_jumps() -> Array:
 	var kinds := []
+	if mount != "" and MOUNTS[mount].get("no_extra_jumps", false):
+		return kinds
 	for d in equipment():
 		if d.get("double_jump", false):
 			var k: String = d.get("jump_kind", "cloud")
@@ -1929,6 +1994,8 @@ func _use_mount(def: Dictionary) -> bool:
 ## (Terraria's heightBoost; no room over you, no mount). False if it can't.
 func ride(def: Dictionary) -> bool:
 	var m: Dictionary = MOUNTS[def.mount]
+	if m.get("no_water", false) and head_liquid != 0:
+		return false
 	var up := float(m.height) / 24.0
 	var w := Game.current.world
 	var lo := (global_position - Vector3(half.x, -0.01, half.z)).floor()
@@ -1940,10 +2007,18 @@ func ride(def: Dictionary) -> bool:
 					return false
 	mount = def.mount
 	mount_item = def
+	# Its flight starts spent (SetMount): on the ground it fills at once,
+	# called up in the air it has only its fatigue to go on.
+	_fly_time = 0.0
+	_fatigue = 0.0
 	half.y += up
 	camera.position.y = EYE_HEIGHT + up
+	if _mount_sprite != null and _mount_sprite.get_meta("mount", "") != def.mount:
+		_mount_sprite.queue_free()
+		_mount_sprite = null
 	if _mount_sprite == null:
 		_mount_sprite = EntitySprite.new()
+		_mount_sprite.set_meta("mount", def.mount)
 		var tex := Assets.texture("Images/Mount_%s" % m.sprite)
 		var frames := int(m.frames)
 		_mount_sprite.setup(tex, frames, Vector2(tex.get_width(), tex.get_height() / float(frames)) / 24.0, false, true)
@@ -1968,10 +2043,12 @@ func dismount() -> void:
 	stats_changed.emit()
 
 
-## Terraria's spawnDust as you get on or off (the slime's 56).
+## Terraria's spawnDust as you get on or off (the slime's 56, the Bee's 152).
 func _mount_dust() -> void:
+	var id: int = MOUNTS[mount].get("dust", 56) if mount != "" else _last_mount_dust
+	_last_mount_dust = id
 	for i in 15:
-		Game.current.dust.spawn(56, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(0.0, 0.8), randf_range(-0.5, 0.5)),
+		Game.current.dust.spawn(id, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(0.0, 0.8), randf_range(-0.5, 0.5)),
 				Vector3(randf_range(-1, 1), randf_range(0, 1.5), randf_range(-1, 1)), 1.2)
 
 
@@ -1982,6 +2059,12 @@ func _ride(delta: float, game) -> void:
 		if _stomped[n] <= 0.0 or not is_instance_valid(n):
 			_stomped.erase(n)
 	var m: Dictionary = MOUNTS[mount]
+	if m.get("no_water", false) and head_liquid != 0:
+		dismount()
+		return
+	if m.has("hover") and on_floor:
+		_fly_time = float(m.hover[0])
+		_fatigue = maxf(0.0, _fatigue - 2.0 * delta * 60.0)
 	if m.has("stomp") and velocity.y < 0.0 and in_liquid == 0:
 		# Terraria's feet strip: 2 px at the bottom, 12 px wider each side and
 		# 6 px taller each way.
@@ -1999,15 +2082,26 @@ func _ride(delta: float, game) -> void:
 			_immune = maxf(_immune, 6.0 / 60.0)
 			break
 	if _mount_sprite != null:
-		var frames := int(m.frames)
+		var run: Array = m.get("run_frames", [0, int(m.frames) - 1])
+		var air: Array = m.get("air_frames", [1, 1])
 		if not on_floor:
-			_mount_frame = 1.0
+			_mount_frame = _cycle(_mount_frame, air, delta * 5.0)
 		elif Vector2(velocity.x, velocity.z).length() > 0.3:
-			_mount_frame = fmod(_mount_frame + delta * 5.0, frames)
+			_mount_frame = _cycle(_mount_frame, run, delta * 5.0)
 		else:
-			_mount_frame = 0.0
+			_mount_frame = float(run[0])
 		_mount_sprite.set_frame(int(_mount_frame))
 		_mount_sprite.update_light(game.world, game.sky, global_position + Vector3(0, 0.4, 0))
+
+
+## `frame` moved on `by` frames through [first, last], from first if it was
+## outside them.
+static func _cycle(frame: float, span: Array, by: float) -> float:
+	var lo := float(span[0])
+	var n := float(span[1]) - lo + 1.0
+	if frame < lo or frame >= lo + n:
+		return lo
+	return lo + fmod(frame - lo + by, n)
 
 
 ## A whip's crack (Whip; Terraria's Item152 as it goes). It isn't held
@@ -2641,6 +2735,10 @@ func _cast(def: Dictionary) -> bool:
 		return false
 	mana -= cost
 	stats_changed.emit()
+	if def.get("bees", false):
+		_shoot_bees(def)
+		Audio.play(def.get("sound", "Item_8"), 0.7)
+		return true
 	var pr := Game.current.spawn_projectile(def.projectile, camera.global_position + forward() * 0.6, forward() * float(def.shoot_speed),
 			weapon_damage(def), weapon_knockback(def), 0.0, 0.0, 0.5, true, crit_chance(def))
 	if def.get("channel", false):
@@ -2648,6 +2746,19 @@ func _cast(def: Dictionary) -> bool:
 		pr.steered_by = self
 	Audio.play(def.get("sound", "Item_8"), 0.7)
 	return true
+
+
+## The Bee Gun (Terraria's ItemCheck_Shoot for item 1121): 1 to 3 bees, and
+## one more at 1 in 6 twice, each off at the gun's speed give or take 0.7 px
+## a tick each way, its damage (and 1 in 2 one more), through 3 hits or
+## bounces.
+func _shoot_bees(def: Dictionary) -> void:
+	var n := randi_range(1, 3)
+	for i in 2:
+		if randi() % 6 == 0:
+			n += 1
+	Projectile.release_bees(Game.current, n, camera.global_position + forward() * 0.6, forward() * float(def.shoot_speed),
+			weapon_damage(def), crit_chance(def))
 
 
 ## Whether holding the use button keeps using this item (Terraria's
@@ -3342,14 +3453,24 @@ func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
 		for i in 20:
 			Game.current.dust.spawn(6, npc.center() + Vector3(randf_range(-0.4, 0.4), randf_range(-0.4, 0.4), randf_range(-0.4, 0.4)),
 					Vector3(randf_range(-0.6, 0.6), 1.0, randf_range(-0.6, 0.6)) * randf_range(2.0, 7.0), randf_range(1.0, 2.0))
+	# The Beekeeper (ApplyNPCOnHitEffects, StatusToNPC): each hit lets loose
+	# 1 to 3 bees with a third of its damage, off your way at 2 px a tick,
+	# and Confuses the enemy for 2 s (not off target dummies or critters).
+	if def.get("bees_on_hit", false) and npc.def.ai != "dummy" and not npc.is_critter():
+		var away := Vector3(forward().x, 0, forward().z).normalized() * 2.0 * 3.75
+		Projectile.release_bees(Game.current, randi_range(1, 3), npc.center(), away, weapon_damage(def) / 3, crit_chance(def))
+	if def.has("confuses") and npc.def.ai != "dummy":
+		npc.confuse(float(def.confuses))
 	if def.get("leech", false) and not swing.get("leeched", false) and life < life_cap() \
 			and npc.def.ai != "dummy" and not npc.is_critter():
 		swing["leeched"] = true
 		heal(1)
 
 
-## Hurts you; true if it did (not invulnerable or immune).
-func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null) -> bool:
+## Hurts you; true if it did (not invulnerable or immune). `source`: what
+## else hurt you, for what only some hurts set off ("shot": an enemy's
+## projectile, "fall").
+func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null, source := "") -> bool:
 	if not alive or invulnerable() or (_immune > 0.0 and not ignore_immunity):
 		return false
 	var game := Game.current
@@ -3367,6 +3488,12 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null)
 	# Magic Cuffs: the damage you take comes back as mana.
 	if has_effect("magic_cuffs"):
 		mana = mini(mana_cap(), mana + dmg)
+	# The Honey Comb (Player.Hurt; 1.4.5: only enemies and falls): a bee, and
+	# one more at 1 in 3 twice, 13 damage each, and 5 s of Honey.
+	if has_effect("honey_comb") and (npc_attacker or source in ["shot", "fall"]):
+		var n := 1 + (1 if randi() % 3 == 0 else 0) + (1 if randi() % 3 == 0 else 0)
+		Projectile.release_bees(game, n, center(), Vector3.ZERO, HONEY_COMB_BEE_DAMAGE, 0.0)
+		honey_time = maxf(honey_time, HONEY_COMB_HONEY)
 	# The Thorns Potion: the attacker takes what it dealt (thorns 1).
 	var thorns := int(stat("thorns")) + int(amount * stat("thorns_reflect"))
 	if thorns > 0 and attacker != null and is_instance_valid(attacker) and attacker.life > 0:

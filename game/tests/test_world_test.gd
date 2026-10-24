@@ -461,6 +461,7 @@ func _run() -> void:
 	await _alchemy_checks(c)
 	await _potion_checks(c)
 	await _summon_checks(c)
+	await _bee_loot_checks(c)
 	await _weather_checks(c)
 	await _slime_rain_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
@@ -7112,6 +7113,273 @@ func _until(cond: Callable, limit: float) -> bool:
 		await get_tree().physics_frame
 		t += 1.0 / Engine.physics_ticks_per_second
 	return cond.call()
+
+
+## The Queen Bee's loot (Terraria's ItemDropDatabase.RegisterBoss_QueenBee and
+## each item's SetDefaults): every drop is an item here; the bees (AI 36:
+## homing, water kills them); the Bee Gun's, the Bee's Knees' Bee Arrows',
+## the Beekeeper's (and its Confused), the Beenade's and the Honey Comb's
+## bees; the Hive Wand; the Nectar's Baby Hornet; the Honeyed Goggles' Bee.
+func _bee_loot_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	var held := p.selected
+	var was_god := p.god_mode
+	var kept_slots := p.inventory.slots.duplicate(true)
+	var kept_acc := p.accessories.slots.duplicate()
+	p.god_mode = true
+	var undefined := []
+	for k in Data.npcs:
+		var e: Dictionary = Data.npcs[k]
+		var names := []
+		for d in e.get("drops", []) + e.get("boss_drops", []):
+			names.append(d[0])
+		names.append_array(e.get("drops_one_of", []))
+		for d in e.get("drops_chain", []):
+			names.append_array(d[0] if d[0] is Array else [d[0]])
+		for n in names:
+			if not Data.items.has(n) and not n in undefined:
+				undefined.append(n)
+	check(undefined.is_empty(), "every enemy's drops are items in the game (undefined: %s)" % [undefined])
+	var qb: Dictionary = Data.npcs.QueenBee
+	check(qb.drops_one_of == ["BeeGun", "BeeKeeper", "BeesKnees"] and qb.drops.any(func(d): return d == ["BeeWax", 17, 30, 1.0])
+			and qb.drops.any(func(d): return d[0] == "Beenade" and d[1] == 10 and d[2] == 30 and is_equal_approx(d[3], 0.75)),
+			"the Queen Bee drops one of the Bee Gun, Beekeeper and Bee's Knees, 17-30 Bee Wax, 3 in 4 10-30 Beenades")
+	var gun := Data.item("BeeGun")
+	var keeper := Data.item("BeeKeeper")
+	var knees := Data.item("BeesKnees")
+	check(int(gun.damage) == 9 and int(gun.mana) == 5 and int(gun.use_time) == 12 and gun.type == "magic"
+			and int(keeper.damage) == 30 and int(keeper.use_time) == 20 and is_equal_approx(float(keeper.knockback), 5.3) and keeper.type == "melee"
+			and int(knees.damage) == 23 and int(knees.use_time) == 23 and knees.type == "ranged",
+			"Terraria's stats: the Bee Gun 9 magic, 5 mana, 12 ticks; the Beekeeper 30 melee, 20 ticks; the Bee's Knees 23 ranged, 23 ticks")
+	check(int(Data.item("Beenade").damage) == 12 and Data.item("HiveWand").wand_ammo == "Hive" and Data.item("Nectar").pet == "BabyHornet"
+			and Data.item("HoneyedGoggles").mount == "bee" and ["BeeHat", "BeeShirt", "BeePants"].all(func(i): return Data.item(i).get("vanity", false)),
+			"the Beenade (12), Hive Wand (uses Hive), Nectar (Baby Hornet), Honeyed Goggles (the Bee) and the Bee vanity set")
+
+	var arena := c + Vector3i(-30, 70, 30)
+	for x in range(-14, 15):
+		for z in range(-14, 15):
+			w.set_block(arena + Vector3i(x, -1, z), Data.block_id("stone"))
+			for y in range(0, 14):
+				w.set_block(arena + Vector3i(x, y, z), 0)
+				w.set_liquid(arena + Vector3i(x, y, z), 0, 0)
+	for npc in game.npcs():
+		if npc.def.ai != "town" and npc.global_position.distance_to(Vector3(arena)) < 60.0:
+			npc.queue_free()
+	var stand := func() -> void:
+		p.global_position = Vector3(arena) + Vector3(0.5, 0, 0.5)
+		p._fall_start = p.global_position.y
+		p.velocity = Vector3.ZERO
+		p.look_at_yaw_pitch(0.0, 0.0)
+	var bees := func() -> Array:
+		return game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "Bee" and not e.is_queued_for_deletion())
+	var clear := func() -> void:
+		for b in bees.call():
+			b.queue_free()
+		for e in game.entities.get_children():
+			if e is Projectile or e is ItemDrop:
+				e.queue_free()
+	var use := func(item: String) -> void:
+		if p.inventory.slots[9] == null or p.inventory.slots[9].item != item:
+			p.inventory.slots[9] = Inventory.stack(item, 1)
+		p.select(9)
+		p._use_timer = 0.0
+		p._use_released = true
+		p.use_item()
+	var enemy := func(at: Vector3i, kind := "BlueSlime") -> NPC:
+		var n := game.spawn_npc(kind, Vector3(arena + at) + Vector3(0.5, 0, 0.5))
+		n.damage = 0
+		return n
+	stand.call()
+	await frames(2)
+
+	# The Bee Gun: 1 to 5 bees, each 9 or 10, that home in on an enemy.
+	var counts := {}
+	for i in 12:
+		p.mana = p.mana_cap()
+		use.call("BeeGun")
+		counts[bees.call().size()] = true
+		await clear.call()
+		await frames(1)
+	check(counts.keys().all(func(n): return n >= 1 and n <= 5) and counts.size() >= 2, "the Bee Gun shoots 1 to 5 bees (%s)" % [counts.keys()])
+	p.mana = p.mana_cap()
+	use.call("BeeGun")
+	var shot: Array = bees.call()
+	check(shot.all(func(b): return b.damage == p.weapon_damage(gun) or b.damage == p.weapon_damage(gun) + 1) and shot.all(func(b): return b.penetrate == 3),
+			"its bees do its damage (1 in 2 one more) through 3 hits or bounces")
+	await clear.call()
+	# Homing: fired straight up, they find an enemy off to the side.
+	var foe: NPC = enemy.call(Vector3i(7, 0, 0))
+	var life0 := foe.life
+	p.look_at_yaw_pitch(0.0, 1.4)
+	p.mana = p.mana_cap()
+	use.call("BeeGun")
+	var stung := await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 4.0)
+	check(stung, "fired upward, its bees turn and sting an enemy off to the side")
+	if is_instance_valid(foe):
+		foe.queue_free()
+	await clear.call()
+	# Water kills a bee; honey doesn't.
+	stand.call()
+	var pool := arena + Vector3i(0, 0, -6)
+	w.set_liquid(pool, Player.LIQ_WATER, 63)
+	var wet: Array = Projectile.release_bees(game, 1, Vector3(pool) + Vector3(0.5, 0.5, 0.5), Vector3.ZERO, 5, 0.0)
+	w.set_liquid(pool + Vector3i(2, 0, 0), Player.LIQ_HONEY, 63)
+	var sticky: Array = Projectile.release_bees(game, 1, Vector3(pool + Vector3i(2, 0, 0)) + Vector3(0.5, 0.5, 0.5), Vector3.ZERO, 5, 0.0)
+	await frames(3)
+	check(not is_instance_valid(wet[0]) and is_instance_valid(sticky[0]), "a bee dies in water, not in honey")
+	w.set_liquid(pool, 0, 0)
+	w.set_liquid(pool + Vector3i(2, 0, 0), 0, 0)
+	await clear.call()
+
+	# The Bee's Knees: Wooden Arrows become Bee Arrows, breaking into bees.
+	stand.call()
+	await frames(1)
+	p.inventory.slots[10] = Inventory.stack("WoodenArrow", 50)
+	w.set_block(arena + Vector3i(0, 1, -5), Data.block_id("stone"))
+	use.call("BeesKnees")
+	var arrows := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "BeeArrow")
+	check(arrows.size() == 1 and arrows[0].gravity == 0.0, "the Bee's Knees turns a Wooden Arrow into a Bee Arrow (no drop)")
+	var dmg_arrow: int = arrows[0].damage if arrows.size() > 0 else 0
+	var broke := await _until(func(): return bees.call().size() >= 3, 2.0)
+	var kb: Array = bees.call()
+	check(broke and kb.size() <= 6 and kb.all(func(b): return b.penetrate <= 2 and (b.damage == dmg_arrow / 3 or b.damage == dmg_arrow / 3 + 1)),
+			"hitting a block it breaks into 3 to 6 bees, a third of its damage each, through 2 hits (%d bees)" % kb.size())
+	w.set_block(arena + Vector3i(0, 1, -5), 0)
+	p.inventory.slots[10] = null
+	await clear.call()
+
+	# The Beekeeper: bees from each hit, and the enemy Confused for 2 s.
+	stand.call()
+	foe = enemy.call(Vector3i(0, 0, -1))
+	foe.life_max = 9999
+	foe.life = 9999
+	await frames(2)
+	use.call("BeeKeeper")
+	var kept: Array = bees.call()
+	check(kept.size() >= 1 and kept.size() <= 3 and foe.confused > 1.9, "a Beekeeper hit lets loose 1 to 3 bees and Confuses the enemy (%d bees, %.1f s)" % [kept.size(), foe.confused])
+	var keeper_dmg := p.weapon_damage(keeper) / 3
+	check(kept.all(func(b): return b.damage == keeper_dmg or b.damage == keeper_dmg + 1), "the bees have a third of its damage")
+	# Confused, a fighter walks away from you.
+	foe.queue_free()
+	var zombie: NPC = enemy.call(Vector3i(0, 0, -6), "Zombie")
+	zombie.confuse(5.0)
+	var z0 := zombie.global_position.distance_to(p.global_position)
+	await frames(60)
+	check(zombie.global_position.distance_to(p.global_position) > z0, "Confused, a Zombie walks away from you")
+	zombie.queue_free()
+	var boss := NPC.new()
+	boss.boss = true
+	boss.confuse(2.0)
+	check(boss.confused == 0.0, "bosses shrug off Confused")
+	boss.free()
+	await clear.call()
+
+	# The Beenade: thrown, it goes off into 15 to 24 bees, no blast.
+	stand.call()
+	p.look_at_yaw_pitch(0.0, 0.3)
+	p.inventory.slots[9] = Inventory.stack("Beenade", 5)
+	use.call("Beenade")
+	check(p.inventory.slots[9].count == 4, "a Beenade is used up")
+	var swarm := await _until(func(): return bees.call().size() >= 15, 4.0)
+	var nb: Array = bees.call()
+	check(swarm and nb.size() <= 24 and nb.all(func(b): return b.damage == 12 or b.damage == 13), "it bursts into 15 to 24 bees of 12 or 13 (%d)" % nb.size())
+	await clear.call()
+	await frames(1)
+
+	# The Honey Comb: hurt by an enemy, bees and Honey; by lava, not.
+	stand.call()
+	p.accessories.slots[0] = Inventory.stack("HoneyComb", 1)
+	p.god_mode = false
+	p.life = p.life_cap()
+	p._immune = 0.0
+	foe = enemy.call(Vector3i(3, 0, 3))
+	p.hurt(10, foe.center(), false, foe)
+	var comb: Array = bees.call()
+	check(comb.size() >= 1 and comb.size() <= 3 and comb.all(func(b): return b.damage == 13 or b.damage == 14) and p.honey_time >= 4.9,
+			"the Honey Comb: hurt by an enemy, 1 to 3 bees of 13 and 5 s of Honey (%d)" % comb.size())
+	await clear.call()
+	p._immune = 0.0
+	p.honey_time = 0.0
+	p.hurt(10, Vector3.ZERO)
+	check(bees.call().is_empty() and p.honey_time == 0.0, "but not from what isn't an enemy or a fall")
+	foe.queue_free()
+	p.accessories.slots[0] = null
+	p.god_mode = true
+	p.life = p.life_cap()
+	await clear.call()
+
+	# The Hive Wand places Hive, using up a Hive block each.
+	stand.call()
+	p.look_at_yaw_pitch(0.0, -0.6)
+	await frames(2)
+	p.inventory.slots[10] = Inventory.stack("Hive", 3)
+	var hive_cells := func() -> Array:
+		var out := []
+		for x in range(-5, 6):
+			for y in range(0, 6):
+				for z in range(-5, 6):
+					if w.get_block(arena + Vector3i(x, y, z)) == Data.block_id("hive"):
+						out.append(arena + Vector3i(x, y, z))
+		return out
+	use.call("HiveWand")
+	await frames(2)
+	var hives: Array = hive_cells.call()
+	check(hives.size() == 1 and p.inventory.count_of("Hive") == 2, "the Hive Wand places a Hive, using one up (%d)" % hives.size())
+	p.inventory.slots[10] = null
+	for q in hives:
+		w.set_block(q, 0)
+
+	# The Nectar: a Baby Hornet over your shoulder.
+	stand.call()
+	use.call("Nectar")
+	check(p.pet != null and p.pet.kind == "BabyHornet" and p.buffs().any(func(b): return b[0] == 51), "the Nectar: a Baby Hornet (its buff)")
+	var hornet: Minion = p.pet
+	hornet.global_position = p.global_position + Vector3(10, 3, 0)
+	var flew := await _until(func(): return hornet.center().distance_to(p.center()) < 4.0, 4.0)
+	check(flew, "it flies after you")
+	use.call("Nectar")
+	await frames(1)
+	check(p.pet == null, "used again, it goes")
+
+	# The Honeyed Goggles: the Bee, 16 px higher; it hovers, climbs while you
+	# hold jump, tires, and rests on the ground.
+	stand.call()
+	await frames(5)
+	use.call("HoneyedGoggles")
+	check(p.mount == "bee" and p.buffs().any(func(b): return b[0] == 132), "the Honeyed Goggles: you ride the Bee")
+	await frames(3)
+	Input.action_press("jump")
+	await frames(40)
+	var climb := p.velocity.y
+	var high := p.global_position.y - arena.y
+	Input.action_release("jump")
+	check(high > 2.0 and climb > 15.0, "holding jump it climbs, up to 8 px a tick fresh (%.1f blocks up, %.1f blocks/s)" % [high, climb])
+	await frames(70)
+	check(absf(p.velocity.y) < 0.5 and p._fly_time > 0.0, "let go, it hangs in the air while its flight lasts (%.2f)" % p.velocity.y)
+	p._fly_time = 0.0
+	p._fatigue = 320.0
+	await frames(30)
+	check(p.velocity.y < -5.0, "worn out, it sinks (%.1f)" % p.velocity.y)
+	await _until(func(): return p.on_floor, 4.0)
+	await frames(10)
+	check(p.on_floor and p.life == p.life_cap() and p._fly_time == 320.0 and p._fatigue < 320.0 - 15.0,
+			"it lands unhurt, its flight back and resting off its fatigue (%.0f)" % p._fatigue)
+	use.call("HoneyedGoggles")
+	check(p.mount == "", "and again: off")
+
+	await clear.call()
+	p.inventory.slots = kept_slots
+	p.inventory.changed.emit()
+	p.accessories.slots = kept_acc
+	p.accessories.changed.emit()
+	p.select(held)
+	p.god_mode = was_god
+	p.life = p.life_cap()
+	stand.call()
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p._fall_start = p.global_position.y
+	await frames(5)
 
 
 ## The summoner: minion staffs (slots, summon damage, each minion's AI), pets
