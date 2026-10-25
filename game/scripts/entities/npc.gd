@@ -1527,7 +1527,7 @@ func _ai_granite_flyer(delta: float, player) -> void:
 		return want + (from - want) * pow(1.0 - 1.0 / n, ticks)
 	var hit_wall := last_blocked != Vector3i.ZERO
 	last_blocked = Vector3i.ZERO
-	var sees := player.alive and _sees(player)
+	var sees: bool = player.alive and _sees(player)
 	if _gf_state == 0:
 		if sees:
 			_gf_state = 1

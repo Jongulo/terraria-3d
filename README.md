@@ -276,6 +276,11 @@ checked by loading it with the dedicated server and having it save; nothing shou
 - **Held weapons in 3D:** a spear rests in your hand pointing at the crosshair. Flails are drawn
   to the player's pixels (the Sunfury's head is two thirds your height). The Terragrim's flurry lies
   flat round you at shoulder height, sweeping out the way you aim.
+- **Swing auras and leaves:** Terraria's swing plane (its left-right and up-down) becomes the plane of
+  your aim and your left: the Night's Edge's aura sweeps from behind you, past your right, to in
+  front, with a second spinning out along your aim; they're drawn at half their reach so they show
+  in front of you. The Blade of Grass's leaves curl in the upright plane through you and the enemy
+  they're thrown at.
 - **What you can't see in first person:** the inventory shows a picture of you wearing your armor.
 - **Sky:** a gradient that follows the time of day, Terraria's clouds, and its background art in
   three layers that change with the biome. The backdrops sit just beyond your view distance, and

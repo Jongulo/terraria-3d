@@ -2315,6 +2315,8 @@ func use_item() -> void:
 				Game.current.regrowth = def.get("regrow", false)
 				_melee(def)
 				Game.current.regrowth = false
+				if def.has("aura"):
+					SwordAura.swing(self, def, duration)
 				if def.get("regrow", false):
 					_regrow()
 				used = true
@@ -2649,7 +2651,8 @@ func _melee(def: Dictionary) -> void:
 	var cone := cos(deg_to_rad(38.0 if thrust else 65.0))
 	var origin := camera.global_position
 	var fwd := forward()
-	for npc in game.npcs():
+	# (A noMelee sword, the Night's Edge, hits with its auras instead.)
+	for npc in ([] if def.get("no_melee", false) else game.npcs()):
 		# Aim at the point of the enemy's body nearest the view ray, so short or
 		# low enemies are hit when the crosshair is on them.
 		var c: Vector3 = npc.center()
@@ -2673,10 +2676,85 @@ func _melee(def: Dictionary) -> void:
 			b.glow = Color(shot.light[0], shot.light[1], shot.light[2])
 	# Grass, vines, cobwebs, pots... in the swing are cut (anything swung that
 	# does damage, tools too, as in Terraria).
-	if int(def.get("damage", 0)) > 0:
+	if int(def.get("damage", 0)) > 0 and not def.get("no_melee", false):
 		game.cut_tiles_in_cone(origin, fwd, reach, cone)
 	if def.get("star", false):
 		_call_star(def)
+	if def.has("leaf"):
+		_throw_leaf(def)
+
+
+## Terraria px per block for the leaf's flight and the swing auras' size
+## (24, as bodies here: the player's 42 px are 1.75 blocks).
+const SWING_PX := 24.0
+
+
+## The Blade of Grass's leaf (Terraria's ItemCheck_Shoot for item 190), worked
+## out as Terraria does in the upright plane through you and its mark, in its
+## px and ticks: the mark is the nearest enemy within 150 px of the point 70 px
+## ahead and 40 up (GetZenithTarget; a random point of its box), else that
+## point give or take 20 px. The leaf sets off from under your feet, somewhere
+## across your width, at 16 px a tick, turning (pi + 3 pi x random) / 60 a
+## tick upward (0.7 of that from 0.17), aimed so it curls round onto the mark:
+## ticks of that turning are stepped until they cover the distance (60 at
+## most), and it's launched turned back by where that curl ends (straight on
+## if it never got there). With no enemy it starts 24 px higher and turned 0.14
+## of a turn further up. It does a quarter of the swing's damage.
+func _throw_leaf(def: Dictionary) -> void:
+	var game := Game.current
+	var ahead := -global_transform.basis.z
+	ahead = Vector3(ahead.x, 0, ahead.z).normalized()
+	var mark := center() + (ahead * 70.0 + Vector3.UP * 40.0) / SWING_PX
+	var best = null
+	var best_d := 150.0 / SWING_PX
+	for npc in game.npcs():
+		if npc.def.ai in ["town", "dummy"] or npc.untouchable or npc.dont_take_damage or npc.is_critter():
+			continue
+		var d: float = npc.center().distance_to(mark)
+		if d < best_d:
+			best_d = d
+			best = npc
+	var side := ahead.cross(Vector3.UP)
+	if best != null:
+		mark = best.global_position + Vector3(randf_range(-best.half.x, best.half.x), randf_range(0.0, best.half.y),
+				randf_range(-best.half.z, best.half.z))
+	else:
+		var r := Vector2.from_angle(randf() * TAU) * sqrt(randf()) * 20.0 / SWING_PX
+		mark += ahead * r.x + Vector3.UP * r.y
+	var start := global_position + side * randf_range(-half.x, half.x)
+	# The upright plane through you and the mark: Terraria's x along it (the
+	# way you face, or the other way if the mark is behind), y down.
+	var along := Vector3(mark.x - start.x, 0, mark.z - start.z)
+	along = along.normalized() if along.length() > 0.01 else ahead
+	if along.dot(ahead) < 0.0:
+		along = -along
+	var to := Vector2((mark - start).dot(along), -(mark - start).y) * SWING_PX
+	var steps := 60
+	var turn := -(PI + TAU * randf() * 1.5) / steps
+	var speed := 16.0
+	if absf(turn) >= 0.17:
+		turn *= 0.7
+	var step := Vector2(speed, 0)
+	var pos := step
+	var i := 0
+	while pos.length() < to.length() and i < steps:
+		i += 1
+		pos += step
+		step = step.rotated(turn)
+	var vel: Vector2 = (to.normalized() if to.length() > 0.0 else Vector2.DOWN).rotated(-pos.angle() - turn) * speed
+	if i == steps:
+		vel = Vector2(speed, 0)
+	if best == null:
+		start.y += 24.0 / SWING_PX
+		vel = vel.rotated(TAU * 0.14)
+	var leaf := game.spawn_projectile(def.leaf, start, (along * vel.x - Vector3.UP * vel.y) * 60.0 / SWING_PX,
+			int(weapon_damage(def) * 0.25), weapon_knockback(def), 0.0, 0.0, 20.0 / SWING_PX * (1.0 + (randi() % 30) * 0.01),
+			true, crit_chance(def))
+	leaf.armor_pen = armor_penetration(def) + 20
+	leaf.leaf_turn = turn
+	leaf.leaf_arrive = i
+	# Terraria's y is down: its turning is about along x down.
+	leaf.leaf_axis = along.cross(Vector3.DOWN)
 
 
 func _shoot_ranged(def: Dictionary) -> bool:
@@ -3459,6 +3537,9 @@ func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
 	if def.get("bees_on_hit", false) and npc.def.ai != "dummy" and not npc.is_critter():
 		var away := Vector3(forward().x, 0, forward().z).normalized() * 2.0 * 3.75
 		Projectile.release_bees(Game.current, randi_range(1, 3), npc.center(), away, weapon_damage(def) / 3, crit_chance(def))
+	# The Blade of Grass: Poisoned one hit in four (StatusToNPC).
+	if def.has("poisons") and randi() % int(def.poisons[0]) == 0:
+		npc.poison(float(def.poisons[1]) / 60.0)
 	if def.has("confuses") and npc.def.ai != "dummy":
 		npc.confuse(float(def.confuses))
 	if def.get("leech", false) and not swing.get("leeched", false) and life < life_cap() \
