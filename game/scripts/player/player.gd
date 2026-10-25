@@ -2741,7 +2741,7 @@ func _throw_leaf(def: Dictionary) -> void:
 		i += 1
 		pos += step
 		step = step.rotated(turn)
-	var vel := (to.normalized() if to.length() > 0.0 else Vector2.DOWN).rotated(-pos.angle() - turn) * speed
+	var vel: Vector2 = (to.normalized() if to.length() > 0.0 else Vector2.DOWN).rotated(-pos.angle() - turn) * speed
 	if i == steps:
 		vel = Vector2(speed, 0)
 	if best == null:
