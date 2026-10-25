@@ -59,7 +59,7 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 		"Stinger": {"long": true}, "QueenBeeStinger": {"long": true}, "HornetStinger": {"long": true},
 		"Flamelash": {"frames": 8, "fps": 12}, "Hellwing": {"frames": 5, "right": true, "fps": 30}, "Volcano": {"frames": 5, "fps": 30},
 		"Ghoulder": {"frames": 10}, "RainbowBoulder": {"frames": 100}, "LibrarianSkeletonBook": {"frames": 54},
-		"Bee": {"frames": 3}}
+		"Bee": {"frames": 3}, "BladeOfGrass": {"frames": 7, "right": true, "fps": 30}}
 ## How some fly (Terraria's AI for them): zigzag [sideways reach, seconds a
 ## swing] across the way it's going (the Thunder Zapper's bolt), and how
 ## long it lasts; a trail of dust [Terraria dust ids, one picked at random each
@@ -98,8 +98,9 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## The Spiked Ice Slime's Ice Spike (AI 1): falls at 0.15 px/tick² (24 px
 ## a block, as the slime's) from its 6th tick (its shooter sets
 ## gravity_delay), at most 16.
-## npc_poison: [min, max ticks] Poisoned on the enemies it hits (the Hornet
-## minion's stinger: 4 to 6 s every hit). The minions' shots (AI 1, no
+## npc_poison: [min, max ticks(, 1 in n)] Poisoned on the enemies it hits (the
+## Hornet minion's stinger: 4 to 6 s every hit; the Blade of Grass's leaf 7 s
+## one hit in four, StatusNPC). leaf: the Blade of Grass's (see _leaf_step). The minions' shots (AI 1, no
 ## gravity): the Hornet's stinger (scale 0.9) and the Imp's fireball (alpha
 ## 255: only its fire dust; 2 updates a tick, 300 of them; 5 enemies, each
 ## set On Fire! for 3 to 6 s).
@@ -141,7 +142,8 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"EmeraldBolt": {"dust": [89]}, "RubyBolt": {"dust": [90]}, "DiamondBolt": {"dust": [91], "pierce": 2},
 		"AmberBolt": {"dust": [138], "bounce": 2, "pierce": 3},
 		"Bee": {"bee": true, "pierce": 3, "life": 10.0, "size": 0.45, "radius": 0.3},
-		"BeeArrow": {"bee_arrow": true, "gravity": 0.0, "life": 20.0}}
+		"BeeArrow": {"bee_arrow": true, "gravity": 0.0, "life": 20.0},
+		"BladeOfGrass": {"leaf": true, "ghost": true, "pierce": 2, "radius": 0.45, "melee": true, "npc_poison": [420, 420, 4], "life": 1.0}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -294,6 +296,8 @@ func _physics_process(delta: float) -> void:
 			var speed := velocity.length()
 			velocity = velocity.lerp((best.center() - global_position).normalized() * speed, minf(1.0, float(_flight.home) * delta * 6.0)).normalized() * speed
 	if _flight.get("bee", false) and not _bee_step(delta, game):
+		return
+	if _flight.get("leaf", false) and not _leaf_step(delta, game):
 		return
 	if steered_by != null:
 		if is_instance_valid(steered_by) and steered_by.alive and steered_by.use_down():
@@ -905,6 +909,47 @@ func _die(game) -> void:
 	queue_free()
 
 
+## The Blade of Grass's leaf (Terraria's projectile 976, AI 152, in its px
+## a tick at 24 a block, as its swing aimed it: Player._throw_leaf): it turns
+## `leaf_turn` a tick about `leaf_axis` (its ai[0]), at 16 px a tick until it
+## reaches its mark (`leaf_arrive` ticks: ai[1]), there slowing to 8 over 20
+## ticks and back up to 16 by 60 after; it fades in over 10 ticks and out from
+## 30 to 60 (it's gone at 60); it flies through blocks, but lava kills it. 1
+## tick in 3 a grass dust (40) at half its speed, and 10 as it sets off.
+var leaf_turn := 0.0
+var leaf_arrive := 0
+var leaf_axis := Vector3.UP
+var _leaf_ticks := 0.0
+
+func _leaf_step(delta: float, game) -> bool:
+	var liquid: Vector2i = game.world.get_liquid(Vector3i(global_position.floor()))
+	if liquid.y > 0 and liquid.x == Player.LIQ_LAVA:
+		_die(game)
+		return false
+	if _leaf_ticks == 0.0:
+		for i in 10:
+			var out := velocity.normalized().rotated(Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)).normalized(),
+					randf() * TAU * 0.25)
+			game.dust.spawn(40, global_position, out * randf() * 3.0, 0.7)
+	var was := int(_leaf_ticks)
+	_leaf_ticks += delta * 60.0
+	for k in range(was, int(_leaf_ticks)):
+		if leaf_turn != 0.0:
+			velocity = velocity.rotated(leaf_axis, leaf_turn)
+		var a := float(leaf_arrive)
+		var slow := remap_clamped(k, a, a + 20.0, 0.0, 1.0) * remap_clamped(k, a, a + 60.0, 1.0, 0.0)
+		velocity = velocity.normalized() * (4.0 + 12.0 * (1.0 - slow)) * 60.0 / Player.SWING_PX
+		sprite.set_fade(remap_clamped(k, 0.0, 10.0, 0.0, 1.0) * remap_clamped(k, 30.0, 60.0, 1.0, 0.0))
+		if randi() % 3 == 0:
+			game.dust.spawn(40, global_position, velocity * Player.SWING_PX / 60.0 * 0.5, 1.2)
+	return true
+
+
+## Terraria's Utils.Remap (clamped).
+static func remap_clamped(v: float, from_a: float, from_b: float, to_a: float, to_b: float) -> float:
+	return lerpf(to_a, to_b, clampf((v - from_a) / (from_b - from_a), 0.0, 1.0))
+
+
 ## Your bees (Terraria's AI 36, in its px a tick: 16 a block for shots, so
 ## x3.75 for blocks a second). After 30 ticks a bee goes for the nearest enemy
 ## it can see within 800 px across plus up (here 50 blocks, all three ways),
@@ -1006,7 +1051,7 @@ func _check_hits(game) -> bool:
 				if not fire.is_empty() and randi() % int(fire[0]) == 0:
 					npc.ignite(randi_range(int(fire[1]), int(fire[2])) / 60.0)
 				var venom: Array = _flight.get("npc_poison", [])
-				if not venom.is_empty():
+				if not venom.is_empty() and (venom.size() < 3 or randi() % int(venom[2]) == 0):
 					npc.poison(randi_range(int(venom[0]), int(venom[1])) / 60.0)
 				damage = maxi(1, int(round(damage * (1.0 - pierce_falloff))))
 				penetrate -= 1

@@ -453,6 +453,7 @@ func _run() -> void:
 	await _underworld_checks(c)
 	await _shadow_chest_checks(c)
 	await _hellstone_checks(c)
+	await _nights_edge_checks(c)
 	await _dungeon_enemy_checks(c)
 	await _trap_checks(c)
 	await _wiring_checks(c)
@@ -5673,6 +5674,129 @@ func _shadow_chest_checks(c: Vector3i) -> void:
 	check(p.life == 190 and is_equal_approx(p.potion_sickness, 45.0), "a Restoration Potion heals 90, 45 s of sickness (%d, %.0f)" % [p.life, p.potion_sickness])
 	p.potion_sickness = 0.0
 	p.life = p.life_max
+	p.god_mode = was_god
+	await frames(2)
+
+
+## The Blade of Grass (item 190) and the Night's Edge (item 273): Terraria's
+## stats and recipes; the Blade's leaf curling onto the nearest enemy, a
+## quarter of the damage, and its poison; the Night's Edge hitting only with
+## its two auras, each enemy once a swing, two each at most.
+func _nights_edge_checks(c: Vector3i) -> void:
+	var p := game.player
+	var was_god := p.god_mode
+	p.god_mode = true
+	var grass := Data.item("BladeofGrass")
+	var edge := Data.item("NightsEdge")
+	check(Assets.ids.ItemID.get("BladeofGrass") == 190 and int(grass.damage) == 18 and int(grass.use_time) == 20 and float(grass.knockback) == 4.5
+			and not grass.auto_reuse and Assets.ids.ItemID.get("NightsEdge") == 273 and int(edge.damage) == 40 and int(edge.use_time) == 25
+			and float(edge.knockback) == 4.5 and edge.auto_reuse and Data.value("NightsEdge") == 200000,
+			"the Blade of Grass and the Night's Edge have Terraria's stats")
+	var made := func(item: String) -> Array:
+		return Data.recipes.filter(func(x): return x.result == item)
+	var grass_r: Array = made.call("BladeofGrass")
+	var edge_r: Array = made.call("NightsEdge")
+	var swords := func(evil: String) -> bool:
+		return edge_r.any(func(r): return r.get("station") == "demon_altar" and r.ingredients == {evil: 1, "Muramasa": 1, "BladeofGrass": 1, "FieryGreatsword": 1})
+	check(grass_r.size() == 1 and grass_r[0].ingredients == {"Stinger": 12, "JungleSpores": 15, "Vine": 3} and grass_r[0].get("station") == "iron_anvil",
+			"the Blade of Grass: 12 Stingers, 15 Jungle Spores and 3 Vines at an anvil")
+	check(edge_r.size() == 2 and swords.call("LightsBane") and swords.call("BloodButcherer"),
+			"the Night's Edge: Light's Bane or Blood Butcherer, Muramasa, Blade of Grass and Fiery Greatsword at an altar")
+	var open := c + Vector3i(0, 40, 0)
+	p.global_position = Vector3(open) + Vector3(0.5, -1.5, 0.5)
+	p.velocity = Vector3.ZERO
+	p.look_at_yaw_pitch(0.0, 0.0)  # facing -z
+	var zombie := func(at: Vector3) -> NPC:
+		var z := game.spawn_npc("Zombie", at)
+		z.life_max = 100000
+		z.life = 100000
+		z.velocity = Vector3.ZERO
+		z.set_physics_process(false)
+		return z
+	var projectiles := func(kind: String) -> Array:
+		return game.entities.get_children().filter(func(e): return e is Projectile and e.kind == kind and not e.is_queued_for_deletion())
+	# Poisoned one melee hit in four.
+	var target: NPC = zombie.call(p.global_position + Vector3(0, 0, -4.5))
+	var poisoned := 0
+	for i in 200:
+		target.poisoned = 0.0
+		p.on_melee_hit(target, grass)
+		if target.poisoned > 0.0:
+			poisoned += 1
+	check(poisoned > 25 and poisoned < 80 and is_equal_approx(target.poisoned if target.poisoned > 0.0 else 7.0, 7.0),
+			"a Blade of Grass hit poisons one time in four, for 7 s (%d in 200)" % poisoned)
+	target.poisoned = 0.0
+	# A swing throws a leaf, which curls onto the enemy ahead (out of the
+	# sword's reach).
+	p.set_physics_process(false)
+	p.inventory.slots[9] = Inventory.stack("BladeofGrass", 1)
+	p.select(9)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	var leaves: Array = projectiles.call("BladeOfGrass")
+	check(leaves.size() == 1 and leaves[0].damage == int(p.weapon_damage(grass) * 0.25) and leaves[0].armor_pen >= 20
+			and leaves[0].leaf_turn < 0.0 and Assets.ids.ProjectileID.get("BladeOfGrass") == 976,
+			"a Blade of Grass swing throws a leaf (projectile 976): a quarter of the damage, 20 armor penetration")
+	var hurt_at := -1
+	for i in 62:
+		await get_tree().physics_frame
+		if hurt_at < 0 and target.life < target.life_max:
+			hurt_at = i
+	check(hurt_at >= 0 and projectiles.call("BladeOfGrass").is_empty(),
+			"the leaf curls round onto the enemy (hit at tick %d) and is gone after 60 ticks" % hurt_at)
+	target.queue_free()
+	await frames(1)
+	# With no enemy near it still goes, up and round.
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	leaves = projectiles.call("BladeOfGrass")
+	var start: Vector3 = leaves[0].global_position if leaves.size() == 1 else Vector3.ZERO
+	var top := start.y
+	for i in 64:
+		await get_tree().physics_frame
+		if leaves.size() == 1 and is_instance_valid(leaves[0]):
+			top = maxf(top, leaves[0].global_position.y)
+	check(leaves.size() == 1 and top > start.y + 3.0, "with nothing to aim at the leaf curls up and round (%.1f blocks up)" % (top - start.y))
+	# The Night's Edge: no hit of its own; its two auras each hit an enemy
+	# once a swing, two at most each, not one the other has hit.
+	var zs := []
+	for i in 6:
+		zs.append(zombie.call(p.global_position + Vector3(-1.0 + (i % 3) * 1.0, 0, -3.0 - (i / 3) * 0.8)))
+	var far: NPC = zombie.call(p.global_position + Vector3(0, 0, -11.0))
+	p.inventory.slots[9] = Inventory.stack("NightsEdge", 1)
+	p._use_timer = 0.0
+	p._use_released = true
+	var counts := {}
+	var lives := {}
+	for z in zs + [far]:
+		counts[z] = 0
+		lives[z] = z.life
+	p.use_item()
+	var auras: Array = game.entities.get_children().filter(func(e): return e is SwordAura)
+	var swing_ticks := roundf(25.0 / (1.0 + p.stat("melee_speed") / 100.0))
+	check(auras.size() == 2 and is_equal_approx(auras[0].life_ticks, swing_ticks) and is_equal_approx(auras[1].life_ticks, 30.0)
+			and auras[0].damage == p.weapon_damage(edge) and is_same(auras[0].hits, auras[1].hits),
+			"a Night's Edge swing lets loose two auras (the swing's %d ticks, and 30 toward your aim)" % swing_ticks)
+	for i in 32:
+		for z in counts:
+			if z.life < lives[z]:
+				counts[z] += 1
+				lives[z] = z.life
+		await get_tree().physics_frame
+	var hit_count := 0
+	var once := true
+	for z in zs:
+		hit_count += counts[z]
+		once = once and counts[z] <= 1
+	check(hit_count >= 2 and hit_count <= 4 and once and counts[far] == 0,
+			"its auras hit the enemies in front once each, four at most, not the one 11 blocks off (%d hits)" % hit_count)
+	check(game.entities.get_children().filter(func(e): return e is SwordAura and not e.is_queued_for_deletion()).is_empty(), "the auras are gone after their time")
+	for z in zs + [far]:
+		z.queue_free()
+	p.set_physics_process(true)
+	p.inventory.slots[9] = null
 	p.god_mode = was_god
 	await frames(2)
 
