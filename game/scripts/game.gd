@@ -770,6 +770,21 @@ func dungeon_wall(pos: Vector3) -> int:
 var _dungeon_parts: Array = []
 
 
+## Whether `pos` is in a spider cave (Terraria's spider walls: worldgen's
+## "spider_cave" decorations, a nest's middle and how far its webs reach:
+## spiders.rs nest).
+func in_spider_cave(pos: Vector3) -> bool:
+	if _spider_caves.is_empty():
+		_spider_caves.append([Vector3.INF, 0.0])  # looked (none, maybe)
+		for d in world.get_decorations():
+			if d.kind == "spider_cave":
+				_spider_caves.append([Vector3(d.pos) + Vector3(0.5, 0.5, 0.5), float(d.style)])
+	return _spider_caves.any(func(c): return pos.distance_to(c[0]) < c[1])
+
+
+var _spider_caves: Array = []
+
+
 ## The Old Man at the Dungeon's door (worldgen's "old_man" decoration), if
 ## Skeletron isn't beaten and he isn't there already.
 func _spawn_old_man() -> void:

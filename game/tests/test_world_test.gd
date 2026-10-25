@@ -464,6 +464,7 @@ func _run() -> void:
 	await _bee_loot_checks(c)
 	await _weather_checks(c)
 	await _slime_rain_checks(c)
+	await _mini_biome_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -545,6 +546,84 @@ func _run() -> void:
 ## hands; its hover, spin and enraged day; a hand's attacks; killing the head
 ## takes the hands and drops its loot; the Old Man back at dawn until it's
 ## beaten; and the Dungeon Guardian before then.
+## Granite, Marble and spider caves: their spawns (Terraria's nearMarble,
+## nearGranite and spider walls), the Granite Golem curling up, the Granite
+## Elemental homing in, the Web Covered Chest's loot and the Web Slinger.
+func _mini_biome_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var god := p.god_mode
+	p.god_mode = true
+	# A stone floor up in the air, nothing round it.
+	var base := c + Vector3i(40, 40, -60)
+	for x in range(-12, 13):
+		for z in range(-12, 13):
+			w.set_block(base + Vector3i(x, -1, z), Data.block_id("stone"))
+			for y in range(0, 12):
+				w.set_block(base + Vector3i(x, y, z), 0)
+	var at := Vector3(base) + Vector3(0.5, 0, 0.5)
+	var biome := game.biome
+	game.biome = ""
+	var share := func(kind: String) -> float:
+		var n := 0
+		for i in 4000:
+			if game.spawner.cave_pick(game, at, at) == kind:
+				n += 1
+		return n / 4000.0
+	check(share.call("") == 1.0, "no granite, marble or webs about: the usual cave spawns")
+	var stone := base + Vector3i(6, 0, 0)
+	w.set_block(stone, Data.block_id("marble"))
+	var hoplite: float = share.call("GreekSkeleton")
+	check(absf(hoplite - 0.375) < 0.03, "by marble, half the cave spawns 3 in 4 a Hoplite (%.3f)" % hoplite)
+	w.set_block(stone, Data.block_id("granite"))
+	var flyer: float = share.call("GraniteFlyer")
+	var golem: float = share.call("GraniteGolem")
+	check(absf(flyer - 0.333) < 0.03 and absf(golem - 0.0667) < 0.015,
+			"by granite, half the cave spawns 4 in 5 a Granite Elemental 5 in 6, else a Granite Golem (%.3f, %.3f)" % [flyer, golem])
+	w.set_block(stone, 0)
+	w.add_decoration("spider_cave", base, 8)
+	game._spider_caves = []
+	check(share.call("WallCreeper") == 1.0 and not game.in_spider_cave(at + Vector3(9, 0, 0)), "in a spider cave's webs, Wall Creepers")
+	w.remove_decorations_at(base)
+	game._spider_caves = []
+	game.biome = biome
+	# The Granite Golem curls up on the ground every 300 ticks for 120, not to
+	# be hurt.
+	p.global_position = at + Vector3(8, 0, 0)
+	p.velocity = Vector3.ZERO
+	var golem_npc := game.spawn_npc("GraniteGolem", at)
+	golem_npc._curl_t = 290.0
+	var curled := false
+	for i in 60:
+		await get_tree().physics_frame
+		if golem_npc.dont_take_damage:
+			curled = true
+			break
+	var life := golem_npc.life
+	golem_npc.hit(50, 0.0, Vector3.RIGHT, 0.0)
+	check(curled and golem_npc.life == life, "the Granite Golem curls up and can't be hurt")
+	var t := 0
+	while golem_npc.dont_take_damage and t < 300:
+		await get_tree().physics_frame
+		t += 1
+	check(t > 100 and t < 140, "it uncurls after 120 ticks (%d)" % t)
+	golem_npc.hit(50, 0.0, Vector3.RIGHT, 0.0)
+	check(golem_npc.life < life, "then it can be hurt")
+	golem_npc.queue_free()
+	# The Granite Elemental, seeing you, homes in.
+	var flyer_npc := game.spawn_npc("GraniteFlyer", at + Vector3(0, 3, 0))
+	var d0: float = flyer_npc.center().distance_to(p.center())
+	for i in 90:
+		await get_tree().physics_frame
+	var d1: float = flyer_npc.center().distance_to(p.center())
+	check(flyer_npc._gf_state == 1 and d1 < d0 - 1.5, "the Granite Elemental homes in on you (%.1f to %.1f blocks)" % [d0, d1])
+	flyer_npc.queue_free()
+	check(Chests.LOOT[28] == "web_chest" and Data.loot.web_chest.pick_one[0][0] == "WebSlinger", "a spider cave's Web Covered Chest holds a Web Slinger")
+	check(int(Data.items.WebSlinger.hook.latched) == 8 and int(Data.items.WebSlinger.hook.fly) == 8, "the Web Slinger: up to 8 webs out")
+	p.god_mode = god
+	await frames(1)
+
+
 func _mushroom_checks(c: Vector3i) -> void:
 	var p := game.player
 	var w := game.world

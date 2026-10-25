@@ -1969,6 +1969,14 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     set_progress(0.705);
 
+    // Pass 3-a: Terraria's Marble and Granite caves (marble.rs, granite.rs),
+    // deep in the caverns away from the coast; their own random numbers.
+    {
+        let inland = |x: i32, z: i32| coast.inland(x, z) > sea.width + sea.beach + 30.0;
+        crate::marble::marble_caves(w, &mut Rng::new(seed as u64 ^ 0x3a2b_1e00), &l, &inland);
+        crate::granite::granite_caves(w, &mut Rng::new(seed as u64 ^ 0x62a_417e), &l, &inland);
+    }
+
     // Pass 3a: the world evil, like Terraria's: every world has either the
     // Corruption or the Crimson, in 2-3 patches away from spawn.
     let evil = match w.gen_evil {
@@ -2209,6 +2217,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // that many go in each 640 x 640 blocks of the map (about 95 in 1024 x 1024).
     let cabin_count = (rng.range(35, 41) as f32 * area / (640.0 * 640.0)).round() as usize;
     let cabins = crate::cabins::underground_cabins(w, &mut rng, &l, cabin_count);
+    // Pass 7a: spider caves (Terraria's Spider Caves pass, after its Buried
+    // Chests), out of the structures; their own random numbers.
+    crate::spiders::spider_caves(w, &mut Rng::new(seed as u64 ^ 0x5b1d_e125), &l);
     // Pass 8: Enchanted Sword Shrines (Terraria's Micro Biomes pass, after its
     // Buried Chests), kept out of the cabins and chests.
     crate::shrines::sword_shrines(w, &mut rng, &l);
@@ -3316,7 +3327,9 @@ mod tests {
 
     #[test]
     fn gem_trees_in_the_caves() {
-        let w = gen_world(5);
+        // (Big enough that the Granite and Marble caves, kept from them,
+        // leave plenty of the caverns' stone.)
+        let w = gen_world_sized(5, 0, (384, 384, 384));
         let l = layers(w.sy);
         let trunks: Vec<u16> = GEMS.iter().map(|g| w.id_of(&format!("{}_tree_trunk", g))).collect();
         let (stone, ebon, crim) = (w.id_of("stone"), w.id_of("ebonstone"), w.id_of("crimstone"));
@@ -3334,8 +3347,10 @@ mod tests {
                 y -= 1;
             }
             assert!((7..=12).contains(&h), "a {} tree {} tall at {:?}", GEMS[gem], h, d.pos);
-            assert!([stone, ebon, crim].contains(&w.get(x, y, z)) && y < l.surface_base - 8 && y > l.underworld_top, "on stone, underground");
-            assert!((1..=GEM_TOP_ROOM).all(|k| w.get(x, d.pos.1 + k - 1, z) == 0), "room for its top");
+            // (On stone, or a gem ore the Gems pass made of it after.)
+            let ground = w.get(x, y, z);
+            assert!(([stone, ebon, crim].contains(&ground) || w.def(ground).name.ends_with("_ore")) && y < l.surface_base - 8 && y > l.underworld_top, "on stone, underground: {} at {:?}", w.def(w.get(x, y, z)).name, (x, y, z));
+            assert!((1..=GEM_TOP_ROOM).all(|k| w.get(x, d.pos.1 + k - 1, z) == 0), "room for its top: {:?}", (1..=GEM_TOP_ROOM).map(|k| w.def(w.get(x, d.pos.1 + k - 1, z)).name.clone()).collect::<Vec<_>>());
             assert!(!w.decorations.iter().any(|f| f.kind == "waterfall" && f.pos.1 > y && (f.pos.0 - x).abs() <= 3 && (f.pos.2 - z).abs() <= 3), "no waterfall pouring through it");
         }
         assert!(kinds.len() >= 5, "several gems ({:?})", kinds);
@@ -3513,7 +3528,7 @@ mod tests {
                 h += 1;
                 y -= 1;
             }
-            assert!((5..=14).contains(&h) && w.get(x, y, z) == jgrass && y < l.surface_base - 8, "a tree {} tall on {} at {:?}", h, w.get(x, y, z), d.pos);
+            assert!((5..=14).contains(&h) && w.get(x, y, z) == jgrass && y < l.surface_base - 8, "a tree {} tall on {} at {:?}", h, w.def(w.get(x, y, z)).name, d.pos);
             assert!((0..7).all(|k| !w.is_solid(x, d.pos.1 + k, z)), "room for its top");
         }
     }
@@ -3681,6 +3696,8 @@ mod tests {
         crate::dungeon::tests::add_dungeon_defs(&mut w);
         crate::traps::tests::add_trap_defs(&mut w);
         crate::mushroom::tests::add_mushroom_defs(&mut w);
+        crate::marble::tests::add_cave_defs(&mut w);
+        crate::spiders::tests::add_spider_defs(&mut w);
         for name in ["silt", "slush", "amethyst_ore", "topaz_ore", "sapphire_ore", "emerald_ore", "ruby_ore", "diamond_ore"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
@@ -3691,6 +3708,34 @@ mod tests {
         w.gen_evil = evil;
         generate(&mut w, seed, &AtomicU32::new(0));
         w
+    }
+
+    /// Terraria's Marble, Granite and spider caves in a whole world: deep in
+    /// the caverns, each where it can be.
+    #[test]
+    fn marble_granite_and_spider_caves() {
+        let w = gen_world_sized(7, 0, (384, 384, 384));
+        let l = layers(w.sy);
+        let (marble, granite, web) = (w.id_of("marble"), w.id_of("granite"), w.id_of("cobweb"));
+        let (mut m, mut g, mut top) = (0, 0, i32::MIN);
+        for (i, &b) in w.blocks.iter().enumerate() {
+            if b == marble || b == granite {
+                if b == marble { m += 1 } else { g += 1 }
+                top = top.max(unflat(&w, i).1);
+            }
+        }
+        assert!(m > 20_000 && g > 10_000, "marble ({m}) and granite ({g})");
+        // Started 20 tiles under the cavern layer or deeper; a granite
+        // cave's magma reaches up to about 100 tiles from its start.
+        let reach = crate::dungeon::depth_y(&l, 150.0) + (100.0 * 2.0 / 3.0) as i32;
+        assert!(top < reach && top < l.surface_base - 20, "under the cavern layer: highest {top}, cavern layer {}", l.cavern_top);
+        let nests: Vec<&Decoration> = w.decorations.iter().filter(|d| d.kind == "spider_cave").collect();
+        assert!(nests.len() >= 3, "spider caves ({})", nests.len());
+        for n in &nests {
+            let r = n.style;
+            let webs = w.find_blocks(n.pos, (r, r, r), &[web], 100_000).len();
+            assert!(webs > 200, "webs in the nest at {:?} ({webs})", n.pos);
+        }
     }
 
     #[test]
@@ -4299,6 +4344,8 @@ mod bench {
             w.set_def(i as u16 + 1, BlockDef { name: name.to_string(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
         }
         crate::cabins::tests::add_cabin_defs(&mut w);
+        crate::marble::tests::add_cave_defs(&mut w);
+        crate::spiders::tests::add_spider_defs(&mut w);
         // WORLD_SIZE="x,y,z" times another size (default: Small).
         let size: Vec<i32> = std::env::var("WORLD_SIZE").unwrap_or("768,384,768".into()).split(',').map(|v| v.trim().parse().unwrap()).collect();
         let t = std::time::Instant::now();
