@@ -693,7 +693,7 @@ func _cave_enemy_checks(c: Vector3i) -> void:
 	p.velocity = Vector3.ZERO
 	var clear := func() -> void:
 		for e in game.npcs():
-			if e.kind in kinds:
+			if e.kind in kinds or e.kind.begins_with("GiantWorm"):
 				e.queue_free()
 	# The Mother Slime: 2 or 3 Baby Slimes when it dies.
 	var mother := game.spawn_npc("MotherSlime", at + Vector3(6, 0, 0))
@@ -731,9 +731,12 @@ func _cave_enemy_checks(c: Vector3i) -> void:
 	for i in 120:
 		await get_tree().physics_frame
 		if shelly._sh_state == 3:
+			# (The state turns at the end of a tick; the spin's damage and
+			# defense come with the next.)
+			await get_tree().physics_frame
 			spun = shelly.defense == 24 and shelly.damage == 24
 			break
-	check(spun, "a Giant Shelly withdraws into its shell and spins at you (state %d)" % shelly._sh_state)
+	check(spun, "a Giant Shelly withdraws into its shell and spins at you, harder to hurt (state %d, defense %d, damage %d)" % [shelly._sh_state, shelly.defense, shelly.damage])
 	clear.call()
 	await frames(2)
 	# The Giant Worm: 4-6 bodies and a tail, one life.
