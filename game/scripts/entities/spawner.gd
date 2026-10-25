@@ -139,11 +139,24 @@ func spawn_tick() -> void:
 				top.y += 1
 			game.spawn_npc("SleepingAngler", Vector3(top) + Vector3(0.5, 0.95, 0.5))
 			return
+	# Cave water: a spawn there is 1 in 3 a Blue Jellyfish (out of the
+	# Jungle, whose water has its Piranhas). Here 1 spawn in 6 looks for
+	# water in the caves near you.
+	if depth in ["underground", "caverns"] and game.biome != "jungle" and randi() % 6 == 0:
+		var wet = _find_water_spot(game, player.global_position, NPC.look("BlueJellyfish").hitbox, true)
+		if wet != null and wet.y < game.surface_level - 12 and not game.in_ocean(wet):
+			game.spawn_npc("BlueJellyfish", wet)
+			return
 	var kind: String
 	if depth == "underworld":
 		kind = underworld_pick(game.npcs().any(func(n): return n.kind == "BoneSerpentHead"))
 		if kind == "":
 			return
+	elif depth == "caverns" and game.biome in ["", "mushroom"]:
+		var deep: bool = player.global_position.y < (game.cavern_level + game.underworld_level) * 0.5
+		kind = cavern_pick(game.biome, deep, cavern_monsters(game.world.get_seed()))
+	elif depth == "underground" and game.biome in ["", "mushroom"] and randi() % 50 == 0:
+		kind = "GiantWormHead"
 	else:
 		kind = surface_pick(game.biome, night, game.sky) if depth == "surface" else ""
 		if kind == "":
@@ -171,7 +184,7 @@ func spawn_tick() -> void:
 				pos += Vector3(0, 1.0, 0)
 	# Any of Terraria's NPC 1 slimes spawning is a Pinky 1 time in 180
 	# (Spawner.SpawnNPC).
-	if kind in Game.SLIME_RAIN_SLIMES and randi() % 180 == 0:
+	if (kind in Game.SLIME_RAIN_SLIMES or kind == "BlackSlime") and randi() % 180 == 0:
 		kind = "Pinky"
 	if pos != null:
 		game.spawn_npc(kind, pos)
@@ -577,6 +590,72 @@ static func surface_pick(biome: String, night: bool, sky) -> String:
 	return "Zombie" if biome == "" else ""
 
 
+## Terraria's cavern spawns (Spawner.SpawnAnNPC in the rock layer, before
+## Hardmode, out of the snow, Jungle and the other big biomes), in its order:
+## 1 in 60 a Cochineal Beetle, 1 in 100 a Giant Worm, 1 in 10 a Mother Slime
+## (1 in 3 of those a Black Slime), 1 in 4 a Black Slime; then half the time
+## 1 in 80 a Lost Girl, `deep` (the lower half of the caverns) 1 in 200 Tim,
+## 1 in 20 an Undead Miner, 1 in 3 one of the world's cavern monsters
+## (`kinds`: cavern_monsters), on glowing mushrooms a Spore Skeleton, else a
+## Skeleton or one of its Headache, Misassembled and Pantless kinds (1 in 4
+## each); the other half a Cave Bat (a Spore Bat on the mushrooms). (Not
+## yet: the Skeleton Merchant; Terraria's Big and Small Skeletons are the
+## plain ones here. The mini-biomes' own come after: cave_pick.)
+static func cavern_pick(biome: String, deep: bool, kinds: Array) -> String:
+	if randi() % 60 == 0:
+		return "CochinealBeetle"
+	if randi() % 100 == 0:
+		return "GiantWormHead"
+	if randi() % 10 == 0:
+		return "BlackSlime" if randi() % 3 == 0 else "MotherSlime"
+	if randi() % 4 == 0:
+		return "BlackSlime"
+	if randi() % 2 != 0:
+		return "SporeBat" if biome == "mushroom" else "CaveBat"
+	if randi() % 80 == 0:
+		return "LostGirl"
+	if deep and randi() % 200 == 0:
+		return "Tim"
+	if randi() % 20 == 0:
+		return "UndeadMiner"
+	if randi() % 3 == 0 and not kinds.is_empty():
+		return kinds[randi() % kinds.size()]
+	if biome == "mushroom":
+		return "SporeSkeleton"
+	return ["Skeleton", "HeadacheSkeleton", "MisassembledSkeleton", "PantlessSkeleton"][randi() % 4]
+
+
+## Terraria's world-specific cavern monsters (NPC.SetWorldSpecificMonsters
+## ByWorldID): two of Crawdads, Giant Shellies and Salamanders, picked by the
+## world's seed, three looks of each (Terraria's NPCs 494-495, 496-497 and
+## 498-506).
+static func cavern_monsters(world_seed: int) -> Array:
+	if _cavern_kinds.has(world_seed):
+		return _cavern_kinds[world_seed]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = world_seed
+	var first := rng.randi_range(0, 2)
+	var second := rng.randi_range(0, 2)
+	while second == first:
+		second = rng.randi_range(0, 2)
+	var out := []
+	for family in [first, second]:
+		for i in 3:
+			match family:
+				0:
+					out.append(["Crawdad", "Crawdad2"][rng.randi_range(0, 1)])
+				1:
+					out.append(["GiantShelly", "GiantShelly2"][rng.randi_range(0, 1)])
+				_:
+					var n := rng.randi_range(1, 9)
+					out.append("Salamander" if n == 1 else "Salamander%d" % n)
+	_cavern_kinds[world_seed] = out
+	return out
+
+
+static var _cavern_kinds := {}
+
+
 ## Weighted spawn tables: [kind, weight].
 func _table(depth: String, night: bool, biome := "") -> Array:
 	# The ocean: crabs on the beach, jellyfish and sharks in the sea.
@@ -633,8 +712,9 @@ func _pick(table: Array) -> String:
 
 
 ## Open water 15-40 blocks away, deep enough for a `size` swimmer: the sea
-## (from sea level down), or wherever the player is swimming.
-func _find_water_spot(game, origin: Vector3, size: Array):
+## (from sea level down), or wherever the player is swimming; `cave`: from a
+## little over the player down (cave pools).
+func _find_water_spot(game, origin: Vector3, size: Array, cave := false):
 	var world: VoxelWorld = game.world
 	var need := ceili(float(size[1])) + 1
 	for attempt in 12:
@@ -642,7 +722,7 @@ func _find_water_spot(game, origin: Vector3, size: Array):
 		var p := origin + Vector3(cos(a), 0, sin(a)) * randf_range(15.0, 40.0)
 		var x := floori(p.x)
 		var z := floori(p.z)
-		var top := maxi(game.sea_level, floori(origin.y) + 4)
+		var top := floori(origin.y) + 8 if cave else maxi(game.sea_level, floori(origin.y) + 4)
 		var run := 0
 		for y in range(top, top - 40, -1):
 			var l := world.get_liquid(Vector3i(x, y, z))

@@ -466,6 +466,7 @@ func _run() -> void:
 	await _weather_checks(c)
 	await _slime_rain_checks(c)
 	await _mini_biome_checks(c)
+	await _cave_enemy_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -621,6 +622,141 @@ func _mini_biome_checks(c: Vector3i) -> void:
 	flyer_npc.queue_free()
 	check(Chests.LOOT[28] == "web_chest" and Data.loot.web_chest.pick_one[0][0] == "WebSlinger", "a spider cave's Web Covered Chest holds a Web Slinger")
 	check(int(Data.items.WebSlinger.hook.latched) == 8 and int(Data.items.WebSlinger.hook.fly) == 8, "the Web Slinger: up to 8 webs out")
+	p.god_mode = god
+	await frames(1)
+
+
+## The common cave enemies (Terraria's cavern spawns before Hardmode): the
+## spawn odds, each one's loot is real, the Mother Slime's babies, the Lost
+## Girl's turn, the Crawdad's pinch, the Giant Shelly's spin, the Giant Worm's
+## one life and the Metal Detector.
+func _cave_enemy_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var god := p.god_mode
+	p.god_mode = true
+	var kinds := ["GiantWormHead", "BlackSlime", "MotherSlime", "BabySlime", "UndeadMiner", "Tim", "LostGirl", "Nymph",
+			"HeadacheSkeleton", "MisassembledSkeleton", "PantlessSkeleton", "CochinealBeetle", "Crawdad", "Crawdad2",
+			"GiantShelly", "GiantShelly2", "Salamander", "Salamander9", "BlueJellyfish"]
+	var missing := []
+	for k in kinds:
+		if not Data.npcs.has(k):
+			missing.append(k)
+			continue
+		var d: Dictionary = Data.npcs[k]
+		for drop in d.get("drops", []):
+			if not Data.items.has(drop[0]):
+				missing.append("%s: %s" % [k, drop[0]])
+		for link in d.get("drops_chain", []):
+			for item in (link[0] if link[0] is Array else [link[0]]):
+				if not Data.items.has(item):
+					missing.append("%s: %s" % [k, item])
+	check(missing.is_empty(), "the cave enemies and all their loot are in the game (%s)" % [missing])
+	# The cavern spawn odds.
+	var tally := {}
+	var n := 20000
+	for i in n:
+		var k := Spawner.cavern_pick("", false, ["Crawdad"])
+		tally[k] = int(tally.get(k, 0)) + 1
+	var share := func(k: String) -> float: return int(tally.get(k, 0)) / float(n)
+	check(absf(share.call("CochinealBeetle") - 0.0167) < 0.005 and absf(share.call("MotherSlime") - 0.0649) < 0.01
+			and absf(share.call("BlackSlime") - 0.2515) < 0.015 and absf(share.call("CaveBat") - 0.3285) < 0.015
+			and tally.has("GiantWormHead") and tally.has("UndeadMiner") and tally.has("Crawdad") and tally.has("PantlessSkeleton")
+			and not tally.has("Tim") and not tally.has("SporeBat"),
+			"the cavern spawns: Cochineal Beetles, Mother and Black Slimes, Cave Bats, Skeletons... (%s)" % [tally])
+	var deep_tim := false
+	var spores := true
+	for i in 20000:
+		var k := Spawner.cavern_pick("mushroom", true, [])
+		deep_tim = deep_tim or k == "Tim"
+		spores = spores and k != "CaveBat" and k != "Skeleton"
+	check(deep_tim and spores, "Tim only deep down; on the glowing mushrooms, Spore Bats and Spore Skeletons")
+	var fams := {}
+	for s in 30:
+		var m := Spawner.cavern_monsters(s)
+		check(m.size() == 6 and m == Spawner.cavern_monsters(s), "a world's cavern monsters: 6, the same each time (%s)" % [m])
+		for k in m:
+			fams[str(k).rstrip("0123456789")] = true
+		if m.size() != 6:
+			break
+	check(fams.size() == 3, "worlds differ: Crawdads, Giant Shellies or Salamanders (%s)" % [fams.keys()])
+	check(Data.npcs.Salamander.shoot.projectile == "SalamanderSpit", "a Salamander spits")
+	# A stone floor up in the air.
+	var base := c + Vector3i(-40, 40, -60)
+	for x in range(-12, 13):
+		for z in range(-12, 13):
+			w.set_block(base + Vector3i(x, -1, z), Data.block_id("stone"))
+			for y in range(0, 12):
+				w.set_block(base + Vector3i(x, y, z), 0)
+	var at := Vector3(base) + Vector3(0.5, 0, 0.5)
+	p.global_position = at
+	p.velocity = Vector3.ZERO
+	var clear := func() -> void:
+		for e in game.npcs():
+			if e.kind in kinds or e.kind.begins_with("GiantWorm"):
+				e.queue_free()
+	# The Mother Slime: 2 or 3 Baby Slimes when it dies.
+	var mother := game.spawn_npc("MotherSlime", at + Vector3(6, 0, 0))
+	await frames(2)
+	mother.hit(9999, 0.0, Vector3.RIGHT, 0.0)
+	await frames(3)
+	var babies := game.npcs().filter(func(e): return e.kind == "BabySlime").size()
+	check(babies >= 2 and babies <= 3, "a Mother Slime splits into 2 or 3 Baby Slimes (%d)" % babies)
+	clear.call()
+	await frames(2)
+	# The Lost Girl, once you're near, is a Nymph.
+	var girl := game.spawn_npc("LostGirl", at + Vector3(4, 0, 0))
+	var t := 0
+	while girl.kind == "LostGirl" and t < 90:
+		await get_tree().physics_frame
+		t += 1
+	check(girl.kind == "Nymph" and girl.life == girl.life_max and girl.life_max == 300, "the Lost Girl turns into a Nymph (%s, %d ticks)" % [girl.kind, t])
+	clear.call()
+	await frames(2)
+	# The Crawdad pinches you up close, for half again its damage.
+	var crawdad := game.spawn_npc("Crawdad", at + Vector3(1.2, 0, 0))
+	var pinched := false
+	for i in 120:
+		await get_tree().physics_frame
+		if crawdad._pinch_t > 0.0 and crawdad.damage == 42:
+			pinched = true
+			break
+	check(pinched, "a Crawdad pinches you for 42")
+	clear.call()
+	await frames(2)
+	# The Giant Shelly withdraws and spins at you, harder to hurt.
+	var shelly := game.spawn_npc("GiantShelly", at + Vector3(7, 0, 0))
+	shelly._sh_t = 399.0
+	var spun := false
+	for i in 120:
+		await get_tree().physics_frame
+		if shelly._sh_state == 3:
+			# (The state turns at the end of a tick; the spin's damage and
+			# defense come with the next.)
+			await get_tree().physics_frame
+			spun = shelly.defense == 24 and shelly.damage == 24
+			break
+	check(spun, "a Giant Shelly withdraws into its shell and spins at you, harder to hurt (state %d, defense %d, damage %d)" % [shelly._sh_state, shelly.defense, shelly.damage])
+	clear.call()
+	await frames(2)
+	# The Giant Worm: 4-6 bodies and a tail, one life.
+	var head := game.spawn_npc("GiantWormHead", at + Vector3(0, -4, 8))
+	await frames(3)
+	var segs: Array = game.npcs().filter(func(e): return e.kind.begins_with("GiantWorm"))
+	check(segs.size() >= 6 and segs.size() <= 8, "a Giant Worm: a head, 4-6 bodies and a tail (%d)" % segs.size())
+	var body: NPC = head.behind
+	body.hit(10, 0.0, Vector3.RIGHT, 0.0)
+	check(head.life < head.life_max and body.life == head.life, "one life for the whole worm (%d of %d)" % [head.life, head.life_max])
+	clear.call()
+	await frames(2)
+	# The Metal Detector: the best treasure about.
+	check(Hud.metal_name("gold_ore") == "Gold" and Hud.metal_name("pot_2") == "Pot", "the Metal Detector names ores and pots")
+	var crystal := base + Vector3i(5, 0, 5)
+	w.set_block(crystal, Data.block_id("life_crystal"))
+	game.hud._metal_t = 0.0
+	var said: String = game.hud.metal_text()
+	check(said == "Life Crystal detected nearby!", "the Metal Detector finds a Life Crystal (%s)" % said)
+	w.set_block(crystal, 0)
 	p.god_mode = god
 	await frames(1)
 

@@ -361,6 +361,8 @@ func _physics_process(delta: float) -> void:
 		"flying_fish": _ai_flying_fish(delta, player)
 		"hover": _ai_hover(delta, player)
 		"granite_flyer": _ai_granite_flyer(delta, player)
+		"shelly": _ai_shelly(delta, player)
+		"lost_girl": _ai_lost_girl(delta, player)
 		"bat": _ai_bat(delta, player)
 		"harpy": _ai_harpy(delta, player)
 		"swim": _ai_swim(delta, player)
@@ -405,7 +407,7 @@ func _physics_process(delta: float) -> void:
 	if not flying and not swimming:
 		var g := GRAVITY * (0.3 if liquid.y > 0 else 1.0)
 		velocity.y = maxf(velocity.y - g * delta, -3.5 if liquid.y > 0 else -MAX_FALL)
-	var step := 1.05 if def.ai in ["fighter", "town", "critter_walk", "duck"] and not flying else 0.0
+	var step := 1.05 if def.ai in ["fighter", "town", "critter_walk", "duck", "shelly"] and not flying else 0.0
 	var r := game.world.move_aabb(global_position, half, velocity * delta, step, false)
 	global_position = r.position
 	on_floor = r.on_floor
@@ -1402,6 +1404,8 @@ func _ai_fighter(delta: float, player) -> void:
 	var game := Game.current
 	if def.has("curl") and _curl(delta, def.curl):
 		return
+	if def.has("pinch") and _pinch(delta, player, def.pinch):
+		return
 	var dir: Vector3 = _chase_point(player.global_position) - global_position
 	dir.y = 0
 	var speed: float = def.get("speed", 2.5)
@@ -1477,6 +1481,212 @@ func _curl(delta: float, c: Dictionary) -> bool:
 		_curl_t = -float(c.get("for", 120))
 	_just_hit = false
 	return false
+
+
+## The Crawdad's pinch (AI_003 for NPCs 494 and 495), in ticks: on the
+## ground, with you within "range" px (42) and in sight (not by day above
+## ground), it slows x0.7 and pinches for "ticks" (20) at "damage" (1.5)
+## times its own, slowing x0.9 a tick, through its "frames" [first, last]; a
+## jump or a fall ends it. Returns whether it's pinching (no walking then).
+var _pinch_t := 0.0
+
+func _pinch(delta: float, player, p: Dictionary) -> bool:
+	var ticks := delta * 60.0
+	var game := Game.current
+	if _pinch_t <= 0.0:
+		damage = int(def.damage)
+		if not on_floor or velocity.y > 0.0 or not player.alive \
+				or (_flees_day(game) and global_position.y > game.surface_level - 10):
+			return false
+		if (player.center() - center()).length() * PX_PER_BLOCK >= float(p.range) or not _sees(player):
+			return false
+		velocity.x *= 0.7
+		velocity.z *= 0.7
+		_pinch_t = 1.0
+	damage = int(round(float(def.damage) * float(p.damage)))
+	velocity.x *= pow(0.9, ticks)
+	velocity.z *= pow(0.9, ticks)
+	if absf(velocity.x) < 0.1 * PX_TICK:
+		velocity.x = 0.0
+	if absf(velocity.z) < 0.1 * PX_TICK:
+		velocity.z = 0.0
+	var f: Array = p.frames
+	var n := int(f[1]) - int(f[0]) + 1
+	sprite.set_frame(mini(int(f[1]), int(f[0]) + int(_pinch_t * n / float(p.ticks))))
+	_pinch_t += ticks
+	if _pinch_t >= float(p.ticks) or not on_floor:
+		_pinch_t = 0.0
+		damage = int(def.damage)
+	return true
+
+
+## Terraria's Giant Shelly (aiStyle 39, NPCs 496 and 497), in its px/tick
+## and ticks. It crawls at you (0.5, gaining 0.07 a tick), counting to 400
+## (2 more a tick while it sees you over 200 px off, 4 more over 600) and
+## then withdraws into its shell (slowing x0.5 a tick, half a count a tick to
+## 30: frames 4 to 6). Then it springs at you, spinning (frame 7): 7.5 px a
+## tick (4.5 if it can't see you, and straight up at 10), aimed a fifth of the
+## way across higher (not when you're below it), at 1.5 times its damage and
+## twice its defense; for 90 ticks it keeps that speed across and falls only
+## 0.08 px/tick² (gravity less 0.22), stopping across over you. Then it slows
+## (x0.96 a tick) as its spin runs down (0.01 a tick); once it's down and on
+## the ground it comes out (frames 10, 11, half a count a tick to 30). Hit, it
+## starts over, crawling.
+var _sh_state := 0
+var _sh_t := 0.0
+var _sh_spin := 0.0
+var _sh_across := Vector3.ZERO
+var _sh_turn := 0.0
+
+func _ai_shelly(delta: float, player) -> void:
+	var ticks := delta * 60.0
+	if _just_hit:
+		_just_hit = false
+		_sh_state = 0
+		_sh_t = 0.0
+	damage = int(def.damage)
+	defense = int(def.defense)
+	var to: Vector3 = player.center() - center()
+	var flat_to := Vector3(to.x, 0, to.z)
+	match _sh_state:
+		0:
+			var px := to.length() * PX_PER_BLOCK
+			var sees := _sees(player)
+			if px > 200.0 and sees:
+				_sh_t += 2.0 * ticks
+			if px > 600.0 and (sees or global_position.y < player.global_position.y + player.half.y + 200.0 / PX_PER_BLOCK):
+				_sh_t += 4.0 * ticks
+			_sh_t += ticks
+			if _sh_t >= 400.0:
+				_sh_t = 0.0
+				_sh_state = 1
+			var dir: Vector3 = _chase_point(player.global_position) - global_position
+			dir.y = 0
+			var speed := 0.5 * PX_TICK
+			var flat := Vector2(velocity.x, velocity.z)
+			if flat.length() > speed + 0.001:
+				if on_floor and velocity.y <= 0.0:
+					flat *= pow(0.8, ticks)
+			elif dir.length() > 0.001:
+				flat = flat.move_toward(Vector2(dir.x, dir.z).normalized() * speed, 0.07 * PX_TICK * ticks)
+			velocity.x = flat.x
+			velocity.z = flat.y
+			if on_floor:
+				anim += absf(flat.length() / PX_TICK) * 1.1 * ticks
+				sprite.set_frame(int(anim / 6.0) % 4)
+			else:
+				anim = 0.0
+				sprite.set_frame(0)
+		1:
+			velocity.x *= pow(0.5, ticks)
+			velocity.z *= pow(0.5, ticks)
+			_sh_t += 0.5 * ticks
+			sprite.set_frame(4 if _sh_t < 10.0 else 5 if _sh_t < 20.0 else 6)
+			if _sh_t >= 30.0:
+				_sh_t = 0.0
+				_sh_spin = 0.0
+				_sh_state = 3
+		3:
+			damage = int(round(float(def.damage) * 1.5))
+			defense = int(def.defense) * 2
+			if _sh_t == 0.0:
+				_sh_spin += 0.3
+				var sees := _sees(player)
+				var speed := (10.0 if sees else 6.0) * 0.75
+				var across := flat_to * PX_PER_BLOCK
+				var lift := across.length() * 0.2 if to.y >= 0.0 else 0.0
+				var top: float = (player.global_position.y + player.half.y - center().y) * PX_PER_BLOCK
+				var v := Vector3(across.x, top + lift, across.z)
+				v = v.normalized() * speed if v.length() > 0.001 else Vector3.ZERO
+				if not sees:
+					v.y = 10.0
+				_sh_across = Vector3(v.x, 0, v.z) * PX_TICK
+				velocity = v * PX_TICK
+				_sh_t = 1.0
+			if absf(to.x) < half.x + player.half.x and absf(to.z) < half.z + player.half.z \
+					and global_position.y + half.y > player.global_position.y:
+				velocity.x *= pow(0.8, ticks)
+				velocity.z *= pow(0.8, ticks)
+				_sh_across = Vector3.ZERO
+				if velocity.y > 0.0:
+					velocity.y -= 0.2 * PX_TICK * ticks
+			if _sh_across != Vector3.ZERO:
+				velocity.x = _sh_across.x
+				velocity.z = _sh_across.z
+				velocity.y += 0.22 * PX_TICK * ticks
+			_sh_t += ticks
+			if _sh_t >= 90.0:
+				_sh_t = 0.0
+				_sh_state = 4
+			_sh_turn += _sh_spin * ticks
+			sprite.set_frame(7)
+		4:
+			velocity.x *= pow(0.96, ticks)
+			velocity.z *= pow(0.96, ticks)
+			if _sh_spin > 0.0:
+				_sh_spin -= 0.01 * ticks
+				_sh_turn += maxf(_sh_spin, 0.0) * ticks
+			elif velocity.y <= 0.0:
+				_sh_turn = 0.0
+			if _sh_spin <= 0.0 and on_floor:
+				_sh_turn = 0.0
+				_sh_spin = 0.0
+				_sh_t = 0.0
+				_sh_state = 5
+			sprite.set_frame(7)
+		5:
+			velocity.x = 0.0
+			velocity.z = 0.0
+			_sh_t += 0.5 * ticks
+			sprite.set_frame(10 if _sh_t < 10.0 else 11 if _sh_t < 20.0 else 3)
+			if _sh_t >= 30.0:
+				_sh_t = 0.0
+				_sh_state = 0
+	if sprite is EntitySprite:
+		sprite.set_rotation_angle(-_sh_turn if velocity.dot(player.camera.global_transform.basis.x) > 0.0 else _sh_turn)
+
+
+## Terraria's Lost Girl (aiStyle 42): she stands till you're within 200 px
+## and she can see you, or she's moved, falls or is hurt; then 21 ticks on
+## she's her "becomes" (the Nymph), keeping her share of life
+## (NPC.Transform), turning through her frames meanwhile.
+var _reveal := 0.0
+
+func _ai_lost_girl(delta: float, player) -> void:
+	if _reveal <= 0.0:
+		var px: float = (player.center() - center()).length() * PX_PER_BLOCK
+		if (px < 200.0 and player.alive and _sees(player)) or life != life_max \
+				or Vector2(velocity.x, velocity.z).length() > 0.01 or velocity.y > 0.0 or velocity.y < -2.0 * PX_TICK:
+			_reveal = 1.0
+		sprite.set_frame(0)
+		return
+	_reveal += delta * 60.0
+	sprite.set_frame(mini(int(def.frames) - 1, int(_reveal / 3.0)))
+	if _reveal >= 21.0:
+		become(str(def.becomes))
+
+
+## Turns into `k` (Terraria's NPC.Transform): its share of life kept, its
+## feet where they were.
+func become(k: String) -> void:
+	var share := float(life) / float(life_max)
+	kind = k
+	def = Data.npcs[k]
+	life_max = int(def.life)
+	life = maxi(1, int(life_max * share))
+	damage = int(def.damage)
+	defense = int(def.defense)
+	var lk := look(k)
+	var size: Array = lk.hitbox
+	half = Vector3(size[0] * 0.5, size[1], size[0] * 0.5)
+	var old := sprite
+	sprite = make_look(k, lk)
+	add_child(sprite)
+	old.queue_free()
+	if health_bar != null:
+		health_bar.position.y = lk.top + 0.25
+	_hunted = -1
+	anim = 0.0
 
 
 ## Terraria's fighter jump (AI_003) at a wall: 5 px/tick over a low one, 6,
@@ -3775,6 +3985,17 @@ func _die(game, drops := true) -> void:
 			var n := randi_range(int(d[2]), int(d[3])) if d.size() > 3 else 1
 			game.spawn_item(item, n, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 			break
+	# The Mother Slime's babies (HitEffect: 2 or 3 Baby Slimes thrown out with
+	# twice its speed across, up to 1 px/tick either way and further each).
+	if def.has("splits"):
+		var sp: Dictionary = def.splits
+		var c: Array = sp.count
+		for i in randi_range(int(c[0]), int(c[1])):
+			var baby: NPC = game.spawn_npc(str(sp.kind), global_position + Vector3(randf_range(-0.2, 0.2), 0.05, randf_range(-0.2, 0.2)))
+			if baby != null:
+				var side := Vector3(randf_range(-1.0, 1.0), 0, randf_range(-1.0, 1.0)).normalized()
+				baby.velocity = Vector3(velocity.x * 2.0, velocity.y, velocity.z * 2.0) \
+						+ side * (randi_range(-20, 19) * 0.1 + i * 0.3) * PX_TICK + Vector3(0, (randi_range(0, 9) * 0.1 + i) * PX_TICK, 0)
 	var one_of: Array = def.get("drops_one_of", []) if drops else []
 	if not one_of.is_empty():
 		game.spawn_item(one_of[randi() % one_of.size()], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
