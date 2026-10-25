@@ -174,9 +174,11 @@ const _CUBE_FACES := [
 ## (PLATFORM_BEVEL). Top and bottom take one colour each
 ## (the frame's commonest just inside its outline); the sides show the frame's
 ## pixels, running on round the edge. The pattern doesn't turn with the block,
-## so every cell lines up with its neighbours. The top and bottom carry their
-## shade in their colour's alpha (below 1): the shader puts the picker's noise
-## on them per voxel of the world (BlockModels.platform_material). Lifted like
+## so every cell lines up with its neighbours. With the picker's one colour per
+## voxel, each voxel's faces share its colour (see face_colour below). Faces
+## of the top or bottom colour carry their shade in their colour's alpha
+## (below 1): the shader puts the picker's noise on them per voxel of the
+## world (BlockModels.platform_material). Lifted like
 ## the block's model (its transform's height); cached per block and links.
 ## How far (voxels, one art pixel each) a platform floor's outer edges are
 ## bevelled.
@@ -184,7 +186,8 @@ const PLATFORM_BEVEL := 1
 
 
 static func platform(block_id: int, links: int) -> ArrayMesh:
-	var key := "%d:platform:%d" % [block_id, links]
+	var one_color := bool(platform_options(block_id).get("one_color", false))
+	var key := "%d:platform:%d:%s" % [block_id, links, one_color]
 	if _cache.has(key):
 		return _cache[key].mesh
 	var d := Data.block(block_id)
@@ -250,21 +253,39 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 		if open.call(side):
 			return false
 		return not bevelled.call(theirs[side], posmod(x, n), y, posmod(z, n))
+	# A face's colour and whether the noise goes on it ([Color, bool]): its own
+	# (the frame's pixel on the sides, the top or bottom colour, with noise), or
+	# with one colour per voxel (the picker's one_color) its voxel's, that of
+	# the voxel's first face that shows of its sides, top and bottom (so the
+	# floor's edge voxels are the frame's pixels all round).
+	var own := func(fi: int, x: int, y: int, z: int) -> Array:
+		if fi < 2:
+			return [art_at.call(x, y), false]
+		if fi < 4:
+			return [art_at.call(z, y), false]
+		return [top if fi == 4 else bottom, true]
+	var steps: Array[Vector3i] = [Vector3i(0, 0, 1), Vector3i(0, 0, -1), Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, -1, 0), Vector3i(0, 1, 0)]
+	var face_colour := func(fi: int, x: int, y: int, z: int) -> Array:
+		if one_color:
+			for f in 6:
+				if not filled.call(x + steps[f].x, y + steps[f].y, z + steps[f].z):
+					return own.call(f, x, y, z)
+		return own.call(fi, x, y, z)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var quad := func(fi: int, x: int, y: int, z: int, length: int, colour: Color) -> void:
+	var quad := func(fi: int, x: int, y: int, z: int, length: int, look: Array) -> void:
 		var p := Vector3((x - n * 0.5) * px, lift + (h - 1 - y) * px, (z - n * 0.5) * px)
 		var size := Vector3(length * px, px, px)
 		var shade := float(_CUBE_FACES[fi][1])
-		var c: Color = colour.srgb_to_linear() * shade
+		var c: Color = (look[0] as Color).srgb_to_linear() * shade
 		for i in [0, 1, 2, 0, 2, 3]:
-			st.set_color(Color(c.r, c.g, c.b, shade if fi >= 4 else 1.0))
+			st.set_color(Color(c.r, c.g, c.b, shade if look[1] else 1.0))
 			st.set_uv(FACE_UVS[i] * Vector2(length, 1))
 			st.add_vertex(p + _CUBE_FACES[fi][0][i] * size)
 	for y in h:
 		for z in n:
-			# Tops and bottoms in runs along x (one colour); UVs count voxels, so
-			# the sun's shadow is still looked up per voxel.
+			# Tops and bottoms in runs along x (of one colour); UVs count voxels,
+			# so the sun's shadow is still looked up per voxel.
 			for fi in [4, 5]:
 				var above := -1 if fi == 4 else 1
 				var x := 0
@@ -272,25 +293,29 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 					if not filled.call(x, y, z) or filled.call(x, y + above, z):
 						x += 1
 						continue
+					var look: Array = face_colour.call(fi, x, y, z)
 					var x1 := x + 1
-					while x1 < n and filled.call(x1, y, z) and not filled.call(x1, y + above, z):
+					while x1 < n and filled.call(x1, y, z) and not filled.call(x1, y + above, z) and face_colour.call(fi, x1, y, z) == look:
 						x1 += 1
-					quad.call(fi, x, y, z, x1 - x, top if fi == 4 else bottom)
+					quad.call(fi, x, y, z, x1 - x, look)
 					x = x1
 			for x in n:
 				if not filled.call(x, y, z):
 					continue
-				if not filled.call(x, y, z + 1):
-					quad.call(0, x, y, z, 1, art_at.call(x, y))
-				if not filled.call(x, y, z - 1):
-					quad.call(1, x, y, z, 1, art_at.call(x, y))
-				if not filled.call(x + 1, y, z):
-					quad.call(2, x, y, z, 1, art_at.call(z, y))
-				if not filled.call(x - 1, y, z):
-					quad.call(3, x, y, z, 1, art_at.call(z, y))
+				for fi in 4:
+					if not filled.call(x + steps[fi].x, y, z + steps[fi].z):
+						quad.call(fi, x, y, z, 1, face_colour.call(fi, x, y, z))
 	var mesh := st.commit()
 	_cache[key] = {"mesh": mesh, "textured": false}
 	return mesh
+
+
+## The placeable picker's settings for a platform's method (Data's
+## method_options): its noise, and whether each voxel is one colour.
+static func platform_options(block_id: int) -> Dictionary:
+	var d := Data.block(block_id)
+	var method: String = d.get("method", "extruded")
+	return Data.method_options(d.get("settings", d.name), method) if method in Data.NOISE_METHODS else {}
 
 
 ## The PLATFORM_DIAGONALS index of the cell past PLATFORM_LINKS side `a`

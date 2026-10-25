@@ -830,8 +830,7 @@ static func platform_material(block_id: int) -> ShaderMaterial:
 		m.set_shader_parameter("noise_palette_size", palette.size())
 		_shared_materials[key] = m
 	var d := Data.block(block_id)
-	var method: String = d.get("method", "extruded")
-	var o: Dictionary = Data.method_options(d.get("settings", d.name), method) if method in Data.NOISE_METHODS else {}
+	var o := BlockModelMesh.platform_options(block_id)
 	m.set_shader_parameter("voxel_noise", maxi(0, Data.EXTRUDE_NOISES.find(o.get("noise", "none"))))
 	m.set_shader_parameter("noise_strength", float(o.get("strength", 0.5)))
 	m.set_shader_parameter("noise_seed", int(o.get("seed", 0)))

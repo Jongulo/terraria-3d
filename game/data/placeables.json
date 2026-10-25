@@ -159,7 +159,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"barrel": {
@@ -236,6 +236,7 @@
 		},
 		"blue_brick_platform": {
 			"noise": "speckle",
+			"one_color": true,
 			"strength": 1.0
 		},
 		"blue_dungeon_bathtub": {
@@ -252,6 +253,7 @@
 		},
 		"bone_platform": {
 			"noise": "grain",
+			"one_color": true,
 			"strength": 0.95
 		},
 		"book": {
@@ -268,7 +270,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"boreal_wood_sink": {
@@ -312,6 +314,7 @@
 		},
 		"cactus_platform": {
 			"noise": "grain",
+			"one_color": true,
 			"strength": 0.6
 		},
 		"campfire": {
@@ -422,7 +425,8 @@
 			"strength": 1.0
 		},
 		"cloud_platform": {
-			"noise": "speckle"
+			"noise": "speckle",
+			"one_color": true
 		},
 		"copper_chandelier": {
 			"bevel": "chamfer",
@@ -1109,7 +1113,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"extractinator": {
@@ -1652,6 +1656,7 @@
 		},
 		"frozen_platform": {
 			"noise": "grain",
+			"one_color": true,
 			"strength": 0.35
 		},
 		"furnace": {
@@ -1681,6 +1686,7 @@
 		},
 		"glass_platform": {
 			"noise": "speckle",
+			"one_color": true,
 			"strength": 0.3
 		},
 		"glowing_mushroom_3": {
@@ -1730,6 +1736,7 @@
 		},
 		"green_brick_platform": {
 			"noise": "speckle",
+			"one_color": true,
 			"strength": 0.65
 		},
 		"green_dungeon_bathtub": {
@@ -2700,7 +2707,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"mushroom_vines_10": {
@@ -3020,7 +3027,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"oil_rag_sconse": {
@@ -3043,7 +3050,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"picnic_table": {
@@ -3070,6 +3077,7 @@
 		},
 		"pink_brick_platform": {
 			"noise": "speckle",
+			"one_color": true,
 			"strength": 0.2
 		},
 		"pink_dungeon_bathtub": {
@@ -3117,11 +3125,12 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"sandstone_platform": {
-			"noise": "grain"
+			"noise": "grain",
+			"one_color": true
 		},
 		"sawmill": {
 			"bevel": "round",
@@ -3135,6 +3144,7 @@
 		},
 		"shadewood_platform": {
 			"noise": "grain",
+			"one_color": true,
 			"strength": 0.6
 		},
 		"shadow_orb": {
@@ -3192,6 +3202,7 @@
 		},
 		"skyware_platform": {
 			"noise": "grain",
+			"one_color": true,
 			"strength": 0.65
 		},
 		"small_rocks": {
@@ -3271,6 +3282,7 @@
 		},
 		"snow_platform": {
 			"noise": "speckle",
+			"one_color": true,
 			"strength": 0.2
 		},
 		"solidifier": {
@@ -3287,6 +3299,7 @@
 		},
 		"stone_platform": {
 			"noise": "speckle",
+			"one_color": true,
 			"strength": 0.85
 		},
 		"sunflower": {
@@ -5139,7 +5152,7 @@
 			"bevel_size": 1.0,
 			"depth": 16.0,
 			"noise": "grain",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.6
 		},
 		"wood_shelf": {
@@ -5169,7 +5182,7 @@
 		},
 		"ash_wood_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"ash_wood_sink": {
@@ -5191,7 +5204,8 @@
 			"one_color": true
 		},
 		"bone_platform": {
-			"noise": "speckle"
+			"noise": "speckle",
+			"one_color": true
 		},
 		"book": {
 			"one_color": false
@@ -5210,7 +5224,7 @@
 		},
 		"boreal_wood_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"bottle": {
@@ -5258,7 +5272,8 @@
 			"one_color": true
 		},
 		"cloud_platform": {
-			"noise": "none"
+			"noise": "none",
+			"one_color": true
 		},
 		"cooking_pot": {
 			"no_outline": false,
@@ -5281,7 +5296,7 @@
 		},
 		"ebonwood_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"fallen_log": {
@@ -5304,7 +5319,8 @@
 			"one_color": true
 		},
 		"glass_platform": {
-			"noise": "grain"
+			"noise": "grain",
+			"one_color": true
 		},
 		"glowing_mushroom_2": {
 			"one_color": true
@@ -5432,7 +5448,7 @@
 		},
 		"mushroom_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"obsidian_bathtub": {
@@ -5443,7 +5459,7 @@
 		},
 		"obsidian_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"obsidian_sink": {
@@ -5465,7 +5481,7 @@
 		},
 		"palm_wood_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"picnic_table": {
@@ -5520,7 +5536,7 @@
 		},
 		"rich_mahogany_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"rope": {
@@ -5621,7 +5637,7 @@
 		},
 		"wood_platform": {
 			"noise": "speckle",
-			"one_color": false,
+			"one_color": true,
 			"strength": 0.5
 		},
 		"wood_shelf": {
