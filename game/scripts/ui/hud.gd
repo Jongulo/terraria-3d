@@ -778,7 +778,68 @@ func info_text() -> String:
 		if player.bobbers().is_empty():
 			player.fishing_info = "%d Fishing Power" % Fishing.conditions(player, game.sky).level
 		lines.append(player.fishing_info)
+	if info.has("metal"):
+		lines.append(metal_text())
 	return "\n".join(lines)
+
+
+## The Metal Detector (Terraria's accOreFinder): the most valuable treasure in
+## its scan round you (SceneMetrics' zone, a screen and its padding: 130 x 78
+## tiles, here 43 blocks across each way and 26 up or down), by Terraria's
+## tileOreFinderPriority, by its map name. Looked for every half second.
+const METAL_PRIORITY := {"pot": 100, "pot_2": 100, "pot_3": 100, "copper_ore": 200, "tin_ore": 210, "iron_ore": 220,
+		"lead_ore": 230, "silver_ore": 240, "tungsten_ore": 250, "gold_ore": 260, "platinum_ore": 270, "demonite_ore": 300,
+		"crimtane_ore": 310, "life_crystal": 550}
+## Its chests (Terraria's tiles 21 and 467, all "Chest" to it): 500.
+const METAL_CHEST := 500
+const METAL_REACH := Vector3i(43, 26, 43)
+var _metal_t := 0.0
+var _metal_text := ""
+var _metal_ids := PackedInt32Array()
+var _metal_rank := {}
+
+
+func metal_text() -> String:
+	var game := Game.current
+	_metal_t -= get_process_delta_time()
+	if _metal_t > 0.0 and _metal_text != "":
+		return _metal_text
+	_metal_t = 0.5
+	if _metal_ids.is_empty():
+		for i in Data.blocks.size():
+			var n: String = Data.block(i).get("name", "")
+			var rank := int(METAL_PRIORITY.get(n, METAL_CHEST if Data.block(i).get("interact", "") == "chest" else 0))
+			if rank > 0:
+				_metal_ids.append(i)
+				_metal_rank[i] = rank
+	var at := Vector3i(player.global_position.floor())
+	var cells: PackedInt32Array = game.world.find_blocks(at, METAL_REACH, _metal_ids, 4096)
+	var best := -1
+	var best_rank := 0
+	var best_d := INF
+	for i in range(0, cells.size(), 3):
+		var c := Vector3i(cells[i], cells[i + 1], cells[i + 2])
+		var id: int = game.world.get_block(c)
+		var r: int = _metal_rank.get(id, 0)
+		var d := Vector3(c - at).length_squared()
+		if r > best_rank or (r == best_rank and d < best_d):
+			best = id
+			best_rank = r
+			best_d = d
+	_metal_text = "No treasure nearby" if best < 0 else "%s detected nearby!" % metal_name(Data.block(best).get("name", ""))
+	return _metal_text
+
+
+## Terraria's map name for it (the ores by their metal; a chest of any kind
+## "Chest").
+static func metal_name(block: String) -> String:
+	if block == "life_crystal":
+		return "Life Crystal"
+	if block.begins_with("pot"):
+		return "Pot"
+	if block.ends_with("_ore"):
+		return block.trim_suffix("_ore").capitalize()
+	return "Chest"
 
 
 ## The Sextant: the moon's phase (Terraria's GameUI text, by Main.moonPhase).

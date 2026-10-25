@@ -95,6 +95,8 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## the Bee's Knees' Bee Arrow (469): no drop, and breaks into bees.
 ## debuffs: what it puts on you, [[debuff, 1 in n, ticks]] (Terraria's
 ## StatusPlayer: the Ice Spike's Chilled 20 s and 1 in 20 Frozen 1.5 s).
+## player_poison: [n, in m, min, max ticks] Poisoned on you n hits in m (the
+## Salamander's spit). harmless: hits no enemy (a thrown Glowstick).
 ## The Spiked Ice Slime's Ice Spike (AI 1): falls at 0.15 px/tick² (24 px
 ## a block, as the slime's) from its 6th tick (its shooter sets
 ## gravity_delay), at most 16.
@@ -143,7 +145,11 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"AmberBolt": {"dust": [138], "bounce": 2, "pierce": 3},
 		"Bee": {"bee": true, "pierce": 3, "life": 10.0, "size": 0.45, "radius": 0.3},
 		"BeeArrow": {"bee_arrow": true, "gravity": 0.0, "life": 20.0},
-		"BladeOfGrass": {"leaf": true, "ghost": true, "pierce": 2, "radius": 0.45, "melee": true, "npc_poison": [420, 420, 4], "life": 1.0}}
+		"BladeOfGrass": {"leaf": true, "ghost": true, "pierce": 2, "radius": 0.45, "melee": true, "npc_poison": [420, 420, 4], "life": 1.0},
+		# The Salamander's spit (572: unseen, dust 40) poisons you 2 hits in 3
+		# for 120 to 239 ticks (StatusPlayer); a thrown Glowstick hurts nothing.
+		"SalamanderSpit": {"hidden": true, "dust": [40], "player_poison": [2, 3, 120, 239], "life": 10.0},
+		"Glowstick": {"harmless": true, "glow": true, "life": 60.0}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -1033,6 +1039,8 @@ func _bee_arrow_bees(game) -> void:
 
 
 func _check_hits(game) -> bool:
+	if friendly and _flight.get("harmless", false):
+		return false
 	if friendly:
 		var bee: bool = _flight.get("bee", false)
 		for npc in game.npcs():
@@ -1065,6 +1073,9 @@ func _check_hits(game) -> bool:
 				p.poison(10.0)
 			if _flight.has("poison"):
 				p.poison(float(_flight.poison))
+			var venom: Array = _flight.get("player_poison", [])
+			if not venom.is_empty() and randi() % int(venom[1]) < int(venom[0]):
+				p.poison(randi_range(int(venom[2]), int(venom[3])) / 60.0)
 			if kind in IGNITES and randi() % 3 == 0:
 				p.ignite(7.0)
 			# (Only a hit that lands: Terraria's StatusPlayer.)
