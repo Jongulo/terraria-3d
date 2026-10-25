@@ -10,6 +10,11 @@ mkdir -p "$SHOTS"
 FAIL=0
 GODOT="godot --audio-driver Dummy --path game"
 
+# The Godot tests load game/bin/libvoxel_core.so, so build and install it from
+# this checkout first: a library left from an older build runs the old worldgen.
+echo "== Build"
+out=$(./build.sh 2>&1) || { echo "$out" | grep -A8 "^error" | head -40; echo "build failed; not running tests"; exit 1; }
+
 echo "== Rust"
 cargo test --release --manifest-path rust/voxel_core/Cargo.toml 2>&1 | grep "test result" | head -1 | grep -q " 0 failed" || FAIL=1
 

@@ -23,6 +23,12 @@ function Invoke-Godot([string[]]$GodotArgs, [int]$Secs) {
 	return $lines
 }
 
+# The Godot tests load game/bin/voxel_core.dll, so build and install it from
+# this checkout first: a DLL left from an older build runs the old worldgen.
+Write-Host "== Build"
+& .\build.ps1 | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Host "build failed; not running tests"; exit 1 }
+
 Write-Host "== Rust"
 $rust = cargo test --release --manifest-path rust/voxel_core/Cargo.toml 2>&1 | ForEach-Object { "$_" }
 $first = $rust | Select-String "test result" | Select-Object -First 1
