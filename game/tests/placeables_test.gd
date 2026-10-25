@@ -843,6 +843,11 @@ func _run() -> void:
 	await frames(5)
 	var lone: ArrayMesh = game.block_models.model_at(left).get("mesh")
 	check(lone != null and _side_faces(lone, 0.5) and _side_faces(lone, -0.5), "a lone platform has its edges")
+	var top_edge := false
+	if lone != null and lone.get_surface_count() > 0:
+		for v: Vector3 in lone.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+			top_edge = top_edge or (is_equal_approx(v.y, 1.0) and (absf(absf(v.x) - 0.5) < 0.001 or absf(absf(v.z) - 0.5) < 0.001))
+	check(lone != null and not top_edge, "and they're bevelled (its top stops short of the block's edge)")
 	game.world.set_block(plat_at, wplat)
 	await frames(5)
 	var lm: ArrayMesh = game.block_models.model_at(left).get("mesh")

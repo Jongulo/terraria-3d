@@ -274,8 +274,8 @@ checked by loading it with the dedicated server and having it save; nothing shou
   block, rising away from you; upside-down ramps make arches. Hammered platforms become stairs with
   Terraria's stair frames up the block's diagonal.
 - **Platforms join up:** platforms that touch, in a line, an L, a ring or a whole floor, are drawn as
-  one seamless slab of the platform's middle frame, with an edge only round the outside (no planks,
-  end caps or seams between blocks). The noise picked for a platform in the placeable picker is laid over
+  one seamless slab of the platform's middle frame, with an edge (bevelled by a pixel) only round the
+  outside (no planks, end caps or seams between blocks). The noise picked for a platform in the placeable picker is laid over
   the floor per voxel of the world, so it runs on unbroken from block to block.
 - **Held weapons in 3D:** a spear rests in your hand pointing at the crosshair. Flails are drawn
   to the player's pixels (the Sunfury's head is two thirds your height). The Terragrim's flurry lies

@@ -148,6 +148,10 @@ static func _cross(sw: float, sh: float, single: bool) -> ArrayMesh:
 ## The sides a platform cell can link to the platform beside it, as bits of
 ## platform()'s `links`: +x, -x, +z, -z.
 const PLATFORM_LINKS: Array[Vector3i] = [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]
+## The diagonal cells platform()'s `links` also has, bits 4-7: whether the
+## linked platforms have platforms beside them there too (where their edges,
+## and so their bevels, are). +x+z, +x-z, -x+z, -x-z.
+const PLATFORM_DIAGONALS: Array[Vector3i] = [Vector3i(1, 0, 1), Vector3i(1, 0, -1), Vector3i(-1, 0, 1), Vector3i(-1, 0, -1)]
 ## Unit cube face corners and shade per face (voxel_arrays' order and shades):
 ## +z, -z, +x, -x, up, down.
 const _CUBE_FACES := [
@@ -163,15 +167,22 @@ const _CUBE_FACES := [
 ## One platform cell of a merged platform floor (BlockModels): the slab of
 ## the platform's middle frame (Terraria's frame for a platform with platforms
 ## on both sides, which tiles) laid across the whole block both ways, with no
-## faces toward the platforms it links to (`links`: PLATFORM_LINKS bits), so
+## faces toward the platforms it links to (`links`: PLATFORM_LINKS bits, then
+## PLATFORM_DIAGONALS), so
 ## platforms that touch read as one surface whatever its shape, without the
-## end caps and seams of single planks. Top and bottom take one colour each
+## end caps and seams of single planks; its outer edges are bevelled
+## (PLATFORM_BEVEL). Top and bottom take one colour each
 ## (the frame's commonest just inside its outline); the sides show the frame's
 ## pixels, running on round the edge. The pattern doesn't turn with the block,
 ## so every cell lines up with its neighbours. The top and bottom carry their
 ## shade in their colour's alpha (below 1): the shader puts the picker's noise
 ## on them per voxel of the world (BlockModels.platform_material). Lifted like
 ## the block's model (its transform's height); cached per block and links.
+## How far (voxels, one art pixel each) a platform floor's outer edges are
+## bevelled.
+const PLATFORM_BEVEL := 1
+
+
 static func platform(block_id: int, links: int) -> ArrayMesh:
 	var key := "%d:platform:%d" % [block_id, links]
 	if _cache.has(key):
@@ -203,12 +214,42 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 				if yy >= 0 and yy < h and art.get_pixel(x, yy).a > 0.5:
 					return art.get_pixel(x, yy)
 		return top
+	# The bevel: PLATFORM_BEVEL voxels off the floor's outer edges, top and
+	# bottom, and down its outer corners (a voxel goes when it's that close to
+	# two of the open sides, the top and the bottom).
+	var first := solid_rows.find(true)
+	var last := solid_rows.rfind(true)
+	var b := PLATFORM_BEVEL
+	var open := func(bit: int) -> bool:
+		return links & (1 << bit) == 0
+	var cap := func(y: int) -> bool:
+		return first >= 0 and (y - first < b or last - y < b)
+	# Whether a cell's voxel is bevelled away, given which of the cell's sides
+	# are open.
+	var bevelled := func(sides: Array, x: int, y: int, z: int) -> bool:
+		var edges := int(x < b and sides[1]) + int(x >= n - b and sides[0]) + int(z < b and sides[3]) + int(z >= n - b and sides[2])
+		return edges + int(cap.call(y)) >= 2
+	var mine := [open.call(0), open.call(1), open.call(2), open.call(3)]
+	# A linked platform's open sides: not back toward this one, nor (being
+	# that far from this one's voxels) its far side; across it, as the
+	# diagonals say (PLATFORM_DIAGONALS).
+	var theirs := []
+	for side in 4:
+		var o := [false, false, false, false]
+		var across := [2, 3] if side < 2 else [0, 1]
+		for a in across:
+			o[a] = links & (1 << (4 + _diagonal(side, a))) == 0
+		theirs.append(o)
 	# A voxel of the slab. Past the block's edge it's the linked platform's.
 	var filled := func(x: int, y: int, z: int) -> bool:
 		if y < 0 or y >= h or not solid_rows[y]:
 			return false
 		var side := 0 if x >= n else 1 if x < 0 else 2 if z >= n else 3 if z < 0 else -1
-		return side < 0 or links & (1 << side) != 0
+		if side < 0:
+			return not bevelled.call(mine, x, y, z)
+		if open.call(side):
+			return false
+		return not bevelled.call(theirs[side], posmod(x, n), y, posmod(z, n))
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var quad := func(fi: int, x: int, y: int, z: int, length: int, colour: Color) -> void:
@@ -250,6 +291,14 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 	var mesh := st.commit()
 	_cache[key] = {"mesh": mesh, "textured": false}
 	return mesh
+
+
+## The PLATFORM_DIAGONALS index of the cell past PLATFORM_LINKS side `a`
+## then side `b` (one along x, one along z).
+static func _diagonal(a: int, b: int) -> int:
+	var xs := a if a < 2 else b
+	var zs := b if a < 2 else a
+	return xs * 2 + (zs - 2)
 
 
 ## A platform's colours for the palette noise (linear, at most 16): its

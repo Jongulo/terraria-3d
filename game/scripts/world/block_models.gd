@@ -252,13 +252,21 @@ static func merges(d: Dictionary) -> bool:
 
 
 ## Which sides of the flat platform at `pos` touch another flat platform (not
-## a stair), as BlockModelMesh.PLATFORM_LINKS bits.
+## a stair), as BlockModelMesh.PLATFORM_LINKS bits, then which diagonal cells
+## are flat platforms (PLATFORM_DIAGONALS, bits 4-7).
 func platform_links(pos: Vector3i) -> int:
 	var links := 0
-	for i in BlockModelMesh.PLATFORM_LINKS.size():
-		var q := pos + BlockModelMesh.PLATFORM_LINKS[i]
+	var cells: Array = BlockModelMesh.PLATFORM_LINKS + BlockModelMesh.PLATFORM_DIAGONALS
+	for i in cells.size():
+		var q: Vector3i = pos + cells[i]
 		if merges(Data.block(world.get_block(q))) and world.get_shape(q) < Game.SHAPE_RAMP:
 			links |= 1 << i
+	# A diagonal only counts next to a linked side (so fewer batches).
+	for i in 4:
+		var x_side := i / 2
+		var z_side := 2 + i % 2
+		if links & ((1 << x_side) | (1 << z_side)) == 0:
+			links &= ~(1 << (4 + i))
 	return links
 
 
