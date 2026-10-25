@@ -851,6 +851,12 @@ func _run() -> void:
 			and not _side_faces(rm, -0.5) and _side_faces(rm, 0.5), "platforms side by side have no faces where they meet")
 	check(lm != null and rm != null and is_equal_approx(lm.get_aabb().end.y, 1.0) and is_equal_approx(rm.get_aabb().end.y, 1.0),
 			"and their tops are level with the top of the block")
+	# The floor takes the noise picked for the platform's method.
+	var popts := Data.method_options("wood_platform", Data.block(wplat).method)
+	var pmat := BlockModels.platform_material(wplat)
+	check(pmat.get_shader_parameter("voxel_noise") == maxi(0, Data.EXTRUDE_NOISES.find(popts.get("noise", "none")))
+			and is_equal_approx(pmat.get_shader_parameter("noise_strength"), float(popts.get("strength", 0.5))),
+			"the floor has the platform's picked noise (%s)" % popts.get("noise", "none"))
 	game.world.set_block(left, 0)
 	game.world.set_block(plat_at, 0)
 	await frames(5)

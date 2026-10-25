@@ -52,6 +52,17 @@ uniform vec4 clip_plane = vec4(0.0);
 uniform vec2 lod_center = vec2(0.0);
 uniform float lod_near = -1.0;
 uniform float lod_far = 1.0e9;
+// Merged platform floors (BlockModelMesh.platform): the placeable picker's
+// noise (0 none, 1 speckle, 2 grain, 3 palette, as on extruded sides) worked
+// out per voxel of the world, so it runs on unbroken from one block to the
+// next. Only on faces whose COLOR.a is below 1 (the floor's top and bottom;
+// their alpha is the face's shade, which palette colours take).
+uniform int voxel_noise = 0;
+uniform float noise_strength = 0.5;
+uniform int noise_seed = 0;
+uniform float voxels_per_metre = 16.0;
+uniform vec3 noise_palette[16];
+uniform int noise_palette_size = 0;
 varying vec4 v_light;
 varying vec3 v_world;
 // Billboards: where the instance stands and which way it faced.
@@ -61,6 +72,39 @@ varying vec3 v_fwd;
 #include "res://shaders/player_light.gdshaderinc"
 #define SUN_FACES
 #include "res://shaders/sun_shadow.gdshaderinc"
+
+// 0-1 from four integers (and the noise seed).
+float voxel_hash(ivec4 v) {
+	uvec4 u = uvec4(v);
+	uint h = u.x * 1597334677u ^ u.y * 3812015801u ^ u.z * 2798796415u ^ u.w * 1979697957u ^ uint(noise_seed) * 2654435761u;
+	h = (h ^ (h >> 16u)) * 2246822519u;
+	h = (h ^ (h >> 13u)) * 3266489917u;
+	h ^= h >> 16u;
+	return float(h) / 4294967295.0;
+}
+
+// A floor face's colour with the noise: `col` its colour, `shade` its shade.
+// The voxel is the one under the fragment in x and z; the face's own height
+// (a voxel boundary) tells top and bottom apart.
+vec3 voxel_noise_colour(vec3 col, float shade, vec3 world) {
+	vec3 p = world * voxels_per_metre;
+	ivec3 cell = ivec3(int(floor(p.x)), int(round(p.y)), int(floor(p.z)));
+	float r = voxel_hash(ivec4(cell, 1));
+	float s = noise_strength;
+	if (voxel_noise == 1) {
+		return col * (1.0 + (r * 2.0 - 1.0) * s * 0.45);
+	}
+	if (voxel_noise == 2) {
+		// Wavy bands along z, each x column on its own phase (wood).
+		float phase = voxel_hash(ivec4(cell.x, cell.y, 0, 7)) * TAU;
+		return col * (1.0 + sin(float(cell.z) * 0.55 + phase) * s * 0.3 + (r - 0.5) * s * 0.12);
+	}
+	if (voxel_noise == 3 && noise_palette_size > 0 && r < s * 0.6) {
+		int i = int(voxel_hash(ivec4(cell, 2)) * float(noise_palette_size)) % noise_palette_size;
+		return noise_palette[i] * shade;
+	}
+	return col;
+}
 
 void vertex() {
 	float lod_d = distance(MODEL_MATRIX[3].xz, lod_center);
@@ -118,6 +162,9 @@ void fragment() {
 		discard;
 	}
 	vec3 col = c.rgb * COLOR.rgb;
+	if (voxel_noise > 0 && COLOR.a < 0.999) {
+		col = voxel_noise_colour(col, COLOR.a, v_world);
+	}
 #ifdef NPC_MODEL
 	col *= tint.rgb * (1.0 - flash);
 #endif

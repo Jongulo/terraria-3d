@@ -170,7 +170,7 @@ func chunk_updated(c: Vector3i) -> void:
 			var pkey := "%d:platform:%d" % [id, links]
 			if not batches.has(pkey):
 				batches[pkey] = {"id": id, "mesh": BlockModelMesh.platform(id, links), "textured": false, "items": [],
-						"method": "platform", "rotation": 0, "frame": 0}
+						"method": "platform", "rotation": 0, "frame": 0, "material": platform_material(id)}
 			batches[pkey].items.append([Transform3D(Basis(), Vector3(pos) + Vector3(0.5, 0.0, 0.5)), pos])
 			continue
 		if shape >= Game.SHAPE_RAMP and shape < Game.SHAPE_CEILING:
@@ -199,7 +199,7 @@ func chunk_updated(c: Vector3i) -> void:
 		batches[mkey].items.append([t, pos])
 	var animated := []
 	for b in batches.values():
-		var node := _mesh_batch(b.id, b.mesh, b.textured, b.items, keys, b.frame)
+		var node := _mesh_batch(b.id, b.mesh, b.textured, b.items, keys, b.frame, b.get("material"))
 		add_child(node)
 		nodes.append(node)
 		if Data.anim_frames(Data.block(b.id)) > 1:
@@ -380,7 +380,7 @@ static func variant_at(pos: Vector3i, variants: int) -> int:
 
 ## One mesh drawn at `items` ([Transform3D, block position]), each instance
 ## lit by its block's light (custom data); records them in _models.
-func _mesh_batch(block_id: int, mesh: ArrayMesh, textured: bool, items: Array, keys: Array, frame := 0) -> MultiMeshInstance3D:
+func _mesh_batch(block_id: int, mesh: ArrayMesh, textured: bool, items: Array, keys: Array, frame := 0, material: ShaderMaterial = null) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
@@ -396,7 +396,7 @@ func _mesh_batch(block_id: int, mesh: ArrayMesh, textured: bool, items: Array, k
 		keys.append(Chests.key(pos))
 	var mi := MultiMeshInstance3D.new()
 	mi.multimesh = mm
-	mi.material_override = batched_material(block_id, textured, frame)
+	mi.material_override = material if material != null else batched_material(block_id, textured, frame)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	return mi
 
@@ -805,6 +805,30 @@ static func material_for(block_id: int, textured: bool, cache := {}, frame := 0)
 		m.set_shader_parameter("textured", textured)
 		store[key] = m
 	return store[key]
+
+
+## Shared material for a block's merged platform floor (BlockModelMesh.platform),
+## with the noise picked for its method in the placeable picker (Data's
+## method_options), set again each time a chunk is built.
+static func platform_material(block_id: int) -> ShaderMaterial:
+	var key := "%d:platform" % block_id
+	var m: ShaderMaterial = _shared_materials.get(key)
+	if m == null:
+		m = ShaderMaterial.new()
+		m.shader = preload("res://shaders/block_model_batched.gdshader")
+		m.set_shader_parameter("textured", false)
+		var palette := BlockModelMesh.platform_palette(block_id)
+		m.set_shader_parameter("noise_palette", palette)
+		m.set_shader_parameter("noise_palette_size", palette.size())
+		_shared_materials[key] = m
+	var d := Data.block(block_id)
+	var method: String = d.get("method", "extruded")
+	var o: Dictionary = Data.method_options(d.get("settings", d.name), method) if method in Data.NOISE_METHODS else {}
+	m.set_shader_parameter("voxel_noise", maxi(0, Data.EXTRUDE_NOISES.find(o.get("noise", "none"))))
+	m.set_shader_parameter("noise_strength", float(o.get("strength", 0.5)))
+	m.set_shader_parameter("noise_seed", int(o.get("seed", 0)))
+	m.set_shader_parameter("voxels_per_metre", 1.0 / float(d.get("art_px", 1.0 / 16.0)))
+	return m
 
 
 ## Shared material for batched block models: lit per instance (custom data).

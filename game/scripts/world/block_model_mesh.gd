@@ -168,8 +168,10 @@ const _CUBE_FACES := [
 ## end caps and seams of single planks. Top and bottom take one colour each
 ## (the frame's commonest just inside its outline); the sides show the frame's
 ## pixels, running on round the edge. The pattern doesn't turn with the block,
-## so every cell lines up with its neighbours. Lifted like the block's model
-## (its transform's height); cached per block and links.
+## so every cell lines up with its neighbours. The top and bottom carry their
+## shade in their colour's alpha (below 1): the shader puts the picker's noise
+## on them per voxel of the world (BlockModels.platform_material). Lifted like
+## the block's model (its transform's height); cached per block and links.
 static func platform(block_id: int, links: int) -> ArrayMesh:
 	var key := "%d:platform:%d" % [block_id, links]
 	if _cache.has(key):
@@ -212,9 +214,10 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 	var quad := func(fi: int, x: int, y: int, z: int, length: int, colour: Color) -> void:
 		var p := Vector3((x - n * 0.5) * px, lift + (h - 1 - y) * px, (z - n * 0.5) * px)
 		var size := Vector3(length * px, px, px)
-		var c: Color = colour.srgb_to_linear() * float(_CUBE_FACES[fi][1])
+		var shade := float(_CUBE_FACES[fi][1])
+		var c: Color = colour.srgb_to_linear() * shade
 		for i in [0, 1, 2, 0, 2, 3]:
-			st.set_color(Color(c.r, c.g, c.b))
+			st.set_color(Color(c.r, c.g, c.b, shade if fi >= 4 else 1.0))
 			st.set_uv(FACE_UVS[i] * Vector2(length, 1))
 			st.add_vertex(p + _CUBE_FACES[fi][0][i] * size)
 	for y in h:
@@ -247,6 +250,30 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 	var mesh := st.commit()
 	_cache[key] = {"mesh": mesh, "textured": false}
 	return mesh
+
+
+## A platform's colours for the palette noise (linear, at most 16): its
+## middle frame's pixels away from transparency (the frame tiles sideways).
+static func platform_palette(block_id: int) -> PackedVector3Array:
+	var d := Data.block(block_id)
+	var art: Image = d.art
+	var tiles: Array = d.get("tex", {}).get("all", {}).get("tiles", [2, 1])
+	var fw := maxi(1, art.get_width() / maxi(1, int(tiles[0])))
+	var h := art.get_height()
+	var opaque := func(x: int, y: int) -> bool:
+		return y >= 0 and y < h and art.get_pixel(posmod(x, fw), y).a > 0.5
+	var seen := {}
+	var out := PackedVector3Array()
+	for y in h:
+		for x in fw:
+			if out.size() >= 16 or not (opaque.call(x, y) and opaque.call(x - 1, y) and opaque.call(x + 1, y)
+					and opaque.call(x, y - 1) and opaque.call(x, y + 1)):
+				continue
+			var c := art.get_pixel(x, y).srgb_to_linear()
+			if not seen.has(c):
+				seen[c] = true
+				out.append(Vector3(c.r, c.g, c.b))
+	return out
 
 
 ## The commonest colour just inside the outline of a platform frame's top (or
