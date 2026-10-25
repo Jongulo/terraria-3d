@@ -214,7 +214,9 @@ fn dart(w: &mut World, rng: &mut Rng, ids: &TrapIds, p: P) -> bool {
     let ok = |w: &World, hit: Option<(P, i32)>| -> Option<P> {
         let (c, d) = hit?;
         (d > blocks(5) && d < reach && solid(w, (c.0, c.1 - 1, c.2)) && !ids.no_ground.contains(&w.get(c.0, c.1, c.2))
-            && !ids.no_ground.contains(&w.get(c.0, c.1 - 1, c.2)))
+            && !ids.no_ground.contains(&w.get(c.0, c.1 - 1, c.2))
+            // (Not a tree's ground: the trunk would stand on the trap.)
+            && !w.def(w.get(c.0, c.1 + 1, c.2)).name.ends_with("trunk"))
             .then_some(c)
     };
     let (a, b) = (ok(w, find(w, -1)), ok(w, find(w, 1)));

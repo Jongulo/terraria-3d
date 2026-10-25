@@ -36,6 +36,12 @@
 		"pick_one": [["CopperCoin", 20, 90], ["Torch", 4, 12], ["Rope", 20, 40], ["LesserHealingPotion", 1, 2], ["WoodenArrow", 10, 20], ["Shuriken", 10, 20], ["MusketBall", 15, 30], ["SilverCoin", 1, 2], ["Gel", 1, 3], ["Bomb", 1, 2], ["ThrowingKnife", 10, 20]],
 		"extras": [["LesserManaPotion", 1, 1, 0.1], ["Mushroom", 1, 2, 0.15]]
 	},
+	"web_chest": {
+		"_doc": "Terraria's Web Covered Chest (a spider cave's, AddBuriedChest with a Web Slinger, chest style 15): the Web Slinger and an underground chest's extras.",
+		"pick_one": [["WebSlinger", 1, 1]],
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05], ["RecallPotion", 2, 4, 0.6667]],
+		"either": [[[["RegenerationPotion", 1, 2], ["ShinePotion", 1, 2], ["NightOwlPotion", 1, 2], ["SwiftnessPotion", 1, 2], ["ArcheryPotion", 1, 2], ["GillsPotion", 1, 2], ["HunterPotion", 1, 2], ["MiningPotion", 1, 2], ["TrapsightPotion", 1, 2]], 0.6667]]
+	},
 	"living_chest": {
 		"_doc": "Terraria's Living Wood Chest (a living tree's root room; GrowLivingTreePassageRoom): a Living Wood Wand and a Leaf Wand, or 1 in 3 a Finch Staff. Extras as any chest near the surface.",
 		"pick_one": [["LivingWoodWand", 1, 1, [["LeafWand", 1, 1]]], ["LivingWoodWand", 1, 1, [["LeafWand", 1, 1]]], ["BabyBirdStaff", 1, 1]],

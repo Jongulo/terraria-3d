@@ -217,6 +217,12 @@ checked by loading it with the dedicated server and having it save; nothing shou
   - **The Underworld's forts** (`hell.rs`) send each wing along x or z, so a fort is a cross, an L,
     a T or a line.
   - **Cabins** are scaled to 2/3 (Terraria's smallest room, 15 × 8 tiles, is 10 × 10 × 6 blocks).
+  - **Granite caves** (`granite.rs`) run Terraria's magma flow through a 3D grid, spreading to
+    the six blocks round each cell, so a cave is a rounded pocket about as wide as Terraria's.
+    **Marble caves** (`marble.rs`) stack Terraria's slabs in 3D: a wandering band of rooms with
+    smoothed floors and ceilings. **Spider caves** (`spiders.rs`) are measured out of the caves
+    in 3D, as Terraria counts a cave's tiles, and webbed through. With no background walls, the
+    Wall Creeper spawns within a nest's webs (Terraria's spider walls), walking the floor.
   - **Enchanted Sword Shrines** always have a shaft open to the sky, with a torch each side of its
     mouth, so you can find them (Terraria digs one only 1 time in 3, and stops it under the
     surface). Their flower vines grow in clumps, since a vine from every ceiling tile would be a
@@ -286,8 +292,8 @@ in this game.
 - **World:** forest, Snow, Desert, Jungle, Corruption or Crimson, Glowing Mushroom biome, bee hives,
   ocean, floating islands, the Dungeon, and the Underworld with its ash forests and ruined forts;
   caves, lakes, gem ores, gem trees, vanity trees, giant living trees and Living Mahogany trees,
-  underground cabins, Enchanted Sword Shrines, traps, pots, life crystals and loot chests, Shadow
-  Chests, and forest plants and debris.
+  underground cabins, Granite and Marble caves, spider caves, Enchanted Sword Shrines, traps, pots,
+  life crystals and loot chests, Shadow Chests, and forest plants and debris.
 - **Liquids:** water, lava and honey that fall, level out and settle; waterfalls and lavafalls, and
   springs you open with a hammer.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
@@ -310,8 +316,8 @@ in this game.
 
 **Not yet:** Hardmode and the Wall of Flesh; summons and minions, pets, mounts and minecarts;
 alchemy, Well Fed and buff potions; placing wires; the Painter, Traveling Merchant, other town NPCs
-and NPC happiness; Devourers, Blood Crawlers and Giant Worms; Granite and Marble caves and the
-Underground Desert's open caverns; the Topaz, Sapphire, Emerald and Ruby Staves' gem effects;
+and NPC happiness; Devourers, Blood Crawlers and Giant Worms; the Underground Desert's open
+caverns; the Topaz, Sapphire, Emerald and Ruby Staves' gem effects;
 Blood Moons; swimming (Flippers); herbs growing from seeds; cages and terrariums; Expert mode.
 
 ## Tools

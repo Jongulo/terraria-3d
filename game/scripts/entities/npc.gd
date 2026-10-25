@@ -156,7 +156,7 @@ static func look(kind_name: String) -> Dictionary:
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
 	var flier: bool = d.ai in ["flyer", "bat", "harpy", "flying_fish", "hover", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper",
-			"skull", "spike_ball", "wheel"]
+			"skull", "spike_ball", "wheel", "granite_flyer"]
 	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
@@ -360,6 +360,7 @@ func _physics_process(delta: float) -> void:
 		"vulture": _ai_vulture(delta, player)
 		"flying_fish": _ai_flying_fish(delta, player)
 		"hover": _ai_hover(delta, player)
+		"granite_flyer": _ai_granite_flyer(delta, player)
 		"bat": _ai_bat(delta, player)
 		"harpy": _ai_harpy(delta, player)
 		"swim": _ai_swim(delta, player)
@@ -1399,6 +1400,8 @@ func _slime_spikes(delta: float, player) -> void:
 
 func _ai_fighter(delta: float, player) -> void:
 	var game := Game.current
+	if def.has("curl") and _curl(delta, def.curl):
+		return
 	var dir: Vector3 = _chase_point(player.global_position) - global_position
 	dir.y = 0
 	var speed: float = def.get("speed", 2.5)
@@ -1442,6 +1445,40 @@ func _ai_fighter(delta: float, player) -> void:
 		sprite.set_frame(int(wf[0]))
 
 
+## The Granite Golem's curl (AI_003 for NPC 482), in ticks: every "every"
+## (300; a hit brings it "hit" (15) sooner) it curls up on the ground for
+## "for" (120): it can't be hurt, slows x0.9 a tick, and a fall (over 1
+## px/tick up or down) uncurls it 10 times as fast; its "frames" [first,
+## last] meanwhile. Returns whether it's curled (no walking then).
+var _curl_t := 0.0
+
+func _curl(delta: float, c: Dictionary) -> bool:
+	var ticks := delta * 60.0
+	dont_take_damage = false
+	if _curl_t < 0.0:
+		dont_take_damage = true
+		_curl_t += ticks
+		velocity.x *= pow(0.9, ticks)
+		velocity.z *= pow(0.9, ticks)
+		if absf(velocity.y) > PX_TICK:
+			_curl_t += 10.0 * ticks
+		if _curl_t >= 0.0:
+			_curl_t = 0.0
+		var f: Array = c.frames
+		anim += ticks / 4.0
+		sprite.set_frame(int(f[0]) + int(anim) % (int(f[1]) - int(f[0]) + 1))
+		_just_hit = false
+		return true
+	if _curl_t < float(c.every):
+		if _just_hit:
+			_curl_t += float(c.hit)
+		_curl_t += ticks
+	elif on_floor:
+		_curl_t = -float(c.get("for", 120))
+	_just_hit = false
+	return false
+
+
 ## Terraria's fighter jump (AI_003) at a wall: 5 px/tick over a low one, 6,
 ## 7 or 8 as it rises 2, 3 or 4 tiles and more (a tile is 2/3 of a block).
 func _wall_jump(game, dir: Vector3) -> float:
@@ -1463,6 +1500,81 @@ func _ai_flyer(delta: float, player) -> void:
 	_fly_frame()
 	if velocity.length() > 0.1 and not def.get("upright", false):
 		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+
+
+## Terraria's Granite Elemental (aiStyle 91), in its px/tick: with you in
+## sight it homes in (at 2 px/tick and 1 more each 200 px away, eased in
+## over 50 ticks). Out of sight it makes for a spot it can reach in a line
+## and see you from: at its own height straight over or under you, or level
+## with you straight below or above it (at 1, eased over 3; giving up when it
+## hits something or gets there). With neither it drifts on at 1.5 (eased
+## over 20, bouncing off walls), for up to 180 ticks, looking for such a spot
+## every 5. (Its shield, curling up when hit, is Expert Mode's only.)
+var _gf_state := 0
+var _gf_to := Vector3.ZERO
+var _gf_t := 0.0
+var _gf_look := 0.0
+
+func _ai_granite_flyer(delta: float, player) -> void:
+	var ticks := delta * 60.0
+	var world: VoxelWorld = Game.current.world
+	var c := center()
+	var you: Vector3 = player.center()
+	var v := velocity / PX_TICK
+	var line := func(a: Vector3, b: Vector3) -> bool:
+		return a.distance_to(b) < 0.01 or world.raycast(a, (b - a).normalized(), a.distance_to(b)).is_empty()
+	var steer := func(from: Vector3, want: Vector3, n: float) -> Vector3:
+		return want + (from - want) * pow(1.0 - 1.0 / n, ticks)
+	var hit_wall := last_blocked != Vector3i.ZERO
+	last_blocked = Vector3i.ZERO
+	var sees := player.alive and _sees(player)
+	if _gf_state == 0:
+		if sees:
+			_gf_state = 1
+		else:
+			_gf_state = 4
+			_gf_t = 0.0
+			var over := Vector3(you.x, c.y, you.z)
+			var level := Vector3(c.x, you.y, c.z)
+			if over.distance_to(c) * PX_PER_BLOCK > 8.0 and line.call(c, over):
+				_gf_state = 3
+				_gf_to = over
+			if level.distance_to(c) * PX_PER_BLOCK > 8.0 and line.call(c, level) and line.call(level, you):
+				_gf_state = 3
+				_gf_to = level
+			if _gf_state == 4:
+				v += (you - c).normalized() * 0.5
+	elif _gf_state == 1:
+		var px := c.distance_to(you) * PX_PER_BLOCK
+		v = steer.call(v, (you - c).normalized() * (2.0 + px / 200.0), 50.0)
+		if not sees:
+			_gf_state = 0
+	elif _gf_state == 3:
+		var px := c.distance_to(_gf_to) * PX_PER_BLOCK
+		v = steer.call(v, (_gf_to - c).normalized(), 3.0)
+		if hit_wall:
+			_gf_state = 4
+			_gf_t = 0.0
+		if px < 1.0 or px > 800.0 or sees:
+			_gf_state = 0
+	else:
+		if v.length() < 0.001:
+			v = (you - c).normalized() * 0.1
+		v = steer.call(v, v.normalized() * 1.5, 20.0)
+		_gf_t += ticks
+		if _gf_t > 180.0 or sees:
+			_gf_state = 0
+		_gf_look += ticks
+		if _gf_state == 4 and _gf_look >= 5.0:
+			_gf_look = 0.0
+			for spot in [Vector3(you.x, c.y, you.z), Vector3(c.x, you.y, c.z)]:
+				if line.call(c, spot) and line.call(you, spot):
+					_gf_state = 3
+					_gf_to = spot
+					break
+	velocity = v * PX_TICK
+	anim += ticks / 5.0
+	_fly_frame()
 
 
 ## Slimes carrying items (AI_001's first tick, Terraria's normal world): an

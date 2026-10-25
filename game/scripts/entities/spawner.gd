@@ -159,9 +159,16 @@ func spawn_tick() -> void:
 	if depth == "caverns" and game.invasion.downed and not game.town.arrived.has("GoblinTinkerer") and randi() % 20 == 0 \
 			and not game.npcs().any(func(n): return n.kind == "BoundGoblin"):
 		kind = "BoundGoblin"
-	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy", "flying_fish", "hover"]
+	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy", "flying_fish", "hover", "granite_flyer"]
 	var pos = _find_water_spot(game, player.global_position, NPC.look(kind).hitbox) if Data.npcs[kind].ai == "swim" \
 			else _find_spot(game, player.global_position, depth in ["underground", "caverns", "underworld"], flying)
+	# The mini-biomes' own, at a spot in a cave (cave_pick).
+	if pos != null and depth in ["underground", "caverns"] and kind != "BoundGoblin":
+		var own := cave_pick(game, pos, player.global_position)
+		if own != "":
+			kind = own
+			if Data.npcs[kind].ai == "granite_flyer":
+				pos += Vector3(0, 1.0, 0)
 	# Any of Terraria's NPC 1 slimes spawning is a Pinky 1 time in 180
 	# (Spawner.SpawnNPC).
 	if kind in Game.SLIME_RAIN_SLIMES and randi() % 180 == 0:
@@ -477,6 +484,41 @@ func _depth(y: float, game) -> String:
 	if y < game.underworld_level:
 		return "underworld"
 	return "caverns"
+
+
+## Terraria's mini-biome spawns underground (Spawner.SpawnAnNPC, before
+## Hardmode), for a spot `at` in a cave with you at `you`: in a spider cave
+## (its spider walls) a Wall Creeper; else (out of the big biomes, in half
+## its cave spawns) near marble 3 in 4 a Hoplite, near granite 4 in 5 a
+## Granite Elemental 5 in 6 while there's none, else a Granite Golem. Near:
+## a block of it within 20 to 30 tiles of the spot or 30 to 60 of you
+## (Terraria's nearMarble, nearGranite). "" for the usual spawns.
+func cave_pick(game, at: Vector3, you: Vector3) -> String:
+	if game.in_spider_cave(at):
+		return "WallCreeper"
+	if game.biome != "" or randi() % 2 != 0:
+		return ""
+	var stone := _stone_near(game, at, you)
+	if stone == "marble" and randi() % 4 != 0:
+		return "GreekSkeleton"
+	if stone == "granite" and randi() % 5 != 0:
+		if randi() % 6 != 0 and not game.npcs().any(func(n): return n.kind == "GraniteFlyer"):
+			return "GraniteFlyer"
+		return "GraniteGolem"
+	return ""
+
+
+## Marble or granite near a spawn (Terraria checks round the spot 20 to 30
+## tiles, then round you 30 to 60; a tile is 2/3 of a block): marble if
+## there's any, else granite, else "".
+static func _stone_near(game, at: Vector3, you: Vector3) -> String:
+	for look in [[at, randi_range(20, 30)], [you, randi_range(30, 60)]]:
+		var r := int(round(float(look[1]) * 2.0 / 3.0))
+		for stone in ["marble", "granite"]:
+			var id: int = Data.block_id(stone)
+			if id > 0 and game.world.find_blocks(Vector3i(look[0].floor()), Vector3i(r, r, r), PackedInt32Array([id]), 1).size() > 0:
+				return stone
+	return ""
 
 
 ## Terraria's Underworld spawns (Spawner.SpawnAnNPC below its last 190
