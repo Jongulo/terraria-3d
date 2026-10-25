@@ -230,8 +230,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"blue_brick_platform": {
@@ -438,8 +438,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"coral_2": {
@@ -451,8 +451,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"coral_3": {
@@ -464,8 +464,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"coral_4": {
@@ -477,8 +477,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 2,
-			"depth": 5,
+			"bevel_size": 2.0,
+			"depth": 5.0,
 			"one_color": true
 		},
 		"coral_5": {
@@ -490,8 +490,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"coral_6": {
@@ -503,8 +503,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"corrupt_plants_10": {
@@ -1059,8 +1059,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"demon_altar": {
@@ -1149,8 +1149,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"fireplace": {
@@ -2680,8 +2680,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"mug": {
@@ -3064,8 +3064,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 3,
-			"depth": 7,
+			"bevel_size": 3.0,
+			"depth": 7.0,
 			"one_color": true
 		},
 		"pink_brick_platform": {
@@ -3154,8 +3154,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"sign": {
@@ -5130,8 +5130,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"one_color": true
 		},
 		"wood_platform": {
@@ -5330,6 +5330,24 @@
 		"grandfather_clock": {
 			"one_color": true
 		},
+		"granite_stalactite": {
+			"one_color": true
+		},
+		"granite_stalactite_2": {
+			"one_color": true
+		},
+		"granite_stalactite_3": {
+			"one_color": true
+		},
+		"granite_stalagmite": {
+			"one_color": true
+		},
+		"granite_stalagmite_2": {
+			"one_color": true
+		},
+		"granite_stalagmite_3": {
+			"one_color": true
+		},
 		"gray_pressure_plate": {
 			"noise": "speckle",
 			"one_color": true
@@ -5384,6 +5402,24 @@
 			"one_color": true
 		},
 		"lily_pad_3": {
+			"one_color": true
+		},
+		"marble_stalactite": {
+			"one_color": true
+		},
+		"marble_stalactite_2": {
+			"one_color": true
+		},
+		"marble_stalactite_3": {
+			"one_color": true
+		},
+		"marble_stalagmite": {
+			"one_color": true
+		},
+		"marble_stalagmite_2": {
+			"one_color": true
+		},
+		"marble_stalagmite_3": {
 			"one_color": true
 		},
 		"metal_shelf": {
@@ -5516,6 +5552,18 @@
 		"small_rocks_3": {
 			"no_outline": false,
 			"one_color": false
+		},
+		"spider_pot": {
+			"one_color": true
+		},
+		"spider_pot_2": {
+			"one_color": true
+		},
+		"spider_stalactite": {
+			"one_color": true
+		},
+		"spider_stalactite_2": {
+			"one_color": true
 		},
 		"teleporter": {
 			"noise": "grain",
@@ -5743,6 +5791,12 @@
 		"gold_chest": "extruded",
 		"gothic_lamp": "hull",
 		"grandfather_clock": "hull",
+		"granite_stalactite": "hull",
+		"granite_stalactite_2": "hull",
+		"granite_stalactite_3": "hull",
+		"granite_stalagmite": "hull",
+		"granite_stalagmite_2": "hull",
+		"granite_stalagmite_3": "hull",
 		"gray_pressure_plate": "hull",
 		"green_dungeon_lamp": "hull",
 		"green_dungeon_vase": "hull",
@@ -5832,6 +5886,12 @@
 		"lily_pad_7": "extruded",
 		"lily_pad_8": "extruded",
 		"lily_pad_9": "extruded",
+		"marble_stalactite": "hull",
+		"marble_stalactite_2": "hull",
+		"marble_stalactite_3": "hull",
+		"marble_stalagmite": "hull",
+		"marble_stalagmite_2": "hull",
+		"marble_stalagmite_3": "hull",
 		"moonglow": "extruded",
 		"mug": "extruded",
 		"mushroom_vines_10": "extruded",
@@ -5901,6 +5961,11 @@
 		"small_rocks_5": "extruded",
 		"small_rocks_6": "extruded",
 		"solidifier": "extruded",
+		"spider_pot": "hull",
+		"spider_pot_2": "hull",
+		"spider_stalactite": "hull",
+		"spider_stalactite_2": "hull",
+		"spider_stalactite_3": "hull",
 		"sunflower": "extruded",
 		"sunflower_2": "extruded",
 		"sunflower_3": "extruded",
