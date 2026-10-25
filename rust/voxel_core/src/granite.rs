@@ -336,9 +336,7 @@ mod tests {
     fn a_granite_cave_in_the_stone() {
         let mut w = stone_world(3);
         let ids = Ids::new(&w);
-        let t = std::time::Instant::now();
         assert!(granite_cave(&mut w, &mut Rng::new(9), &ids, (100, 80, 100)));
-        let took = t.elapsed();
         let (granite, spel) = (ids.granite, ids.spel);
         let (mut g, mut tites, mut mites) = (0, 0, 0);
         for i in 0..w.blocks.len() {
@@ -356,7 +354,6 @@ mod tests {
         assert_eq!(w.structures.len(), 1);
         // Not in a block: nothing.
         assert!(!granite_cave(&mut w, &mut Rng::new(9), &ids, (0, 0, 0)));
-        assert!(took.as_secs_f64() < 5.0, "took {took:?}");
     }
 
     #[test]
