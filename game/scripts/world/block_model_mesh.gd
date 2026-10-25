@@ -145,6 +145,136 @@ static func _cross(sw: float, sh: float, single: bool) -> ArrayMesh:
 	return st.commit()
 
 
+## The sides a platform cell can link to the platform beside it, as bits of
+## platform()'s `links`: +x, -x, +z, -z.
+const PLATFORM_LINKS: Array[Vector3i] = [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]
+## Unit cube face corners and shade per face (voxel_arrays' order and shades):
+## +z, -z, +x, -x, up, down.
+const _CUBE_FACES := [
+	[[Vector3(0, 0, 1), Vector3(1, 0, 1), Vector3(1, 1, 1), Vector3(0, 1, 1)], 1.0],
+	[[Vector3(1, 0, 0), Vector3(0, 0, 0), Vector3(0, 1, 0), Vector3(1, 1, 0)], 0.85],
+	[[Vector3(1, 0, 1), Vector3(1, 0, 0), Vector3(1, 1, 0), Vector3(1, 1, 1)], 0.72],
+	[[Vector3(0, 0, 0), Vector3(0, 0, 1), Vector3(0, 1, 1), Vector3(0, 1, 0)], 0.72],
+	[[Vector3(0, 1, 1), Vector3(1, 1, 1), Vector3(1, 1, 0), Vector3(0, 1, 0)], 0.9],
+	[[Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(1, 0, 1), Vector3(0, 0, 1)], 0.55],
+]
+
+
+## One platform cell of a merged platform floor (BlockModels): the slab of
+## the platform's middle frame (Terraria's frame for a platform with platforms
+## on both sides, which tiles) laid across the whole block both ways, with no
+## faces toward the platforms it links to (`links`: PLATFORM_LINKS bits), so
+## platforms that touch read as one surface whatever its shape, without the
+## end caps and seams of single planks. Top and bottom take one colour each
+## (the frame's commonest just inside its outline); the sides show the frame's
+## pixels, running on round the edge. The pattern doesn't turn with the block,
+## so every cell lines up with its neighbours. Lifted like the block's model
+## (its transform's height); cached per block and links.
+static func platform(block_id: int, links: int) -> ArrayMesh:
+	var key := "%d:platform:%d" % [block_id, links]
+	if _cache.has(key):
+		return _cache[key].mesh
+	var d := Data.block(block_id)
+	var art: Image = d.art
+	var n := art.get_width()
+	var h := art.get_height()
+	var tiles: Array = d.get("tex", {}).get("all", {}).get("tiles", [2, 1])
+	var fw := maxi(1, n / maxi(1, int(tiles[0])))
+	var px := float(d.art_px)
+	var lift := Data.block_transform(d).origin.y
+	# The slab's layers: the frame's rows that are mostly opaque, filled right
+	# across (gaps in the art, between bricks or round a cloud's rim, would cut
+	# a grid of grooves into the floor). A gap's pixel on the sides takes the
+	# nearest opaque pixel above or below it.
+	var solid_rows := []
+	for y in h:
+		var opaque := 0
+		for x in fw:
+			opaque += int(art.get_pixel(x, y).a > 0.5)
+		solid_rows.append(opaque * 2 >= fw)
+	var top := _platform_face_colour(art, fw, true)
+	var bottom := _platform_face_colour(art, fw, false)
+	var art_at := func(u: int, y: int) -> Color:
+		var x := posmod(u, fw)
+		for step in h:
+			for yy in [y - step, y + step]:
+				if yy >= 0 and yy < h and art.get_pixel(x, yy).a > 0.5:
+					return art.get_pixel(x, yy)
+		return top
+	# A voxel of the slab. Past the block's edge it's the linked platform's.
+	var filled := func(x: int, y: int, z: int) -> bool:
+		if y < 0 or y >= h or not solid_rows[y]:
+			return false
+		var side := 0 if x >= n else 1 if x < 0 else 2 if z >= n else 3 if z < 0 else -1
+		return side < 0 or links & (1 << side) != 0
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var quad := func(fi: int, x: int, y: int, z: int, length: int, colour: Color) -> void:
+		var p := Vector3((x - n * 0.5) * px, lift + (h - 1 - y) * px, (z - n * 0.5) * px)
+		var size := Vector3(length * px, px, px)
+		var c: Color = colour.srgb_to_linear() * float(_CUBE_FACES[fi][1])
+		for i in [0, 1, 2, 0, 2, 3]:
+			st.set_color(Color(c.r, c.g, c.b))
+			st.set_uv(FACE_UVS[i] * Vector2(length, 1))
+			st.add_vertex(p + _CUBE_FACES[fi][0][i] * size)
+	for y in h:
+		for z in n:
+			# Tops and bottoms in runs along x (one colour); UVs count voxels, so
+			# the sun's shadow is still looked up per voxel.
+			for fi in [4, 5]:
+				var above := -1 if fi == 4 else 1
+				var x := 0
+				while x < n:
+					if not filled.call(x, y, z) or filled.call(x, y + above, z):
+						x += 1
+						continue
+					var x1 := x + 1
+					while x1 < n and filled.call(x1, y, z) and not filled.call(x1, y + above, z):
+						x1 += 1
+					quad.call(fi, x, y, z, x1 - x, top if fi == 4 else bottom)
+					x = x1
+			for x in n:
+				if not filled.call(x, y, z):
+					continue
+				if not filled.call(x, y, z + 1):
+					quad.call(0, x, y, z, 1, art_at.call(x, y))
+				if not filled.call(x, y, z - 1):
+					quad.call(1, x, y, z, 1, art_at.call(x, y))
+				if not filled.call(x + 1, y, z):
+					quad.call(2, x, y, z, 1, art_at.call(z, y))
+				if not filled.call(x - 1, y, z):
+					quad.call(3, x, y, z, 1, art_at.call(z, y))
+	var mesh := st.commit()
+	_cache[key] = {"mesh": mesh, "textured": false}
+	return mesh
+
+
+## The commonest colour just inside the outline of a platform frame's top (or
+## bottom), across its columns.
+static func _platform_face_colour(art: Image, fw: int, from_top: bool) -> Color:
+	var h := art.get_height()
+	var counts := {}
+	var best := Color(0.5, 0.4, 0.3)
+	var most := 0
+	for x in fw:
+		var rows: Array = range(h) if from_top else range(h - 1, -1, -1)
+		var edge := -1
+		for y in rows:
+			if art.get_pixel(x, y).a > 0.5:
+				edge = y
+				break
+		if edge < 0:
+			continue
+		var inner := edge + (1 if from_top else -1)
+		var y := inner if inner >= 0 and inner < h and art.get_pixel(x, inner).a > 0.5 else edge
+		var c := art.get_pixel(x, y)
+		counts[c] = counts.get(c, 0) + 1
+		if counts[c] > most:
+			most = counts[c]
+			best = c
+	return best
+
+
 static func transformed(m: ArrayMesh, t: Transform3D) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.create_from(m, 0)

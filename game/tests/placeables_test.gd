@@ -32,6 +32,17 @@ func key(code: Key, ctrl := false) -> void:
 		await get_tree().process_frame
 
 
+## Whether `mesh` has a face lying in the plane x = `x` (a platform's edge).
+func _side_faces(mesh: ArrayMesh, x: float) -> bool:
+	if mesh.get_surface_count() == 0:
+		return false
+	var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	for i in range(0, verts.size(), 3):
+		if absf(verts[i].x - x) < 0.001 and absf(verts[i + 1].x - x) < 0.001 and absf(verts[i + 2].x - x) < 0.001:
+			return true
+	return false
+
+
 func _ready() -> void:
 	Settings.persist = false
 	Settings.set_value("render_distance", 4)
@@ -819,6 +830,30 @@ func _run() -> void:
 	check(not near_model.is_empty() and near_model.mesh != cross_mesh, "and up close its full model")
 	p.global_position = was_at
 	game.world.set_block(far_chest, 0)
+
+	# Platforms that touch are one floor: no side faces where they meet, the
+	# same top height, and a lone platform is closed all round.
+	var plat_at := leaf_at + Vector3i(0, 0, 6)
+	for x in range(-1, 2):
+		game.world.set_block(plat_at + Vector3i(x, -1, 0), stone)
+		game.world.set_block(plat_at + Vector3i(x, 0, 0), 0)
+	var wplat := Data.block_id("wood_platform")
+	var left := plat_at + Vector3i(-1, 0, 0)
+	game.world.set_block(left, wplat)
+	await frames(5)
+	var lone: ArrayMesh = game.block_models.model_at(left).get("mesh")
+	check(lone != null and _side_faces(lone, 0.5) and _side_faces(lone, -0.5), "a lone platform has its edges")
+	game.world.set_block(plat_at, wplat)
+	await frames(5)
+	var lm: ArrayMesh = game.block_models.model_at(left).get("mesh")
+	var rm: ArrayMesh = game.block_models.model_at(plat_at).get("mesh")
+	check(lm != null and rm != null and not _side_faces(lm, 0.5) and _side_faces(lm, -0.5)
+			and not _side_faces(rm, -0.5) and _side_faces(rm, 0.5), "platforms side by side have no faces where they meet")
+	check(lm != null and rm != null and is_equal_approx(lm.get_aabb().end.y, 1.0) and is_equal_approx(rm.get_aabb().end.y, 1.0),
+			"and their tops are level with the top of the block")
+	game.world.set_block(left, 0)
+	game.world.set_block(plat_at, 0)
+	await frames(5)
 
 	# Platform stairs: the hammer turns a platform into a stair rising away
 	# from you, then the other way, then flat; it's drawn as Terraria's stair.

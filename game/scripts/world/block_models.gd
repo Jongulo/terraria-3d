@@ -18,7 +18,9 @@ extends Node3D
 ## placeables (PlaceableRenders' shots) batch per block: a camera-facing quad
 ## each that shows the shot for the view (rendered_batched.gdshader); until a
 ## block's shots are made it's drawn as its billboard, then its chunks are
-## built again.
+## built again. Platforms that touch are drawn as one floor: each cell's mesh
+## has no faces toward the platforms beside it (BlockModelMesh.platform),
+## batched per block type and which sides link.
 
 var world: VoxelWorld
 var game: Game
@@ -116,7 +118,7 @@ func chunk_updated(c: Vector3i) -> void:
 			kinds[id] = {"trunk": bd.get("trunk", false) and not bd.get("palm", false), "palm": bd.get("palm", false),
 					"cactus": bd.get("cactus", false), "door": Doors.is_part(bd), "method": bd.get("method", "panels"),
 					"wall": bd.get("wall", false), "variants": bd.get("variants", 1), "scatter": float(bd.get("scatter", 0.0)),
-					"vary": bd.get("vary", false)}
+					"vary": bd.get("vary", false), "merge": merges(bd)}
 		var k: Dictionary = kinds[id]
 		if k.trunk:
 			trunks.append(pos)  # and on with its own billboard below
@@ -162,6 +164,15 @@ func chunk_updated(c: Vector3i) -> void:
 		var rotation := game.block_rotation(pos)
 		var frame := Data.anim_frame_now(Data.block(id))
 		var shape := world.get_shape(pos) if Data.block(id).get("platform", false) else 0
+		if k.merge and shape < Game.SHAPE_RAMP:
+			# Platforms that touch are drawn as one floor (BlockModelMesh.platform).
+			var links := platform_links(pos)
+			var pkey := "%d:platform:%d" % [id, links]
+			if not batches.has(pkey):
+				batches[pkey] = {"id": id, "mesh": BlockModelMesh.platform(id, links), "textured": false, "items": [],
+						"method": "platform", "rotation": 0, "frame": 0}
+			batches[pkey].items.append([Transform3D(Basis(), Vector3(pos) + Vector3(0.5, 0.0, 0.5)), pos])
+			continue
 		if shape >= Game.SHAPE_RAMP and shape < Game.SHAPE_CEILING:
 			# A platform stair: its stair twin, turned to rise toward
 			# WALL_NORMALS[shape - 2] (the art rises toward +x).
@@ -228,6 +239,27 @@ func chunk_updated(c: Vector3i) -> void:
 			n.material_override.set_shader_parameter("sky_color", _sky_color)
 	_by_chunk[c] = nodes
 	_models_by_chunk[c] = keys
+
+
+## Whether a block is a platform drawn as part of one floor with the
+## platforms it touches (BlockModelMesh.platform): Terraria's platforms (not
+## tables and other furniture you can stand on), whose art spans one block.
+## In every placeable method: the floor is what you see in the world (the
+## placeable picker still shows the method's model).
+static func merges(d: Dictionary) -> bool:
+	return d.get("platform", false) and String(d.get("name", "")).ends_with("_platform") and d.has("art") \
+			and is_equal_approx(d.art.get_width() * float(d.get("art_px", 0.0)), 1.0)
+
+
+## Which sides of the flat platform at `pos` touch another flat platform (not
+## a stair), as BlockModelMesh.PLATFORM_LINKS bits.
+func platform_links(pos: Vector3i) -> int:
+	var links := 0
+	for i in BlockModelMesh.PLATFORM_LINKS.size():
+		var q := pos + BlockModelMesh.PLATFORM_LINKS[i]
+		if merges(Data.block(world.get_block(q))) and world.get_shape(q) < Game.SHAPE_RAMP:
+			links |= 1 << i
+	return links
 
 
 ## Whether chunk `c` is drawn in full detail (near your chunk), or without a
