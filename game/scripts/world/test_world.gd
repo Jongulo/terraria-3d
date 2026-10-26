@@ -36,6 +36,7 @@ const HELP := [
 	["", "F4  day / night"],
 	["", "F5  kill all enemies      F6  clear dropped items"],
 	["", "F7  natural enemy spawns on/off      F8  heal"],
+	["", "F9  a meteorite lands in front of you"],
 	["", "North: every item in chests, crafting by spawn"],
 	["npc", "Spawners: right-click spawns one, Shift+right-click toggles auto-spawn"],
 	["npc", "East: enemy arena   East of it: the town - the Guide, Merchant, Nurse, Arms Dealer, Dryad,"],
@@ -1279,9 +1280,26 @@ func _unhandled_input(event: InputEvent) -> void:
 			p.on_fire = 0.0
 			p.potion_sickness = 0.0
 			p.stats_changed.emit()
+		KEY_F9:
+			drop_meteorite()
 		_:
 			return
 	get_viewport().set_input_as_handled()
+
+
+## A meteorite crater on the ground 20 blocks ahead of you, there and then
+## (Meteors.land, without the search for a spot out of sight).
+func drop_meteorite() -> void:
+	var p := game.player
+	var ahead := -p.camera.global_basis.z
+	ahead.y = 0.0
+	ahead = ahead.normalized() if ahead.length() > 0.01 else Vector3.FORWARD
+	var at := Vector3i((p.global_position + ahead * 20.0).floor())
+	var y: int = game.meteors.ground_y(at.x, at.z)
+	if y < 0:
+		game.message("No ground there for a meteorite", Color(1, 0.9, 0.5))
+		return
+	game.meteors.land(Vector3i(at.x, y, at.z))
 
 
 func set_night(night: bool) -> void:

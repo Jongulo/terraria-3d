@@ -138,7 +138,8 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 
 You start with top-tier gear, max life and mana. Hotkeys: **F1** help, **F2** god mode, **F3** fly
 (Space up, Shift down), **F4** day/night, **F5** remove enemies, **F6** clear dropped items,
-**F7** natural spawns (off by default), **F8** heal. Enemies spawned here don't flee at daytime.
+**F7** natural spawns (off by default), **F8** heal, **F9** a meteorite lands 20 blocks in front of
+you. Enemies spawned here don't flee at daytime.
 
 ### The same test world in Terraria
 
