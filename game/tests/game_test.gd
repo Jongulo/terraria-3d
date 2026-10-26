@@ -477,9 +477,18 @@ func _run() -> void:
 	var under := range(2, 10).any(func(k): return game.world.get_block(landed + Vector3i.DOWN * k) == ore)
 	check(landed != Meteors.NO_SPOT and game.world.get_block(landed) == 0 and under, "a bowl hollowed out of its top, Meteorite under it")
 	await shot("meteorite")
-	# Past Terraria's cap of Meteorite about (scaled: ~450 on this world) no
-	# more land: while that crater's still there, the next one doesn't.
-	check(met.drop_now() == Meteors.NO_SPOT, "no meteorite while there's too much Meteorite about")
+	# Past Terraria's cap of Meteorite above the surface (scaled: ~450 on this
+	# world) no more land. (A cap's worth up in the sky, on top of that crater's.)
+	var cap := int(Meteors.ORE_CAP * size.x / float(Game.WORLD_SIZES.small.x))
+	var sky_ore: Array[Vector3i] = []
+	for i in cap + 1:
+		var cell := Vector3i(40 + i % 40, size.y - 8 - i / 1600, 40 + (i / 40) % 40)
+		if game.world.get_block(cell) == 0:
+			game.world.set_block(cell, ore)
+			sky_ore.append(cell)
+	check(sky_ore.size() > cap and met.drop_now() == Meteors.NO_SPOT, "no meteorite while there's too much Meteorite about")
+	for cell in sky_ore:
+		game.world.set_block(cell, 0)
 	Settings.set_value("render_distance", 5)
 	game.defeated_bosses = bosses_was
 	game.sky.is_day = was_day
