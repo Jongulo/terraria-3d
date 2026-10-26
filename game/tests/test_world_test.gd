@@ -4995,6 +4995,8 @@ func _eater_checks(c: Vector3i) -> void:
 	var heads := segs.filter(func(n): return n.worm_role() == "head")
 	check(segs.size() == 67 and heads.size() == 1 and segs.filter(func(n): return n.worm_role() == "tail").size() == 1,
 			"the Eater of Worlds: a head, 65 body segments and a tail (%d)" % segs.size())
+	check(segs.all(func(n): return n.sprite.get("_xray") == null),
+			"it isn't shown through the blocks, unlike other bosses: where it burrows is for you to find")
 	var st: Dictionary = game.boss_status()
 	check(st.get("name") == "Eater of Worlds" and st.get("max") == 10050 and st.get("life") == 10050, "one boss bar for all of it: 10,050 life (%s)" % [st])
 	var head: NPC = heads[0]

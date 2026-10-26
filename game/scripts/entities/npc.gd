@@ -205,7 +205,7 @@ static func make_look(kind_name: String, lk: Dictionary) -> Node3D:
 	var m := NPCModels.method(kind_name)
 	var d: Dictionary = Data.npcs[kind_name]
 	# Bosses (and their bees, hands...) show through the blocks in front of them.
-	var xray: bool = d.get("boss", false) or d.get("xray", false)
+	var xray: bool = d.get("xray", d.get("boss", false))
 	if m == "rendered":
 		var r := RenderedSprite.new()
 		r.setup_rendered(kind_name)
@@ -236,7 +236,7 @@ func set_hunted(state: int) -> void:
 	if state == _hunted or sprite == null or not sprite.has_method("set_xray"):
 		return
 	_hunted = state
-	var own: bool = def.get("boss", false) or def.get("xray", false)
+	var own: bool = def.get("xray", def.get("boss", false))
 	# (Back to its own look: off, then a boss's own silhouette again.)
 	sprite.set_xray(false)
 	if state > 0:
