@@ -1166,7 +1166,7 @@ func light() -> Color:
 
 ## How far right on your screen `v` points.
 func _screen_x(v: Vector3) -> float:
-	return v.dot(player.camera.global_transform.basis.x)
+	return v.dot(player.view().global_transform.basis.x)
 
 
 func _draw(game) -> void:
@@ -1184,7 +1184,7 @@ func _draw(game) -> void:
 			# Along its flight, head first (Terraria: its rotation is its
 			# velocity's angle less a quarter turn).
 			if vel.length() > 0.01:
-				sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, vel))
+				sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), vel))
 		"skull", "orb", "walker":
 			sprite.set_rotation_angle(-spin)
 		"bird":

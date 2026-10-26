@@ -72,6 +72,22 @@ var half := Vector3(0.3, 1.8, 0.3)
 var velocity := Vector3.ZERO
 var on_floor := false
 var camera := Camera3D.new()
+## Camera views (the "camera_view" control cycles them, Settings remembers):
+## first person, third person from behind, third person from the front. In
+## third person `camera` stays your eye (aiming, reach, what you use start
+## there) and the view camera draws: behind you, THIRD_LIFT over your eye and
+## THIRD_DISTANCE back (closer where a wall is in the way), the eye turned
+## to what the crosshair is on; or in front, looking back at you.
+const VIEW_FIRST := 0
+const VIEW_BACK := 1
+const VIEW_FRONT := 2
+const THIRD_DISTANCE := 3.6
+const THIRD_LIFT := 0.35
+var view_mode := VIEW_FIRST
+var _view_cam := Camera3D.new()
+var _view_dist := THIRD_DISTANCE
+## You, drawn in third person (and your shadow in first).
+var body := PlayerBody.new()
 var viewmodel := Viewmodel.new()
 var inventory := Inventory.new(50)
 var accessories := Inventory.new(5)
@@ -362,6 +378,12 @@ func _ready() -> void:
 	add_child(camera)
 	camera.add_child(viewmodel)
 	viewmodel.player = self
+	_view_cam.near = 0.05
+	_view_cam.top_level = true
+	add_child(_view_cam)
+	body.player = self
+	add_child(body)
+	_set_view.call_deferred(int(Settings.get_value("camera_view")))
 	_highlight.mesh = BoxMesh.new()
 	(_highlight.mesh as BoxMesh).size = Vector3.ONE * 1.004
 	var m := ShaderMaterial.new()
@@ -636,6 +658,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		grapple()
 	elif event.is_action_pressed("pick_block") and creative:
 		pick_block()
+	elif event.is_action_pressed("camera_view"):
+		_set_view((view_mode + 1) % 3)
+		Settings.set_value("camera_view", view_mode)
 	else:
 		for i in 10:
 			if event.is_action_pressed("hotbar_%d" % (i + 1)):
@@ -721,6 +746,8 @@ func _physics_process(delta: float) -> void:
 			if randf() < delta * 30.0:
 				game.spawn_dust(center() + Vector3(randf_range(-0.4, 0.4), randf_range(-0.8, 0.8), randf_range(-0.4, 0.4)), Color(0.75, 0.6, 1.0), 1)
 
+	_update_view(delta, game)
+	body.update(delta, view(), game)
 	target = Doors.raycast(game, camera.global_position, forward(), reach()) if input_enabled else {}
 	_highlight.visible = not target.is_empty() and not game.taking_screenshot
 	if _highlight.visible:
@@ -749,6 +776,60 @@ func _physics_process(delta: float) -> void:
 
 func _exit_tree() -> void:
 	RenderingServer.global_shader_parameter_set("player_light_color", Vector3.ZERO)
+
+
+## The camera drawing the world: your eye in first person, else the view camera.
+func view() -> Camera3D:
+	return camera if view_mode == VIEW_FIRST else _view_cam
+
+
+func _set_view(mode: int) -> void:
+	view_mode = clampi(mode, VIEW_FIRST, VIEW_FRONT)
+	viewmodel.visible = view_mode == VIEW_FIRST
+	body.set_seen(view_mode != VIEW_FIRST)
+	if not is_inside_tree():
+		return
+	if view_mode == VIEW_FIRST:
+		camera.rotation = Vector3(_pitch, 0.0, 0.0)
+		camera.make_current()
+	else:
+		_view_dist = 0.5
+		_update_view(0.0, Game.current)
+		_view_cam.make_current()
+	if Game.current != null:
+		Game.current.sky.camera = view()
+
+
+## Places the third person camera, out from your head and kept out of the
+## blocks, and turns your eye to what its crosshair is on (from behind).
+func _update_view(delta: float, game) -> void:
+	if view_mode == VIEW_FIRST or game == null:
+		return
+	_view_cam.fov = camera.fov
+	_view_cam.far = camera.far
+	var look := Vector3(-sin(_yaw) * cos(_pitch), sin(_pitch), -cos(_yaw) * cos(_pitch))
+	var back := -look if view_mode == VIEW_BACK else look
+	var pivot := global_position + Vector3(0, camera.position.y + THIRD_LIFT, 0)
+	var room := THIRD_DISTANCE
+	var hit: Dictionary = game.world.raycast(pivot, back, THIRD_DISTANCE + 0.3)
+	if not hit.is_empty():
+		room = maxf(0.2, float(hit.distance) - 0.3)
+	# In at once where a wall's closer, back out smoothly.
+	_view_dist = room if room < _view_dist else move_toward(_view_dist, room, delta * 6.0)
+	var at := pivot + back * _view_dist
+	if view_mode == VIEW_BACK:
+		_view_cam.global_transform = Transform3D(Basis.from_euler(Vector3(_pitch, _yaw, 0.0)), at)
+		# What the crosshair is on (past you), and the eye turned to it.
+		var far: Dictionary = game.world.raycast(pivot, look, 64.0)
+		var aim_at := pivot + look * float(far.get("distance", 64.0))
+		var d := aim_at - camera.global_position
+		if d.length() > 0.5 and absf(d.normalized().y) < 0.999:
+			camera.look_at(aim_at, Vector3.UP)
+		else:
+			camera.rotation = Vector3(_pitch, 0.0, 0.0)
+	else:
+		_view_cam.global_transform = Transform3D(Basis.from_euler(Vector3(-_pitch, _yaw + PI, 0.0)), at)
+		camera.rotation = Vector3(_pitch, 0.0, 0.0)
 
 
 ## Hands the carried light to the shaders (global uniforms, project.godot).
@@ -3765,6 +3846,7 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null,
 
 func _die() -> void:
 	alive = false
+	body.visible = false
 	sharpened = false
 	charging = {}
 	climbing = null
@@ -3816,6 +3898,7 @@ func respawn_point() -> Vector3:
 
 func _respawn() -> void:
 	alive = true
+	body.visible = true
 	breath = BREATH_MAX
 	lava_time = stat("lava_time")
 	on_fire = 0.0

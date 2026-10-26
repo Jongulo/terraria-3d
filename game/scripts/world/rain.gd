@@ -77,7 +77,7 @@ func _process(delta: float) -> void:
 
 func _tick(here: bool) -> void:
 	var sky: SkySystem = game.sky
-	var cam: Vector3 = game.player.camera.global_position
+	var cam: Vector3 = game.player.view().global_position
 	if here:
 		var cap := int(MAX_RAIN * sky.cloud_alpha)
 		var n := 25.0 * (0.25 + sky.cloud_alpha)

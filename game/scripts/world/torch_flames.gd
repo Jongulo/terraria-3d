@@ -336,7 +336,7 @@ func pulse_cells(id: int) -> PackedInt32Array:
 
 ## One tick: new embers from the torches near you, and the embers move.
 func _tick() -> void:
-	var eye := game.player.camera.global_position
+	var eye := game.player.view().global_position
 	for list in _sources.values():
 		for s in list:
 			if randf() >= EMBER_CHANCE or _embers.size() >= MAX_EMBERS:

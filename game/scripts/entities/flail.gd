@@ -152,7 +152,7 @@ func _physics_process(delta: float) -> void:
 	# Turns with its motion (Terraria: its velocity's angle plus a spin).
 	var moved := global_position - _last
 	if moved.length() > 0.02:
-		_rotation = EntitySprite.facing_angle(player.camera, moved) - PI * 0.5
+		_rotation = EntitySprite.facing_angle(player.view(), moved) - PI * 0.5
 	sprite.set_rotation_angle(_rotation)
 	sprite.update_light(game.world, game.sky, global_position)
 	_draw_chain(game)

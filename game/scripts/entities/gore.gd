@@ -63,7 +63,7 @@ func _tick() -> void:
 	if velocity.length() > MAX_SPEED:
 		velocity = velocity.normalized() * MAX_SPEED
 	# Spins with its speed across your view (Terraria's x).
-	var cam := game.player.camera
+	var cam := game.player.view()
 	var across := velocity.dot(cam.global_transform.basis.x)
 	spin -= across * 0.05
 	var r: Dictionary = game.world.move_aabb(global_position, _half, velocity * PX, 0.0, false)

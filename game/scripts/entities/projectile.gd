@@ -422,7 +422,7 @@ func _physics_process(delta: float) -> void:
 	if life <= 0:
 		_die(game)
 		return
-	var cam := game.player.camera
+	var cam := game.player.view()
 	if spin != 0.0:
 		_angle += spin * delta
 		sprite.set_rotation_angle(_angle)

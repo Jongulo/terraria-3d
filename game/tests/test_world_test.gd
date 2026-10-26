@@ -448,6 +448,7 @@ func _run() -> void:
 	await _swim_checks(c)
 	await _screenshot_checks()
 	await _perf_overlay_checks()
+	await _camera_view_checks()
 	await _eater_checks(c)
 	await _king_slime_checks(c)
 	await _recipe_checks(c)
@@ -5082,6 +5083,68 @@ func _perf_overlay_checks() -> void:
 			"F10 shows it: frame rate, draw calls, chunks, NPCs (%s)" % text.replace("\n", " | "))
 	await key(KEY_F10)
 	check(not perf.visible, "F10 again hides it")
+
+
+## Third person (V, rebindable): from behind, a camera back from your head
+## draws (kept out of a wall behind you), you're drawn and the first person
+## hand isn't, and your eye aims where its crosshair is; then from the front
+## (looking back at you), then first person again. The view is remembered.
+func _camera_view_checks() -> void:
+	var p := game.player
+	var w: VoxelWorld = game.world
+	check(InputMap.has_action("camera_view") and InputMap.action_get_events("camera_view").any(func(e): return e is InputEventKey and e.physical_keycode == KEY_V),
+			"V changes the camera view (rebindable under Controls)")
+	check(p.view_mode == Player.VIEW_FIRST and p.view() == p.camera and p.camera.current and p.viewmodel.visible
+			and p.body.sprite.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,
+			"first person at first: your eye draws, the hand shows, your body only casts your shadow")
+	var was_flying := p.flying
+	p.flying = true
+	var yaw0 := p._yaw
+	var pitch0 := p._pitch
+	p._yaw = 0.0
+	p._pitch = -0.35
+	p.rotation.y = 0.0
+	await key(KEY_V)
+	await frames(40)
+	var cam: Camera3D = p.view()
+	var pivot := p.global_position + Vector3(0, p.camera.position.y + Player.THIRD_LIFT, 0)
+	var look := Vector3(-sin(p._yaw) * cos(p._pitch), sin(p._pitch), -cos(p._yaw) * cos(p._pitch))
+	check(p.view_mode == Player.VIEW_BACK and cam != p.camera and cam.current and not p.viewmodel.visible
+			and p.body.sprite.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			and absf(cam.global_position.distance_to(pivot) - Player.THIRD_DISTANCE) < 0.1 and (cam.global_position - pivot).normalized().dot(-look) > 0.99,
+			"V: third person, the camera %.1f blocks behind your head; you're drawn, the hand isn't" % cam.global_position.distance_to(pivot))
+	var seen: Dictionary = w.raycast(cam.global_position, -cam.global_basis.z, 64.0)
+	check(not seen.is_empty() and not p.target.is_empty() and p.target.block == seen.block,
+			"your eye aims at what the crosshair is on (%s, %s)" % [p.target.get("block"), seen.get("block")])
+	# A wall right behind you: the camera comes in front of it.
+	var at := Vector3i(p.global_position.floor())
+	var stone := Data.block_id("stone")
+	for x in range(-3, 4):
+		for y in range(-1, 6):
+			w.set_block(at + Vector3i(x, y, 2), stone)
+	await frames(4)
+	var close: Vector3 = p.view().global_position
+	check(close.distance_to(pivot) < 2.0 and not w.is_solid(Vector3i(close.floor())),
+			"a wall behind you brings the camera in (%.1f blocks), never into it" % close.distance_to(pivot))
+	for x in range(-3, 4):
+		for y in range(-1, 6):
+			w.set_block(at + Vector3i(x, y, 2), 0)
+	await frames(30)
+	await key(KEY_V)
+	await frames(30)
+	cam = p.view()
+	check(p.view_mode == Player.VIEW_FRONT and cam.current and (cam.global_position - pivot).normalized().dot(look) > 0.99
+			and (-cam.global_basis.z).dot(-look) > 0.99 and int(Settings.get_value("camera_view")) == Player.VIEW_FRONT,
+			"V again: in front of you, looking back (and the view is remembered)")
+	await key(KEY_V)
+	await frames(2)
+	check(p.view_mode == Player.VIEW_FIRST and p.camera.current and p.viewmodel.visible and is_equal_approx(p.camera.rotation.x, p._pitch),
+			"V again: first person")
+	p._yaw = yaw0
+	p._pitch = pitch0
+	p.rotation.y = yaw0
+	p.camera.rotation.x = pitch0
+	p.flying = was_flying
 
 
 ## Water, Terraria style: you can't swim. You sink, and jump only off the

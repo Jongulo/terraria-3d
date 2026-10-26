@@ -41,7 +41,7 @@ func _process(delta: float) -> void:
 		if is_queued_for_deletion():
 			return
 	global_position += velocity * delta
-	var cam: Camera3D = game.player.camera
+	var cam: Camera3D = game.player.view()
 	_sprite.set_frame(FLAP[(_ticks / 4) % FLAP.size()])
 	if not _settled and Vector2(velocity.x, velocity.z).length() > 0.01:
 		_sprite.set_flip(velocity.dot(cam.global_transform.basis.x) > 0.0)

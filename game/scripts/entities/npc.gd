@@ -450,7 +450,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_sprite(delta: float, game) -> void:
-	var cam: Camera3D = game.player.camera
+	var cam: Camera3D = game.player.view()
 	var right := cam.global_transform.basis.x
 	if def.ai == "worm":
 		# Turned along the worm, toward the segment ahead (a head: its motion).
@@ -493,7 +493,7 @@ func _update_sprite(delta: float, game) -> void:
 	if _carry_sprite != null:
 		# Inside it: at its middle, a hair toward you so it shows.
 		var c := center()
-		_carry_sprite.global_position = c + (game.player.camera.global_position - c).normalized() * 0.03
+		_carry_sprite.global_position = c + (game.player.view().global_position - c).normalized() * 0.03
 		_carry_sprite.update_light(game.world, game.sky, c)
 	_flash = maxf(0.0, _flash - delta * 6.0)
 	sprite.set_flash(_flash)
@@ -616,7 +616,7 @@ func _ai_king_slime(delta: float, game, player) -> void:
 func _ks_place_extras(game, frame: int) -> void:
 	var k := float(life) / life_max * 0.5 + 0.75
 	var c := global_position + Vector3(0, half.y * 0.5, 0)
-	var cam: Camera3D = game.player.camera
+	var cam: Camera3D = game.player.view()
 	_ks_crown.global_position = c + Vector3(0, (70.0 - KS_CROWN_BOB[frame]) * k * _ks_shrink / WORM_PX, 0)
 	var v := velocity / PX_TICK
 	var bob: float = [0.0, -2.0, 0.0, 2.0, 6.0, 0.0][frame]
@@ -1726,7 +1726,7 @@ func _ai_shelly(delta: float, player) -> void:
 				_sh_t = 0.0
 				_sh_state = 0
 	if sprite is EntitySprite:
-		sprite.set_rotation_angle(-_sh_turn if velocity.dot(player.camera.global_transform.basis.x) > 0.0 else _sh_turn)
+		sprite.set_rotation_angle(-_sh_turn if velocity.dot(player.view().global_transform.basis.x) > 0.0 else _sh_turn)
 
 
 ## Terraria's Lost Girl (aiStyle 42): she stands till you're within 200 px
@@ -1792,7 +1792,7 @@ func _ai_flyer(delta: float, player) -> void:
 	anim += delta * 6.0
 	_fly_frame()
 	if velocity.length() > 0.1 and not def.get("upright", false):
-		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
 
 
 ## Terraria's Granite Elemental (aiStyle 91), in its px/tick: with you in
@@ -2074,7 +2074,7 @@ func _ai_flying_fish(delta: float, player) -> void:
 	anim += delta * 10.0
 	sprite.set_frame(int(anim) % int(def.frames))
 	if velocity.length() > 0.05:
-		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
 
 
 ## Terraria's hovering AI (aiStyle 22) as the Drippler's, in its px/tick
@@ -2181,7 +2181,7 @@ func _ai_hover(delta: float, player) -> void:
 	# Its frames, 7 ticks each, leaning with its drift.
 	anim += delta * 60.0 / 7.0
 	sprite.set_frame(int(anim) % int(def.frames))
-	sprite.set_rotation_angle(-velocity.dot(player.camera.global_transform.basis.x) / PX_TICK * 0.15)
+	sprite.set_rotation_angle(-velocity.dot(player.view().global_transform.basis.x) / PX_TICK * 0.15)
 
 
 ## Terraria's harpy: hovers above the player, drifting around them, flapping,
@@ -2719,7 +2719,7 @@ func _ai_snatcher(delta: float, player) -> void:
 	sprite.set_frame(int(anim) % int(def.frames))
 	var face: Vector3 = to - center()
 	if face.length() > 0.1:
-		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, face) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), face) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
 	# The vine: from the root to the jaw.
 	var a: Vector3 = _anchor
 	var b := center()
@@ -2990,7 +2990,7 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 	if _flees_day(game) or not player.alive:
 		# Leaves at dawn or when the player dies.
 		velocity = velocity.lerp(Vector3(0, 25, 0), 2.0 * delta)
-		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, Vector3.UP))
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), Vector3.UP))
 		look_dir = Vector3.UP
 		turn_rate = EOC_TURN.hover
 		if global_position.y > player.global_position.y + 80.0:
@@ -3009,7 +3009,7 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 			var target: Vector3 = player.center() + orbit
 			var accel := 14.0 if phase2 else 9.0
 			velocity = velocity.lerp((target - center()).limit_length(1.0) * (18.0 if phase2 else 12.0), accel * delta * 0.3)
-			sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, to_player))
+			sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), to_player))
 			# A model turns to watch you (Terraria: 0.02 a tick, 0.05 in phase 2).
 			look_dir = to_player
 			turn_rate = EOC_TURN.hover2 if phase2 else EOC_TURN.hover
@@ -3027,7 +3027,7 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 			if ai_timer < delta * 1.5:
 				velocity = to_player.normalized() * (24.0 if phase2 else 17.0)
 				Audio.play_at("Roar_0", center(), 0.7)
-				sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, velocity))
+				sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), velocity))
 				# Terraria sets its rotation along the dash, holds it 40 ticks,
 				# then turns back toward you (0.05 a tick, 0.08 in phase 2).
 				look_dir = velocity
@@ -3048,7 +3048,7 @@ func _ai_eye_of_cthulhu(delta: float, player) -> void:
 			sprite.set_rotation_angle(ai_timer * ai_timer * 8.0)
 			# A model spins the same way, in the plane facing you.
 			turn_rate = -1.0
-			var cb: Basis = player.camera.global_transform.basis
+			var cb: Basis = player.view().global_transform.basis
 			look_dir = -cb.y.rotated(cb.z, ai_timer * ai_timer * 8.0)
 			if ai_timer > 2.0:
 				ai_state = 10
@@ -3598,7 +3598,7 @@ func _ai_skeletron(delta: float, game, player) -> void:
 	elif (guardian or game.sky.is_day) and ai_state != 2 and ai_state != 3:
 		ai_state = 2
 		Audio.play_at("Roar_0", center())
-	var cam: Camera3D = player.camera
+	var cam: Camera3D = player.view()
 	match ai_state:
 		0:
 			damage = int(def.damage)
@@ -3731,7 +3731,7 @@ func _ai_skeletron_hand(delta: float, game, player) -> void:
 		sprite.set_frame(0)
 		# Its wrist toward where it rests (Terraria: atan2 to it + 90 degrees).
 		var rest := head.center() + r * (-200.0 * _side / SK_PX) + Vector3(0, -230.0 / SK_PX, 0)
-		sprite.set_rotation_angle(EntitySprite.facing_angle(player.camera, center() - rest))
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), center() - rest))
 	# (A model points the same way, not along its flight.)
 	look_dir = center() - (head.center() + r * (-200.0 * _side / SK_PX) + Vector3(0, -230.0 / SK_PX, 0))
 	_update_arm(game, head, r)
@@ -3758,7 +3758,7 @@ func _update_arm(game, head: NPC, r: Vector3) -> void:
 			b.top_level = true
 			add_child(b)
 			_bones.append(b)
-	var cam: Camera3D = game.player.camera
+	var cam: Camera3D = game.player.view()
 	var p := center() + Vector3(0, half.y * 0.5 - 20.0 / SK_PX, 0) - r * (5.0 * _side / SK_PX)
 	var hc := head.center()
 	for i in 2:
@@ -3979,7 +3979,7 @@ func gib(game, rolls: Array) -> Array:
 	var roll: Array = rolls[randi() % rolls.size()]
 	var lk := look(kind)
 	var px: float = lk.sprite_size.y / float(lk.frame_h)
-	var right: Vector3 = game.player.camera.global_transform.basis.x
+	var right: Vector3 = game.player.view().global_transform.basis.x
 	right.y = 0
 	right = right.normalized()
 	var top := center().y + half.y * 0.5

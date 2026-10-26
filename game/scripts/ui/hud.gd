@@ -660,7 +660,7 @@ func _process(delta: float) -> void:
 		_invasion_bar.value = game.invasion.progress() * 100.0
 		_invasion_label.text = "Goblin Army  %d%%" % int(game.invasion.progress() * 100.0)
 	_boss_bar.visible = not b.is_empty()
-	boss_markers.update_marks(player.camera if player.alive else null, game.npcs().filter(func(n): return n.boss) if game and not b.is_empty() else [])
+	boss_markers.update_marks(player.view() if player.alive else null, game.npcs().filter(func(n): return n.boss) if game and not b.is_empty() else [])
 	if not b.is_empty():
 		_boss_bar.value = float(b.life) / b.max * 100.0
 		_boss_label.text = "%s  %d/%d" % [b.name, b.life, b.max]

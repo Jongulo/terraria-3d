@@ -15,6 +15,8 @@ const DEFAULTS := {
 	"sfx_volume": 0.8,
 	"music_volume": 0.6,
 	"enemy_health_bars": true,
+	# First person, or third from behind or in front (Player.view_mode).
+	"camera_view": 0,
 	# Optional shaders (Settings → Shaders): the sun's and moon's real-time
 	# shadows (SunShadows), how far they reach (blocks), their detail (1-3:
 	# a 2048, 4096 or 8192 shadow map) and how much sunlight a shadow leaves.

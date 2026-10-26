@@ -213,7 +213,7 @@ func _strike(game, npc) -> void:
 
 func _draw(game) -> void:
 	var pts := points(ticks)
-	var cam: Camera3D = player.camera
+	var cam: Camera3D = player.view()
 	# The string through it, in the whip's colour.
 	var sc: Array = cfg.string
 	_mesh.clear_surfaces()

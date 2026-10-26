@@ -233,6 +233,12 @@ func set_light_rgb(l: Vector3) -> void:
 	_mat.set_shader_parameter("light", l)
 
 
+## The use animation running: [style ("" none), how far through it (0-1)]
+## (PlayerBody poses your arm and item from it in third person).
+func use_state() -> Array:
+	return [_style if _t < 1.0 else "", _t]
+
+
 ## Stops any running use animation (the editor does this before transforming).
 func stop_animation() -> void:
 	_t = 1.0
@@ -266,7 +272,7 @@ func _process(delta: float) -> void:
 	var thrown := idef.has("boomerang") and player.boomerangs_out(idef) >= int(idef.boomerang.get("max", 1))
 	_item.visible = item != "" and not player.yoyo_out() and not player.flail_out() and not player.slash_out() and not player.whip_out() and not idef.has("spear") and not thrown
 	# A held torch puffs embers too (Terraria: 1 tick in 40).
-	if _item.visible and _ember_dust >= 0 and not editing and Game.current != null and randf() < delta * 60.0 / 40.0:
+	if _item.visible and is_visible_in_tree() and _ember_dust >= 0 and not editing and Game.current != null and randf() < delta * 60.0 / 40.0:
 		var top: Vector2 = _flame_info.get("top", Vector2.ZERO)
 		Game.current.torch_flames.spawn_ember(_item.global_transform * Vector3(top.x, top.y, 0.0), _ember_dust, 1.0 / 64.0)
 	_equip = 1.0 if editing else minf(1.0, _equip + delta / EQUIP_TIME)

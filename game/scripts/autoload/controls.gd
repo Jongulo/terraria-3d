@@ -18,6 +18,7 @@ const ACTIONS := [
 	["grapple", "Grapple", {"key": KEY_E}],
 	["screenshot", "Screenshot", {"key": KEY_F12}],
 	["perf_overlay", "Performance overlay", {"key": KEY_F10}],
+	["camera_view", "Camera view (first / third person)", {"key": KEY_V}],
 	["pick_block", "Pick block (creative)", {"mouse": MOUSE_BUTTON_MIDDLE}],
 	["hotbar_1", "Hotbar 1", {"key": KEY_1}],
 	["hotbar_2", "Hotbar 2", {"key": KEY_2}],
