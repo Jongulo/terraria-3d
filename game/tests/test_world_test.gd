@@ -1766,11 +1766,15 @@ func _flora_checks(c: Vector3i) -> void:
 ## Props (block models) are drawn in batches with each block's light in the
 ## instance data, not one node each with a shader instance uniform: those ran
 ## out in big worlds, and props rebuilt after breaking one drew black.
-## Plants, rocks and debris on the ground ("vary") turn and mirror by cell.
+## Plants, rocks and debris on the ground ("vary") turn and mirror by cell
+## (as voxel models: the rocks drawn Extruded here, whatever the picker has
+## them as; headless, rendered ones are billboards, which face you).
 func _vary_checks(c: Vector3i) -> void:
 	var w: VoxelWorld = game.world
 	var bm := game.block_models
 	var o := c + Vector3i(-20, 45, 40)
+	var rocks_method: String = Data.block(Data.block_id("small_rocks")).method
+	Data.set_block_method("small_rocks", "extruded")
 	for x in range(0, 24):
 		w.set_block(o + Vector3i(x, -1, 0), Data.block_id("stone"))
 		w.set_block(o + Vector3i(x, 0, 0), Data.block_id("small_rocks"))
@@ -1800,6 +1804,7 @@ func _vary_checks(c: Vector3i) -> void:
 	for x in range(0, 24):
 		w.set_block(o + Vector3i(x, 0, 0), 0)
 		w.set_block(o + Vector3i(x, -1, 0), 0)
+	Data.set_block_method("small_rocks", rocks_method)
 
 
 func _prop_batch_checks(c: Vector3i) -> void:
@@ -7208,7 +7213,12 @@ func _alchemy_checks(c: Vector3i) -> void:
 	var fire := o + Vector3i(0, 0, -2)
 	w.set_block(fire + Vector3i.DOWN, Data.block_id("ash"))
 	w.set_block(fire, Data.block_id("fireblossom_mature"))
+	# (By day and dry: the suite may have got to night or rain by now.)
 	var t0: float = game.sky.time
+	var day0: bool = game.sky.is_day
+	var rain0: bool = game.sky.raining
+	game.sky.is_day = true
+	game.sky.raining = false
 	game.sky.time = 30000.0
 	herbs.grow(fire)
 	var before_bloom: String = name_at.call(fire)
@@ -7216,6 +7226,8 @@ func _alchemy_checks(c: Vector3i) -> void:
 	herbs.grow(fire)
 	check(before_bloom == "fireblossom_mature" and name_at.call(fire) == "fireblossom", "Fireblossom blooms late in the day")
 	game.sky.time = t0
+	game.sky.is_day = day0
+	game.sky.raining = rain0
 	# Deathweed: on full-moon nights.
 	var death := o + Vector3i(-2, 0, 0)
 	w.set_block(death + Vector3i.DOWN, Data.block_id("ebonstone"))

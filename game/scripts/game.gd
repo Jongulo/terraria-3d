@@ -252,7 +252,7 @@ func _on_world_ready() -> void:
 	torch_flames.setup(world, self)
 	falling_leaves.setup(world, self)
 	rain.setup(self)
-	renderer.chunk_updated.connect(block_models.chunk_updated)
+	renderer.chunk_updated.connect(block_models.chunk_meshed)
 	renderer.chunk_updated.connect(decorations.relight)
 	renderer.chunk_unloaded.connect(block_models.chunk_unloaded)
 	renderer.chunk_updated.connect(torch_flames.chunk_updated)

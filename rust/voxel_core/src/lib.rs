@@ -734,6 +734,25 @@ impl VoxelWorld {
         Color::from_rgba(l[1] as f32 / 15.0, l[2] as f32 / 15.0, l[3] as f32 / 15.0, l[0] as f32 / 15.0)
     }
 
+    /// A MultiMesh buffer (3D transforms with custom data, no colors) for
+    /// `transforms`, each instance's custom data the light at its point in
+    /// `light_at` (as get_light): 16 floats an instance, in one call instead
+    /// of three per instance.
+    #[func]
+    fn instance_buffer(&self, transforms: Array<Transform3D>, light_at: PackedVector3Array) -> PackedFloat32Array {
+        let w = self.world();
+        let pts = light_at.as_slice();
+        let mut out = Vec::with_capacity(transforms.len() * 16);
+        for (i, t) in transforms.iter_shared().enumerate() {
+            let (b, o) = (&t.basis.rows, t.origin);
+            out.extend_from_slice(&[b[0].x, b[0].y, b[0].z, o.x, b[1].x, b[1].y, b[1].z, o.y, b[2].x, b[2].y, b[2].z, o.z]);
+            let p = pts.get(i).copied().unwrap_or(t.origin).floor();
+            let l = world::unpack_light(w.light_at(p.x as i32, p.y as i32, p.z as i32));
+            out.extend_from_slice(&[l[1] as f32 / 15.0, l[2] as f32 / 15.0, l[3] as f32 / 15.0, l[0] as f32 / 15.0]);
+        }
+        PackedFloat32Array::from(out.as_slice())
+    }
+
     /// Returns {} or {block: Vector3i, normal: Vector3i, id: int, distance: float}.
     #[func]
     fn raycast(&self, origin: Vector3, dir: Vector3, max_dist: f32) -> VarDictionary {

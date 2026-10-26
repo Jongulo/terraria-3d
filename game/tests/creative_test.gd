@@ -242,11 +242,11 @@ func _run() -> void:
 		var top_cell: Vector3i = base + Vector3i.UP * (leaning.height - 1)
 		p.global_position = Vector3(base) + Vector3(3.5, 2, 0.5)
 		await frames(30)
-		var m: Dictionary = game.block_models._models.get(Chests.key(top_cell), {})
+		var m: Dictionary = game.block_models.model_at(top_cell)
 		var expect: Vector3 = BlockModels.billboard_instance(palm_id, top_cell).origin + PalmArt.segment_offset(leaning, leaning.height - 1)
 		check(not m.is_empty() and m.transform.origin.is_equal_approx(expect) and (m.transform.origin - Vector3(top_cell)).length() > 0.4,
 				"its top segment is drawn out along the lean (%s)" % [m.get("transform", Transform3D()).origin - Vector3(top_cell)])
-		var bm: Dictionary = game.block_models._models.get(Chests.key(base), {})
+		var bm: Dictionary = game.block_models.model_at(base)
 		var tb: Basis = m.get("transform", Transform3D()).basis
 		var bb: Basis = bm.get("transform", Transform3D()).basis
 		check(not bm.is_empty() and is_equal_approx(bb.z.length() - bb.y.length(), (leaning.height - 1) * PalmArt.NUDGE) and is_equal_approx(tb.z.length(), tb.y.length()),

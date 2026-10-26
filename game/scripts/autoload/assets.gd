@@ -11,6 +11,8 @@ var ROOT := root_dir()
 var ids: Dictionary = {}
 
 var _images := {}
+## Guards _images: block art is built on worker threads too (BlockModels).
+var _image_lock := Mutex.new()
 var _textures := {}
 var _streams := {}
 var _fonts := {}
@@ -47,13 +49,19 @@ func disk_path(rel: String) -> String:
 
 ## `name` like "Images/Item_1" (no extension).
 func image(name: String) -> Image:
-	if not _images.has(name):
-		var img := Image.load_from_file(disk_path(name + ".png"))
-		if img == null:
-			push_warning("missing image " + name)
-			img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
-		_images[name] = img
-	return _images[name]
+	_image_lock.lock()
+	var hit = _images.get(name)
+	_image_lock.unlock()
+	if hit != null:
+		return hit
+	var img := Image.load_from_file(disk_path(name + ".png"))
+	if img == null:
+		push_warning("missing image " + name)
+		img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	_image_lock.lock()
+	_images[name] = img
+	_image_lock.unlock()
+	return img
 
 
 func texture(name: String) -> Texture2D:
@@ -79,10 +87,16 @@ func item_image(id: int) -> Image:
 	if n <= 1:
 		return img
 	var key := "item_frame:%d" % id
-	if not _images.has(key):
-		var h := img.get_height() / n
-		_images[key] = img.get_region(Rect2i(0, 0, img.get_width(), h))
-	return _images[key]
+	_image_lock.lock()
+	var hit = _images.get(key)
+	_image_lock.unlock()
+	if hit != null:
+		return hit
+	var frame := img.get_region(Rect2i(0, 0, img.get_width(), img.get_height() / n))
+	_image_lock.lock()
+	_images[key] = frame
+	_image_lock.unlock()
+	return frame
 
 
 ## The whole sheet of an item (every frame of an animated one).

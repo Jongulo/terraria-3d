@@ -35,6 +35,11 @@ const UPDATE := 166.0 / 60.0
 ## How far round you herbs grow.
 const REACH := Vector3i(64, 40, 64)
 const MOST := 4000
+## The reach is looked through a slab at a time (SLICES of them, bottom to
+## top, one every UPDATE / SLICES), so each herb still has its update every
+## UPDATE without the whole search landing in one frame.
+const SLICES := 9
+var _slice := 0
 ## Fireblossom blooms past this many ticks into the day (3:45 PM).
 const FIREBLOSSOM_TIME := 40500.0
 ## ...or in this much lava (Terraria's liquid > 16 of 255).
@@ -62,15 +67,23 @@ func _process(delta: float) -> void:
 	if game == null or game.player == null:
 		return
 	_t += delta
-	if _t < UPDATE:
+	if _t < UPDATE / SLICES:
 		return
-	_t -= UPDATE
-	update_near(Vector3i(game.player.global_position.floor()))
+	_t -= UPDATE / SLICES
+	update_near(Vector3i(game.player.global_position.floor()), _slice)
+	_slice = (_slice + 1) % SLICES
 
 
-## One update for every herb round `at`.
-func update_near(at: Vector3i) -> void:
-	var cells: PackedInt32Array = game.world.find_blocks(at, REACH, _ids, MOST)
+## One update for every herb round `at` (only those in slab `slice` of
+## SLICES, if given).
+func update_near(at: Vector3i, slice := -1) -> void:
+	var center := at
+	var extent := REACH
+	if slice >= 0:
+		var h := (REACH.y * 2 + 1) / SLICES
+		extent.y = h / 2
+		center.y = at.y - REACH.y + h / 2 + slice * h
+	var cells: PackedInt32Array = game.world.find_blocks(center, extent, _ids, MOST)
 	var tw = game.test_world
 	var c := Vector3i(TestWorld.SIZE.x / 2, TestWorld.GROUND + 1, TestWorld.SIZE.z / 2)
 	for i in range(0, cells.size(), 3):

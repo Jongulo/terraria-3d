@@ -16,8 +16,9 @@ extends Node3D
 ## (billboards take offset and scale only: they always face you). [ / ] depth -/+1 voxel, N next noise mode,
 ## Shift+N new seed, B / Shift+B next / previous bevel profile. "Rendered" (in
 ## the settings panel) picks the model the rendered method shoots: Auto (tuned,
-## Claude's or the hull) or Extruded; its shots are taken again when that model
-## or the block's transform changes.
+## Claude's or the hull) or one of the voxel methods (Data.RENDER_MODELS;
+## switching a block to Rendered keeps the voxel method it had); its shots are
+## taken again when that model or the block's transform changes.
 
 const SPACING := 1.8
 ## The ground texture's repeat, in blocks.
@@ -440,11 +441,11 @@ func _build_extrude_panel(parent: Control) -> void:
 	shots_label.text = "Shots taken of"
 	shots_label.add_theme_font_size_override("font_size", 16)
 	box.add_child(shots_label)
-	_render_model.add_item("Auto (tuned, Claude or hull)")
-	_render_model.add_item("Extruded model")
+	for m in Data.RENDER_MODELS:
+		_render_model.add_item("Auto (tuned, Claude or hull)" if m == "auto" else "%s model" % m.capitalize())
 	_render_model.add_theme_font_size_override("font_size", 16)
 	_render_model.item_selected.connect(func(i):
-		_set_option("model", NPCModels.RENDER_MODELS[i], "rendered")
+		_set_option("model", Data.RENDER_MODELS[i], "rendered")
 		get_viewport().gui_release_focus())
 	box.add_child(_render_model)
 	_render_outline.text = "Add outline (Shift+L)"
@@ -568,7 +569,7 @@ func _sync_extrude_ui() -> void:
 	_no_outline.visible = _settings_method in Data.OUTLINE_METHODS
 	_no_outline.set_pressed_no_signal(o.get("no_outline", false))
 	_render_outline.set_pressed_no_signal(Data.method_options(current, "rendered").outline)
-	_render_model.select(NPCModels.RENDER_MODELS.find(Data.method_options(current, "rendered").model))
+	_render_model.select(Data.RENDER_MODELS.find(Data.method_options(current, "rendered").model))
 	_ex_bevel.select(Data.EXTRUDE_BEVELS.find(ex.bevel))
 	_ex_bevel_size.set_value_no_signal(ex.bevel_size)
 	_ex_bevel_label.text = "Bevel size: %d voxels" % ex.bevel_size
@@ -776,6 +777,10 @@ func choose(method: String) -> void:
 		return
 	Data.set_block_method(current, method)
 	dirty = true
+	if method == "rendered":
+		# (Its shots are now of the voxel method it had.)
+		_sync_extrude_ui()
+		_reshoot_if("rendered")
 	_refresh_choice()
 
 

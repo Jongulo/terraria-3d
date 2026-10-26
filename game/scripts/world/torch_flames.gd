@@ -40,6 +40,10 @@ var _acc := 0.0
 var _pulse := {}  # Vector3i chunk -> {block id: PackedInt32Array of x, y, z}
 var _pulse_cells := {}  # block id -> PackedInt32Array (the chunks round you)
 var _pulse_dirty := false
+## The block kinds chunk_updated looks for (flames and pulsing ones), found
+## once: every chunk that streams in asks.
+var _ids := PackedInt32Array()
+var _ids_found := false
 var _pulse_center := Vector3(INF, INF, INF)
 static var _info := {}  # block id -> flame info ({} if it has none)
 static var _materials := {}
@@ -212,10 +216,13 @@ func chunk_unloaded(c: Vector3i) -> void:
 
 func chunk_updated(c: Vector3i) -> void:
 	chunk_unloaded(c)
-	var ids := flame_ids()
-	for id in pulse_ids():
-		if not id in ids:
-			ids.append(id)
+	if not _ids_found:
+		_ids_found = true
+		_ids = flame_ids()
+		for id in pulse_ids():
+			if not id in _ids:
+				_ids.append(id)
+	var ids := _ids
 	if ids.is_empty():
 		return
 	var lo := c * ChunkRenderer.CHUNK

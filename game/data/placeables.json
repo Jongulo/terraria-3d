@@ -5984,7 +5984,7 @@
 	"methods": {
 		"ash_wood_lamp": "hull",
 		"barrel": "extruded",
-		"blinkroot": "extruded",
+		"blinkroot": "rendered",
 		"blue_dungeon_lamp": "hull",
 		"blue_dungeon_sink": "rendered",
 		"blue_dungeon_vase": "hull",
@@ -5996,11 +5996,11 @@
 		"brown_pressure_plate": "hull",
 		"cactus": "extruded",
 		"cactus_lamp": "hull",
-		"cattail": "flat",
-		"cattail_2": "extruded",
-		"cattail_3": "extruded",
-		"cattail_4": "extruded",
-		"cattail_5": "extruded",
+		"cattail": "rendered",
+		"cattail_2": "rendered",
+		"cattail_3": "rendered",
+		"cattail_4": "rendered",
+		"cattail_5": "rendered",
 		"chain": "hull",
 		"chain_lantern": "hull",
 		"chest": "extruded",
@@ -6008,240 +6008,246 @@
 		"clay_pot": "hull",
 		"cooking_pot": "hull",
 		"copper_chandelier": "billboard",
-		"coral": "extruded",
-		"coral_2": "extruded",
-		"coral_3": "extruded",
-		"coral_4": "extruded",
-		"coral_5": "extruded",
-		"coral_6": "extruded",
-		"corrupt_plants": "hull",
-		"corrupt_plants_10": "extruded",
-		"corrupt_plants_11": "extruded",
-		"corrupt_plants_12": "extruded",
-		"corrupt_plants_13": "extruded",
-		"corrupt_plants_14": "extruded",
-		"corrupt_plants_15": "extruded",
-		"corrupt_plants_16": "extruded",
-		"corrupt_plants_17": "extruded",
-		"corrupt_plants_18": "extruded",
-		"corrupt_plants_19": "extruded",
-		"corrupt_plants_2": "extruded",
-		"corrupt_plants_20": "extruded",
-		"corrupt_plants_21": "extruded",
-		"corrupt_plants_22": "extruded",
-		"corrupt_plants_3": "extruded",
-		"corrupt_plants_4": "extruded",
-		"corrupt_plants_5": "hull",
-		"corrupt_plants_6": "extruded",
-		"corrupt_plants_7": "extruded",
-		"corrupt_plants_8": "extruded",
-		"corrupt_plants_9": "extruded",
+		"coral": "rendered",
+		"coral_2": "rendered",
+		"coral_3": "rendered",
+		"coral_4": "rendered",
+		"coral_5": "rendered",
+		"coral_6": "rendered",
+		"corrupt_plants": "rendered",
+		"corrupt_plants_10": "rendered",
+		"corrupt_plants_11": "rendered",
+		"corrupt_plants_12": "rendered",
+		"corrupt_plants_13": "rendered",
+		"corrupt_plants_14": "rendered",
+		"corrupt_plants_15": "rendered",
+		"corrupt_plants_16": "rendered",
+		"corrupt_plants_17": "rendered",
+		"corrupt_plants_18": "rendered",
+		"corrupt_plants_19": "rendered",
+		"corrupt_plants_2": "rendered",
+		"corrupt_plants_20": "rendered",
+		"corrupt_plants_21": "rendered",
+		"corrupt_plants_22": "rendered",
+		"corrupt_plants_3": "rendered",
+		"corrupt_plants_4": "rendered",
+		"corrupt_plants_5": "rendered",
+		"corrupt_plants_6": "rendered",
+		"corrupt_plants_7": "rendered",
+		"corrupt_plants_8": "rendered",
+		"corrupt_plants_9": "rendered",
 		"crimson_altar": "extruded",
 		"crimson_heart": "extruded",
-		"crimson_plants": "extruded",
-		"crimson_plants_10": "extruded",
-		"crimson_plants_11": "extruded",
-		"crimson_plants_12": "extruded",
-		"crimson_plants_13": "extruded",
-		"crimson_plants_14": "extruded",
-		"crimson_plants_15": "extruded",
-		"crimson_plants_16": "extruded",
-		"crimson_plants_17": "extruded",
-		"crimson_plants_18": "extruded",
-		"crimson_plants_19": "extruded",
-		"crimson_plants_2": "extruded",
-		"crimson_plants_20": "extruded",
-		"crimson_plants_21": "extruded",
-		"crimson_plants_22": "extruded",
-		"crimson_plants_3": "extruded",
-		"crimson_plants_4": "extruded",
-		"crimson_plants_5": "extruded",
-		"crimson_plants_6": "extruded",
-		"crimson_plants_7": "extruded",
-		"crimson_plants_8": "extruded",
-		"crimson_plants_9": "extruded",
-		"daybloom": "extruded",
-		"deathweed": "extruded",
+		"crimson_plants": "rendered",
+		"crimson_plants_10": "rendered",
+		"crimson_plants_11": "rendered",
+		"crimson_plants_12": "rendered",
+		"crimson_plants_13": "rendered",
+		"crimson_plants_14": "rendered",
+		"crimson_plants_15": "rendered",
+		"crimson_plants_16": "rendered",
+		"crimson_plants_17": "rendered",
+		"crimson_plants_18": "rendered",
+		"crimson_plants_19": "rendered",
+		"crimson_plants_2": "rendered",
+		"crimson_plants_20": "rendered",
+		"crimson_plants_21": "rendered",
+		"crimson_plants_22": "rendered",
+		"crimson_plants_3": "rendered",
+		"crimson_plants_4": "rendered",
+		"crimson_plants_5": "rendered",
+		"crimson_plants_6": "rendered",
+		"crimson_plants_7": "rendered",
+		"crimson_plants_8": "rendered",
+		"crimson_plants_9": "rendered",
+		"daybloom": "rendered",
+		"deathweed": "rendered",
 		"demon_altar": "extruded",
 		"demon_torch": "hull",
 		"ebonwood_lamp": "hull",
 		"extractinator": "extruded",
+		"fallen_log": "rendered",
 		"fancy_dishes": "hull",
-		"fireblossom": "extruded",
-		"flowers": "extruded",
-		"flowers_10": "extruded",
-		"flowers_11": "extruded",
-		"flowers_12": "extruded",
-		"flowers_13": "extruded",
-		"flowers_14": "extruded",
-		"flowers_15": "extruded",
-		"flowers_16": "extruded",
-		"flowers_17": "extruded",
-		"flowers_18": "extruded",
-		"flowers_19": "extruded",
-		"flowers_2": "extruded",
-		"flowers_20": "extruded",
-		"flowers_21": "extruded",
-		"flowers_22": "extruded",
-		"flowers_23": "extruded",
-		"flowers_24": "extruded",
-		"flowers_25": "extruded",
-		"flowers_26": "extruded",
-		"flowers_27": "extruded",
-		"flowers_28": "extruded",
-		"flowers_29": "extruded",
-		"flowers_3": "extruded",
-		"flowers_30": "extruded",
-		"flowers_31": "extruded",
-		"flowers_32": "extruded",
-		"flowers_33": "extruded",
-		"flowers_34": "extruded",
-		"flowers_35": "extruded",
-		"flowers_36": "extruded",
-		"flowers_37": "extruded",
-		"flowers_38": "extruded",
-		"flowers_4": "extruded",
-		"flowers_5": "extruded",
-		"flowers_6": "extruded",
-		"flowers_7": "extruded",
-		"flowers_8": "extruded",
-		"flowers_9": "extruded",
+		"fireblossom": "rendered",
+		"flowers": "rendered",
+		"flowers_10": "rendered",
+		"flowers_11": "rendered",
+		"flowers_12": "rendered",
+		"flowers_13": "rendered",
+		"flowers_14": "rendered",
+		"flowers_15": "rendered",
+		"flowers_16": "rendered",
+		"flowers_17": "rendered",
+		"flowers_18": "rendered",
+		"flowers_19": "rendered",
+		"flowers_2": "rendered",
+		"flowers_20": "rendered",
+		"flowers_21": "rendered",
+		"flowers_22": "rendered",
+		"flowers_23": "rendered",
+		"flowers_24": "rendered",
+		"flowers_25": "rendered",
+		"flowers_26": "rendered",
+		"flowers_27": "rendered",
+		"flowers_28": "rendered",
+		"flowers_29": "rendered",
+		"flowers_3": "rendered",
+		"flowers_30": "rendered",
+		"flowers_31": "rendered",
+		"flowers_32": "rendered",
+		"flowers_33": "rendered",
+		"flowers_34": "rendered",
+		"flowers_35": "rendered",
+		"flowers_36": "rendered",
+		"flowers_37": "rendered",
+		"flowers_38": "rendered",
+		"flowers_4": "rendered",
+		"flowers_5": "rendered",
+		"flowers_6": "rendered",
+		"flowers_7": "rendered",
+		"flowers_8": "rendered",
+		"flowers_9": "rendered",
 		"frozen_chest": "extruded",
 		"furnace": "extruded",
 		"glass_bowl": "hull",
-		"glowing_mushroom_3": "extruded",
+		"glowing_mushroom": "rendered",
+		"glowing_mushroom_2": "rendered",
+		"glowing_mushroom_3": "rendered",
+		"glowing_mushroom_4": "rendered",
+		"glowing_mushroom_5": "rendered",
 		"gold_chandelier": "billboard",
 		"gold_chest": "extruded",
 		"gothic_lamp": "hull",
 		"grandfather_clock": "hull",
-		"granite_stalactite": "hull",
-		"granite_stalactite_2": "hull",
-		"granite_stalactite_3": "hull",
-		"granite_stalagmite": "hull",
-		"granite_stalagmite_2": "hull",
-		"granite_stalagmite_3": "hull",
+		"granite_stalactite": "rendered",
+		"granite_stalactite_2": "rendered",
+		"granite_stalactite_3": "rendered",
+		"granite_stalagmite": "rendered",
+		"granite_stalagmite_2": "rendered",
+		"granite_stalagmite_3": "rendered",
 		"gray_pressure_plate": "hull",
 		"green_dungeon_lamp": "hull",
 		"green_dungeon_vase": "hull",
 		"green_torch": "hull",
 		"ice_torch": "hull",
-		"icicle": "hull",
-		"icicle_2": "hull",
-		"icicle_3": "hull",
+		"icicle": "rendered",
+		"icicle_2": "rendered",
+		"icicle_3": "rendered",
 		"iron_anvil": "extruded",
 		"ivy_chest": "rendered",
 		"junction_box": "hull",
-		"jungle_plants": "hull",
-		"jungle_plants_10": "extruded",
-		"jungle_plants_11": "extruded",
-		"jungle_plants_12": "extruded",
-		"jungle_plants_13": "extruded",
-		"jungle_plants_14": "extruded",
-		"jungle_plants_15": "extruded",
-		"jungle_plants_16": "extruded",
-		"jungle_plants_17": "extruded",
-		"jungle_plants_18": "extruded",
-		"jungle_plants_19": "extruded",
-		"jungle_plants_2": "extruded",
-		"jungle_plants_20": "extruded",
-		"jungle_plants_21": "extruded",
-		"jungle_plants_3": "extruded",
-		"jungle_plants_4": "extruded",
-		"jungle_plants_5": "extruded",
-		"jungle_plants_6": "extruded",
-		"jungle_plants_7": "extruded",
-		"jungle_plants_8": "extruded",
-		"jungle_plants_9": "extruded",
-		"jungle_spores": "extruded",
-		"jungle_vines": "hull",
-		"jungle_vines_10": "extruded",
-		"jungle_vines_11": "extruded",
-		"jungle_vines_12": "extruded",
-		"jungle_vines_13": "extruded",
-		"jungle_vines_14": "extruded",
-		"jungle_vines_15": "extruded",
-		"jungle_vines_16": "extruded",
-		"jungle_vines_17": "extruded",
-		"jungle_vines_18": "extruded",
-		"jungle_vines_19": "extruded",
-		"jungle_vines_2": "extruded",
-		"jungle_vines_20": "extruded",
-		"jungle_vines_21": "extruded",
-		"jungle_vines_22": "extruded",
-		"jungle_vines_23": "extruded",
-		"jungle_vines_24": "extruded",
-		"jungle_vines_25": "extruded",
-		"jungle_vines_26": "extruded",
-		"jungle_vines_3": "extruded",
-		"jungle_vines_4": "extruded",
-		"jungle_vines_5": "extruded",
-		"jungle_vines_6": "extruded",
-		"jungle_vines_7": "extruded",
-		"jungle_vines_8": "extruded",
-		"jungle_vines_9": "extruded",
+		"jungle_plants": "rendered",
+		"jungle_plants_10": "rendered",
+		"jungle_plants_11": "rendered",
+		"jungle_plants_12": "rendered",
+		"jungle_plants_13": "rendered",
+		"jungle_plants_14": "rendered",
+		"jungle_plants_15": "rendered",
+		"jungle_plants_16": "rendered",
+		"jungle_plants_17": "rendered",
+		"jungle_plants_18": "rendered",
+		"jungle_plants_19": "rendered",
+		"jungle_plants_2": "rendered",
+		"jungle_plants_20": "rendered",
+		"jungle_plants_21": "rendered",
+		"jungle_plants_3": "rendered",
+		"jungle_plants_4": "rendered",
+		"jungle_plants_5": "rendered",
+		"jungle_plants_6": "rendered",
+		"jungle_plants_7": "rendered",
+		"jungle_plants_8": "rendered",
+		"jungle_plants_9": "rendered",
+		"jungle_spores": "rendered",
+		"jungle_vines": "rendered",
+		"jungle_vines_10": "rendered",
+		"jungle_vines_11": "rendered",
+		"jungle_vines_12": "rendered",
+		"jungle_vines_13": "rendered",
+		"jungle_vines_14": "rendered",
+		"jungle_vines_15": "rendered",
+		"jungle_vines_16": "rendered",
+		"jungle_vines_17": "rendered",
+		"jungle_vines_18": "rendered",
+		"jungle_vines_19": "rendered",
+		"jungle_vines_2": "rendered",
+		"jungle_vines_20": "rendered",
+		"jungle_vines_21": "rendered",
+		"jungle_vines_22": "rendered",
+		"jungle_vines_23": "rendered",
+		"jungle_vines_24": "rendered",
+		"jungle_vines_25": "rendered",
+		"jungle_vines_26": "rendered",
+		"jungle_vines_3": "rendered",
+		"jungle_vines_4": "rendered",
+		"jungle_vines_5": "rendered",
+		"jungle_vines_6": "rendered",
+		"jungle_vines_7": "rendered",
+		"jungle_vines_8": "rendered",
+		"jungle_vines_9": "rendered",
 		"keg": "extruded",
 		"lamp_post": "hull",
-		"large_rocks": "extruded",
-		"large_rocks_2": "extruded",
-		"large_rocks_3": "extruded",
-		"large_rocks_4": "extruded",
-		"large_rocks_5": "extruded",
-		"large_rocks_6": "extruded",
+		"large_rocks": "rendered",
+		"large_rocks_2": "rendered",
+		"large_rocks_3": "rendered",
+		"large_rocks_4": "rendered",
+		"large_rocks_5": "rendered",
+		"large_rocks_6": "rendered",
 		"larva": "extruded",
 		"lead_anvil": "extruded",
 		"lever": "hull",
 		"life_crystal": "extruded",
-		"lily_pad": "extruded",
-		"lily_pad_10": "extruded",
-		"lily_pad_11": "extruded",
-		"lily_pad_12": "extruded",
-		"lily_pad_13": "extruded",
-		"lily_pad_14": "extruded",
-		"lily_pad_15": "extruded",
-		"lily_pad_16": "extruded",
-		"lily_pad_17": "extruded",
-		"lily_pad_18": "extruded",
-		"lily_pad_2": "extruded",
-		"lily_pad_3": "extruded",
-		"lily_pad_4": "extruded",
-		"lily_pad_5": "extruded",
-		"lily_pad_6": "extruded",
-		"lily_pad_7": "extruded",
-		"lily_pad_8": "extruded",
-		"lily_pad_9": "extruded",
-		"marble_stalactite": "hull",
-		"marble_stalactite_2": "hull",
-		"marble_stalactite_3": "hull",
-		"marble_stalagmite": "hull",
-		"marble_stalagmite_2": "hull",
-		"marble_stalagmite_3": "hull",
-		"moonglow": "extruded",
+		"lily_pad": "rendered",
+		"lily_pad_10": "rendered",
+		"lily_pad_11": "rendered",
+		"lily_pad_12": "rendered",
+		"lily_pad_13": "rendered",
+		"lily_pad_14": "rendered",
+		"lily_pad_15": "rendered",
+		"lily_pad_16": "rendered",
+		"lily_pad_17": "rendered",
+		"lily_pad_18": "rendered",
+		"lily_pad_2": "rendered",
+		"lily_pad_3": "rendered",
+		"lily_pad_4": "rendered",
+		"lily_pad_5": "rendered",
+		"lily_pad_6": "rendered",
+		"lily_pad_7": "rendered",
+		"lily_pad_8": "rendered",
+		"lily_pad_9": "rendered",
+		"marble_stalactite": "rendered",
+		"marble_stalactite_2": "rendered",
+		"marble_stalactite_3": "rendered",
+		"marble_stalagmite": "rendered",
+		"marble_stalagmite_2": "rendered",
+		"marble_stalagmite_3": "rendered",
+		"moonglow": "rendered",
 		"mug": "extruded",
-		"mushroom_vines_10": "extruded",
-		"mushroom_vines_11": "extruded",
-		"mushroom_vines_12": "extruded",
-		"mushroom_vines_13": "extruded",
-		"mushroom_vines_14": "extruded",
-		"mushroom_vines_15": "extruded",
-		"mushroom_vines_16": "extruded",
-		"mushroom_vines_17": "extruded",
-		"mushroom_vines_18": "extruded",
-		"mushroom_vines_19": "extruded",
-		"mushroom_vines_2": "extruded",
-		"mushroom_vines_20": "extruded",
-		"mushroom_vines_21": "extruded",
-		"mushroom_vines_22": "extruded",
-		"mushroom_vines_23": "extruded",
-		"mushroom_vines_24": "extruded",
-		"mushroom_vines_25": "extruded",
-		"mushroom_vines_26": "extruded",
-		"mushroom_vines_3": "extruded",
-		"mushroom_vines_4": "extruded",
-		"mushroom_vines_5": "extruded",
-		"mushroom_vines_6": "extruded",
-		"mushroom_vines_7": "extruded",
-		"mushroom_vines_8": "extruded",
-		"mushroom_vines_9": "extruded",
+		"mushroom": "rendered",
+		"mushroom_vines_10": "rendered",
+		"mushroom_vines_11": "rendered",
+		"mushroom_vines_12": "rendered",
+		"mushroom_vines_13": "rendered",
+		"mushroom_vines_14": "rendered",
+		"mushroom_vines_15": "rendered",
+		"mushroom_vines_16": "rendered",
+		"mushroom_vines_17": "rendered",
+		"mushroom_vines_18": "rendered",
+		"mushroom_vines_19": "rendered",
+		"mushroom_vines_2": "rendered",
+		"mushroom_vines_20": "rendered",
+		"mushroom_vines_21": "rendered",
+		"mushroom_vines_22": "rendered",
+		"mushroom_vines_23": "rendered",
+		"mushroom_vines_24": "rendered",
+		"mushroom_vines_25": "rendered",
+		"mushroom_vines_26": "rendered",
+		"mushroom_vines_3": "rendered",
+		"mushroom_vines_4": "rendered",
+		"mushroom_vines_5": "rendered",
+		"mushroom_vines_6": "rendered",
+		"mushroom_vines_7": "rendered",
+		"mushroom_vines_8": "rendered",
+		"mushroom_vines_9": "rendered",
 		"obsidian_lamp": "hull",
 		"obsidian_vase": "hull",
 		"oil_rag_sconse": "billboard",
@@ -6266,84 +6272,84 @@
 		"rich_mahogany_lamp": "hull",
 		"rope": "hull",
 		"sandstone_chest": "extruded",
-		"sandstone_stalactite": "hull",
-		"sandstone_stalactite_2": "hull",
-		"sandstone_stalactite_3": "hull",
+		"sandstone_stalactite": "rendered",
+		"sandstone_stalactite_2": "rendered",
+		"sandstone_stalactite_3": "rendered",
 		"shadewood_lamp": "hull",
 		"shadow_orb": "extruded",
-		"shiverthorn": "extruded",
+		"shiverthorn": "rendered",
 		"silk_rope": "hull",
 		"silver_chandelier": "billboard",
 		"skull_lantern": "billboard",
 		"skyware_chest": "rendered",
 		"skyware_lantern": "hull",
-		"small_rocks": "extruded",
-		"small_rocks_2": "extruded",
-		"small_rocks_3": "extruded",
-		"small_rocks_4": "extruded",
-		"small_rocks_5": "extruded",
-		"small_rocks_6": "extruded",
+		"small_rocks": "rendered",
+		"small_rocks_2": "rendered",
+		"small_rocks_3": "rendered",
+		"small_rocks_4": "rendered",
+		"small_rocks_5": "rendered",
+		"small_rocks_6": "rendered",
 		"solidifier": "extruded",
 		"spider_pot": "hull",
 		"spider_pot_2": "hull",
-		"spider_stalactite": "hull",
-		"spider_stalactite_2": "hull",
-		"spider_stalactite_3": "hull",
+		"spider_stalactite": "rendered",
+		"spider_stalactite_2": "rendered",
+		"spider_stalactite_3": "rendered",
 		"steampunk_cup": "hull",
-		"sunflower": "extruded",
-		"sunflower_2": "extruded",
-		"sunflower_3": "extruded",
-		"sword_in_stone": "extruded",
-		"tall_flowers": "extruded",
-		"tall_flowers_10": "extruded",
-		"tall_flowers_11": "extruded",
-		"tall_flowers_12": "extruded",
-		"tall_flowers_13": "extruded",
-		"tall_flowers_14": "extruded",
-		"tall_flowers_15": "extruded",
-		"tall_flowers_16": "extruded",
-		"tall_flowers_17": "extruded",
-		"tall_flowers_18": "extruded",
-		"tall_flowers_19": "extruded",
-		"tall_flowers_2": "extruded",
-		"tall_flowers_20": "extruded",
-		"tall_flowers_21": "extruded",
-		"tall_flowers_22": "extruded",
-		"tall_flowers_23": "extruded",
-		"tall_flowers_24": "extruded",
-		"tall_flowers_25": "extruded",
-		"tall_flowers_26": "extruded",
-		"tall_flowers_27": "extruded",
-		"tall_flowers_28": "extruded",
-		"tall_flowers_29": "extruded",
-		"tall_flowers_3": "extruded",
-		"tall_flowers_30": "extruded",
-		"tall_flowers_31": "extruded",
-		"tall_flowers_32": "extruded",
-		"tall_flowers_33": "extruded",
-		"tall_flowers_34": "extruded",
-		"tall_flowers_35": "extruded",
-		"tall_flowers_36": "extruded",
-		"tall_flowers_37": "extruded",
-		"tall_flowers_38": "extruded",
-		"tall_flowers_4": "extruded",
-		"tall_flowers_5": "extruded",
-		"tall_flowers_6": "extruded",
-		"tall_flowers_7": "extruded",
-		"tall_flowers_8": "extruded",
-		"tall_flowers_9": "extruded",
-		"tall_grass": "hull",
-		"tall_grass_2": "extruded",
-		"tall_grass_3": "flat",
-		"tall_grass_4": "flat",
-		"tall_grass_5": "hull",
-		"tall_grass_6": "flat",
-		"taller_grass": "extruded",
-		"taller_grass_2": "extruded",
-		"taller_grass_3": "extruded",
-		"taller_grass_4": "extruded",
-		"taller_grass_5": "extruded",
-		"taller_grass_6": "extruded",
+		"sunflower": "rendered",
+		"sunflower_2": "rendered",
+		"sunflower_3": "rendered",
+		"sword_in_stone": "rendered",
+		"tall_flowers": "rendered",
+		"tall_flowers_10": "rendered",
+		"tall_flowers_11": "rendered",
+		"tall_flowers_12": "rendered",
+		"tall_flowers_13": "rendered",
+		"tall_flowers_14": "rendered",
+		"tall_flowers_15": "rendered",
+		"tall_flowers_16": "rendered",
+		"tall_flowers_17": "rendered",
+		"tall_flowers_18": "rendered",
+		"tall_flowers_19": "rendered",
+		"tall_flowers_2": "rendered",
+		"tall_flowers_20": "rendered",
+		"tall_flowers_21": "rendered",
+		"tall_flowers_22": "rendered",
+		"tall_flowers_23": "rendered",
+		"tall_flowers_24": "rendered",
+		"tall_flowers_25": "rendered",
+		"tall_flowers_26": "rendered",
+		"tall_flowers_27": "rendered",
+		"tall_flowers_28": "rendered",
+		"tall_flowers_29": "rendered",
+		"tall_flowers_3": "rendered",
+		"tall_flowers_30": "rendered",
+		"tall_flowers_31": "rendered",
+		"tall_flowers_32": "rendered",
+		"tall_flowers_33": "rendered",
+		"tall_flowers_34": "rendered",
+		"tall_flowers_35": "rendered",
+		"tall_flowers_36": "rendered",
+		"tall_flowers_37": "rendered",
+		"tall_flowers_38": "rendered",
+		"tall_flowers_4": "rendered",
+		"tall_flowers_5": "rendered",
+		"tall_flowers_6": "rendered",
+		"tall_flowers_7": "rendered",
+		"tall_flowers_8": "rendered",
+		"tall_flowers_9": "rendered",
+		"tall_grass": "rendered",
+		"tall_grass_2": "rendered",
+		"tall_grass_3": "rendered",
+		"tall_grass_4": "rendered",
+		"tall_grass_5": "rendered",
+		"tall_grass_6": "rendered",
+		"taller_grass": "rendered",
+		"taller_grass_2": "rendered",
+		"taller_grass_3": "rendered",
+		"taller_grass_4": "rendered",
+		"taller_grass_5": "rendered",
+		"taller_grass_6": "rendered",
 		"tiki_torch": "hull",
 		"tin_chandelier": "billboard",
 		"tinkerers_workshop": "tuned",
@@ -6435,65 +6441,68 @@
 		"tree_canopy@92": "billboard",
 		"tree_trunk": "billboard",
 		"tungsten_chandelier": "billboard",
+		"twigs": "rendered",
+		"twigs_2": "rendered",
+		"twigs_3": "rendered",
 		"ultrabright_torch": "hull",
-		"vicious_mushroom": "hull",
-		"vile_mushroom": "hull",
-		"vine_flowers": "extruded",
-		"vine_flowers_10": "extruded",
-		"vine_flowers_11": "extruded",
-		"vine_flowers_12": "extruded",
-		"vine_flowers_13": "extruded",
-		"vine_flowers_14": "extruded",
-		"vine_flowers_15": "extruded",
-		"vine_flowers_16": "extruded",
-		"vine_flowers_17": "extruded",
-		"vine_flowers_18": "extruded",
-		"vine_flowers_19": "extruded",
-		"vine_flowers_2": "extruded",
-		"vine_flowers_20": "extruded",
-		"vine_flowers_21": "extruded",
-		"vine_flowers_22": "extruded",
-		"vine_flowers_23": "extruded",
-		"vine_flowers_24": "extruded",
-		"vine_flowers_25": "extruded",
-		"vine_flowers_26": "extruded",
-		"vine_flowers_3": "extruded",
-		"vine_flowers_4": "extruded",
-		"vine_flowers_5": "extruded",
-		"vine_flowers_6": "extruded",
-		"vine_flowers_7": "extruded",
-		"vine_flowers_8": "extruded",
-		"vine_flowers_9": "extruded",
+		"vicious_mushroom": "rendered",
+		"vile_mushroom": "rendered",
+		"vine_flowers": "rendered",
+		"vine_flowers_10": "rendered",
+		"vine_flowers_11": "rendered",
+		"vine_flowers_12": "rendered",
+		"vine_flowers_13": "rendered",
+		"vine_flowers_14": "rendered",
+		"vine_flowers_15": "rendered",
+		"vine_flowers_16": "rendered",
+		"vine_flowers_17": "rendered",
+		"vine_flowers_18": "rendered",
+		"vine_flowers_19": "rendered",
+		"vine_flowers_2": "rendered",
+		"vine_flowers_20": "rendered",
+		"vine_flowers_21": "rendered",
+		"vine_flowers_22": "rendered",
+		"vine_flowers_23": "rendered",
+		"vine_flowers_24": "rendered",
+		"vine_flowers_25": "rendered",
+		"vine_flowers_26": "rendered",
+		"vine_flowers_3": "rendered",
+		"vine_flowers_4": "rendered",
+		"vine_flowers_5": "rendered",
+		"vine_flowers_6": "rendered",
+		"vine_flowers_7": "rendered",
+		"vine_flowers_8": "rendered",
+		"vine_flowers_9": "rendered",
 		"vine_rope": "hull",
-		"vines": "extruded",
-		"vines_10": "extruded",
-		"vines_11": "extruded",
-		"vines_12": "extruded",
-		"vines_13": "extruded",
-		"vines_14": "extruded",
-		"vines_15": "extruded",
-		"vines_16": "extruded",
-		"vines_17": "extruded",
-		"vines_18": "extruded",
-		"vines_19": "extruded",
-		"vines_2": "extruded",
-		"vines_20": "extruded",
-		"vines_21": "extruded",
-		"vines_22": "extruded",
-		"vines_23": "extruded",
-		"vines_24": "extruded",
-		"vines_25": "extruded",
-		"vines_26": "extruded",
-		"vines_3": "extruded",
-		"vines_4": "extruded",
-		"vines_5": "extruded",
-		"vines_6": "extruded",
-		"vines_7": "extruded",
-		"vines_8": "extruded",
-		"vines_9": "extruded",
+		"vines": "rendered",
+		"vines_10": "rendered",
+		"vines_11": "rendered",
+		"vines_12": "rendered",
+		"vines_13": "rendered",
+		"vines_14": "rendered",
+		"vines_15": "rendered",
+		"vines_16": "rendered",
+		"vines_17": "rendered",
+		"vines_18": "rendered",
+		"vines_19": "rendered",
+		"vines_2": "rendered",
+		"vines_20": "rendered",
+		"vines_21": "rendered",
+		"vines_22": "rendered",
+		"vines_23": "rendered",
+		"vines_24": "rendered",
+		"vines_25": "rendered",
+		"vines_26": "rendered",
+		"vines_3": "rendered",
+		"vines_4": "rendered",
+		"vines_5": "rendered",
+		"vines_6": "rendered",
+		"vines_7": "rendered",
+		"vines_8": "rendered",
+		"vines_9": "rendered",
 		"wall_torch": "extruded",
 		"water_candle": "hull",
-		"waterleaf": "extruded",
+		"waterleaf": "rendered",
 		"web_rope": "hull",
 		"white_torch": "hull",
 		"wine_glass": "hull",
@@ -6514,6 +6523,9 @@
 		"bewitching_table": {
 			"model": "extruded"
 		},
+		"blinkroot": {
+			"model": "extruded"
+		},
 		"campfire": {
 			"model": "extruded"
 		},
@@ -6522,6 +6534,9 @@
 		},
 		"candle": {
 			"model": "extruded"
+		},
+		"cattail": {
+			"model": "flat"
 		},
 		"cattail_2": {
 			"model": "extruded"
@@ -6540,6 +6555,27 @@
 		},
 		"copper_chandelier": {
 			"model": "extruded"
+		},
+		"coral": {
+			"model": "extruded"
+		},
+		"coral_2": {
+			"model": "extruded"
+		},
+		"coral_3": {
+			"model": "extruded"
+		},
+		"coral_4": {
+			"model": "extruded"
+		},
+		"coral_5": {
+			"model": "extruded"
+		},
+		"coral_6": {
+			"model": "extruded"
+		},
+		"corrupt_plants": {
+			"model": "hull"
 		},
 		"corrupt_plants_10": {
 			"model": "extruded"
@@ -6590,7 +6626,7 @@
 			"model": "extruded"
 		},
 		"corrupt_plants_5": {
-			"model": "extruded"
+			"model": "hull"
 		},
 		"corrupt_plants_6": {
 			"model": "extruded"
@@ -6676,6 +6712,12 @@
 		"crimson_plants_9": {
 			"model": "extruded"
 		},
+		"daybloom": {
+			"model": "extruded"
+		},
+		"deathweed": {
+			"model": "extruded"
+		},
 		"demon_altar": {
 			"model": "extruded"
 		},
@@ -6686,6 +6728,9 @@
 			"model": "extruded"
 		},
 		"fallen_log": {
+			"model": "extruded"
+		},
+		"fireblossom": {
 			"model": "extruded"
 		},
 		"fireplace": {
@@ -6811,17 +6856,62 @@
 		"geyser": {
 			"outline": false
 		},
+		"glowing_mushroom": {
+			"model": "hull"
+		},
+		"glowing_mushroom_2": {
+			"model": "hull"
+		},
+		"glowing_mushroom_3": {
+			"model": "extruded"
+		},
+		"glowing_mushroom_4": {
+			"model": "hull"
+		},
+		"glowing_mushroom_5": {
+			"model": "hull"
+		},
 		"gold_chandelier": {
 			"model": "extruded"
 		},
 		"grandfather_clock": {
 			"model": "auto"
 		},
+		"granite_stalactite": {
+			"model": "hull"
+		},
+		"granite_stalactite_2": {
+			"model": "hull"
+		},
+		"granite_stalactite_3": {
+			"model": "hull"
+		},
+		"granite_stalagmite": {
+			"model": "hull"
+		},
+		"granite_stalagmite_2": {
+			"model": "hull"
+		},
+		"granite_stalagmite_3": {
+			"model": "hull"
+		},
+		"icicle": {
+			"model": "hull"
+		},
+		"icicle_2": {
+			"model": "hull"
+		},
+		"icicle_3": {
+			"model": "hull"
+		},
 		"iron_anvil": {
 			"model": "extruded"
 		},
 		"ivy_chest": {
 			"model": "extruded"
+		},
+		"jungle_plants": {
+			"model": "hull"
 		},
 		"jungle_plants_10": {
 			"model": "extruded"
@@ -6885,6 +6975,9 @@
 		},
 		"jungle_spores": {
 			"model": "extruded"
+		},
+		"jungle_vines": {
+			"model": "hull"
 		},
 		"jungle_vines_10": {
 			"model": "extruded"
@@ -6991,6 +7084,9 @@
 		"life_crystal": {
 			"model": "extruded"
 		},
+		"lily_pad": {
+			"model": "extruded"
+		},
 		"lily_pad_10": {
 			"model": "extruded"
 		},
@@ -7018,6 +7114,12 @@
 		"lily_pad_18": {
 			"model": "extruded"
 		},
+		"lily_pad_2": {
+			"model": "extruded"
+		},
+		"lily_pad_3": {
+			"model": "extruded"
+		},
 		"lily_pad_4": {
 			"model": "extruded"
 		},
@@ -7039,11 +7141,32 @@
 		"loom": {
 			"model": "extruded"
 		},
+		"marble_stalactite": {
+			"model": "hull"
+		},
+		"marble_stalactite_2": {
+			"model": "hull"
+		},
+		"marble_stalactite_3": {
+			"model": "hull"
+		},
+		"marble_stalagmite": {
+			"model": "hull"
+		},
+		"marble_stalagmite_2": {
+			"model": "hull"
+		},
+		"marble_stalagmite_3": {
+			"model": "hull"
+		},
+		"moonglow": {
+			"model": "extruded"
+		},
 		"mug": {
 			"model": "extruded"
 		},
 		"mushroom": {
-			"model": "auto"
+			"model": "hull"
 		},
 		"mushroom_vines_10": {
 			"model": "extruded"
@@ -7123,7 +7246,19 @@
 		"platinum_chandelier": {
 			"model": "auto"
 		},
+		"sandstone_stalactite": {
+			"model": "hull"
+		},
+		"sandstone_stalactite_2": {
+			"model": "hull"
+		},
+		"sandstone_stalactite_3": {
+			"model": "hull"
+		},
 		"shadow_orb": {
+			"model": "extruded"
+		},
+		"shiverthorn": {
 			"model": "extruded"
 		},
 		"sign": {
@@ -7154,6 +7289,18 @@
 			"model": "extruded"
 		},
 		"solidifier": {
+			"model": "extruded"
+		},
+		"spider_stalactite": {
+			"model": "hull"
+		},
+		"spider_stalactite_2": {
+			"model": "hull"
+		},
+		"spider_stalactite_3": {
+			"model": "hull"
+		},
+		"sunflower": {
 			"model": "extruded"
 		},
 		"sunflower_2": {
@@ -7282,6 +7429,24 @@
 		"tall_flowers_9": {
 			"model": "extruded"
 		},
+		"tall_grass": {
+			"model": "hull"
+		},
+		"tall_grass_2": {
+			"model": "extruded"
+		},
+		"tall_grass_3": {
+			"model": "flat"
+		},
+		"tall_grass_4": {
+			"model": "flat"
+		},
+		"tall_grass_5": {
+			"model": "hull"
+		},
+		"tall_grass_6": {
+			"model": "flat"
+		},
 		"taller_grass": {
 			"model": "extruded"
 		},
@@ -7336,8 +7501,14 @@
 		"twigs_3": {
 			"model": "extruded"
 		},
+		"vicious_mushroom": {
+			"model": "hull"
+		},
+		"vile_mushroom": {
+			"model": "hull"
+		},
 		"vine_flowers": {
-			"model": "auto"
+			"model": "extruded"
 		},
 		"vine_flowers_10": {
 			"model": "extruded"
@@ -7415,7 +7586,7 @@
 			"model": "extruded"
 		},
 		"vines": {
-			"model": "auto"
+			"model": "extruded"
 		},
 		"vines_10": {
 			"model": "extruded"
@@ -7490,6 +7661,9 @@
 			"model": "extruded"
 		},
 		"vines_9": {
+			"model": "extruded"
+		},
+		"waterleaf": {
 			"model": "extruded"
 		},
 		"wooden_chair": {

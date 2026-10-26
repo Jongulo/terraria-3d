@@ -99,10 +99,14 @@ static func build(s: Dictionary, o := {}) -> Dictionary:
 	return r
 
 
-## The cached sprite, quad and material for a shape (BlockModels' batches).
+## The cached sprite, quad and material for a shape (BlockModels' batches;
+## guarded by BlockModelMesh.lock: they're built on workers too).
 static func get_art(s: Dictionary) -> Dictionary:
 	var c := code(s)
-	if not _cache.has(c):
+	BlockModelMesh.lock.lock()
+	var hit = _cache.get(c)
+	BlockModelMesh.lock.unlock()
+	if hit == null:
 		var b := build(s)
 		var w: float = b.image.get_width() * b.px
 		var h: float = b.image.get_height() * b.px
@@ -115,18 +119,34 @@ static func get_art(s: Dictionary) -> Dictionary:
 		m.set_shader_parameter("textured", true)
 		m.set_shader_parameter("billboard", true)
 		b["material"] = m
+		hit = b
+		BlockModelMesh.lock.lock()
 		_cache[c] = b
-	return _cache[c]
+		BlockModelMesh.lock.unlock()
+	return hit
+
+
+## Whether a shape's sprite is built yet (get_art).
+static func has_art(s: Dictionary) -> bool:
+	BlockModelMesh.lock.lock()
+	var built := _cache.has(code(s))
+	BlockModelMesh.lock.unlock()
+	return built
 
 
 ## Forgets the built sprites (after the sprite settings change).
 static func clear_cache() -> void:
+	BlockModelMesh.lock.lock()
 	_cache.clear()
+	BlockModelMesh.lock.unlock()
 
 
 ## The built materials (BlockModels gives them the sky's light as it changes).
 static func materials() -> Array:
-	return _cache.values().map(func(b): return b.material)
+	BlockModelMesh.lock.lock()
+	var built := _cache.values()
+	BlockModelMesh.lock.unlock()
+	return built.map(func(b): return b.material)
 
 
 ## A `w` x `h` quad standing on its bottom edge (at `bottom`), centred on the

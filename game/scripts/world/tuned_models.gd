@@ -55,27 +55,38 @@ static func patch_path(key: String) -> String:
 
 
 static func has(key: String) -> bool:
-	return _models.has(key) or FileAccess.file_exists(path(key)) or FileAccess.file_exists(patch_path(key))
+	BlockModelMesh.lock.lock()
+	var known := _models.has(key)
+	BlockModelMesh.lock.unlock()
+	return known or FileAccess.file_exists(path(key)) or FileAccess.file_exists(patch_path(key))
 
 
 ## The model saved for `key` ({} if none), loaded once: its cached whole copy,
 ## else rebuilt from its patch (and cached).
 static func model(key: String) -> Dictionary:
-	if not _models.has(key):
-		var m := {}
-		if FileAccess.file_exists(path(key)):
-			m = decode(FileAccess.get_file_as_string(path(key)))
-		elif FileAccess.file_exists(patch_path(key)):
-			m = from_patch(key, FileAccess.get_file_as_string(patch_path(key)))
-			if not m.is_empty():
-				_write(path(key), encode(m))
-		_models[key] = m
-	return _models[key]
+	BlockModelMesh.lock.lock()
+	var hit = _models.get(key)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
+	var m := {}
+	if FileAccess.file_exists(path(key)):
+		m = decode(FileAccess.get_file_as_string(path(key)))
+	elif FileAccess.file_exists(patch_path(key)):
+		m = from_patch(key, FileAccess.get_file_as_string(patch_path(key)))
+		if not m.is_empty():
+			_write(path(key), encode(m))
+	BlockModelMesh.lock.lock()
+	_models[key] = m
+	BlockModelMesh.lock.unlock()
+	return m
 
 
 ## Keeps an edited (or new) model in memory, so the game and pickers show it.
 static func put(key: String, m: Dictionary) -> void:
+	BlockModelMesh.lock.lock()
 	_models[key] = m
+	BlockModelMesh.lock.unlock()
 	forget_meshes(key)
 
 
@@ -104,7 +115,9 @@ static func remove(key: String) -> void:
 	for file in [path(key), patch_path(key)]:
 		if FileAccess.file_exists(file):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(file))
+	BlockModelMesh.lock.lock()
 	_models.erase(key)
+	BlockModelMesh.lock.unlock()
 	forget_meshes(key)
 
 
@@ -313,14 +326,18 @@ static func from_patch(key: String, text: String) -> Dictionary:
 
 
 static func forget_meshes(key: String) -> void:
+	BlockModelMesh.lock.lock()
 	for k in _meshes.keys():
 		if str(k).begins_with(key + "|"):
 			_meshes.erase(k)
+	BlockModelMesh.lock.unlock()
 
 
 static func clear_cache() -> void:
+	BlockModelMesh.lock.lock()
 	_models.clear()
 	_meshes.clear()
+	BlockModelMesh.lock.unlock()
 
 
 # ------------------------------------------------------------ the model
@@ -753,6 +770,13 @@ static func arrays(m: Dictionary, frame: int, px: float, o := {}, lo := Vector3i
 static func mesh(key: String, frame: int, px: float, o := {}) -> ArrayMesh:
 	var m := model(key)
 	var k := "%s|%d|%s|%s" % [key, frame, px, JSON.stringify(o)]
-	if not _meshes.has(k):
-		_meshes[k] = BlockModelMesh.mesh_from_arrays(arrays(m, frame, px, o))
-	return _meshes[k]
+	BlockModelMesh.lock.lock()
+	var hit = _meshes.get(k)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
+	var built := BlockModelMesh.mesh_from_arrays(arrays(m, frame, px, o))
+	BlockModelMesh.lock.lock()
+	_meshes[k] = built
+	BlockModelMesh.lock.unlock()
+	return built

@@ -22,8 +22,11 @@ static func build_art(image: Image, key: String) -> ArrayMesh:
 	if scale.x <= 1:
 		return build(image, key)
 	var full_key := key + "@art"
-	if _cache.has(full_key):
-		return _cache[full_key]
+	BlockModelMesh.lock.lock()
+	var hit = _cache.get(full_key)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
 	var m := build(PixelArt.downsample(image, scale), key + "~art")
 	var st := SurfaceTool.new()
 	st.create_from(m, 0)
@@ -35,7 +38,9 @@ static func build_art(image: Image, key: String) -> ArrayMesh:
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	var out := ArrayMesh.new()
 	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	BlockModelMesh.lock.lock()
 	_cache[full_key] = out
+	BlockModelMesh.lock.unlock()
 	return out
 
 
@@ -45,8 +50,11 @@ static func build_art(image: Image, key: String) -> ArrayMesh:
 ## a dark outline, which would otherwise turn the sides of thick extrusions black.
 static func build(image: Image, key: String, depth := 1.0, inset_edges := false) -> ArrayMesh:
 	key = "%s@%s%s" % [key, depth, "i" if inset_edges else ""]
-	if _cache.has(key):
-		return _cache[key]
+	BlockModelMesh.lock.lock()
+	var hit = _cache.get(key)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
 	var dz := depth * 0.5
 	var img := image
 	if img.is_compressed():
@@ -104,7 +112,9 @@ static func build(image: Image, key: String, depth := 1.0, inset_edges := false)
 			if not solid.call(px, py + 1):
 				_quad(st, Vector3(x0, y0, -dz), Vector3(x1, y0, -dz), Vector3(x1, y0, dz), Vector3(x0, y0, dz), edge_uvs.call(0, -1), BOTTOM_SHADE)
 	var mesh := st.commit()
+	BlockModelMesh.lock.lock()
 	_cache[key] = mesh
+	BlockModelMesh.lock.unlock()
 	return mesh
 
 

@@ -100,9 +100,13 @@ static func art(sheet: String, trunk_sheet: String, b: Dictionary) -> Image:
 
 ## The card's mesh and material for a branch (cached per look): the card
 ## stands on the trunk's edge and reaches out along +x, centred on its cell.
+## (Guarded by BlockModelMesh.lock: BlockModels builds them on workers too.)
 static func get_art(sheet: String, trunk_sheet: String, b: Dictionary) -> Dictionary:
-	var key := "%s:%s:%d:%s:%s" % [sheet, trunk_sheet, b.variant, b.leafy, b.left]
-	if not _cache.has(key):
+	var key := art_key(sheet, trunk_sheet, b)
+	BlockModelMesh.lock.lock()
+	var hit = _cache.get(key)
+	BlockModelMesh.lock.unlock()
+	if hit == null:
 		var built := build(sheet, trunk_sheet, b)
 		var img: Image = built.image
 		var w: float = img.get_width() * built.px
@@ -113,8 +117,25 @@ static func get_art(sheet: String, trunk_sheet: String, b: Dictionary) -> Dictio
 		m.set_shader_parameter("art_scale", PixelArt.detect_scale(img).x)
 		m.set_shader_parameter("textured", true)
 		m.set_shader_parameter("toward_camera", NEARER)
-		_cache[key] = {"mesh": card(w, h), "material": m, "size": Vector2(w, h)}
-	return _cache[key]
+		hit = {"mesh": card(w, h), "material": m, "size": Vector2(w, h)}
+		BlockModelMesh.lock.lock()
+		_cache[key] = hit
+		BlockModelMesh.lock.unlock()
+	return hit
+
+
+## A branch card's cache key: a leafy one's look is its canopy sheet's, a
+## bare stub's its trunk's.
+static func art_key(sheet: String, trunk_sheet: String, b: Dictionary) -> String:
+	return "%s:%d:%s:%s" % [sheet if b.leafy else trunk_sheet, b.variant, b.leafy, b.left]
+
+
+## Whether a branch's card is built yet (get_art).
+static func has_art(sheet: String, trunk_sheet: String, b: Dictionary) -> bool:
+	BlockModelMesh.lock.lock()
+	var built := _cache.has(art_key(sheet, trunk_sheet, b))
+	BlockModelMesh.lock.unlock()
+	return built
 
 
 ## A branch processed for drawing: {image (stem on the left), px (world size
@@ -133,12 +154,17 @@ static func build(sheet: String, trunk_sheet: String, b: Dictionary, canopy_o :=
 
 ## Forgets the built cards (after the sprite settings change).
 static func clear_cache() -> void:
+	BlockModelMesh.lock.lock()
 	_cache.clear()
+	BlockModelMesh.lock.unlock()
 
 
 ## The built materials (BlockModels gives them the sky's light as it changes).
 static func materials() -> Array:
-	return _cache.values().map(func(b): return b.material)
+	BlockModelMesh.lock.lock()
+	var built := _cache.values()
+	BlockModelMesh.lock.unlock()
+	return built.map(func(b): return b.material)
 
 
 ## A `w` x `h` quad from x = 0 out to w, centred on y = 0, in the xy plane.

@@ -26,6 +26,10 @@ const NOISE_METHODS := ["extruded", "hull", "hull_top", "lathe", "claude", "tune
 ## The voxel methods that work the sprite out by themselves, which can cut its
 ## dark outline away first ("no_outline": PixelArt.without_outline).
 const OUTLINE_METHODS := ["extruded", "hull", "hull_top", "lathe"]
+## What the "rendered" method shoots: "auto" (the tuned model, else Claude's,
+## else the hull), or one of the voxel methods, with its own settings. A block
+## switched to rendered from a voxel method shoots that one (set_block_method).
+const RENDER_MODELS := ["auto", "extruded", "flat", "hull", "hull_top", "lathe", "claude", "tuned"]
 ## Bevel profiles for the "extruded" method's front and back edges.
 const EXTRUDE_BEVELS := ["none", "chamfer", "round", "cove", "step"]
 ## Bevel size limit, in art voxels.
@@ -62,7 +66,7 @@ var extrude_settings := {}
 ## from the defaults ({noise, strength, seed, one_color}).
 var noise_settings := {"hull": {}, "hull_top": {}, "lathe": {}, "claude": {}, "tuned": {}}
 ## Block name -> the "rendered" method's settings that differ from the
-## defaults ({model: what's shot, NPCModels.RENDER_MODELS}).
+## defaults ({model: what's shot, RENDER_MODELS}, outline).
 var rendered_settings := {}
 ## Block name -> model transform keys that differ from the defaults
 ## ({offset: [x, y, z] art pixels, rotation: [x, y, z] degrees, scale}).
@@ -910,7 +914,7 @@ func method_options(name: String, method: String) -> Dictionary:
 		return extrude_options(name)
 	if method == "rendered":
 		var model = rendered_settings.get(name, {}).get("model", "auto")
-		return {"model": model if model in NPCModels.RENDER_MODELS else "auto", "outline": bool(rendered_settings.get(name, {}).get("outline", false))}
+		return {"model": model if model in RENDER_MODELS else "auto", "outline": bool(rendered_settings.get(name, {}).get("outline", false))}
 	var o := {"noise": "none", "strength": 0.5, "seed": 0, "one_color": false}
 	if method in OUTLINE_METHODS:
 		o.no_outline = false
@@ -1026,11 +1030,16 @@ func reset_placeables() -> void:
 	placeable_methods = {}
 
 
-## Changes how a placeable block is drawn (re-register blocks with the world after).
+## Changes how a placeable block is drawn (re-register blocks with the world
+## after). Switched to "rendered" from a voxel method, its shots are of that
+## method's model.
 func set_block_method(name: String, method: String) -> void:
 	var d := block(block_id(name))
 	if d.is_empty() or not is_placeable(d):
 		return
+	var was: String = d.get("method", default_method(d))
+	if method == "rendered" and was != "rendered" and was in RENDER_MODELS:
+		set_method_option(name, "rendered", "model", was)
 	d.method = method
 	d.render_id = render_for(d)
 	# Hidden twins (canopy styles) follow the listed block.

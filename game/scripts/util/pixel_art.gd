@@ -50,8 +50,11 @@ static func without_outline(art: Image, cut := false) -> Image:
 ## Detects the art scale: Vector3i(scale, grid offset x, grid offset y).
 static func detect_scale(img: Image) -> Vector3i:
 	var key := img.get_instance_id()
-	if _cache.has(key):
-		return _cache[key]
+	BlockModelMesh.lock.lock()
+	var hit = _cache.get(key)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
 	var result := Vector3i(1, 0, 0)
 	for k in [4, 3, 2]:
 		if img.get_width() < k or img.get_height() < k:
@@ -62,7 +65,9 @@ static func detect_scale(img: Image) -> Vector3i:
 				break
 		if result.x > 1:
 			break
+	BlockModelMesh.lock.lock()
 	_cache[key] = result
+	BlockModelMesh.lock.unlock()
 	return result
 
 

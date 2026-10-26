@@ -41,6 +41,10 @@ var _chunk_count := Vector3i.ZERO
 var _max_in_flight := 12
 ## Time per frame for applying finished meshes (microseconds).
 const APPLY_BUDGET_USEC := 4000
+## Chunks freed a frame at most: crossing into a new chunk leaves a whole
+## slab of them behind, and freeing them (their meshes and models) at once
+## stalls that frame.
+const FREES_PER_FRAME := 12
 
 
 func setup(voxel_world: VoxelWorld) -> void:
@@ -184,16 +188,22 @@ func _unload_far() -> void:
 
 
 ## Frees chunks that left the range once the far terrain draws their ground
-## (at once without far terrain); ones back in range stay.
+## (at once without far terrain), FREES_PER_FRAME a frame; ones back in range
+## stay.
 func _free_covered() -> void:
+	var freed := 0
 	for c in _leaving.keys():
 		if _in_range(c) or not _chunks.has(c):
 			_leaving.erase(c)
 		elif covered_rule.call(c.x, c.z):
-			_leaving.erase(c)
 			var mi = _chunks[c]
 			if mi:
+				# (Empty chunks cost nothing to drop.)
+				if freed >= FREES_PER_FRAME:
+					continue
+				freed += 1
 				mi.queue_free()
+			_leaving.erase(c)
 			_chunks.erase(c)
 			chunk_unloaded.emit(c)
 

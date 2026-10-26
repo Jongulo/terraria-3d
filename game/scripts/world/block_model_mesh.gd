@@ -44,6 +44,10 @@ const NOISE_CELL := 1
 const BEVEL_CELL := 1
 
 static var _cache := {}
+## Guards the model caches (this one, PixelArt's, ItemMesh's, TunedModels'
+## and BlockModels' transformed meshes): BlockModels builds models on a
+## worker thread too.
+static var lock := Mutex.new()
 
 
 ## Forgets built meshes (after sprites were rebuilt).
@@ -54,7 +58,9 @@ const FACE_UVS := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
 
 
 static func clear_cache() -> void:
+	lock.lock()
 	_cache.clear()
+	lock.unlock()
 
 
 ## {mesh: ArrayMesh, textured: bool}; `frame`: an animated block's frame.
@@ -69,8 +75,11 @@ static func build(block_id: int, method: String, frame := 0) -> Dictionary:
 	var key := "%d:%s:%d" % [block_id, method, frame]
 	if method in Data.NOISE_METHODS:
 		key += JSON.stringify(Data.method_options(settings, method))
-	if _cache.has(key):
-		return _cache[key]
+	lock.lock()
+	var hit = _cache.get(key)
+	lock.unlock()
+	if hit != null:
+		return hit
 	var img: Image = d.anim_sprites[frame] if frame > 0 else d.sprite
 	var px: float = d.sprite_px
 	var w := img.get_width()
@@ -110,7 +119,9 @@ static func build(block_id: int, method: String, frame := 0) -> Dictionary:
 					"textured": false}
 	if method != "tuned" and method in Data.NOISE_METHODS and Data.method_options(settings, method).one_color:
 		out = {"mesh": TunedModels.one_color_mesh(out.mesh, out.textured, art, apx), "textured": false}
+	lock.lock()
 	_cache[key] = out
+	lock.unlock()
 	return out
 
 
@@ -185,11 +196,26 @@ const _CUBE_FACES := [
 const PLATFORM_BEVEL := 1
 
 
+static func _platform_key(block_id: int, links: int) -> String:
+	return "%d:platform:%d:%s" % [block_id, links, bool(platform_options(block_id).get("one_color", false))]
+
+
+## Whether a platform cell's floor mesh is built yet (platform).
+static func has_platform(block_id: int, links: int) -> bool:
+	lock.lock()
+	var built := _cache.has(_platform_key(block_id, links))
+	lock.unlock()
+	return built
+
+
 static func platform(block_id: int, links: int) -> ArrayMesh:
 	var one_color := bool(platform_options(block_id).get("one_color", false))
-	var key := "%d:platform:%d:%s" % [block_id, links, one_color]
-	if _cache.has(key):
-		return _cache[key].mesh
+	var key := _platform_key(block_id, links)
+	lock.lock()
+	var hit = _cache.get(key)
+	lock.unlock()
+	if hit != null:
+		return hit.mesh
 	var d := Data.block(block_id)
 	var art: Image = d.art
 	var n := art.get_width()
@@ -306,7 +332,9 @@ static func platform(block_id: int, links: int) -> ArrayMesh:
 					if not filled.call(x + steps[fi].x, y, z + steps[fi].z):
 						quad.call(fi, x, y, z, 1, face_colour.call(fi, x, y, z))
 	var mesh := st.commit()
+	lock.lock()
 	_cache[key] = {"mesh": mesh, "textured": false}
+	lock.unlock()
 	return mesh
 
 

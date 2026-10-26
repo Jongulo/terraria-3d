@@ -3,9 +3,10 @@ class_name PlaceableRenders
 ## made as NPCRenders makes an NPC's, but only straight on: the block's model
 ## shot from YAWS directions round it at eye level (Doom's way; BlockModels
 ## stands them upright, turning round the vertical only), each shot shrunk to
-## the art's pixels, every frame of an animated block. The model is the
-## Extruded one if its rendered setting says so, else its tuned model, else
-## Claude's, else its hull, with the block's offset, rotation and scale. BlockModels draws them (rendered_batched.gdshader) once they're made,
+## the art's pixels, every frame of an animated block. The model is the voxel
+## method its rendered setting names (Data.RENDER_MODELS: the one it was drawn
+## with before it was rendered), or on "auto" its tuned model, else Claude's,
+## else its hull, with the block's offset, rotation and scale. BlockModels draws them (rendered_batched.gdshader) once they're made,
 ## and the block's billboard until then (or where nothing renders: headless).
 ## Cached in NPCRenders.dir as "block-<name>_...".
 
@@ -23,8 +24,9 @@ static var _stale := {}
 static func source(block_id: int) -> String:
 	var d := Data.block(block_id)
 	var settings: String = d.get("settings", d.name)
-	if Data.method_options(settings, "rendered").model == "extruded":
-		return "extruded"
+	var model: String = Data.method_options(settings, "rendered").model
+	if model != "auto":
+		return model
 	if TunedModels.has(TunedModels.block_key(settings)):
 		return "tuned"
 	if Data.handmade_models.has(settings):
@@ -57,10 +59,17 @@ static func forget(block_id := -1) -> void:
 static func _bake(block_id: int) -> void:
 	var d := Data.block(block_id)
 	var src := source(block_id)
+	# Its model, built on a worker (a voxel model can take tens of
+	# milliseconds; the shots' cache is keyed by it, so it's built even when
+	# they're on disk).
 	var meshes: Array = []
-	for f in Data.anim_frames(d):
-		var m := BlockModels.model_mesh(block_id, src, 0, f)
-		meshes.append({"mesh": m.mesh, "textured": m.textured})
+	var task := WorkerThreadPool.add_task(func():
+		for f in Data.anim_frames(d):
+			var m := BlockModels.model_mesh(block_id, src, 0, f)
+			meshes.append({"mesh": m.mesh, "textured": m.textured}), false, "rendered placeable")
+	while not WorkerThreadPool.is_task_completed(task):
+		await (Engine.get_main_loop() as SceneTree).process_frame
+	WorkerThreadPool.wait_for_task_completion(task)
 	# One pixel per voxel: the art's pixels, at the block's scale.
 	var apx: float = float(d.get("art_px", d.sprite_px)) * Data.block_transform(d).basis.get_scale().x
 	var done := await NPCRenders.bake_shots("block-" + d.name, meshes,

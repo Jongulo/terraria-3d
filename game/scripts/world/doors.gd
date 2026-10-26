@@ -318,24 +318,47 @@ static func set_light(root: Node3D, light: Color) -> void:
 ## which would show as a gap down the side of the doorway.
 static func _sprite(block_id: int, hinge_side: int) -> Image:
 	var key := "%d:%d" % [block_id, hinge_side]
-	if not _sprites.has(key):
-		var d := Data.block(block_id)
-		var sprites: Array = d.get("sprites", [d.sprite])
-		var img: Image = sprites[hinge_side % sprites.size()]
-		_sprites[key] = img.get_region(img.get_used_rect())
-	return _sprites[key]
+	BlockModelMesh.lock.lock()
+	var hit = _sprites.get(key)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
+	var d := Data.block(block_id)
+	var sprites: Array = d.get("sprites", [d.sprite])
+	var img: Image = sprites[hinge_side % sprites.size()]
+	var cropped := img.get_region(img.get_used_rect())
+	BlockModelMesh.lock.lock()
+	_sprites[key] = cropped
+	BlockModelMesh.lock.unlock()
+	return cropped
 
 
 ## The panel: the door art pushed THICKNESS deep, stretched to 1 x HEIGHT,
 ## centred on x, bottom at 0, its middle on z = 0.
+## (Guarded by BlockModelMesh.lock: BlockModels builds them on workers too.)
 static func mesh(block_id: int, hinge_side: int) -> ArrayMesh:
 	var key := "%d:%d" % [block_id, hinge_side]
-	if not _meshes.has(key):
-		var art := _art(block_id, hinge_side)
-		var depth := _depth(art)
-		var fit := Basis.from_scale(Vector3(1.0 / art.get_width(), float(HEIGHT) / art.get_height(), THICKNESS / depth))
-		_meshes[key] = BlockModelMesh.transformed(panel(block_id, hinge_side), Transform3D(fit, Vector3.ZERO))
-	return _meshes[key]
+	BlockModelMesh.lock.lock()
+	var hit = _meshes.get(key)
+	BlockModelMesh.lock.unlock()
+	if hit != null:
+		return hit
+	var art := _art(block_id, hinge_side)
+	var depth := _depth(art)
+	var fit := Basis.from_scale(Vector3(1.0 / art.get_width(), float(HEIGHT) / art.get_height(), THICKNESS / depth))
+	var built := BlockModelMesh.transformed(panel(block_id, hinge_side), Transform3D(fit, Vector3.ZERO))
+	BlockModelMesh.lock.lock()
+	_meshes[key] = built
+	BlockModelMesh.lock.unlock()
+	return built
+
+
+## Whether a door's panel is built yet (mesh).
+static func has_mesh(block_id: int, hinge_side: int) -> bool:
+	BlockModelMesh.lock.lock()
+	var built := _meshes.has("%d:%d" % [block_id, hinge_side])
+	BlockModelMesh.lock.unlock()
+	return built
 
 
 ## The panel before it's fitted to the doorway: one unit per art pixel, the
