@@ -285,7 +285,7 @@ func land(at: Vector3i) -> void:
 			if b.get("trunk", false):
 				_fell(q)
 			elif w.is_solid(q) and b.get("render", "cube") == "cube":
-				_set(q, ore)
+				_place(q, ore)
 			else:
 				_clear(q)
 	# The bowl.
@@ -342,12 +342,12 @@ func _sprinkle(q: Vector3i, ore: int) -> void:
 	var b := Data.block(id)
 	if id != 0 and game.world.is_solid(q) and b.get("render", "cube") == "cube" and not Game.blastproof(b) \
 			and not b.get("trunk", false):
-		_set(q, ore)
+		_place(q, ore)
 
 
 ## Meteorite in place of the block at `q`, its hammered shape, actuation and
 ## any liquid gone.
-func _set(q: Vector3i, id: int) -> void:
+func _place(q: Vector3i, id: int) -> void:
 	var w: VoxelWorld = game.world
 	w.set_block(q, id)
 	if w.get_liquid(q).y > 0:
