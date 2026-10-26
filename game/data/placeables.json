@@ -234,6 +234,19 @@
 			"depth": 3.0,
 			"one_color": true
 		},
+		"blood_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"blue_brick_platform": {
 			"noise": "speckle",
 			"one_color": true,
@@ -400,6 +413,19 @@
 			"one_color": true
 		},
 		"cattail_5": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"cavern_fountain": {
 			"bevel": "chamfer",
 			"bevel_sides": [
 				"top",
@@ -763,6 +789,19 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"corrupt_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"crimson_altar": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1042,6 +1081,19 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"crimson_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"daybloom": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1078,6 +1130,19 @@
 			],
 			"bevel_size": 3.0,
 			"depth": 7.0,
+			"one_color": true
+		},
+		"desert_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"dresser": {
@@ -1684,6 +1749,21 @@
 		"ghoulder": {
 			"one_color": true
 		},
+		"giant_tiki": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 12.0,
+			"no_outline": false,
+			"noise": "speckle",
+			"one_color": true
+		},
 		"glass_platform": {
 			"noise": "speckle",
 			"one_color": true,
@@ -1752,6 +1832,19 @@
 			"noise": "grain",
 			"one_color": false
 		},
+		"hallowed_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"icicle": {
 			"one_color": false
 		},
@@ -1760,6 +1853,31 @@
 		},
 		"icicle_3": {
 			"one_color": false
+		},
+		"icy_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
+		"imbuing_station": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"no_outline": false,
+			"one_color": true
 		},
 		"iron_anvil": {
 			"bevel": "chamfer",
@@ -2332,6 +2450,19 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"jungle_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"keg": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -2437,6 +2568,20 @@
 			"depth": 13.0,
 			"one_color": true,
 			"strength": 0.55
+		},
+		"lawn_flamingo": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 1.0,
+			"depth": 4.0,
+			"no_outline": false,
+			"one_color": true
 		},
 		"lead_anvil": {
 			"bevel": "chamfer",
@@ -3010,6 +3155,19 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"oasis_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
+		},
 		"obsidian_bathtub": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -3115,6 +3273,19 @@
 		},
 		"projectile_pressure_pad": {
 			"one_color": false
+		},
+		"pure_water_fountain": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6.0,
+			"depth": 13.0,
+			"one_color": true
 		},
 		"red_pressure_plate": {
 			"no_outline": false,
@@ -3296,6 +3467,9 @@
 			"bevel_size": 6.0,
 			"depth": 12.0,
 			"one_color": true
+		},
+		"spider_stalactite_3": {
+			"one_color": false
 		},
 		"stone_platform": {
 			"noise": "speckle",
@@ -3829,6 +4003,54 @@
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
 			"depth": 1.0
+		},
+		"team_block_blue_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.6
+		},
+		"team_block_green_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.6
+		},
+		"team_block_pink_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.6
+		},
+		"team_block_red_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.6
+		},
+		"team_block_white_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.6
+		},
+		"team_block_yellow_platform": {
+			"bevel": "none",
+			"bevel_size": 1.0,
+			"depth": 16.0,
+			"noise": "grain",
+			"one_color": true,
+			"strength": 0.6
 		},
 		"teleporter": {
 			"bevel": "chamfer",
@@ -5191,6 +5413,9 @@
 		"barrel": {
 			"noise": "speckle"
 		},
+		"blood_water_fountain": {
+			"one_color": true
+		},
 		"blue_dungeon_bathtub": {
 			"noise": "grain"
 		},
@@ -5205,6 +5430,9 @@
 		},
 		"bone_platform": {
 			"noise": "speckle",
+			"one_color": true
+		},
+		"bone_torch": {
 			"one_color": true
 		},
 		"book": {
@@ -5254,6 +5482,9 @@
 		"cactus_lamp": {
 			"one_color": true
 		},
+		"cavern_fountain": {
+			"one_color": true
+		},
 		"chain": {
 			"one_color": true
 		},
@@ -5280,7 +5511,16 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"corrupt_water_fountain": {
+			"one_color": true
+		},
+		"crimson_water_fountain": {
+			"one_color": true
+		},
 		"demon_torch": {
+			"one_color": true
+		},
+		"desert_water_fountain": {
 			"one_color": true
 		},
 		"dresser": {
@@ -5302,6 +5542,9 @@
 		"fallen_log": {
 			"strength": 0.55
 		},
+		"fancy_dishes": {
+			"one_color": true
+		},
 		"fireplace": {
 			"noise": "speckle"
 		},
@@ -5313,6 +5556,9 @@
 		},
 		"ghoulder": {
 			"no_outline": false,
+			"one_color": true
+		},
+		"giant_tiki": {
 			"one_color": true
 		},
 		"glass_bowl": {
@@ -5380,6 +5626,9 @@
 		"green_torch": {
 			"one_color": true
 		},
+		"hallowed_water_fountain": {
+			"one_color": true
+		},
 		"ice_torch": {
 			"one_color": true
 		},
@@ -5392,10 +5641,19 @@
 		"icicle_3": {
 			"one_color": true
 		},
+		"icy_water_fountain": {
+			"one_color": true
+		},
+		"imbuing_station": {
+			"one_color": true
+		},
 		"junction_box": {
 			"one_color": true
 		},
 		"jungle_vines": {
+			"one_color": true
+		},
+		"jungle_water_fountain": {
 			"one_color": true
 		},
 		"lamp_post": {
@@ -5450,6 +5708,9 @@
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 0.5
+		},
+		"oasis_fountain": {
+			"one_color": true
 		},
 		"obsidian_bathtub": {
 			"noise": "grain"
@@ -5521,6 +5782,9 @@
 			"no_outline": false,
 			"one_color": true
 		},
+		"pure_water_fountain": {
+			"one_color": true
+		},
 		"purple_torch": {
 			"one_color": true
 		},
@@ -5581,6 +5845,43 @@
 		"spider_stalactite_2": {
 			"one_color": true
 		},
+		"spider_stalactite_3": {
+			"one_color": true
+		},
+		"steampunk_cup": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"team_block_blue_platform": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.5
+		},
+		"team_block_green_platform": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.5
+		},
+		"team_block_pink_platform": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.5
+		},
+		"team_block_red_platform": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.5
+		},
+		"team_block_white_platform": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.5
+		},
+		"team_block_yellow_platform": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 0.5
+		},
 		"teleporter": {
 			"noise": "grain",
 			"one_color": true
@@ -5604,6 +5905,10 @@
 			"no_outline": false
 		},
 		"trash_can": {
+			"one_color": true
+		},
+		"ultrabright_torch": {
+			"no_outline": false,
 			"one_color": true
 		},
 		"vicious_mushroom": {
@@ -5684,6 +5989,7 @@
 		"blue_dungeon_sink": "rendered",
 		"blue_dungeon_vase": "hull",
 		"blue_torch": "hull",
+		"bone_torch": "hull",
 		"bottle": "hull",
 		"boulder": "hull",
 		"bowl": "hull",
@@ -5760,6 +6066,7 @@
 		"demon_torch": "hull",
 		"ebonwood_lamp": "hull",
 		"extractinator": "extruded",
+		"fancy_dishes": "hull",
 		"fireblossom": "extruded",
 		"flowers": "extruded",
 		"flowers_10": "extruded",
@@ -5982,6 +6289,7 @@
 		"spider_stalactite": "hull",
 		"spider_stalactite_2": "hull",
 		"spider_stalactite_3": "hull",
+		"steampunk_cup": "hull",
 		"sunflower": "extruded",
 		"sunflower_2": "extruded",
 		"sunflower_3": "extruded",
@@ -6127,6 +6435,7 @@
 		"tree_canopy@92": "billboard",
 		"tree_trunk": "billboard",
 		"tungsten_chandelier": "billboard",
+		"ultrabright_torch": "hull",
 		"vicious_mushroom": "hull",
 		"vile_mushroom": "hull",
 		"vine_flowers": "extruded",
