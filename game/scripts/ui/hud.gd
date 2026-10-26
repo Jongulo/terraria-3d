@@ -68,6 +68,8 @@ var _life_label := Label.new()
 var _hearts := Control.new()
 var _stars := Control.new()
 var _clock := Label.new()
+## The performance overlay (F10).
+var perf := PerfOverlay.new()
 var _info := Label.new()
 var _crosshair := Control.new()
 var _messages := VBoxContainer.new()
@@ -146,6 +148,7 @@ func _ready() -> void:
 	_build_overlays()
 	_build_sign_ui()
 	_build_town_ui()
+	_root.add_child(perf)
 
 
 func bind(p: Player) -> void:

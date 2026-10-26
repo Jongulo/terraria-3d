@@ -80,6 +80,11 @@ func loaded_count() -> int:
 	return _chunks.size()
 
 
+## Chunks with a mesh job in flight.
+func pending_count() -> int:
+	return _pending.size()
+
+
 func _near_default(cx: int, cz: int, f: Vector2i) -> bool:
 	var dx := cx - f.x
 	var dz := cz - f.y

@@ -608,6 +608,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("screenshot") and not event.is_echo():
 		take_screenshot()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("perf_overlay") and not event.is_echo():
+		hud.perf.toggle()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("inventory") and not event.is_echo() and not hud.paused and not hud.sign_open:
 		if hud.chat_npc != null and not hud.shop_open:
 			hud.close_chat()

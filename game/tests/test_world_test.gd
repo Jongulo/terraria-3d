@@ -447,6 +447,7 @@ func _run() -> void:
 	await _sword_shrine_checks(c)
 	await _swim_checks(c)
 	await _screenshot_checks()
+	await _perf_overlay_checks()
 	await _eater_checks(c)
 	await _king_slime_checks(c)
 	await _recipe_checks(c)
@@ -5059,6 +5060,23 @@ func _screenshot_checks() -> void:
 	if path != "":
 		check(FileAccess.file_exists(path), "it's saved (%s)" % path)
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## The performance overlay (F10, as Terraria's frame rate): off at first,
+## the key shows it with the frame rate, the renderer's counts, the chunks and
+## what's in the world, and hides it again.
+func _perf_overlay_checks() -> void:
+	check(InputMap.has_action("perf_overlay") and InputMap.action_get_events("perf_overlay").any(func(e): return e is InputEventKey and e.physical_keycode == KEY_F10),
+			"F10 shows the performance overlay (rebindable under Controls)")
+	var perf: PerfOverlay = game.hud.perf
+	check(not perf.visible, "the performance overlay starts hidden")
+	await key(KEY_F10)
+	await frames(20)
+	var text: String = perf._label.text
+	check(perf.visible and "FPS" in text and "Draw calls" in text and "Chunks" in text and "NPCs" in text,
+			"F10 shows it: frame rate, draw calls, chunks, NPCs (%s)" % text.replace("\n", " | "))
+	await key(KEY_F10)
+	check(not perf.visible, "F10 again hides it")
 
 
 ## Water, Terraria style: you can't swim. You sink, and jump only off the

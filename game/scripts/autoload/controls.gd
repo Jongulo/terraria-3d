@@ -17,6 +17,7 @@ const ACTIONS := [
 	["throw_item", "Throw item", {"key": KEY_T}],
 	["grapple", "Grapple", {"key": KEY_E}],
 	["screenshot", "Screenshot", {"key": KEY_F12}],
+	["perf_overlay", "Performance overlay", {"key": KEY_F10}],
 	["pick_block", "Pick block (creative)", {"mouse": MOUSE_BUTTON_MIDDLE}],
 	["hotbar_1", "Hotbar 1", {"key": KEY_1}],
 	["hotbar_2", "Hotbar 2", {"key": KEY_2}],
