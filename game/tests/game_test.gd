@@ -418,6 +418,72 @@ func _run() -> void:
 	game.sky.is_day = was_day
 	game.sky.time = was_time
 	game.starfall.process_mode = Node.PROCESS_MODE_INHERIT
+
+	# Meteorites (Meteors): beating the Eater of Worlds or the Brain of
+	# Cthulhu sends one for sure the first time, then 1 time in 2; every dusk
+	# 1 in 50 once either is beaten; it lands at midnight, out of sight and away
+	# from spawn, as a crater of Meteorite with a bowl in it.
+	var met := game.meteors
+	var ore := Data.block_id("meteorite")
+	check(ore > 0 and int(Data.block(ore).get("min_pick", 0)) == 50 and Data.item("Meteorite").get("place") == "meteorite",
+			"Meteorite: a block that takes a pickaxe of 50 power, mined as the Meteorite item")
+	var bar := Data.recipes.filter(func(r): return r.result == "MeteoriteBar")
+	check(not bar.is_empty() and bar[0].ingredients.get("Meteorite") == 3 and bar[0].get("station") == "furnace",
+			"a Meteorite Bar takes 3 Meteorite at a furnace")
+	var bosses_was := game.defeated_bosses.duplicate()
+	met.pending = false
+	met.boss_beaten(false)
+	check(met.pending, "the first Eater of Worlds or Brain of Cthulhu win always sends a meteorite")
+	var sent := 0
+	for i in 400:
+		met.pending = false
+		met.boss_beaten(true)
+		sent += int(met.pending)
+	check(sent > 150 and sent < 250, "later wins send one 1 time in 2 (%d of 400)" % sent)
+	game.defeated_bosses.erase("EaterofWorldsHead")
+	game.defeated_bosses.erase("BrainofCthulhu")
+	sent = 0
+	for i in 2000:
+		met.pending = false
+		met.dusk()
+		sent += int(met.pending)
+	check(sent == 0, "no nightly meteorites before either is beaten")
+	game.defeated_bosses["BrainofCthulhu"] = true
+	for i in 5000:
+		met.pending = false
+		met.dusk()
+		sent += int(met.pending)
+	check(sent > 50 and sent < 160, "after, 1 dusk in 50 (%d of 5000)" % sent)
+	# Past midnight it starts down, a few spots a frame.
+	met.pending = true
+	game.sky.is_day = false
+	game.sky.time = Meteors.MIDNIGHT - 100.0
+	met.update(0.016)
+	check(met.pending and met._drop.is_empty(), "before midnight it waits")
+	game.sky.time = Meteors.MIDNIGHT + 1.0
+	met.update(0.016)
+	check(not met.pending and not met._drop.is_empty(), "at midnight it's on its way")
+	met._drop = {}
+	# Out of sight: what's drawn here, cut down so the island has room for it.
+	Settings.set_value("render_distance", 2)
+	var landed := met.drop_now()
+	var spawn_at := game.world.get_spawn()
+	var counts := game.world.count_blocks(landed, 16) if landed != Meteors.NO_SPOT else PackedInt32Array()
+	var landed_ore := counts[ore] if counts.size() > ore else 0
+	check(landed != Meteors.NO_SPOT and Vector2(landed.x - p.global_position.x, landed.z - p.global_position.z).length() > 64.0
+			and Vector2(landed.x - spawn_at.x, landed.z - spawn_at.z).length() >= Meteors.SPAWN_CLEAR * size.x,
+			"a meteorite lands out of sight and away from the spawn point (%s)" % landed)
+	check(landed_ore > 200 and landed_ore < 2000, "its crater holds a few hundred Meteorite (%d)" % landed_ore)
+	var under := range(2, 10).any(func(k): return game.world.get_block(landed + Vector3i.DOWN * k) == ore)
+	check(landed != Meteors.NO_SPOT and game.world.get_block(landed) == 0 and under, "a bowl hollowed out of its top, Meteorite under it")
+	await shot("meteorite")
+	# Past Terraria's cap of Meteorite about (scaled: ~450 on this world) no
+	# more land: while that crater's still there, the next one doesn't.
+	check(met.drop_now() == Meteors.NO_SPOT, "no meteorite while there's too much Meteorite about")
+	Settings.set_value("render_distance", 5)
+	game.defeated_bosses = bosses_was
+	game.sky.is_day = was_day
+	game.sky.time = was_time
 	# Optional sun shadows (Settings → Shaders): off by default, no light; on,
 	# a shadowed directional light along the sun, the shaders told, with the
 	# blocks and models casting; voxel models' faces carry UVs for the
@@ -809,7 +875,10 @@ func _run() -> void:
 	p.velocity = Vector3.ZERO
 	await frames(10)
 
-	# Save, reload into a fresh session, compare.
+	# Save, reload into a fresh session, compare. (By day, so tonight's
+	# meteorite waits.)
+	game.sky.is_day = true
+	game.meteors.pending = true
 	var pos := p.global_position
 	var wood := p.inventory.count_of("Wood")
 	check(game.save_world(), "world saved")
@@ -827,6 +896,7 @@ func _run() -> void:
 	check(game.world.get_liquid(liquid_cell).x == 1, "pit water saved and restored")
 	check(game.waterfalls._falls.any(func(f): return f.pos == mouth), "waterfalls saved and restored")
 	check(game.has_ocean, "the ocean flag is saved")
+	check(game.meteors.pending, "a meteorite on its way is saved")
 
 	# Don't leave the test world in the player's saved-worlds list.
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://worlds/test_world.twld"))

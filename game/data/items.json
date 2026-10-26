@@ -53,6 +53,7 @@
 		"Hellstone": {"value": 1250, "rare": 2, "type": "block", "place": "hellstone"},
 		"Obsidian": {"value": 250, "type": "block", "place": "obsidian"},
 		"DemoniteOre": {"value": 1000, "type": "block", "place": "demonite_ore"},
+		"Meteorite": {"value": 1000, "rare": 1, "type": "block", "place": "meteorite"},
 		"Torch": {"value": 50, "type": "block", "place": "torch", "light": [1.0, 0.9, 0.7]},
 		"WorkBench": {"type": "block", "place": "work_bench", "max_stack": 99},
 		"Furnace": {"type": "block", "place": "furnace", "max_stack": 99},

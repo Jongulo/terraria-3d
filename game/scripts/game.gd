@@ -75,6 +75,8 @@ var regrowth := false
 var town := Town.new()
 ## The Goblin Army (Invasion): on its way, here, beaten.
 var invasion := Invasion.new(self)
+## Meteorite landings (WorldGen.dropMeteor).
+var meteors := Meteors.new(self)
 ## Set in test worlds (see scripts/world/test_world.gd).
 var test_world: TestWorld
 var _mode := "new"
@@ -314,6 +316,7 @@ func _begin_play() -> void:
 			return world.sea_distances(at, n, reach, ocean_width)
 	# The town: as saved, else (a new world, or one from before towns) the Guide.
 	invasion.load_state(_pending_meta.get("invasion", {}))
+	meteors.load_state(_pending_meta.get("meteors", {}))
 	if _pending_meta.has("town"):
 		town.load_state(_pending_meta.town)
 	elif test_world == null:
@@ -374,6 +377,7 @@ func _update_playing(delta: float) -> void:
 	# The camera reaches the sky's backdrops, clouds and sun beyond it.
 	player.camera.far = maxf(1000.0, sky.body_distance() + 100.0)
 	invasion.update(delta)
+	meteors.update(delta)
 	_update_music(pos)
 	# The time only with a watch on you (Terraria's informational accessories).
 	var watch := int(player.info_accessories().get("watch", 0))
@@ -720,6 +724,8 @@ func on_npc_killed(npc: NPC) -> void:
 		# The last of it: the boss is beaten, and this one drops its loot.
 		if _group_left(npc):
 			return
+		if group == "EaterofWorldsHead":
+			meteors.boss_beaten(meteors.boss2_beaten())
 		defeated_bosses[group] = true
 		for d in Data.npcs[group].get("boss_drops", []):
 			if randf() < float(d[3]):
@@ -727,6 +733,8 @@ func on_npc_killed(npc: NPC) -> void:
 		message("%s has been defeated!" % Assets.npc_name(group), Color(0.69, 0.29, 1.0))
 		return
 	if npc.boss:
+		if npc.kind == "BrainofCthulhu":
+			meteors.boss_beaten(meteors.boss2_beaten())
 		defeated_bosses[npc.kind] = true
 		message("%s has been defeated!" % Assets.npc_name(npc.kind), Color(0.69, 0.29, 1.0))
 		# King Slime beaten: the Slime Rain is over.
@@ -822,8 +830,10 @@ const WORLD_COLOR := Color(50 / 255.0, 1.0, 130 / 255.0)
 ## Dusk (Main.UpdateTime_StartNight): the Eye of Cthulhu comes 1 night in 3
 ## for a player with 200 max life and more than 10 defense once 4 town NPCs
 ## live here (till it's beaten); else 1 night in 9 a Blood Moon rises (not
-## at a new moon, and only once someone has more than 120 max life).
+## at a new moon, and only once someone has more than 120 max life). And 1
+## night in 50 a meteorite (Meteors.dusk).
 func _on_dusk() -> void:
+	meteors.dusk()
 	if not defeated_bosses.has("EyeofCthulhu") and player.life_max >= 200 and player.defense() > 10 \
 			and randi() % 3 == 0 and town.residents.size() >= 4:
 		message("You feel an evil presence watching you...", WORLD_COLOR)
@@ -1140,7 +1150,7 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 			spawn_item("VineRope", 1, c)
 
 	if b.get("trunk", false):
-		_fell_tree(p, id)
+		_fell_tree(p, id, drop)
 	if b.get("on_break") == "larva":
 		_larva_burst(c)
 	if b.get("on_break") == "orb":
@@ -1403,19 +1413,21 @@ func block_drop(b: Dictionary) -> String:
 	return b.get("drop", "")
 
 
-func _fell_tree(p: Vector3i, trunk: int) -> void:
+func _fell_tree(p: Vector3i, trunk: int, drop := true) -> void:
 	# The trunk's own wood (boreal, mahogany, palm...; a gem tree's stone and gems).
 	var b := Data.block(trunk)
 	var y := p.y + 1
 	while world.get_block(Vector3i(p.x, y, p.z)) == trunk:
 		world.set_block(Vector3i(p.x, y, p.z), 0)
-		spawn_item(block_drop(b), 1, Vector3(p.x + 0.5, y + 0.5, p.z + 0.5))
+		if drop:
+			spawn_item(block_drop(b), 1, Vector3(p.x + 0.5, y + 0.5, p.z + 0.5))
 		y += 1
 	if world.remove_decorations_at(Vector3i(p.x, y, p.z)) > 0:
 		# The canopy drops a few extra logs, like Terraria's tree tops (a
 		# giant mushroom's cap is just its top cell: one more roll).
-		for i in (randi_range(2, 5) if b.get("top_drops", true) else 1):
-			spawn_item(block_drop(b), 1, Vector3(p.x + 0.5, y, p.z + 0.5))
+		if drop:
+			for i in (randi_range(2, 5) if b.get("top_drops", true) else 1):
+				spawn_item(block_drop(b), 1, Vector3(p.x + 0.5, y, p.z + 0.5))
 		decorations.refresh()
 		far_trees.invalidate()
 
@@ -1557,6 +1569,7 @@ func save_world() -> bool:
 	meta["signs"] = signs
 	meta["town"] = town.save_state()
 	meta["invasion"] = invasion.save_state()
+	meta["meteors"] = meteors.save_state()
 	var ok := world.save(ProjectSettings.globalize_path(_save_path), JSON.stringify(meta))
 	message("World saved" if ok else "Saving failed!", Color(0.7, 0.9, 0.7) if ok else Color(1, 0.4, 0.4))
 	return ok

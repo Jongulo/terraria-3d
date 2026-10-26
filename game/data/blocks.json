@@ -1711,6 +1711,7 @@
 		{"name": "spider_stalactite", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "hangs": true, "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_165", "tiles": [1, 2], "frames": [[108, 0]]}}},
 		{"name": "spider_stalactite_2", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "hangs": true, "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_165", "tiles": [1, 2], "frames": [[126, 0]]}}, "variant_of": "spider_stalactite"},
 		{"name": "spider_stalactite_3", "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "hangs": true, "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_165", "tiles": [1, 2], "frames": [[144, 0]]}}, "variant_of": "spider_stalactite"},
-		{"name": "web_covered_chest", "render": "cutout", "opaque": false, "tool": "any", "drop": "WebCoveredChest", "sound": "dig", "interact": "chest", "settings": "chest", "tex": {"side": {"sheet": "Tiles_21", "tiles": [2, 2], "frames": [[540, 0]]}, "top": {"sheet": "Tiles_30", "frames": [[18, 18]]}, "bottom": {"sheet": "Tiles_30", "frames": [[18, 18]]}}}
+		{"name": "web_covered_chest", "render": "cutout", "opaque": false, "tool": "any", "drop": "WebCoveredChest", "sound": "dig", "interact": "chest", "settings": "chest", "tex": {"side": {"sheet": "Tiles_21", "tiles": [2, 2], "frames": [[540, 0]]}, "top": {"sheet": "Tiles_30", "frames": [[18, 18]]}, "bottom": {"sheet": "Tiles_30", "frames": [[18, 18]]}}},
+		{"name": "meteorite", "tex": {"all": {"sheet": "Tiles_37", "frames": [[18, 18], [36, 18], [54, 18]]}}, "hardness": 1.0, "min_pick": 50, "drop": "Meteorite", "sound": "tink", "emit": [0.56, 0.43, 0.15]}
 	]
 }
