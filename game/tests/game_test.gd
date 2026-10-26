@@ -468,8 +468,8 @@ func _run() -> void:
 	Settings.set_value("render_distance", 2)
 	var landed := met.drop_now()
 	var spawn_at := game.world.get_spawn()
-	var counts := game.world.count_blocks(landed, 16) if landed != Meteors.NO_SPOT else PackedInt32Array()
-	var landed_ore := counts[ore] if counts.size() > ore else 0
+	var crater := game.world.count_blocks(landed, 16) if landed != Meteors.NO_SPOT else PackedInt32Array()
+	var landed_ore := crater[ore] if crater.size() > ore else 0
 	check(landed != Meteors.NO_SPOT and Vector2(landed.x - p.global_position.x, landed.z - p.global_position.z).length() > 64.0
 			and Vector2(landed.x - spawn_at.x, landed.z - spawn_at.z).length() >= Meteors.SPAWN_CLEAR * size.x,
 			"a meteorite lands out of sight and away from the spawn point (%s)" % landed)
