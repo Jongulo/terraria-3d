@@ -94,6 +94,18 @@ func _process(delta: float) -> void:
 	_imesh.surface_end()
 
 
+## Terraria's SpelunkerProjectileHelper (a Spelunker Glowstick, the Magic
+## Lantern): every treasure block within `radius` blocks of `at` sparkles 1
+## time in 4 (dust 204, tiny, fading in). Called every 10 ticks.
+func sparkle_treasure(at: Vector3, radius: float) -> void:
+	var r := ceili(radius)
+	var cells: PackedInt32Array = game.world.find_blocks(Vector3i(at.floor()), Vector3i(r, r, r), _treasure_ids, MOST)
+	for i in range(0, cells.size(), 3):
+		var c := Vector3(cells[i], cells[i + 1], cells[i + 2])
+		if randi() % 4 == 0 and (c + Vector3.ONE * 0.5).distance_to(at) <= radius:
+			game.dust.spawn(204, c + Vector3(randf(), randf(), randf()), Vector3(randf_range(-0.1, 0.1), randf_range(-0.1, 0.1), randf_range(-0.1, 0.1)), 0.3)
+
+
 ## Creatures (more than 1 life) near you show through the blocks with the
 ## Hunter Potion, tinted red, or green if friendly.
 func _hunt(p, on: bool) -> void:

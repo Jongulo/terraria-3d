@@ -27,6 +27,9 @@ extends Node3D
 ##   bird: AI_158 (the Finch): sits on your head, darts at enemies within
 ##     800 px and pecks them (each every 15 ticks).
 ##   orb: AI_011 (the Shadow Orb): drifts after you at 3 px a tick, shining.
+##   lantern: AI_090 (the Magic Lantern): floats 40 px beside you and 40 above
+##     your middle, dimly lit, and every 10 ticks sparkles the treasure within
+##     17 tiles of it (each tile 1 in 4: Terraria's dust 204).
 ##   walker: AI_067 on foot (the Flinx, the Vampire Frog; the Crimson Heart
 ##     and the Friendly Boulder pets). It walks to its place (a minion beside
 ##     you, a pet behind you), hopping onto what's in its way and up toward
@@ -65,6 +68,7 @@ const KINDS := {
 		"shot": "ImpFireball", "shot_speed": 22.0, "shot_sound": "Item_20"},
 	"BabyBird": {"ai": "bird", "size": [10, 10], "frames": 5, "buff": "BabyBird", "slot": 1, "faces": "right", "contact": 15},
 	"ShadowOrb": {"ai": "orb", "size": [26, 26], "frames": 1, "buff": "ShadowOrb", "scale": 0.8, "light": [0.54, 0.09, 0.9]},
+	"MagicLantern": {"ai": "lantern", "size": [18, 32], "frames": 8, "buff": "MagicLantern", "light": [0.35, 0.35, 0.1]},
 	# AI_067: home [px behind you past half its width, px more for each
 	# minion], leash (px), walk / hunt [accel, top speed] px/tick, hop:
 	# "moving" (a hop whenever it walks), "hunting" (only after an enemy),
@@ -175,6 +179,7 @@ func _physics_process(delta: float) -> void:
 			"swarm": _swarm_tick(game)
 			"bird": _bird_tick(game)
 			"orb": _orb_tick(game)
+			"lantern": _lantern_tick(game)
 			"walker": _walker_tick(game)
 		_contact(game)
 	_draw(game)
@@ -1119,6 +1124,38 @@ func _orb_tick(_game) -> void:
 	spin += 0.02
 
 
+func _lantern_tick(game) -> void:
+	var goal := _you() + player.camera.global_transform.basis.x * (40.0 / PX) + Vector3(0, 40.0 / PX, 0)
+	var d := (goal - center()) * PX
+	var dist := d.length()
+	if dist > 1000.0:
+		_teleport_to_you()
+		return
+	var speed := 4.0
+	if dist > 200.0:
+		speed += (dist - 200.0) * 0.1
+	if dist < speed:
+		vel *= 0.25
+		speed = dist
+	if dist > 0.0:
+		d = d / dist * speed
+	vel = (vel * 2.0 + d) / 3.0
+	global_position += vel / PX
+	# Fast, its swinging frames 4-7 (5 ticks each); else 0-3 (7 each).
+	frame_counter += 1.0
+	if vel.length() > 6.0:
+		if frame_counter > 4.0:
+			frame_counter = 0.0
+			frame = 4 if frame >= 7 or frame < 4 else frame + 1
+	elif frame_counter > 6.0:
+		frame_counter = 0.0
+		frame = 0 if frame >= 3 else frame + 1
+	local0 += 1.0
+	if local0 >= 10.0:
+		local0 = 0.0
+		game.senses.sparkle_treasure(center(), 17.0 * 2.0 / 3.0)
+
+
 ## Its light, if it gives one (the Shadow Orb's: Terraria's 0.9, purple).
 func light() -> Color:
 	var l: Array = cfg.get("light", [])
@@ -1158,7 +1195,7 @@ func _draw(game) -> void:
 			sprite.set_rotation_angle(-sx * 0.05)
 		_:
 			sprite.set_rotation_angle(0.0)
-	if cfg.has("light") and cfg.ai == "orb":
+	if cfg.has("light") and cfg.ai in ["orb", "lantern"]:
 		sprite.set_glow()
 	else:
 		sprite.update_light(game.world, game.sky, center())

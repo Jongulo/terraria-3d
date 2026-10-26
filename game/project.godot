@@ -40,6 +40,14 @@ player_light_color={
 "type": "vec3",
 "value": Vector3(0, 0, 0)
 }
+dynamic_lights={
+"type": "sampler2D",
+"value": ""
+}
+dynamic_light_count={
+"type": "int",
+"value": 0
+}
 underworld_top={
 "type": "float",
 "value": -100000.0

@@ -239,7 +239,9 @@ def extract_names(data):
 TOWN_PROBES = [
     ("TownNPCHousingFailureReasons", "RoomIsTooBig", "This room is too big",
      ["TownNPCHousingFailureReasons", "HousingText", "DryadSpecialText", "GuideHelpText",
-      "AnglerQuestText", "AnglerQuestChatter", "AnglerChatter", "MechanicChatter"]),
+      "AnglerQuestText", "AnglerQuestChatter", "AnglerChatter", "MechanicChatter",
+      "WitchDoctorSpecialText", "TravellingMerchantSpecialText", "SkeletonMerchantSpecialText",
+      "SkeletonMerchantChatter"]),
     ("LegacyDialog", "4", "Sword beats paper! Get one today.", ["LegacyDialog"]),
 ]
 

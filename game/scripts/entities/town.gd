@@ -10,7 +10,7 @@ extends Node
 ## Seconds between housing checks (Terraria checks every few seconds too).
 const CHECK_INTERVAL := 4.0
 ## In the order they can move in.
-const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "Clothier", "GoblinTinkerer", "Mechanic", "Angler"]
+const ROSTER := ["Guide", "Merchant", "Nurse", "ArmsDealer", "Dryad", "Demolitionist", "WitchDoctor", "Clothier", "GoblinTinkerer", "Mechanic", "Angler"]
 
 var game: Game
 ## Kind -> the NPC living here.
@@ -23,6 +23,18 @@ var angler_quest := ""
 var angler_done := false
 var _angler_rng := RandomNumberGenerator.new()
 var _timer := 1.0
+## The Traveling Merchant while he's here, and what he brought this time
+## (TravelShop).
+var traveler: NPC = null
+var travel_shop := []
+var travel_rng := RandomNumberGenerator.new()
+## His arrival: 1 in 108000 a tick (Terraria's 27000 / dayRate x 4) before
+## 27000 (noon); he goes after 48600 (6:00 PM) or at night, out of sight.
+const TRAVEL_CHANCE := 108000
+const TRAVEL_BY := 27000.0
+const TRAVEL_UNTIL := 48600.0
+## Out of sight: this far from you (Terraria's screen and safe range).
+const OUT_OF_SIGHT := 40.0
 
 
 func _process(delta: float) -> void:
@@ -32,6 +44,98 @@ func _process(delta: float) -> void:
 	if _timer <= 0.0:
 		_timer = CHECK_INTERVAL
 		update_housing()
+	_travel_tick(delta)
+
+
+## Main.UpdateTime's Traveling Merchant: gone after 6 PM or at night (when
+## you can't see him, WorldGen.UnspawnTravelNPC); on a morning, with at
+## least two town NPCs about (not the Old Man or the Skeleton Merchant),
+## 1 in 108000 a tick he comes (WorldGen.SpawnTravelNPC).
+func _travel_tick(delta: float) -> void:
+	var sky = game.sky
+	if traveler_here():
+		if (not sky.is_day or sky.time > TRAVEL_UNTIL) and traveler.global_position.distance_to(game.player.global_position) > OUT_OF_SIGHT:
+			game.message("%s has departed!" % traveler.title(), TRAVEL_COLOR)
+			traveler.queue_free()
+			traveler = null
+		return
+	if sky.is_day and sky.time < TRAVEL_BY and travel_rng.randf() < delta * 60.0 / TRAVEL_CHANCE:
+		var town := residents.keys().filter(func(k): return k != "OldMan")
+		if town.size() >= 2:
+			spawn_traveler()
+
+
+const TRAVEL_COLOR := Color(0.35, 0.6, 1.0)
+
+
+func traveler_here() -> bool:
+	return traveler != null and is_instance_valid(traveler) and not traveler.is_queued_for_deletion()
+
+
+## WorldGen.SpawnTravelNPC: his stock rolled, he turns up on the ground out of
+## sight, out from a random town NPC's home (else a homeless one's, if there's
+## a home free), and makes for it. False if there's no home or no ground.
+func spawn_traveler() -> bool:
+	if traveler_here():
+		return false
+	prune()
+	var homes := []
+	for kind in residents:
+		if kind != "OldMan" and residents[kind].home_key != "":
+			homes.append(residents[kind].home_spot)
+	if homes.is_empty():
+		for h in Housing.find_homes(game.world, Vector3i(game.player.global_position.floor())):
+			if not residents.values().any(func(n): return n.home_key == h.key):
+				homes.append(h.spot)
+	if homes.is_empty():
+		return false
+	var home: Vector3i = homes[travel_rng.randi() % homes.size()]
+	var at = _traveler_spot(home)
+	if at == null:
+		return false
+	travel_shop = TravelShop.roll(game, travel_rng)
+	_bring_traveler(at, Vector3(home) + Vector3(0.5, 0, 0.5), "")
+	game.message("%s has arrived!" % traveler.title(), TRAVEL_COLOR)
+	return true
+
+
+func _bring_traveler(at: Vector3, goal: Vector3, npc_name: String) -> void:
+	traveler = game.spawn_npc("TravellingMerchant", at)
+	if npc_name == "":
+		var names: Array = Assets.ids.get("names", {}).get("town", {}).get("TravelingMerchantNames", [])
+		npc_name = names[travel_rng.randi() % names.size()] if not names.is_empty() else ""
+	traveler.display_name = npc_name
+	traveler.travel_to = goal
+
+
+## Ground out from `home`, a ring at a time (Terraria's 40 to 1000 tiles out,
+## here 27 blocks on): standing room (3 blocks of air, no liquid) on the
+## surface, out of your sight, in the world (not the sea).
+func _traveler_spot(home: Vector3i):
+	var w: VoxelWorld = game.world
+	var size := w.get_size()
+	var you: Vector3 = game.player.global_position
+	for r in range(27, 400, 2):
+		for k in 8:
+			var a := travel_rng.randf() * TAU
+			var x := home.x + roundi(cos(a) * r)
+			var z := home.z + roundi(sin(a) * r)
+			if x < 10 or z < 10 or x >= size.x - 10 or z >= size.z - 10:
+				continue
+			var y := w.surface_y(x, z)
+			if y < 0 or Data.block(w.get_block(Vector3i(x, y, z))).get("trunk", false):
+				continue
+			var at := Vector3(x + 0.5, y + 1, z + 0.5)
+			if at.distance_to(you) <= OUT_OF_SIGHT or (game.has_ocean and game.in_ocean(at)):
+				continue
+			var clear := true
+			for dy in range(1, 4):
+				var c := Vector3i(x, y + dy, z)
+				if w.is_solid(c) or w.get_liquid(c).y > 0:
+					clear = false
+			if clear:
+				return at
+	return null
 
 
 ## The Guide, at the start of a new world (homeless, by the spawn point).
@@ -63,6 +167,8 @@ func wants_to_come(kind: String) -> bool:
 		"skeletron":
 			# The Old Man freed of his curse (Terraria's downedBoss3).
 			return game.defeated_bosses.has("SkeletronHead")
+		"queen_bee":
+			return game.defeated_bosses.has("QueenBee")
 		"freed":
 			return false  # only once you've freed them (free_goblin, free_mechanic)
 		"woken":
@@ -296,7 +402,12 @@ func save_state() -> Dictionary:
 		var p := n.global_position
 		list.append({"kind": kind, "name": n.display_name, "pos": [p.x, p.y, p.z], "home": n.home_key,
 				"spot": [n.home_spot.x, n.home_spot.y, n.home_spot.z]})
-	return {"residents": list, "arrived": arrived.keys(), "angler_quest": angler_quest, "angler_done": angler_done}
+	var out := {"residents": list, "arrived": arrived.keys(), "angler_quest": angler_quest, "angler_done": angler_done}
+	if traveler_here():
+		var p := traveler.global_position
+		var g: Vector3 = traveler.travel_to
+		out["traveler"] = {"name": traveler.display_name, "pos": [p.x, p.y, p.z], "goal": [g.x, g.y, g.z], "shop": travel_shop}
+	return out
 
 
 func load_state(d: Dictionary) -> void:
@@ -310,3 +421,9 @@ func load_state(d: Dictionary) -> void:
 		arrived[k] = true
 	angler_quest = d.get("angler_quest", "")
 	angler_done = d.get("angler_done", false)
+	var t: Dictionary = d.get("traveler", {})
+	if not t.is_empty():
+		travel_shop = t.get("shop", [])
+		var p: Array = t.pos
+		var g: Array = t.goal
+		_bring_traveler(Vector3(p[0], p[1], p[2]), Vector3(g[0], g[1], g[2]), t.name)

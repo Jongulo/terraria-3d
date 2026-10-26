@@ -71,6 +71,7 @@ var wiring := Wiring.new()
 var wire_view := WireView.new()
 var laser_ruler := LaserRuler.new()
 var senses := Senses.new()
+var dynamic_lights := DynamicLights.new()
 var herbs := Herbs.new()
 ## A Staff of Regrowth swing (Player.staffOfRegrowthBonus): herbs cut give more.
 var regrowth := false
@@ -264,6 +265,7 @@ func _on_world_ready() -> void:
 	add_child(laser_ruler)
 	senses.setup(self)
 	add_child(senses)
+	add_child(dynamic_lights)
 	herbs.setup(self)
 	add_child(herbs)
 
@@ -1163,6 +1165,12 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 		# drop Vine Rope half the time (Terraria's KillTile_GetItemDrops).
 		if Data.kind_of(id) in CORDAGE_VINES and player != null and player.has_effect("cordage") and randf() < 0.5:
 			spawn_item("VineRope", 1, c)
+		# Grass (Terraria's tiles 3 and 73, not their mushrooms) drops Seeds
+		# half the time while you carry a Blowpipe or Blowgun
+		# (KillTile_ShouldDropSeeds).
+		if int(b.get("tile_id", -1)) in [3, 73] and b.get("drop", "") == "" and player != null and randf() < 0.5 \
+				and (player.inventory.count_of("Blowpipe") > 0 or player.inventory.count_of("Blowgun") > 0):
+			spawn_item("Seed", 1, c)
 
 	if b.get("trunk", false):
 		_fell_tree(p, id, drop)
@@ -1533,12 +1541,15 @@ func hit_switch(p: Vector3i) -> void:
 	wiring.flip(self, p)
 
 
-## Crafting stations within reach (block names like "work_bench").
+## Crafting stations within reach (block names like "work_bench"). The
+## Artisan Loaf reaches 4 tiles further (Player.AdjTiles: here 3 blocks).
 func nearby_stations(radius := 4) -> Dictionary:
 	var found := {}
 	var c := Vector3i(player.global_position.floor())
+	var more := 3 if player.ate_artisan_bread else 0
+	radius += more
 	for x in range(c.x - radius, c.x + radius + 1):
-		for y in range(c.y - 2, c.y + 4):
+		for y in range(c.y - 2 - more, c.y + 4 + more):
 			for z in range(c.z - radius, c.z + radius + 1):
 				var b := Data.block(world.get_block(Vector3i(x, y, z)))
 				if b.get("station", false):

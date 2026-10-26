@@ -86,6 +86,8 @@ var safe := Inventory.new(40)
 ## The yoyo you have out (Yoyo), or null; hold_use keeps it out without the
 ## mouse (tests).
 var yoyo: Yoyo = null
+## Your yoyo's counterweight, while one is out.
+var counterweight: Counterweight = null
 ## Boomerangs you've thrown that haven't come back (Boomerang).
 var boomerangs: Array = []
 ## The spear you're holding (Spear, out in the world while you hold one), or null.
@@ -153,16 +155,27 @@ var _target_marker: EntitySprite = null
 ## (usesHover: _hover) with flight and fatigue ticks (flightTimeMax,
 ## fatigueMax); no_extra_jumps (blockExtraJumps); no_water: gone under water
 ## (the Bee).
+## Roller skates (1.4.5's, Mount.SetAsRollerSkate): no height, their speeds
+## added to yours (MovementStatsAreAdditive: run and dash +1 px/tick,
+## acceleration +0.1, jump +1 px/tick for 2 ticks more); "skates": let go
+## and you coast (Player.RollerSkateMovement); spawnDust 31.
 const MOUNTS := {"slime": {"buff": "SlimeMount", "height": 20, "run": 4.0, "dash": 4.0, "accel": 0.18, "jump_speed": 8.25,
 		"jump_ticks": 12, "auto_jump": true, "fall_damage": 0.5, "extra_fall": 10, "stomp": 40, "sprite": "Slime", "frames": 4},
 	"bee": {"buff": "BeeMount", "height": 16, "run": 2.0, "dash": 2.0, "accel": 0.16, "jump_speed": 4.0, "jump_ticks": 10,
 		"fall_damage": 0.0, "hover": [320, 320], "no_extra_jumps": true, "no_water": true, "sprite": "Bee", "frames": 12,
-		"run_frames": [0, 4], "air_frames": [5, 7], "dust": 152}}
+		"run_frames": [0, 4], "air_frames": [5, 7], "dust": 152},
+	"skates_blue": {"buff": "RollerSkatesMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
+		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31},
+	"skates_green": {"buff": "RollerSkatesGreenMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
+		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31},
+	"skates_classic": {"buff": "RollerSkatesWhiteMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
+		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31},
+	"skates_party": {"buff": "RollerSkatesPinkMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
+		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31}}
 ## A hovering mount's flight left and fatigue (Terraria's _flyTime, _fatigue),
 ## in ticks.
 var _fly_time := 0.0
 var _fatigue := 0.0
-var _last_mount_dust := 56
 ## The mount you ride ("": none) and the item that called it.
 var mount := ""
 var mount_item := {}
@@ -221,8 +234,17 @@ const BUFF_EFFECTS := {
 	"WellFed": {"defense": 2, "crit": 2, "damage": 5, "melee_speed": 5, "move_speed": 20, "mining_speed": 5},
 	"WellFed2": {"defense": 3, "crit": 3, "damage": 7.5, "melee_speed": 7.5, "move_speed": 30, "mining_speed": 10},
 	"WellFed3": {"defense": 4, "crit": 4, "damage": 10, "melee_speed": 10, "move_speed": 40, "mining_speed": 15},
+	# Tipsy (Sake): 4 defense less, melee 2% crit, 10% damage and speed more.
+	"Tipsy": {"defense": -4, "melee_crit": 2, "melee_damage": 10, "melee_speed": 10},
+	# Weapon imbues (flasks, Terraria's meleeEnchant): melee hits and whips
+	# set enemies On Fire! for 3 to 6 s or poison them for 5 to 9 s.
+	"WeaponImbueFire": {"imbue_fire": true},
+	"WeaponImbuePoison": {"imbue_poison": true},
 }
 const WELL_FED := ["WellFed", "WellFed2", "WellFed3"]
+## The flasks' buffs: drinking one ends the others (Main.meleeBuff).
+const IMBUES := ["WeaponImbueVenom", "WeaponImbueCursedFlames", "WeaponImbueFire", "WeaponImbueGold", "WeaponImbueIchor",
+		"WeaponImbueNanites", "WeaponImbueConfetti", "WeaponImbuePoison"]
 ## Shine's light (Lighting.AddLight 0.8, 0.95, 1) and Inferno's (0.65, 0.4, 0.1).
 const SHINE_LIGHT := [0.8, 0.95, 1.0]
 const INFERNO_LIGHT := [0.65, 0.4, 0.1]
@@ -232,6 +254,9 @@ const INFERNO_RANGE := 200.0 / 24.0
 var _inferno_t := 0.0
 ## Quests done for the Angler (Terraria's anglerQuestsFinished).
 var angler_quests := 0
+## Eaten an Artisan Loaf (Terraria's ateArtisanBread: crafting stations
+## reach further; one is all you can eat).
+var ate_artisan_bread := false
 ## What the bobber's last bite check found (Terraria's displayedFishingInfo,
 ## shown by the Fisherman's Pocket Guide): "12 Fishing Power", "Not Enough Water!".
 var fishing_info := ""
@@ -391,11 +416,13 @@ func touching(flag: String) -> bool:
 
 
 ## How far you reach: blocks you hold go a tile further for each Toolbelt
-## (Terraria's blockRange, a tile is 2/3 of a block).
+## (Terraria's blockRange, a tile is 2/3 of a block); the Extendo Grip's 3
+## tiles more for everything (tileRangeX).
 func reach() -> float:
 	var def := held()
 	# Wrenches and the Wire Cutter reach 20 tiles further (tileBoost).
-	return REACH + (stat("block_range") * 2.0 / 3.0 if def.get("type") == "block" else 0.0) + float(def.get("tile_boost", 0)) * 2.0 / 3.0
+	return REACH + (stat("block_range") * 2.0 / 3.0 if def.get("type") == "block" else 0.0) + float(def.get("tile_boost", 0)) * 2.0 / 3.0 \
+			+ stat("tile_range") * 2.0 / 3.0
 
 
 ## The point the crosshair is on (the targeted block's face), or REACH ahead.
@@ -766,12 +793,18 @@ func _move(delta: float, game) -> void:
 	max_run *= move
 	accel *= move
 	# A mount's own run (Terraria's maxRunSpeed, accRunSpeed and
-	# runAcceleration from it, in place of yours and your bonuses).
+	# runAcceleration from it, in place of yours and your bonuses; roller
+	# skates' added to yours).
 	if mount != "":
 		var mt: Dictionary = MOUNTS[mount]
-		max_run = float(mt.run) * 2.5
-		acc_run = float(mt.dash) * 2.5
-		accel = float(mt.accel) * 150.0
+		if mt.get("additive", false):
+			max_run += float(mt.run) * 2.5
+			acc_run += float(mt.dash) * 2.5
+			accel += float(mt.accel) * 150.0
+		else:
+			max_run = float(mt.run) * 2.5
+			acc_run = float(mt.dash) * 2.5
+			accel = float(mt.accel) * 150.0
 		# The Bee flying: 4 px/tick faster, less as it tires (Mount.RunSpeed).
 		if mt.has("hover") and not on_floor:
 			max_run += 4.0 * (1.0 - _fatigue / float(mt.hover[1])) * 2.5
@@ -831,8 +864,12 @@ func _move(delta: float, game) -> void:
 	var mount_ground := false
 	if mount != "":
 		var mj: Dictionary = MOUNTS[mount]
-		jump_speed = float(mj.jump_speed) * 2.5
-		jump_ticks = int(mj.jump_ticks)
+		if mj.get("additive", false):
+			jump_speed += float(mj.jump_speed) * 2.5
+			jump_ticks += int(mj.jump_ticks)
+		else:
+			jump_speed = float(mj.jump_speed) * 2.5
+			jump_ticks = int(mj.jump_ticks)
 		if mj.get("auto_jump", false) and on_floor:
 			_jump_held = false
 		mount_ground = mj.has("stomp") and in_liquid != 0 and in_liquid != LIQ_LAVA
@@ -1123,6 +1160,65 @@ func _rocket_effects(delta: float) -> void:
 		Audio.play("Item_13" if stat("rocket") <= 1.0 else "Item_24", 0.5)
 
 
+## The DPS Meter's count (Terraria's addDPS / getDPS): damage you've dealt
+## since you started hitting (ms), which stops 3 s after your last hit.
+var _dps_damage := 0
+var _dps_start := 0
+var _dps_end := 0
+var _dps_last := -100000
+
+
+func add_dps(dmg: int) -> void:
+	var now := Time.get_ticks_msec()
+	if now - _dps_last >= 3000:
+		_dps_start = now
+		_dps_damage = 0
+	_dps_damage += dmg
+	_dps_end = now
+	_dps_last = now
+
+
+## Damage a second: over at least a second, and once the count is 3 s long
+## it starts again from a second ago carrying on the rate.
+func dps() -> int:
+	if Time.get_ticks_msec() - _dps_last >= 3000:
+		return 0
+	var span := (_dps_end - _dps_start) / 1000.0
+	if span >= 3.0:
+		_dps_start = Time.get_ticks_msec() - 1000
+		_dps_damage = int(_dps_damage / span)
+		span = (_dps_end - _dps_start) / 1000.0
+	return int(_dps_damage / maxf(1.0, span))
+
+
+## The Stopwatch (Main.DrawInfoAccs): your speed in mph, px a tick x
+## 216000 / 42240, averaged over the last 1 + 6 x speed ticks (up to 30
+## kept); half that wet, a quarter in honey.
+var _speed_slices := PackedFloat32Array()
+
+
+func stopwatch_mph() -> float:
+	var v := velocity.length() / 2.5
+	if _speed_slices.is_empty():
+		_speed_slices.resize(30)
+	var n := mini(int(1.0 + v * 6.0), _speed_slices.size())
+	for i in range(n - 1, 0, -1):
+		_speed_slices[i] = _speed_slices[i - 1]
+	_speed_slices[0] = v
+	var total := 0.0
+	for i in _speed_slices.size():
+		if i < n:
+			total += _speed_slices[i]
+		else:
+			_speed_slices[i] = total / n
+	var mph := total / n * 216000.0 / 42240.0
+	if in_liquid == LIQ_HONEY:
+		mph /= 4.0
+	elif in_liquid != 0 and not has_effect("ignore_water"):
+		mph /= 2.0
+	return mph
+
+
 ## Your informational accessories, carried anywhere in your inventory or worn
 ## (Terraria's): {"watch": best level, "depth", "compass", "radar": true}.
 func info_accessories() -> Dictionary:
@@ -1152,8 +1248,23 @@ func info_accessories() -> Dictionary:
 ## ground and half that in the air.
 func _run(delta: float, dir: Vector3, max_run: float, acc_run: float, accel: float, slowdown: float) -> void:
 	var v := Vector2(velocity.x, velocity.z)
-	var friction := slowdown * (1.0 if on_floor else 0.5) * delta
 	var d := Vector2(dir.x, dir.z)
+	# On roller skates you slow down only above your top speed (runSlowdown
+	# clamped to the excess), and let go you coast: below 1.5 px/tick you
+	# roll to a stop (lerp 0.3 a tick), up to 1 px/tick under your boots'
+	# speed you settle at 1.6 (16 px over a block's 10-tick place time).
+	if mount != "" and MOUNTS[mount].get("skates", false):
+		slowdown = clampf(v.length() - maxf(max_run, acc_run), 0.0, slowdown * delta) / maxf(delta, 0.0001)
+		if d == Vector2.ZERO and on_floor:
+			var k := 1.0 - pow(0.7, delta * 60.0)
+			var spd := v.length()
+			if spd < 1.5 * 2.5:
+				v = v.lerp(Vector2.ZERO, k)
+				if v.length() < 0.03 * 2.5:
+					v = Vector2.ZERO
+			elif spd < acc_run - 2.5:
+				v = v.normalized() * lerpf(spd, 1.6 * 2.5, k)
+	var friction := slowdown * (1.0 if on_floor else 0.5) * delta
 	if d == Vector2.ZERO:
 		v = v.move_toward(Vector2.ZERO, friction)
 	else:
@@ -2013,18 +2124,23 @@ func ride(def: Dictionary) -> bool:
 	_fatigue = 0.0
 	half.y += up
 	camera.position.y = EYE_HEIGHT + up
-	if _mount_sprite != null and _mount_sprite.get_meta("mount", "") != def.mount:
-		_mount_sprite.queue_free()
-		_mount_sprite = null
-	if _mount_sprite == null:
-		_mount_sprite = EntitySprite.new()
-		_mount_sprite.set_meta("mount", def.mount)
-		var tex := Assets.texture("Images/Mount_%s" % m.sprite)
-		var frames := int(m.frames)
-		_mount_sprite.setup(tex, frames, Vector2(tex.get_width(), tex.get_height() / float(frames)) / 24.0, false, true)
-		add_child(_mount_sprite)
-	_mount_sprite.visible = true
-	_mount_dust()
+	if not m.has("sprite"):
+		# (Roller skates: on your feet, out of sight.)
+		if _mount_sprite != null:
+			_mount_sprite.visible = false
+	else:
+		if _mount_sprite != null and _mount_sprite.get_meta("mount", "") != def.mount:
+			_mount_sprite.queue_free()
+			_mount_sprite = null
+		if _mount_sprite == null:
+			_mount_sprite = EntitySprite.new()
+			_mount_sprite.set_meta("mount", def.mount)
+			var tex := Assets.texture("Images/Mount_%s" % m.sprite)
+			var frames := int(m.frames)
+			_mount_sprite.setup(tex, frames, Vector2(tex.get_width(), tex.get_height() / float(frames)) / 24.0, false, true)
+			add_child(_mount_sprite)
+		_mount_sprite.visible = true
+	_mount_dust(int(m.get("dust", 56)))
 	stats_changed.emit()
 	return true
 
@@ -2033,22 +2149,22 @@ func dismount() -> void:
 	if mount == "":
 		return
 	var up := float(MOUNTS[mount].height) / 24.0
+	var dust := int(MOUNTS[mount].get("dust", 56))
 	half.y -= up
 	camera.position.y = EYE_HEIGHT
 	mount = ""
 	mount_item = {}
 	if _mount_sprite != null:
 		_mount_sprite.visible = false
-	_mount_dust()
+	_mount_dust(dust)
 	stats_changed.emit()
 
 
-## Terraria's spawnDust as you get on or off (the slime's 56, the Bee's 152).
-func _mount_dust() -> void:
-	var id: int = MOUNTS[mount].get("dust", 56) if mount != "" else _last_mount_dust
-	_last_mount_dust = id
+## Terraria's spawnDust as you get on or off (the slime's 56, the Bee's
+## 152, roller skates' 31).
+func _mount_dust(dust: int) -> void:
 	for i in 15:
-		Game.current.dust.spawn(id, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(0.0, 0.8), randf_range(-0.5, 0.5)),
+		Game.current.dust.spawn(dust, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(0.0, 0.8), randf_range(-0.5, 0.5)),
 				Vector3(randf_range(-1, 1), randf_range(0, 1.5), randf_range(-1, 1)), 1.2)
 
 
@@ -2081,7 +2197,7 @@ func _ride(delta: float, game) -> void:
 			velocity.y = 25.0
 			_immune = maxf(_immune, 6.0 / 60.0)
 			break
-	if _mount_sprite != null:
+	if _mount_sprite != null and m.has("sprite"):
 		var run: Array = m.get("run_frames", [0, int(m.frames) - 1])
 		var air: Array = m.get("air_frames", [1, 1])
 		if not on_floor:
@@ -2952,6 +3068,26 @@ func yoyo_out() -> bool:
 	return yoyo != null and is_instance_valid(yoyo) and not yoyo.is_queued_for_deletion()
 
 
+## A counterweight you wear (its ProjectileID name; "" without one).
+func counterweight_kind() -> String:
+	for s in accessories.slots:
+		if s != null and Data.item(s.item).has("counterweight"):
+			return Data.item(s.item).counterweight
+	return ""
+
+
+## Your yoyo hit something at `at`: with a counterweight on and none out,
+## one flies out at it (Player.Counterweight).
+func throw_counterweight(at: Vector3, dmg: int, kb: float) -> void:
+	var kind := counterweight_kind()
+	if kind == "" or (counterweight != null and is_instance_valid(counterweight) and not counterweight.is_queued_for_deletion()):
+		return
+	counterweight = Counterweight.new()
+	counterweight.setup(self, kind, at, dmg, kb)
+	Game.current.entities.add_child(counterweight)
+	counterweight.global_position = center()
+
+
 ## A spell's mana cost after your reductions (Jungle set: 16%).
 func mana_cost(def: Dictionary) -> int:
 	return int(round(float(def.get("mana", 0)) * maxf(0.0, 1.0 - stat("mana_cost") / 100.0)))
@@ -3047,6 +3183,11 @@ func _place(def: Dictionary) -> bool:
 		inventory.remove(def.wand_ammo, 1)
 	else:
 		_use_up(selected)
+	# The Actuation Accessory (autoActuator): an Actuator from your inventory
+	# goes on each solid block you place.
+	if has_effect("auto_actuator") and bdef.get("solid", true) and not game.wiring.mask(pos) & Wiring.ACTUATOR \
+			and (creative or inventory.remove("Actuator", 1)):
+		game.wiring.add(pos, Wiring.ACTUATOR)
 	Audio.play("Dig_*", 0.6)
 	if bdef.get("interact") == "chest":  # chests, barrels
 		game.chests.register_new(pos)
@@ -3190,10 +3331,15 @@ func _consume(def: Dictionary) -> bool:
 	elif def.has("buff"):
 		# A buff potion: its buff for its time (drinking another restarts it).
 		# Food's three kinds of Well Fed replace one another.
-		if def.buff[0] in WELL_FED:
-			for b in WELL_FED:
-				timed_buffs.erase(b)
+		for group in [WELL_FED, IMBUES]:
+			if def.buff[0] in group:
+				for b in group:
+					timed_buffs.erase(b)
 		timed_buffs[def.buff[0]] = float(def.buff[1])
+	elif def.get("artisan", false):
+		if ate_artisan_bread:
+			return false
+		ate_artisan_bread = true
 	elif def.get("recall", false):
 		home_teleport()
 	elif def.get("teleport_random", false):
@@ -3428,6 +3574,9 @@ func _interact() -> void:
 		sharpened = true
 		Audio.play("Item_37", 0.7)
 		Game.current.message("Sharpened: melee weapons pierce 12 more armor", Color(1.0, 0.95, 0.6))
+	elif bdef.get("interact") == "toggle":
+		# A water fountain: on or off (its twin).
+		Game.current.world.set_block(target.block, Data.block_id(bdef.get("off", bdef.get("lit"))))
 	elif bdef.get("interact") == "clock":
 		Game.current.message("Current time: " + Game.current.sky.clock_text(), Color(1.0, 0.95, 0.6))
 	elif bdef.get("interact") == "spawner" and Game.current.test_world:
@@ -3518,6 +3667,7 @@ func _crack_bricks(game, delta: float) -> void:
 ## swing (`swing`: a dictionary the swing keeps), and not off target dummies
 ## or critters (BatBat_TryLifeLeeching).
 func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
+	imbue_hit(npc)
 	if has_effect("magma_stone"):
 		npc.ignite_hellfire(6.0 if randi() % 4 == 0 else (4.0 if randi() % 2 == 0 else 2.0))
 	# The Fiery Greatsword: the first enemy a swing hits erupts (Terraria's
@@ -3546,6 +3696,15 @@ func on_melee_hit(npc, def: Dictionary, swing := {}) -> void:
 			and npc.def.ai != "dummy" and not npc.is_critter():
 		swing["leeched"] = true
 		heal(1)
+
+
+## A flask's imbue on a melee or whip hit (StatusToNPC, Projectile.StatusNPC):
+## Fire, On Fire! for 3 to 6 s; Poison, Poisoned for 5 to 9 s.
+func imbue_hit(npc) -> void:
+	if has_effect("imbue_fire"):
+		npc.ignite(float(randi_range(3, 6)))
+	if has_effect("imbue_poison"):
+		npc.poison(float(randi_range(5, 9)))
 
 
 ## Hurts you; true if it did (not invulnerable or immune). `source`: what
@@ -3689,6 +3848,7 @@ func save_state() -> Dictionary:
 		"yaw": _yaw, "pitch": _pitch, "selected": selected,
 		"bed": [bed.x, bed.y, bed.z],
 		"angler_quests": angler_quests,
+		"ate_artisan_bread": ate_artisan_bread,
 		"buffs": timed_buffs.duplicate(),
 		"pets": [pet.item.internal if pet != null and is_instance_valid(pet) else "",
 				light_pet.item.internal if light_pet != null and is_instance_valid(light_pet) else ""],
@@ -3719,6 +3879,7 @@ func load_state(d: Dictionary) -> void:
 	var b: Array = d.get("bed", [])
 	bed = Vector3i(int(b[0]), int(b[1]), int(b[2])) if b.size() == 3 else NO_BED
 	angler_quests = int(d.get("angler_quests", 0))
+	ate_artisan_bread = bool(d.get("ate_artisan_bread", false))
 	# Your pets come back with you (Terraria keeps their buffs).
 	for m in [pet, light_pet]:
 		if m != null and is_instance_valid(m):

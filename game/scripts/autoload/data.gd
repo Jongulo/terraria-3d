@@ -1235,7 +1235,7 @@ const TERRARIA_STATIONS := {
 	"WorkBenches": "work_bench", "Furnaces": "furnace", "Anvils": "iron_anvil", "Sawmill": "sawmill",
 	"Loom": "loom", "DemonAltar": "demon_altar", "Bottles": "bottles", "Solidifier": "solidifier",
 	"TinkerersWorkbench": "tinkerers_workshop", "Campfire": "campfire", "Hellforge": "hellforge",
-	"CookingPots": "cooking_pot",
+	"CookingPots": "cooking_pot", "ImbuingStation": "imbuing_station",
 }
 ## Terraria's "near a liquid" recipe conditions: the liquid counts as a
 ## station when it's within reach (Game.nearby_stations).

@@ -204,6 +204,7 @@ func _strike(game, npc) -> void:
 	npc.whip_tag = {"damage": int(cfg.tag), "crit": int(cfg.get("crit", 0)), "until": Engine.get_physics_frames() + TAG_TICKS,
 			"proc": cfg.get("proc", "")}
 	player.minion_target = npc
+	player.imbue_hit(npc)
 	if cfg.has("poison") and randi() % int(cfg.poison[0]) == 0:
 		npc.poison(float(cfg.poison[1]) / 60.0)
 	if cfg.has("buff"):

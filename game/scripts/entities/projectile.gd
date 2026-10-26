@@ -80,7 +80,10 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## (max_fall: 60 blocks/s), spinning 0.3 a tick, and dies on its 6th touch of
 ## a block, Item10 each bounce. ignite: [1 in n, min, max ticks] On Fire! on
 ## the enemies it hits (Terraria's StatusNPC: the Ball of Fire 1 in 2 for 300,
-## the Flamelash 1 in 2 for 240-479, the Flaming Arrow 1 in 3 for 180). hellwing: [aim, launch] (the Hellwing
+## the Flamelash 1 in 2 for 240-479, the Flaming Arrow 1 in 3 for 180), and a
+## fourth: 1 time in 3 up to that many ticks instead (the Wand of Sparking's
+## spark, 60-119 or 60-239). drag: the share of its speed lost a second once
+## it falls (the spark's 0.99 a tick). hellwing: [aim, launch] (the Hellwing
 ## Bow's, AI 1): fired turned by up to half `launch` either way, it steers
 ## toward its way turned up to half `aim` (each tick its velocity is 39/40 of
 ## itself and 1/40 of that); Terraria's penetrate -1 (each enemy hit once).
@@ -96,7 +99,14 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## debuffs: what it puts on you, [[debuff, 1 in n, ticks]] (Terraria's
 ## StatusPlayer: the Ice Spike's Chilled 20 s and 1 in 20 Frozen 1.5 s).
 ## player_poison: [n, in m, min, max ticks] Poisoned on you n hits in m (the
-## Salamander's spit). harmless: hits no enemy (a thrown Glowstick).
+## Salamander's spit). harmless: hits no enemy.
+## glowstick: Terraria's AI 14 glowsticks: thrown, falling from their 5th
+## tick (0.2 px/tick², here 30 blocks/s²), bouncing off walls at a fifth of
+## their speed and off the ground only when falling faster than 1.5 px/tick,
+## rolling to a stop (x0.97 a tick); harmless. light: the light it gives
+## (Projectile.light 1 tinted by ProjLight: the Glowstick's 0.7, 1, 0.8, the
+## Spelunker Glowstick's 1.05, 0.95, 0.55; DynamicLights); spelunker: every
+## 10 ticks the treasure within 30 tiles of it sparkles (Senses).
 ## The Spiked Ice Slime's Ice Spike (AI 1): falls at 0.15 px/tick² (24 px
 ## a block, as the slime's) from its 6th tick (its shooter sets
 ## gravity_delay), at most 16.
@@ -147,9 +157,13 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"BeeArrow": {"bee_arrow": true, "gravity": 0.0, "life": 20.0},
 		"BladeOfGrass": {"leaf": true, "ghost": true, "pierce": 2, "radius": 0.45, "melee": true, "npc_poison": [420, 420, 4], "life": 1.0},
 		# The Salamander's spit (572: unseen, dust 40) poisons you 2 hits in 3
-		# for 120 to 239 ticks (StatusPlayer); a thrown Glowstick hurts nothing.
+		# for 120 to 239 ticks (StatusPlayer).
 		"SalamanderSpit": {"hidden": true, "dust": [40], "player_poison": [2, 3, 120, 239], "life": 10.0},
-		"Glowstick": {"harmless": true, "glow": true, "life": 60.0}}
+		"WandOfSparkingSpark": {"hidden": true, "dust": [6], "glow": true, "pierce": 2, "gravity": 15.0, "gravity_after": 20, "drag": 0.453,
+			"ignite": [2, 60, 119, 239], "radius": 0.21, "life": 1.0},
+		"BoneArrowFromMerchant": {"pierce": 2, "life": 20.0},
+		"Glowstick": {"glowstick": true, "light": [0.7, 1.0, 0.8], "size": 0.25, "life": 300.0},
+		"SpelunkerGlowstick": {"glowstick": true, "light": [1.05, 0.95, 0.55], "spelunker": true, "size": 0.75, "life": 120.0}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -194,6 +208,9 @@ var _turn := PI
 var _axial := false
 var _trail: Array = []
 var _trail_ticks := 0.0
+## The light it gives (black: none; DynamicLights).
+var light_color := Color.BLACK
+var _spot_ticks := 0.0
 
 
 ## `proj` is a ProjectileID name; its sprite sheet is Projectile_<id>.
@@ -233,6 +250,9 @@ func setup(proj: String, size := 0.5) -> void:
 	if flight.has("zigzag"):
 		_zigzag = Vector2(flight.zigzag[0], flight.zigzag[1])
 	life = float(flight.get("life", life))
+	if flight.has("light"):
+		light_color = Color(flight.light[0], flight.light[1], flight.light[2])
+		add_to_group(DynamicLights.GROUP)
 	_trail = flight.get("dust", [])
 	_trail_ticks = -float(flight.get("dust_after", 0))
 	if proj == "Ghoulder":
@@ -272,6 +292,8 @@ func _ready() -> void:
 		spin = float(_flight.spin)
 	if _flight.has("gravity_after"):
 		gravity_delay = float(_flight.gravity_after) / 60.0
+	if _flight.has("drag"):
+		drag = float(_flight.drag)
 	if _flight.has("hellwing"):
 		_aim = _turned(velocity, float(_flight.hellwing[0]))
 		velocity = _turned(velocity, float(_flight.hellwing[1]))
@@ -313,6 +335,9 @@ func _physics_process(delta: float) -> void:
 				velocity = velocity.lerp(to.normalized() * speed, minf(1.0, delta * 8.0)).normalized() * speed
 		else:
 			steered_by = null
+	if _flight.get("glowstick", false):
+		_glowstick_step(delta, game)
+		return
 	if not explosive.is_empty():
 		_explosive_step(delta, game)
 		return
@@ -494,6 +519,50 @@ func _burst_into_bees(game) -> void:
 		game.spawn_dust(global_position + Vector3(randf_range(-0.4, 0.4), randf_range(-0.4, 0.4), randf_range(-0.4, 0.4)), Color(0.55, 0.55, 0.55), 3)
 	var n: Array = explosive.bees
 	release_bees(game, randi_range(int(n[0]), int(n[1])), global_position, Vector3.ZERO, damage, 0.0)
+
+
+func _glowstick_step(delta: float, game) -> void:
+	life -= delta
+	_age += delta
+	if life <= 0.0:
+		queue_free()
+		return
+	var w: VoxelWorld = game.world
+	if _age >= 5.0 / 60.0:
+		velocity.y = maxf(velocity.y - 30.0 * delta, -40.0)
+	var r := 0.12
+	for axis in 3:
+		var move := velocity[axis] * delta
+		if move == 0.0:
+			continue
+		var to := global_position
+		to[axis] += move
+		var edge := to
+		edge[axis] += signf(move) * r
+		if w.is_solid(Vector3i(edge.floor())):
+			if axis != 1:
+				velocity[axis] *= -0.2
+			elif velocity.y < -1.5 * 2.5:
+				velocity.y *= -0.2
+			else:
+				velocity.y = 0.0
+		else:
+			global_position = to
+	if w.is_solid(Vector3i((global_position - Vector3(0, r + 0.02, 0)).floor())):
+		var keep := pow(0.97, delta * 60.0)
+		velocity.x *= keep
+		velocity.z *= keep
+		if Vector2(velocity.x, velocity.z).length() < 0.01 * 2.5:
+			velocity.x = 0.0
+			velocity.z = 0.0
+	_angle += Vector2(velocity.x, velocity.z).length() / 2.5 * 0.05 * delta * 60.0
+	sprite.set_rotation_angle(_angle)
+	sprite.set_glow()
+	if _flight.get("spelunker", false):
+		_spot_ticks += delta * 60.0
+		if _spot_ticks >= 10.0:
+			_spot_ticks = 0.0
+			game.senses.sparkle_treasure(global_position, 30.0 * 2.0 / 3.0)
 
 
 ## The Geyser's spout: a column of fire from it up to the first block, 320 px
@@ -1057,7 +1126,8 @@ func _check_hits(game) -> bool:
 					game.player.on_melee_hit(npc, {})
 				var fire: Array = _flight.get("ignite", [])
 				if not fire.is_empty() and randi() % int(fire[0]) == 0:
-					npc.ignite(randi_range(int(fire[1]), int(fire[2])) / 60.0)
+					var most := int(fire[3]) if fire.size() > 3 and randi() % 3 == 0 else int(fire[2])
+					npc.ignite(randi_range(int(fire[1]), most) / 60.0)
 				var venom: Array = _flight.get("npc_poison", [])
 				if not venom.is_empty() and (venom.size() < 3 or randi() % int(venom[2]) == 0):
 					npc.poison(randi_range(int(venom[0]), int(venom[1])) / 60.0)

@@ -763,6 +763,20 @@ func info_text() -> String:
 					and int(npc.def.get("life", 0)) > 5 and npc.center().distance_to(player.center()) < RADAR_RANGE:
 				n += 1
 		lines.append("No enemies nearby" if n == 0 else "1 enemy nearby!" if n == 1 else "%d enemies nearby!" % n)
+	if info.has("lifeform"):
+		# The Lifeform Analyzer: the rarest creature (Terraria's NPC.rarity)
+		# within 1300 px.
+		var rarest = null
+		for npc in game.npcs():
+			if int(npc.def.get("rarity", 0)) > (int(rarest.def.get("rarity", 0)) if rarest != null else 0) \
+					and npc.center().distance_to(player.center()) < 1300.0 / 24.0:
+				rarest = npc
+		lines.append("No rare creatures nearby" if rarest == null else rarest.title())
+	if info.has("stopwatch"):
+		lines.append("%d mph" % roundi(player.stopwatch_mph()))
+	if info.has("dps"):
+		var dps := player.dps()
+		lines.append("N/A" if dps == 0 else "%d damage per second" % dps)
 	if info.has("weather"):
 		lines.append(weather_text())
 	if info.has("moon"):
@@ -1966,7 +1980,10 @@ func open_shop() -> void:
 	shop_open = true
 	_shop_inv.slots.fill(null)
 	var i := 0
-	for entry in npc.def.get("town", {}).get("shop", []):
+	var stock: Array = npc.def.get("town", {}).get("shop", [])
+	if npc.def.get("town", {}).get("travel_shop", false):
+		stock = Game.current.town.travel_shop
+	for entry in stock:
 		var item: String = entry if entry is String else entry[0]
 		if entry is Array and not shop_condition(entry[1]):
 			continue
@@ -1983,34 +2000,47 @@ func open_shop() -> void:
 
 
 ## Whether a shop item's condition holds (npcs.json town "shop": [item,
-## condition]): "day" or "night"; "moon0".."moon7" (Terraria's moonPhase, 0
-## the full moon), with "_night" only then; "snow", "mushroom": you're in
-## that biome; "corruption", "crimson": the world's evil; "skeletron": after
-## Skeletron; "bloodmoon": in a Blood Moon.
+## condition]): parts joined by "_" must all hold; a part may list
+## alternatives joined by "|", any of which will do; "not" in front of one
+## turns it round. Each is "day" or "night"; "moon0".."moon7" (Terraria's
+## moonPhase, 0 the full moon), "moonodd", "mooneven"; "earlyminute" /
+## "lateminute": the first or second half of the in-game minute (Terraria's
+## time % 60, the Skeleton Merchant's torches); "snow", "mushroom", "jungle":
+## you're in that biome; "corruption", "crimson": the world's evil;
+## "skeletron": after Skeletron; "bloodmoon": in a Blood Moon; "wizard": the
+## Wizard lives here; "angler": the Angler does; "artisan": you've eaten an
+## Artisan Loaf.
 static func shop_condition(cond: String) -> bool:
+	for part in cond.split("_"):
+		var any := false
+		for alt in part.split("|"):
+			var neg := alt.begins_with("not")
+			if _shop_atom(alt.substr(3) if neg else alt) != neg:
+				any = true
+				break
+		if not any:
+			return false
+	return true
+
+
+static func _shop_atom(c: String) -> bool:
 	var game := Game.current
-	var parts := cond.split("_")
-	for c in parts:
-		if c == "day" and not game.sky.is_day:
-			return false
-		if c == "night" and game.sky.is_day:
-			return false
-		if c.begins_with("moon") and game.sky.moon_phase != int(c.substr(4)):
-			return false
-		if c == "snow" and game.biome != "snow":
-			return false
-		if c == "moonodd" and game.sky.moon_phase % 2 == 0:
-			return false
-		if c == "angler" and not game.town.residents.has("Angler"):
-			return false
-		if c == "skeletron" and not game.defeated_bosses.has("SkeletronHead"):
-			return false
-		if c == "bloodmoon" and not game.sky.blood_moon:
-			return false
-		if c in ["corruption", "crimson"] and game.town.world_evil() != c:
-			return false
-		if c == "mushroom" and game.biome != "mushroom":
-			return false
+	if c.begins_with("moon") and c.substr(4).is_valid_int():
+		return game.sky.moon_phase == int(c.substr(4))
+	match c:
+		"day": return game.sky.is_day
+		"night": return not game.sky.is_day
+		"moonodd": return game.sky.moon_phase % 2 == 1
+		"mooneven": return game.sky.moon_phase % 2 == 0
+		"earlyminute": return fmod(game.sky.time, 60.0) <= 30.0
+		"lateminute": return fmod(game.sky.time, 60.0) > 30.0
+		"snow", "mushroom", "jungle": return game.biome == c
+		"angler": return game.town.residents.has("Angler")
+		"wizard": return game.town.residents.has("Wizard")
+		"skeletron": return game.defeated_bosses.has("SkeletronHead")
+		"bloodmoon": return game.sky.blood_moon
+		"corruption", "crimson": return game.town.world_evil() == c
+		"artisan": return game.player.ate_artisan_bread
 	return true
 
 

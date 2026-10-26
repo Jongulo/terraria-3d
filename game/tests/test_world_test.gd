@@ -467,6 +467,7 @@ func _run() -> void:
 	await _slime_rain_checks(c)
 	await _mini_biome_checks(c)
 	await _cave_enemy_checks(c)
+	await _merchant_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -4327,7 +4328,7 @@ func _armor_checks(c: Vector3i) -> void:
 		# (The Angler's armor: his rewards for the 10th, 15th and 20th quests.)
 		var sold: bool = Data.npcs.values().any(func(e): return e.get("town", {}).get("shop", []).any(func(x): return (x if x is String else x[0]) == n))
 		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set \
-				or sold or n in AnglerQuests.MILESTONES.values()
+				or sold or n in AnglerQuests.MILESTONES.values() or n in TravelShop.all_items()
 		if not d.get("slot") in Data.ARMOR_SLOTS or (Assets.armor_texture(d.slot, n) == null and not d.get("own_look", false)) or d.id == 0 or not sources:
 			bad.append(n)
 	check(armor_items.size() >= 50 and bad.is_empty(), "%d armor pieces, each with its equip sprite and a recipe, chest, enemy drop, shop or Angler reward (bad: %s)" % [armor_items.size(), bad])
@@ -8607,3 +8608,272 @@ func _slime_rain_checks(c: Vector3i) -> void:
 	game.spawner.set_physics_process(true)
 	p.god_mode = was_god
 	p.life = p.life_cap()
+
+
+
+## What a shop sells now (its conditions as Hud.shop_condition reads them).
+func _stock(kind: String) -> Array:
+	var out := []
+	for e in Data.npcs[kind].town.shop:
+		if e is String or Hud.shop_condition(e[1]):
+			out.append(e if e is String else e[0])
+	return out
+
+
+func _merchant_checks(c: Vector3i) -> void:
+	var p := game.player
+	var sky: SkySystem = game.sky
+	var saved := sky.save_state()
+	var was_god := p.god_mode
+	p.god_mode = true
+	var held := p.selected
+	var spot := c + Vector3i(-90, 0, 24)
+	for npc in game.npcs():
+		if npc.def.ai != "town":
+			npc.queue_free()
+	p.global_position = Vector3(spot) + Vector3(0.5, 0, 0.5)
+	p._fall_start = p.global_position.y
+	p.velocity = Vector3.ZERO
+	game.spawner.set_physics_process(false)
+	await frames(2)
+	# --- The Witch Doctor: comes once the Queen Bee is beaten.
+	var queen: bool = game.defeated_bosses.has("QueenBee")
+	var was_here: bool = game.town.arrived.has("WitchDoctor")
+	game.town.arrived.erase("WitchDoctor")
+	game.defeated_bosses.erase("QueenBee")
+	var before: bool = game.town.wants_to_come("WitchDoctor")
+	game.defeated_bosses["QueenBee"] = true
+	check(not before and game.town.wants_to_come("WitchDoctor") and "WitchDoctor" in Town.ROSTER,
+			"the Witch Doctor moves in once the Queen Bee is beaten")
+	if not queen:
+		game.defeated_bosses.erase("QueenBee")
+	if was_here:
+		game.town.arrived["WitchDoctor"] = true
+	var biome: String = game.biome
+	sky.is_day = true
+	game.biome = ""
+	var day := _stock("WitchDoctor")
+	sky.is_day = false
+	game.biome = "jungle"
+	var night := _stock("WitchDoctor")
+	game.biome = biome
+	sky.is_day = true
+	check(day.has("ImbuingStation") and day.has("Blowgun") and day.has("CavernFountain") and not day.has("PygmyNecklace") and not day.has("GiantTiki")
+			and night.has("PygmyNecklace") and night.has("GiantTiki") and not night.has("BewitchingTable"),
+			"his shop: the Imbuing Station, the Blowgun, fountains; the Giant Tiki in the jungle, the Pygmy Necklace at night (%d / %d)" % [day.size(), night.size()])
+	var doctor := game.spawn_npc("WitchDoctor", Vector3(spot) + Vector3(3.5, 0, 0.5))
+	var said: String = doctor.talk_line()
+	check(said != "" and said != "...", "he talks (%s)" % said)
+	doctor.queue_free()
+	# Flasks: one imbue at a time; melee and whip hits poison or burn.
+	var foe := game.spawn_npc("Zombie", Vector3(spot) + Vector3(2.5, 0, 0.5))
+	foe.set_physics_process(false)
+	p.inventory.slots[9] = Inventory.stack("FlaskofPoison", 2)
+	p.select(9)
+	p._use_timer = 0.0
+	p.use_item()
+	p.on_melee_hit(foe, {})
+	var poisoned: bool = foe.poisoned >= 5.0 and foe.on_fire == 0.0
+	p.inventory.slots[9] = Inventory.stack("FlaskofFire", 1)
+	p._use_timer = 0.0
+	p.use_item()
+	p.on_melee_hit(foe, {})
+	check(poisoned and foe.on_fire >= 3.0 and p.has_buff("WeaponImbueFire") and not p.has_buff("WeaponImbuePoison"),
+			"a Flask of Poison's melee hits poison, a Flask of Fire's burn (and it ends the poison imbue)")
+	p.timed_buffs.erase("WeaponImbueFire")
+	foe.queue_free()
+	check(Data.recipes.any(func(r): return r.result == "FlaskofPoison" and "imbuing_station" in r.get("stations", [r.get("station")])),
+			"Flasks are made at the Imbuing Station")
+	# Seeds: grass cut with a Blowgun on you drops them half the time.
+	var grass := -1
+	for id in Data.blocks.size():
+		var b := Data.block(id)
+		if int(b.get("tile_id", -1)) == 3 and b.get("drop", "") == "" and b.get("cut", false):
+			grass = id
+			break
+	var seeds := func(with_gun: bool) -> int:
+		p.inventory.slots[9] = Inventory.stack("Blowgun", 1) if with_gun else null
+		for i in 40:
+			var q := spot + Vector3i(6 + i % 8, 0, -4 + i / 8)
+			game.world.set_block(q, grass)
+			game.break_block(q)
+		var n := 0
+		for e in game.entities.get_children():
+			if e is ItemDrop and e.item == "Seed":
+				n += e.count
+				e.queue_free()
+		return n
+	var no_gun: int = seeds.call(false)
+	var with_gun: int = seeds.call(true)
+	check(grass >= 0 and no_gun == 0 and with_gun >= 8 and with_gun <= 32, "grass drops Seeds only with a Blowgun on you (%d of 40)" % with_gun)
+	p.inventory.slots[8] = Inventory.stack("Seed", 5)
+	p._use_timer = 0.0
+	p.select(9)
+	p.use_item()
+	check(game.entities.get_children().any(func(e): return e is Projectile and e.kind == "Seed") and p.inventory.count_of("Seed") == 4,
+			"the Blowgun shoots Seeds")
+	p.inventory.slots[8] = null
+	# A water fountain: right-click turns it off and on.
+	var fq := spot + Vector3i(2, 0, 3)
+	game.world.set_block(fq, Data.block_id("cavern_fountain"))
+	p.target = {"block": fq, "id": game.world.get_block(fq), "normal": Vector3i.UP, "distance": 3.0}
+	p._interact()
+	var off: String = Data.block(game.world.get_block(fq)).name
+	p.target = {"block": fq, "id": game.world.get_block(fq), "normal": Vector3i.UP, "distance": 3.0}
+	p._interact()
+	check(off == "cavern_fountain_off" and Data.block(game.world.get_block(fq)).name == "cavern_fountain", "a fountain turns off and on")
+	game.world.set_block(fq, 0)
+	# --- The Skeleton Merchant: his stock by the moon.
+	sky.moon_phase = 0
+	sky.is_day = false
+	var full := _stock("SkeletonMerchant")
+	sky.moon_phase = 3
+	sky.is_day = true
+	var third := _stock("SkeletonMerchant")
+	var ate := p.ate_artisan_bread
+	p.ate_artisan_bread = true
+	var eaten := _stock("SkeletonMerchant")
+	p.ate_artisan_bread = ate
+	check(full.has("WoodenBoomerang") and full.has("SpelunkerGlowstick") and full.has("BoneArrow") and full.has("BlueCounterweight")
+			and full.has("MagicLantern") and full.has("StrangeBrew") and full.has("Bomb") and not full.has("Glowstick")
+			and third.has("Glowstick") and third.has("WoodenArrow") and third.has("GreenCounterweight") and third.has("RollerSkatesClassicMountItem")
+			and third.has("LesserHealingPotion") and third.has("ArtisanLoaf") and not eaten.has("ArtisanLoaf") and not third.has("MagicLantern"),
+			"the Skeleton Merchant's stock changes with the moon (%s / %s)" % [full, third])
+	var skel := game.spawn_npc("SkeletonMerchant", Vector3(spot) + Vector3(3.5, 0, 0.5))
+	said = skel.talk_line()
+	check(said != "" and said != "..." and skel.home_key == "", "he talks (%s), and has no home" % said)
+	skel.queue_free()
+	# Strange Brew heals 70.
+	p.god_mode = false
+	p.life = 100
+	p.potion_sickness = 0.0
+	p.inventory.slots[9] = Inventory.stack("StrangeBrew", 1)
+	p._use_timer = 0.0
+	p.use_item()
+	check(p.life == mini(170, p.life_cap()), "Strange Brew heals 70 (%d)" % p.life)
+	p.god_mode = true
+	p.potion_sickness = 0.0
+	# The Artisan Loaf: stations reach further, once.
+	var bench := spot + Vector3i(6, 0, 0)
+	game.world.set_block(bench, Data.block_id("work_bench"))
+	p.ate_artisan_bread = false
+	var near_before: bool = game.nearby_stations().has("work_bench")
+	p.inventory.slots[9] = Inventory.stack("ArtisanLoaf", 2)
+	p._use_timer = 0.0
+	p.use_item()
+	p._use_timer = 0.0
+	p.use_item()
+	check(not near_before and game.nearby_stations().has("work_bench") and p.ate_artisan_bread and p.inventory.count_of("ArtisanLoaf") == 1,
+			"an Artisan Loaf lets you craft at stations further off, and only one can be eaten")
+	p.ate_artisan_bread = ate
+	game.world.set_block(bench, 0)
+	# A Glowstick: thrown, it lands and lights its spot.
+	p.look_at_yaw_pitch(0.0, 0.3)
+	p.inventory.slots[9] = Inventory.stack("Glowstick", 3)
+	p._use_timer = 0.0
+	p.use_item()
+	var stick = null
+	for e in game.entities.get_children():
+		if e is Projectile and e.kind == "Glowstick":
+			stick = e
+	await frames(300)
+	check(stick != null and is_instance_valid(stick) and stick.velocity.length() < 0.5 and stick.light_color.g > 0.9
+			and stick.is_in_group(DynamicLights.GROUP) and game.dynamic_lights._count >= 1,
+			"a thrown Glowstick rolls to rest and shines where it lies")
+	if stick != null and is_instance_valid(stick):
+		stick.queue_free()
+	# Roller skates: let go, you coast.
+	p.inventory.slots[9] = Inventory.stack("RollerSkatesGreenMountItem", 1)
+	p._use_timer = 0.0
+	p.use_item()
+	var skating := p.mount
+	p.global_position = Vector3(spot) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3(7.0, 0, 0)
+	await frames(60)
+	var coast := Vector2(p.velocity.x, p.velocity.z).length()
+	p._use_timer = 0.0
+	p.use_item()
+	p.global_position = Vector3(spot) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3(7.0, 0, 0)
+	await frames(60)
+	check(skating == "skates_green" and p.mount == "" and coast > 3.0 and coast < 5.0 and Vector2(p.velocity.x, p.velocity.z).length() < 0.1,
+			"on roller skates you coast at 1.6 px a tick when you let go (%.2f blocks/s), on foot you stop" % coast)
+	# The Magic Lantern: a light pet that lights you.
+	p.inventory.slots[9] = Inventory.stack("MagicLantern", 1)
+	p._use_timer = 0.0
+	p.use_item()
+	await frames(5)
+	check(p.light_pet != null and p.light_pet.kind == "MagicLantern" and p.carried_light().r > 0.3, "the Magic Lantern follows you, shining")
+	p._use_timer = 0.0
+	p.use_item()
+	# A counterweight goes out from your yoyo's hits.
+	var acc = p.accessories.slots[0]
+	p.accessories.slots[0] = Inventory.stack("BlueCounterweight", 1)
+	p.throw_counterweight(p.center() + Vector3(3, 0, 0), 10, 2.0)
+	var thrown := p.counterweight != null and is_instance_valid(p.counterweight)
+	await frames(30)
+	p.accessories.slots[0] = acc
+	check(thrown and not is_instance_valid(p.counterweight), "a counterweight flies out on a yoyo hit, and back once the yoyo's gone")
+	# --- The Traveling Merchant.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var orbs: int = game.orbs_broken
+	game.orbs_broken = 0
+	var sizes := []
+	var ok := true
+	var seen := {}
+	for i in 300:
+		var shop := TravelShop.roll(game, rng)
+		sizes.append(shop.size())
+		for it in shop:
+			seen[it] = int(seen.get(it, 0)) + 1
+			if Data.item(it).is_empty() or shop.count(it) > 1:
+				ok = false
+		if not shop.any(func(it): return Data.item(it).get("place", "") != "" and Data.block(Data.block_id(Data.item(it).place)).has("painting")):
+			ok = false
+	game.orbs_broken = orbs
+	check(ok and sizes.min() >= 5 and not seen.has("Revolver") and int(seen.get("Stopwatch", 0)) > int(seen.get("AngelHalo", 0)),
+			"his stock: what this game has, no repeats, a painting each time, rarer things less often (%d-%d items)" % [sizes.min(), sizes.max()])
+	sky.is_day = true
+	sky.time = 5000.0
+	var came: bool = game.town.spawn_traveler()
+	var tm: NPC = game.town.traveler
+	check(came and tm != null and tm.global_position.distance_to(p.global_position) > Town.OUT_OF_SIGHT and not game.town.travel_shop.is_empty()
+			and last_message().ends_with("has arrived!"), "the Traveling Merchant turns up out of sight, with his stock (%s)" % last_message())
+	if tm != null:
+		said = tm.talk_line()
+		check(said != "" and said != "...", "he talks (%s)" % said)
+		var ts := game.town.save_state()
+		check(ts.has("traveler") and ts.traveler.shop == game.town.travel_shop, "he and his stock are saved with the world")
+		sky.is_day = false
+		game.town._travel_tick(0.016)
+		await frames(2)
+		check(not game.town.traveler_here() and last_message().ends_with("has departed!"), "at night he's gone (%s)" % last_message())
+	sky.is_day = true
+	# Info: the Stopwatch, the DPS Meter and the Lifeform Analyzer.
+	p.accessories.slots[0] = Inventory.stack("Stopwatch", 1)
+	p.inventory.slots[9] = Inventory.stack("DPSMeter", 1)
+	p.inventory.slots[8] = Inventory.stack("LifeformAnalyzer", 1)
+	var bunny := game.spawn_npc("GoldBunny", Vector3(spot) + Vector3(4.5, 0, 0.5))
+	bunny.set_physics_process(false)
+	var dummy := game.spawn_npc("Zombie", Vector3(spot) + Vector3(-4.5, 0, 0.5))
+	dummy.set_physics_process(false)
+	dummy.hit(10, 0.0, Vector3.FORWARD, 0.0)
+	var text: String = game.hud.info_text()
+	check("mph" in text and "damage per second" in text and bunny.title() in text, "the Stopwatch, the DPS Meter and the Lifeform Analyzer (%s)" % text.replace("\n", " | "))
+	bunny.queue_free()
+	dummy.queue_free()
+	p.accessories.slots[0] = acc
+	p.inventory.slots[8] = null
+	p.inventory.slots[9] = null
+	p.select(held)
+	for e in game.entities.get_children():
+		if e is ItemDrop or e is Projectile:
+			e.queue_free()
+	sky.load_state(saved)
+	game.spawner.set_physics_process(true)
+	p.god_mode = was_god
+	p.life = p.life_cap()
+	# (Let the blocks changed here mesh before the next checks' key presses.)
+	for i in 30:
+		await get_tree().process_frame

@@ -180,13 +180,21 @@ func spawn_tick() -> void:
 	if depth == "caverns" and game.invasion.downed and not game.town.arrived.has("GoblinTinkerer") and randi() % 20 == 0 \
 			and not game.npcs().any(func(n): return n.kind == "BoundGoblin"):
 		kind = "BoundGoblin"
+	# The Skeleton Merchant (SpawnAnNPC's underground chain): past its slimes
+	# (1 in 10, then 1 in 4), 1 in 2 and then 1 in 35, unless he's about
+	# already; not in water.
+	if depth in ["underground", "caverns"] and game.biome != "dungeon" and randi() % 10 != 0 and randi() % 4 != 0 \
+			and randi() % 2 == 0 and randi() % 35 == 0 and not game.npcs().any(func(n): return n.kind == "SkeletonMerchant"):
+		kind = "SkeletonMerchant"
 	var flying: bool = Data.npcs[kind].ai in ["flyer", "bat", "harpy", "flying_fish", "hover", "granite_flyer"]
 	var pos = _find_water_spot(game, player.global_position, NPC.look(kind).hitbox) if Data.npcs[kind].ai == "swim" \
 			else _find_spot(game, player.global_position, depth in ["underground", "caverns", "underworld"], flying)
-	# The mini-biomes' own, at a spot in a cave (cave_pick).
+	# The mini-biomes' own, at a spot in a cave (cave_pick); Terraria looks
+	# for the Skeleton Merchant after the spider caves but before the marble
+	# and granite.
 	if pos != null and depth in ["underground", "caverns"] and kind != "BoundGoblin":
 		var own := cave_pick(game, pos, player.global_position)
-		if own != "":
+		if own != "" and (kind != "SkeletonMerchant" or own == "WallCreeper"):
 			kind = own
 			if Data.npcs[kind].ai == "granite_flyer":
 				pos += Vector3(0, 1.0, 0)
@@ -194,6 +202,8 @@ func spawn_tick() -> void:
 	# (Spawner.SpawnNPC).
 	if (kind in Game.SLIME_RAIN_SLIMES or kind == "BlackSlime") and randi() % 180 == 0:
 		kind = "Pinky"
+	if kind == "SkeletonMerchant" and pos != null and game.world.get_liquid(Vector3i(pos.floor())).y > 0:
+		return
 	if pos != null:
 		game.spawn_npc(kind, pos)
 

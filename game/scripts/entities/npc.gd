@@ -94,6 +94,9 @@ var _bar_shown := Vector2i(-1, -1)
 var display_name := ""
 var home_key := ""
 var home_spot := Vector3i.ZERO
+## Where a homeless wanderer makes for and then wanders round (the Traveling
+## Merchant: the town NPC home he came for; INF: where it is).
+var travel_to := Vector3.INF
 var talking := false
 var _door = null
 ## The path it's walking (TownPaths): the middle of each cell's floor.
@@ -1077,7 +1080,7 @@ func _ai_resident(delta: float) -> void:
 	var home := Vector3(home_spot) + Vector3(0.5, 0, 0.5)
 	var housed := home_key != ""
 	if _roam_from == Vector3.INF:
-		_roam_from = global_position
+		_roam_from = global_position if travel_to == Vector3.INF else travel_to
 	var you: Vector3 = game.player.global_position
 	if night and housed and global_position.distance_to(home) > 16.0 and you.distance_to(global_position) > 32.0 and you.distance_to(home) > 32.0:
 		global_position = home
@@ -1088,6 +1091,11 @@ func _ai_resident(delta: float) -> void:
 		_stuck = 0.0
 		if night and housed:
 			walk_to(home)
+			ai_timer = randf_range(3.0, 6.0)
+		elif not housed and Vector2(_roam_from.x - global_position.x, _roam_from.z - global_position.z).length() > WANDER + 2:
+			# Far from where it's making for (the Traveling Merchant come to
+			# town): on its way.
+			walk_to(_roam_from)
 			ai_timer = randf_range(3.0, 6.0)
 		elif randf() < 0.4:
 			_waypoints.clear()
@@ -1224,6 +1232,12 @@ func talk_line() -> String:
 		return angler_line()
 	if def.get("talk", "") == "mechanic":
 		return mechanic_line()
+	if def.get("talk", "") == "witch_doctor":
+		return witch_doctor_line()
+	if def.get("talk", "") == "traveling_merchant":
+		return traveling_merchant_line()
+	if def.get("talk", "") == "skeleton_merchant":
+		return skeleton_merchant_line()
 	var lines: Dictionary = DIALOG.get(def.get("talk", ""), {})
 	var pool: Array = lines.get("any", []).duplicate()
 	pool.append_array(lines.get("day" if game.sky.is_day else "night", []))
@@ -1292,6 +1306,69 @@ func mechanic_line() -> String:
 	var n := randi() % (3 + chatter.size())
 	var text := dialog(167 + n) if n < 3 else fill(chatter[n - 3])
 	return text if text != "" else dialog(167 + randi() % 3)
+
+
+## Terraria's weather lines (NPC.HasSpecialEventText), each 1 time in 3: in
+## the rain (not a storm) one of `prefix`SpecialText's Rain lines, on a windy
+## day its Windy ones, in a storm its Storm ones; "" otherwise (or if it has
+## none). (No graveyards or parties yet.)
+static func special_line(prefix: String) -> String:
+	var sky = Game.current.sky
+	var text: Dictionary = Assets.ids.get("names", {}).get("town", {}).get(prefix + "SpecialText", {})
+	var pick := func(kind: String) -> String:
+		var lines := []
+		for k in text:
+			if k.begins_with(kind):
+				var t := fill(text[k])
+				if t != "":
+					lines.append(t)
+		return lines[randi() % lines.size()] if not lines.is_empty() else ""
+	var line := ""
+	if sky.raining and not sky.storm and randi() % 3 == 0:
+		line = pick.call("Rain")
+	if line == "" and sky.windy_day and randi() % 3 == 0:
+		line = pick.call("Windy")
+	if line == "" and sky.storm and randi() % 3 == 0:
+		line = pick.call("Storm")
+	return line
+
+
+## The Witch Doctor's chat (NPC.GetChat): his weather lines; with the Nurse
+## about, 1 in 4 about her; else one of his three lines or his musing on the
+## Etherian Dark Mages.
+func witch_doctor_line() -> String:
+	var n := randi() % 4
+	var line := special_line("WitchDoctor")
+	if line == "" and Game.current.town.residents.has("Nurse") and randi() % 4 == 0:
+		line = dialog(263)
+	if line == "":
+		var town: Dictionary = Assets.ids.get("names", {}).get("town", {})
+		line = [dialog(261), dialog(262), dialog(264), town.get("WitchDoctorSpecialText", {}).get("AfterDD2Tier1", "")][n]
+	return line if line != "" else dialog(261 + randi() % 2)
+
+
+## The Traveling Merchant's chat: his weather lines; 1 in 5 each about the
+## Guide, the Merchant and the Clothier if they live here; else one of his
+## sales pitches.
+func traveling_merchant_line() -> String:
+	var town = Game.current.town
+	var line := special_line("TravellingMerchant")
+	for who in [["Guide", 319], ["Merchant", 320], ["Clothier", 321]]:
+		if line == "" and town.residents.has(who[0]) and randi() % 5 == 0:
+			line = dialog(who[1])
+	return line if line != "" else dialog(randi_range(322, 330))
+
+
+## The Skeleton Merchant's chat: his weather lines, else one of his eight
+## lines or his chatter.
+func skeleton_merchant_line() -> String:
+	var line := special_line("SkeletonMerchant")
+	if line != "":
+		return line
+	var chatter: Array = Assets.ids.get("names", {}).get("town", {}).get("SkeletonMerchantChatter", {}).values()
+	var n := randi() % (8 + chatter.size())
+	line = dialog(356 + n) if n < 8 else fill(chatter[n - 8])
+	return line if line != "" else dialog(356 + randi() % 8)
 
 
 ## Terraria's LegacyDialog line `n` with its {placeholders} filled in, or ""
@@ -3747,6 +3824,7 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 		life = life_max
 		anim = float(int(def.frames) - 1)  # wobble back through the dummy's hit frames
 	game.floating_text(str(dmg), center() + Vector3(0, half.y * 0.6, 0), Color(1.0, 0.55, 0.1) if crit else Color(1.0, 0.65, 0.3), crit)
+	game.player.add_dps(dmg)
 	_knock_back(knockback, dir, dmg, crit)
 	if is_critter():
 		hurt_critter(dir)
