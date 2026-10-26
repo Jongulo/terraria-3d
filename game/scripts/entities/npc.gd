@@ -408,10 +408,16 @@ func _physics_process(delta: float) -> void:
 		var g := GRAVITY * (0.3 if liquid.y > 0 else 1.0)
 		velocity.y = maxf(velocity.y - g * delta, -3.5 if liquid.y > 0 else -MAX_FALL)
 	var step := 1.05 if def.ai in ["fighter", "town", "critter_walk", "duck", "shelly"] and not flying else 0.0
-	var r := game.world.move_aabb(global_position, half, velocity * delta, step, false)
-	global_position = r.position
-	on_floor = r.on_floor
-	var blocked: Vector3i = r.blocked
+	var blocked := Vector3i.ZERO
+	if def.get("through_blocks", false):
+		# Through the blocks (Terraria's noTileCollide: the Meteor Head).
+		global_position += velocity * delta
+		on_floor = false
+	else:
+		var r := game.world.move_aabb(global_position, half, velocity * delta, step, false)
+		global_position = r.position
+		on_floor = r.on_floor
+		blocked = r.blocked
 	if blocked != Vector3i.ZERO:
 		last_blocked = blocked
 	if flying or swimming:

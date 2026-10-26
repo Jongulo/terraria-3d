@@ -102,11 +102,16 @@ func spawn_tick() -> void:
 	var blood: bool = game.sky.blood_moon and night and depth == "surface"
 	if blood:
 		cap = int(round(cap * 1.8))
+	# A meteorite's crater (GetSpawnRate's ZoneMeteor): x1.1 as many, at 0.4
+	# the wait.
+	var meteor: bool = game.biome == "meteor"
+	if meteor:
+		cap = int(round(cap * 1.1))
 	if game.boss_alive():
 		cap = 2
 	# The Battle Potion: spawns twice as often, twice as many; the Calming
 	# Potion: 1.3 times as seldom, 0.7 as many (spawnRate, maxSpawns).
-	var rate := 1.0 if dungeon else (minf(1.0, 0.45 / 0.3) if blood else 0.45)
+	var rate := 1.0 if dungeon else (minf(1.0, 0.45 / 0.3) if blood else (minf(1.0, 0.45 / 0.4) if meteor else 0.45))
 	if player.has_effect("battle"):
 		cap *= 2
 		rate *= 2.0
@@ -148,7 +153,10 @@ func spawn_tick() -> void:
 			game.spawn_npc("BlueJellyfish", wet)
 			return
 	var kind: String
-	if depth == "underworld":
+	if meteor:
+		# Its spawns are all Meteor Heads (Spawner.SpawnAnNPC).
+		kind = "MeteorHead"
+	elif depth == "underworld":
 		kind = underworld_pick(game.npcs().any(func(n): return n.kind == "BoneSerpentHead"))
 		if kind == "":
 			return

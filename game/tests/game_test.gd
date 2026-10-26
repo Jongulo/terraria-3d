@@ -489,6 +489,45 @@ func _run() -> void:
 	check(sky_ore.size() > cap and met.drop_now() == Meteors.NO_SPOT, "no meteorite while there's too much Meteorite about")
 	for cell in sky_ore:
 		game.world.set_block(cell, 0)
+	# Meteorite burns (Terraria's TouchDamageHot, as Hellstone's).
+	var feet := Vector3i(p.global_position.floor()) + Vector3i.DOWN
+	var feet_was := game.world.get_block(feet)
+	p.on_fire = 0.0
+	game.world.set_block(feet, ore)
+	await frames(3)
+	check(p.on_fire > 0.0, "standing on Meteorite sets you on fire")
+	game.world.set_block(feet, feet_was)
+	p.on_fire = 0.0
+	# The crater is the Meteorite biome (Terraria's ZoneMeteor): its music,
+	# and its spawns all Meteor Heads.
+	var home_at := p.global_position
+	p.global_position = Vector3(landed) + Vector3(0.5, 1.0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(40)
+	check(game.biome == "meteor" and Audio._current_track == "Eerie", "at the crater: the Meteorite biome (%s), its music (%s)" % [game.biome, Audio._current_track])
+	for n in game.npcs():
+		n.queue_free()
+	await frames(1)
+	for i in 12:
+		game.spawner.spawn_tick()
+	var foes := game.npcs().filter(func(n): return not n.is_critter() and n.def.ai != "town")
+	check(not foes.is_empty() and foes.all(func(n): return n.kind == "MeteorHead"),
+			"its spawns are Meteor Heads (%s)" % [foes.map(func(n): return n.kind)])
+	for n in game.npcs():
+		n.queue_free()
+	p.global_position = home_at
+	p.velocity = Vector3.ZERO
+	await frames(10)
+	# A Meteor Head flies at you through the blocks.
+	var under_you := p.global_position + Vector3(0, -6, 0)
+	var head := game.spawn_npc("MeteorHead", under_you)
+	var started_in_ground := game.world.is_solid(Vector3i(under_you.floor()))
+	await frames(90)
+	check(is_instance_valid(head) and started_in_ground and head.global_position.y > under_you.y + 1.0,
+			"a Meteor Head comes up at you through the ground (%.1f -> %.1f)" % [under_you.y, head.global_position.y if is_instance_valid(head) else -1.0])
+	if is_instance_valid(head):
+		head.queue_free()
+	p.on_fire = 0.0
 	Settings.set_value("render_distance", 5)
 	game.defeated_bosses = bosses_was
 	game.sky.is_day = was_day

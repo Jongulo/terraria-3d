@@ -53,6 +53,9 @@ var orbs_broken := 0
 var _biome_timer := 0.0
 const BIOME_RADIUS := 24
 const BIOME_THRESHOLD := 400
+## The Meteorite biome's (Terraria's 75 Meteorite, some 15% of its craters'
+## 400 to 600; of ours, about 800).
+const METEOR_THRESHOLD := 125
 const EVIL_SKY := {"corruption": Color(0.34, 0.26, 0.5), "crimson": Color(0.5, 0.15, 0.13)}
 var sky := SkySystem.new()
 ## The sun's and moon's real-time shadows (optional: Settings → Shaders).
@@ -398,15 +401,25 @@ func _update_playing(delta: float) -> void:
 
 
 ## The biome at `pos`: the ocean on the coast (the sea and its beach, from
-## the sea floor up to the sky), else the evil biome like Terraria's tile
-## counts: enough Corruption or Crimson blocks nearby (the stronger wins).
+## the sea floor up to the sky), else a meteorite's crater (Terraria's
+## ZoneMeteor: METEOR_THRESHOLD Meteorite nearby), else the evil biome like
+## Terraria's tile counts: enough Corruption or Crimson blocks nearby (the
+## stronger wins).
 func detect_biome(pos: Vector3) -> String:
 	if in_ocean(pos):
 		return "ocean"
 	var counts := world.count_blocks(Vector3i(pos.floor()), BIOME_RADIUS)
+	var meteorite := 0
+	for id in Data.biome_blocks.get("meteor", []):
+		if id < counts.size():
+			meteorite += counts[id]
+	if meteorite >= METEOR_THRESHOLD:
+		return "meteor"
 	var best := ""
 	var best_n := BIOME_THRESHOLD - 1
 	for b in Data.biome_blocks:
+		if b == "meteor":
+			continue
 		var n := 0
 		for id in Data.biome_blocks[b]:
 			if id < counts.size():
@@ -488,6 +501,8 @@ func biome_music(b: String, under: bool) -> String:
 			return "Dungeon"
 		"mushroom":
 			return "Mushroom"
+		"meteor":
+			return "Eerie"
 	return ("Underground" if under else "") + "Corruption"
 
 
