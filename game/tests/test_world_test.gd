@@ -2268,12 +2268,16 @@ func _queen_bee_checks(c: Vector3i) -> void:
 			"in the Jungle it brings the Queen Bee (%s, %s)" % [game.biome, last_message()])
 	await frames(5)
 	check(Audio._current_track == "QueenBee", "her own music plays (%s)" % Audio._current_track)
-	# Seen through the blocks in front of her (Terraria draws NPCs in front of
-	# the tiles), with her bees and stingers; out of view, her head icon at
-	# the edge of the screen points to her.
+	# With Show bosses through blocks on (Settings "boss_xray"; Terraria draws
+	# NPCs in front of the tiles), seen through the blocks in front of her,
+	# with her bees and stingers; out of view, her head icon at the edge of
+	# the screen points to her.
+	var seen_through := func(n: NPC) -> bool:
+		return n.sprite.get("material_overlay") != null or (n.sprite is NPCModel and n.sprite._mi.material_overlay != null)
+	check(qb != null and not seen_through.call(qb), "she isn't seen through blocks unless the setting is on")
+	Settings.set_value("boss_xray", true)
 	var bee_look := NPC.make_look("Bee", NPC.look("Bee"))
-	check(qb != null and qb.sprite.get("material_overlay") != null or (qb.sprite is NPCModel and qb.sprite._mi.material_overlay != null),
-			"she's seen through blocks")
+	check(qb != null and seen_through.call(qb), "she's seen through blocks with it on")
 	check(bee_look is NPCModel or bee_look.material_overlay != null, "and so are her bees")
 	bee_look.free()
 	if qb != null:
@@ -2357,6 +2361,7 @@ func _queen_bee_checks(c: Vector3i) -> void:
 		check(stinger != null and not stinger.friendly and stinger.damage == 22 and absf(stinger.velocity.length() / NPC.PX_TICK - 22.0) < 0.1 and stinger._axial
 				and stinger.sprite.material_overlay != null,
 				"from over your head she shoots stingers at you (22 damage, 22 px a tick), pointing along their flight, seen through blocks")
+		Settings.set_value("boss_xray", false)
 		# Poisoned: 2 life a second, no healing.
 		await clear.call()
 		p.god_mode = false
@@ -2461,8 +2466,12 @@ func _brain_checks(c: Vector3i) -> void:
 	var bar: Dictionary = game.boss_status()
 	check(creepers.call().size() == 20 and bar.life == 3250 and bar.max == 3250,
 			"it brings 20 Creepers, and the boss bar counts their life with its own (%d, %s)" % [creepers.call().size(), bar])
-	check(b.head_icon() == 23 and (b.sprite.get("material_overlay") != null or (b.sprite is NPCModel and b.sprite._mi.material_overlay != null)),
-			"its head icon is NPC_Head_Boss_23, and it's seen through blocks")
+	var brain_seen := func() -> bool:
+		return b.sprite.get("material_overlay") != null or (b.sprite is NPCModel and b.sprite._mi.material_overlay != null)
+	check(b.head_icon() == 23 and not brain_seen.call(), "its head icon is NPC_Head_Boss_23, and it isn't seen through blocks by default")
+	Settings.set_value("boss_xray", true)
+	check(brain_seen.call(), "it is with Show bosses through blocks on")
+	Settings.set_value("boss_xray", false)
 	var life0 := b.life
 	b.hit(500, 0.0, Vector3.FORWARD, 0.0)
 	check(b.dont_take_damage and b.life == life0 and b._br_frame < 4, "while it has Creepers it can't be hurt, in its outer brain")

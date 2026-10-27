@@ -637,6 +637,9 @@ func _on_setting_changed(key: String) -> void:
 		"enemy_health_bars":
 			for npc in npcs():
 				npc._bar_shown = Vector2i(-1, -1)  # redraw (or hide) on the next frame
+		"boss_xray":
+			for npc in npcs():
+				npc.refresh_xray()
 
 
 # ------------------------------------------------------------------ entities

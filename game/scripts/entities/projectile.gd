@@ -71,7 +71,7 @@ const SHEETS := {"ThunderSpearShot": {"frames": 4, "right": true}, "ThunderStaff
 ## stream, AI 12: 0.075 px a tick each of its 3 updates); hidden: no sprite,
 ## only its dust (Terraria draws them at alpha 255); glow: lit by itself
 ## (the Magic Missile's light); xray: seen through blocks like the boss that
-## shot it (the Queen Bee's stingers). scythe: Terraria's AI 18 (the Demons'
+## shot it, with Settings "boss_xray" on (the Queen Bee's stingers). scythe: Terraria's AI 18 (the Demons'
 ## Demon Scythes and the weapon's): spinning (0.8 a tick), from its 30th tick
 ## to its 100th it speeds up 1.06 a tick; size: drawn that big (blocks);
 ## radius: how far from its centre it hits, enemies or you.
@@ -268,7 +268,7 @@ func setup(proj: String, size := 0.5) -> void:
 		sprite.set_rotation_angle(PI - _turn)
 	var flight: Dictionary = FLIGHT.get(proj, {})
 	_flight = flight
-	sprite.set_xray(flight.get("xray", false))
+	sprite.set_xray(flight.get("xray", false) and Settings.get_value("boss_xray"))
 	bounces = int(flight.get("bounce", 0))
 	if flight.get("hidden", false):
 		sprite.visible = false

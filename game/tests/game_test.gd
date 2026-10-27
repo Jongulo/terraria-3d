@@ -842,6 +842,15 @@ func _run() -> void:
 	check(game.boss_alive(), "Suspicious Looking Eye summoned the Eye of Cthulhu")
 	var eoc := game.boss()
 	if eoc:
+		# Not seen through the blocks unless Settings says so (and then at once).
+		var xrayed := func(n) -> bool:
+			var x = n.sprite.get("_xray")
+			return (x is bool and x) or x is ShaderMaterial
+		check(not xrayed.call(eoc), "a boss isn't shown through the blocks by default")
+		Settings.set_value("boss_xray", true)
+		check(xrayed.call(eoc), "with Show bosses through blocks on, it is, at once")
+		Settings.set_value("boss_xray", false)
+		check(not xrayed.call(eoc), "and off again")
 		eoc.global_position = p.global_position + Vector3(0, 6, -9)
 		p._immune = 999.0
 		await aim(0.35, 0.0)

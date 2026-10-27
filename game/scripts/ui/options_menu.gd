@@ -151,6 +151,7 @@ func _interface_tab() -> Control:
 					c.set_value_no_signal(1.0))
 	page.add_child(reset)
 	_checkbox(page, "Enemy health bars", "enemy_health_bars")
+	_checkbox(page, "Show bosses through blocks", "boss_xray")
 	return page
 
 

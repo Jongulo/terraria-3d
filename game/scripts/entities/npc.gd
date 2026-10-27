@@ -214,9 +214,7 @@ static func image_path(kind_name: String) -> String:
 ## (bottom on the ground; fliers' middle where the billboard's middle was).
 static func make_look(kind_name: String, lk: Dictionary) -> Node3D:
 	var m := NPCModels.method(kind_name)
-	var d: Dictionary = Data.npcs[kind_name]
-	# Bosses (and their bees, hands...) show through the blocks in front of them.
-	var xray: bool = d.get("xray", d.get("boss", false))
+	var xray := shows_through(Data.npcs[kind_name])
 	if m == "rendered":
 		var r := RenderedSprite.new()
 		r.setup_rendered(kind_name)
@@ -247,12 +245,26 @@ func set_hunted(state: int) -> void:
 	if state == _hunted or sprite == null or not sprite.has_method("set_xray"):
 		return
 	_hunted = state
-	var own: bool = def.get("xray", def.get("boss", false))
-	# (Back to its own look: off, then a boss's own silhouette again.)
+	refresh_xray()
+
+
+## Whether a kind (its npcs.json entry) shows through the blocks in front of
+## it: bosses and their bees, hands... ("xray", else "boss"), with Settings
+## "boss_xray" on.
+static func shows_through(d: Dictionary) -> bool:
+	return bool(Settings.get_value("boss_xray")) and bool(d.get("xray", d.get("boss", false)))
+
+
+## Its see-through look again: the Hunter Potion's colour, its own (a boss's
+## silhouette, as Settings has it), or none.
+func refresh_xray() -> void:
+	if sprite == null or not sprite.has_method("set_xray"):
+		return
+	# (Off first, then a hunted colour or a boss's own silhouette again.)
 	sprite.set_xray(false)
-	if state > 0:
-		sprite.set_xray(true, HUNTED_COLOURS[state])
-	elif own:
+	if _hunted > 0:
+		sprite.set_xray(true, HUNTED_COLOURS[_hunted])
+	elif shows_through(def):
 		sprite.set_xray(true)
 
 

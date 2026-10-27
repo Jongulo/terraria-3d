@@ -19,6 +19,9 @@ const DEFAULTS := {
 	"sfx_volume": 0.8,
 	"music_volume": 0.6,
 	"enemy_health_bars": true,
+	# Bosses (and their bees, hands, stingers...) drawn through the blocks
+	# in front of them (NPC.shows_through).
+	"boss_xray": false,
 	# First person, or third from behind or in front (Player.view_mode).
 	"camera_view": 0,
 	# Optional shaders (Settings → Shaders): the sun's and moon's real-time
