@@ -1005,18 +1005,10 @@ func _skeletron_checks(c: Vector3i) -> void:
 	check(not game.town.wants_to_come("Clothier"), "not before")
 	game._on_dawn()
 	check(game.npcs().filter(func(n): return n.kind == "OldMan").size() == 1, "before then he's back at dawn")
-	# The Dungeon Guardian: below the ground in the Dungeon before Skeletron
-	# is beaten.
-	var deep := Vector3.INF
-	for x in range(-12, 13):
-		for z in range(-12, 13):
-			for y in range(d.y - 30, d.y - 3):
-				var q := d + Vector3i(x, y - d.y, z)
-				if not game.world.is_solid(q) and not game.world.is_solid(q + Vector3i.UP) and game.detect_biome(Vector3(q) + Vector3(0.5, 0.5, 0.5)) == "dungeon":
-					deep = Vector3(q) + Vector3(0.5, 0, 0.5)
-	check(deep != Vector3.INF, "somewhere below the ground in the Dungeon")
-	if deep != Vector3.INF:
-		p.global_position = deep
+	# The Dungeon Guardian: below the surface layer in the Dungeon before
+	# Skeletron is beaten; not in its entrance hall.
+	var run_spawner := func(at: Vector3) -> Array:
+		p.global_position = at
 		game.biome = "dungeon"
 		game._biome_timer = 1000.0
 		game.spawner.process_mode = Node.PROCESS_MODE_INHERIT
@@ -1024,7 +1016,29 @@ func _skeletron_checks(c: Vector3i) -> void:
 			game.spawner._timer = 0.0
 			game.spawner._physics_process(0.016)
 		game.spawner.process_mode = Node.PROCESS_MODE_DISABLED
-		var guardians := game.npcs().filter(func(n): return n.kind == "DungeonGuardian")
+		return game.npcs().filter(func(n): return n.kind == "DungeonGuardian")
+	var hall := Vector3.INF
+	for x in range(-6, 7):
+		for z in range(-6, 7):
+			var q := d + Vector3i(x, 1, z)
+			if not game.world.is_solid(q) and not game.world.is_solid(q + Vector3i.UP) and game.detect_biome(Vector3(q) + Vector3(0.5, 0.5, 0.5)) == "dungeon":
+				hall = Vector3(q) + Vector3(0.5, 0, 0.5)
+	check(hall != Vector3.INF, "somewhere in the Dungeon's entrance hall")
+	if hall != Vector3.INF:
+		var none: Array = run_spawner.call(hall)
+		check(none.is_empty(), "no Dungeon Guardian in the entrance hall (%d)" % none.size())
+		for g in none:
+			g.queue_free()
+	var deep := Vector3.INF
+	for x in range(-12, 13):
+		for z in range(-12, 13):
+			for y in range(d.y - 30, game.surface_level - 11):
+				var q := d + Vector3i(x, y - d.y, z)
+				if not game.world.is_solid(q) and not game.world.is_solid(q + Vector3i.UP) and game.detect_biome(Vector3(q) + Vector3(0.5, 0.5, 0.5)) == "dungeon":
+					deep = Vector3(q) + Vector3(0.5, 0, 0.5)
+	check(deep != Vector3.INF, "somewhere below the surface layer in the Dungeon")
+	if deep != Vector3.INF:
+		var guardians: Array = run_spawner.call(deep)
 		check(guardians.size() == 1, "the Dungeon Guardian comes for you (%d)" % guardians.size())
 		if guardians.size() == 1:
 			var g: NPC = guardians[0]

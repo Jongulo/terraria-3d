@@ -123,11 +123,14 @@ func spawn_tick() -> void:
 	if randf() > rate:
 		return
 	if dungeon:
-		# Below the ground before Skeletron is beaten, the Dungeon Guardian
-		# comes for you (Terraria's); after, the Dungeon's own.
+		# Down in it before Skeletron is beaten, the Dungeon Guardian comes for
+		# you (Terraria's: below the surface layer, Main.worldSurface; never in
+		# the entrance, which stands above it); after, the Dungeon's own.
 		var p := player.global_position
 		if not game.defeated_bosses.has("SkeletronHead"):
-			if not game.boss_alive() and p.y < game.world.surface_y(floori(p.x), floori(p.z)) \
+			var down: bool = _depth(p.y, game) not in ["surface", "space"] \
+					and (game.dungeon_entrance == Game.NO_DUNGEON or p.y < game.dungeon_entrance.y)
+			if down and not game.boss_alive() \
 					and not game.npcs().any(func(n): return n.kind == "DungeonGuardian"):
 				game.spawn_npc("DungeonGuardian", p + Vector3(randf_range(-1, 1), 0.6, randf_range(-1, 1)).normalized() * 40.0)
 			return
