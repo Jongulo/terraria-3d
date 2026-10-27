@@ -60,6 +60,11 @@ const PART_DEPTH := 4.0
 ## How far the mouth and eyes turn from straight out of the wall toward you.
 const MOUTH_TURN := deg_to_rad(45.0)
 const EYE_TURN := deg_to_rad(70.0)
+## How often the wall's light is read again where it stands (seconds).
+const LIGHT_EVERY := 0.5
+const WALL_SHADER := preload("res://shaders/wof_wall.gdshader")
+## How many of its parts shade the wall at most (wof_wall.gdshader's casters).
+const CASTERS := 16
 
 var mouth: NPC
 var eyes: Array[NPC] = []
@@ -68,7 +73,13 @@ var hungry: Array[NPC] = []
 var z := 0.0
 var dir := 1.0
 var _mesh: MeshInstance3D
-var _material: StandardMaterial3D
+var _material: ShaderMaterial
+## The wall lit like the blocks (wof_wall.gdshader): the light of the cells
+## along its plane, refreshed as it moves into the next row of them (and
+## every LIGHT_EVERY seconds, for light that changes).
+var _light: ImageTexture
+var _light_z := -1
+var _light_t := 0.0
 ## Its middle and its reach up and down where the mouth is.
 var _mid := 0.0
 var _top := 0.0
@@ -115,12 +126,11 @@ func _begin(game) -> void:
 	var height: float = game.underworld_level + 8.0
 	q.size = Vector2(size.x, height)
 	_mesh.mesh = q
-	_material = StandardMaterial3D.new()
-	_material.albedo_color = Color8(103, 45, 66)
-	_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
-	_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_material.uv1_scale = Vector3(size.x / 16.0, height / 16.0, 1)
+	_material = ShaderMaterial.new()
+	_material.shader = WALL_SHADER
+	_material.set_shader_parameter("flesh_color", Color8(103, 45, 66))
+	_material.set_shader_parameter("flesh_repeat", Vector2(size.x / 16.0, height / 16.0))
+	_material.set_shader_parameter("light_size", Vector2(size.x, height))
 	_mesh.material_override = _material
 	_mesh.position = Vector3(size.x * 0.5, height * 0.5, 0)
 	add_child(_mesh)
@@ -147,11 +157,47 @@ func _begin(game) -> void:
 	game.message("Wall of Flesh has awoken!", Color(0.69, 0.29, 1.0))
 
 
+func _show_flesh() -> void:
+	_material.set_shader_parameter("flesh", _flesh)
+	_material.set_shader_parameter("has_flesh", true)
+
+
+## The light of the cells the wall lies in, from the bottom of the world up
+## its height, across the world (one VoxelWorld.light_plane call), the
+## sky's light on it, and the parts that shade it.
+func _relight(game, delta: float) -> void:
+	_material.set_shader_parameter("sky_light", game.sky.sky_light)
+	_material.set_shader_parameter("sky_color", game.sky.sky_tint)
+	var casters := PackedVector4Array()
+	for n in [mouth] + eyes + hungry:
+		if is_instance_valid(n) and n.life > 0:
+			var c: Vector3 = n.center()
+			casters.append(Vector4(c.x, c.y, c.z, maxf(n.half.x, n.half.y)))
+	var count := mini(casters.size(), CASTERS)
+	casters.resize(CASTERS)
+	_material.set_shader_parameter("casters", casters)
+	_material.set_shader_parameter("caster_count", count)
+	_light_t -= delta
+	var cell := floori(z)
+	if cell == _light_z and _light_t > 0.0:
+		return
+	_light_z = cell
+	_light_t = LIGHT_EVERY
+	var q: QuadMesh = _mesh.mesh
+	var w := int(q.size.x)
+	var h := int(q.size.y)
+	var img := Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, game.world.light_plane(cell, w, h))
+	if _light == null or _light.get_size() != Vector2(w, h):
+		_light = ImageTexture.create_from_image(img)
+		_material.set_shader_parameter("wall_light", _light)
+	else:
+		_light.update(img)
+
+
 ## The flesh texture (WallOfFlesh: the wall's bubbles), made off the main thread the first time.
 func _texture_later() -> void:
 	if _flesh != null:
-		_material.albedo_texture = _flesh
-		_material.albedo_color = Color.WHITE
+		_show_flesh()
 		return
 	_tex_task = WorkerThreadPool.add_task(func(): _flesh_image = WofTexture.flesh(256, 36, 7))
 
@@ -164,8 +210,7 @@ func _physics_process(delta: float) -> void:
 		WorkerThreadPool.wait_for_task_completion(_tex_task)
 		_tex_task = -1
 		_flesh = ImageTexture.create_from_image(_flesh_image)
-		_material.albedo_texture = _flesh
-		_material.albedo_color = Color.WHITE
+		_show_flesh()
 	if mouth == null or not is_instance_valid(mouth) or mouth.life <= 0:
 		_end(game, true)
 		return
@@ -196,6 +241,7 @@ func _physics_process(delta: float) -> void:
 			p.die_by(LICKED)
 		_end(game, false)
 		return
+	_relight(game, delta)
 	_place(game, delta)
 	_leeches(game, share, delta)
 	_roars(delta)

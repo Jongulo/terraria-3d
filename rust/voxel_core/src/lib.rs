@@ -736,6 +736,23 @@ impl VoxelWorld {
         Color::from_rgba(l[1] as f32 / 15.0, l[2] as f32 / 15.0, l[3] as f32 / 15.0, l[0] as f32 / 15.0)
     }
 
+    /// The light (as get_light, 0..255 a channel: r, g, b, sun) of the cells
+    /// in the plane at `z`, `width` across from x 0 and `height` up from y 0,
+    /// a row at a time from the bottom: an RGBA8 image's bytes, the whole
+    /// plane in one call (the Wall of Flesh's wall, lit as it goes).
+    #[func]
+    fn light_plane(&self, z: i32, width: i32, height: i32) -> PackedByteArray {
+        let w = self.world();
+        let mut out = Vec::with_capacity((width.max(0) * height.max(0) * 4) as usize);
+        for y in 0..height {
+            for x in 0..width {
+                let l = world::unpack_light(w.light_at(x, y, z));
+                out.extend_from_slice(&[l[1] * 17, l[2] * 17, l[3] * 17, l[0] * 17]);
+            }
+        }
+        PackedByteArray::from(out.as_slice())
+    }
+
     /// A MultiMesh buffer (3D transforms with custom data, no colors) for
     /// `transforms`, each instance's custom data the light at its point in
     /// `light_at` (as get_light): 16 floats an instance, in one call instead
