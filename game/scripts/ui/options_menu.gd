@@ -121,6 +121,13 @@ func _general_tab() -> Control:
 	_slider(page, "Field of view", "fov", 60.0, 110.0, 1.0, func(x): return "%d°" % int(x))
 	_slider(page, "View distance", "render_distance", 3.0, 12.0, 1.0, func(x): return "%d chunks" % int(x))
 	_slider(page, "Far view", "far_distance", 0.0, 64.0, 4.0, func(x): return "Off" if int(x) == 0 else "%d chunks" % int(x))
+	_slider(page, "Render scale", "render_scale", Settings.RENDER_SCALE_MIN, Settings.RENDER_SCALE_MAX, 0.05, func(x): return "%d%%" % roundi(x * 100.0), false)
+	_slider(page, "Upscaling", "upscaling", 0.0, Settings.UPSCALERS.size() - 1, 1.0, func(x): return Settings.UPSCALERS[clampi(int(x), 0, Settings.UPSCALERS.size() - 1)][0])
+	var hint := Label.new()
+	hint.text = "Below 100% draws the world at a lower resolution, then stretches it to fit:\nNearest keeps hard pixels, Bilinear blurs, FSR sharpens. Above 100% supersamples."
+	hint.add_theme_font_size_override("font_size", 18)
+	hint.modulate = Color(1, 1, 1, 0.7)
+	page.add_child(hint)
 	return page
 
 

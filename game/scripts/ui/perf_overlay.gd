@@ -69,6 +69,9 @@ func refresh() -> void:
 			avg.y * 1000.0, avg.z * 1000.0,
 			RenderingServer.viewport_get_measured_render_time_cpu(vp),
 			RenderingServer.viewport_get_measured_render_time_gpu(vp)],
+		"3D at %s (%d%%, %s)" % [
+			_resolution(), roundi(get_tree().root.scaling_3d_scale * 100.0),
+			Settings.UPSCALERS[clampi(int(Settings.get_value("upscaling")), 0, Settings.UPSCALERS.size() - 1)][0]],
 		"Draw calls %d   objects %d   primitives %s" % [
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
@@ -107,3 +110,10 @@ static func _count(n: float) -> String:
 	if n >= 1e4:
 		return "%.1fK" % (n / 1e3)
 	return str(int(n))
+
+
+## The size the 3D is drawn at, as "1280×720".
+func _resolution() -> String:
+	var root := get_tree().root
+	var s := Vector2(root.size) * root.scaling_3d_scale
+	return "%d×%d" % [roundi(s.x), roundi(s.y)]

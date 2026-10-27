@@ -11,6 +11,10 @@ const DEFAULTS := {
 	"fov": 80.0,
 	"render_distance": 7,
 	"far_distance": 32,
+	# The 3D view's resolution as a share of the window's, and how it's
+	# stretched to fit (an index into UPSCALERS).
+	"render_scale": 1.0,
+	"upscaling": 1,
 	"ui_scale": 1.0,
 	"sfx_volume": 0.8,
 	"music_volume": 0.6,
@@ -33,6 +37,15 @@ const DEFAULTS := {
 }
 const UI_SCALE_MIN := 0.5
 const UI_SCALE_MAX := 2.0
+const RENDER_SCALE_MIN := 0.25
+const RENDER_SCALE_MAX := 2.0
+## The upscaling methods offered, as [name, Viewport.Scaling3DMode].
+const UPSCALERS := [
+	["Nearest neighbor", Viewport.SCALING_3D_MODE_NEAREST],
+	["Bilinear", Viewport.SCALING_3D_MODE_BILINEAR],
+	["FSR 1.0", Viewport.SCALING_3D_MODE_FSR],
+	["FSR 2.2", Viewport.SCALING_3D_MODE_FSR2],
+]
 
 ## False keeps changes in memory only (automated tests must not touch the user's file).
 var persist := true
@@ -47,6 +60,10 @@ func _ready() -> void:
 		var saved = JSON.parse_string(f.get_as_text())
 		if saved is Dictionary:
 			values = saved
+	apply_render_scale()
+	changed.connect(func(key):
+		if key == "render_scale" or key == "upscaling":
+			apply_render_scale())
 
 
 func get_value(key: String):
@@ -74,6 +91,14 @@ func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(values, "\t"))
+
+
+## Renders the window's 3D at the chosen share of its resolution, stretched
+## back up (or down, above 100%) with the chosen method. The UI stays sharp.
+func apply_render_scale() -> void:
+	var vp := get_tree().root
+	vp.scaling_3d_scale = clampf(float(get_value("render_scale")), RENDER_SCALE_MIN, RENDER_SCALE_MAX)
+	vp.scaling_3d_mode = UPSCALERS[clampi(int(get_value("upscaling")), 0, UPSCALERS.size() - 1)][1]
 
 
 ## Lays a full-screen UI root out at the user's UI scale: the control is sized to
