@@ -120,6 +120,15 @@ var _yoyo_was_out := false
 var _flail_was_out := false
 var selected := 0
 
+## Who you are (your character, PlayerFile): your name, your difficulty
+## (PlayerFile.CLASSIC, MEDIUMCORE, HARDCORE) and how you look.
+var player_name := ""
+var difficulty := 0
+var look := PlayerLook.new()
+## A Hardcore character who died: gone for good, never back (Game takes
+## you to the menu).
+var gone := false
+
 var life := 100
 var life_max := 100
 var mana := 20
@@ -129,6 +138,9 @@ var spawn_point := Vector3.ZERO
 ## The bed you set your spawn with (NO_BED: none).
 var bed := NO_BED
 const NO_BED := Vector3i(-1, -1, -1)
+## A new character's tools (UICharacterCreation: Copper Shortsword, Pickaxe,
+## Axe), lost rather than dropped when a Mediumcore or Hardcore one dies.
+const STARTER_TOOLS := ["CopperShortsword", "CopperPickaxe", "CopperAxe"]
 ## False while a menu has the mouse.
 var input_enabled := true
 var potion_sickness := 0.0
@@ -727,7 +739,7 @@ func _physics_process(delta: float) -> void:
 	var game := Game.current
 	if not alive:
 		respawn_timer -= delta
-		if respawn_timer <= 0.0:
+		if respawn_timer <= 0.0 and not gone:
 			_respawn()
 		return
 	_update_liquid(game)
@@ -3960,14 +3972,34 @@ func _die() -> void:
 	_highlight.visible = false
 	viewmodel.visible = false
 	Audio.play("Player_Killed")
-	# Terraria drops half of your coins where you die.
 	var game := Game.current
-	for coin in ["CopperCoin", "SilverCoin", "GoldCoin"]:
-		var n := inventory.count_of(coin) / 2
-		if n > 0:
-			inventory.remove(coin, n)
-			game.spawn_item(coin, n, center())
+	if difficulty == PlayerFile.CLASSIC:
+		# Terraria drops half of your coins where you die.
+		for coin in ["CopperCoin", "SilverCoin", "GoldCoin"]:
+			var n := inventory.count_of(coin) / 2
+			if n > 0:
+				inventory.remove(coin, n)
+				game.spawn_item(coin, n, center())
+	else:
+		_drop_everything(game)
 	died.emit()
+
+
+## Mediumcore and Hardcore deaths (Player.DropItems): everything you carry,
+## wear and hold falls where you die, scattered (1 to 3 px a tick up, up to
+## 2 across); the starting copper tools are lost instead.
+func _drop_everything(game) -> void:
+	for inv in [inventory, armor, accessories, hook_slot]:
+		for i in inv.slots.size():
+			var st = inv.slots[i]
+			inv.slots[i] = null
+			if st == null or st.item in STARTER_TOOLS:
+				continue
+			var a := randf() * TAU
+			var v := Vector3(cos(a), 0, sin(a)) * randi_range(0, 20) * 0.1 + Vector3.UP * randi_range(10, 30) * 0.1
+			game.spawn_item(st.item, int(st.count), center(), v * NPC.PX_TICK, 0.0, int(st.get("prefix", 0)))
+		inv.changed.emit()
+	stats_changed.emit()
 
 
 ## Right-clicking a bed makes it your spawn point, like Terraria's; your own

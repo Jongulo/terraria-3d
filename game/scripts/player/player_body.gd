@@ -1,8 +1,8 @@
 class_name PlayerBody
 extends Node3D
 ## You, seen in third person (Player's camera views): Terraria's player drawn
-## as a billboard, like the NPCs, from its layers (Player_0_N, a new
-## character's default colours, as PaperDoll) and the armor you wear. Its
+## as a billboard, like the NPCs, from its layers (your PlayerLook, as
+## PaperDoll draws it) and the armor you wear. Its
 ## sheet is drawn on the GPU (an offscreen viewport, again after the armor
 ## changes): ARMS arm poses times Terraria's 20 leg frames (0 standing, 5 in
 ## the air, 6-19 walking). The arm poses are the composite sheets' front arm:
@@ -201,6 +201,7 @@ class _Sheet extends Control:
 	func _draw() -> void:
 		if player == null:
 			return
+		var lk: PlayerLook = player.look
 		var head := _worn("head")
 		var body := _worn("body")
 		var legs := _worn("legs")
@@ -210,9 +211,14 @@ class _Sheet extends Control:
 		var hair: String = Data.item(head).get("hair", "") if head != "" else "full"
 		var hair_tex: Texture2D = null
 		if hair == "full":
-			hair_tex = Assets.texture("Images/Player_Hair_1")
+			hair_tex = lk.hair_texture()
 		elif hair == "hat":
-			hair_tex = Assets.texture("Images/Player_HairAlt_1")
+			hair_tex = lk.hair_texture(true)
+		var skin := lk.colour("skin")
+		var shirt := lk.colour("shirt")
+		var undershirt := lk.colour("undershirt")
+		var coat := lk.layer_texture(14) if body_tex == null and lk.has_long_coat() else null
+		var rows := lk.torso_rows()
 		var bob := _bobs()
 		for arm in PlayerBody.ARMS:
 			var front: Vector2i = PlayerBody.ARM_CELLS[arm]
@@ -220,44 +226,47 @@ class _Sheet extends Control:
 				var at := Vector2(0, (arm * PlayerBody.LEG_FRAMES + f) * PlayerBody.FRAME.y)
 				var up := Vector2(0, bob[f])
 				# Back arm, behind everything.
-				_cell(_skin(7), Vector2i(2, 2), at + up, PaperDoll.SKIN)
+				_cell(lk.layer_texture(7), Vector2i(2, 2), at + up, skin)
 				if body_tex == null:
-					_cell(_skin(8), Vector2i(2, 2), at + up, PaperDoll.UNDERSHIRT)
-					_cell(_skin(13), Vector2i(2, 2), at + up, PaperDoll.SHIRT)
+					_cell(lk.layer_texture(8), Vector2i(2, 2), at + up, undershirt)
+					_cell(lk.layer_texture(13), Vector2i(2, 2), at + up, shirt)
 				else:
 					_cell(body_tex, Vector2i(2, 2), at + up)
-					_cell(body_tex, Vector2i(1, 1), at + up)
-				# Legs (their walk frames move by themselves).
-				_strip(_skin(10), f, at, PaperDoll.SKIN)
+					_cell(body_tex, Vector2i(1, 1) + rows, at + up)
+				# Legs (their walk frames move by themselves), a long coat
+				# or dress over them.
+				_strip(lk.layer_texture(10), f, at, skin)
 				if legs_tex == null:
-					_strip(_skin(11), f, at, PaperDoll.PANTS)
-					_strip(_skin(12), f, at, PaperDoll.SHOES)
+					_strip(lk.layer_texture(11), f, at, lk.colour("pants"))
+					_strip(lk.layer_texture(12), f, at, lk.colour("shoes"))
 				else:
 					_strip(legs_tex, f, at)
+				if coat != null:
+					_strip(coat, f, at, shirt)
 				# Torso.
-				_cell(_skin(3), Vector2i(0, 0), at + up, PaperDoll.SKIN)
+				_cell(lk.layer_texture(3), rows, at + up, skin)
 				if body_tex == null:
-					_cell(_skin(4), Vector2i(0, 0), at + up, PaperDoll.UNDERSHIRT)
-					_cell(_skin(6), Vector2i(0, 0), at + up, PaperDoll.SHIRT)
+					_cell(lk.layer_texture(4), rows, at + up, undershirt)
+					_cell(lk.layer_texture(6), rows, at + up, shirt)
 				else:
-					_cell(body_tex, Vector2i(0, 0), at + up)
+					_cell(body_tex, rows, at + up)
 				# Head (its frames bob with the walk), hair, helmet.
-				_strip(_skin(0), f, at, PaperDoll.SKIN)
-				_strip(_skin(1), f, at)
-				_strip(_skin(2), f, at, PaperDoll.EYES)
+				_strip(lk.layer_texture(0), f, at, skin)
+				_strip(lk.layer_texture(1), f, at)
+				_strip(lk.layer_texture(2), f, at, lk.colour("eyes"))
 				if hair_tex != null:
-					_strip(hair_tex, 0, at + up, PaperDoll.HAIR)
+					_strip(hair_tex, 0, at + up, lk.colour("hair"))
 				if head_tex != null:
 					_strip(head_tex, f, at)
 				# Front arm and hand.
-				_cell(_skin(7), front, at + up, PaperDoll.SKIN)
+				_cell(lk.layer_texture(7), front, at + up, skin)
 				if body_tex == null:
-					_cell(_skin(8), front, at + up, PaperDoll.UNDERSHIRT)
-					_cell(_skin(13), front, at + up, PaperDoll.SHIRT)
+					_cell(lk.layer_texture(8), front, at + up, undershirt)
+					_cell(lk.layer_texture(13), front, at + up, shirt)
 				else:
 					_cell(body_tex, front, at + up)
-					_cell(body_tex, Vector2i(0, 1), at + up)
-				_cell(_skin(9), front, at + up, PaperDoll.SKIN)
+					_cell(body_tex, Vector2i(0, 1) + rows, at + up)
+				_cell(lk.layer_texture(9), front, at + up, skin)
 
 	## How far each leg frame lifts the body (pixels, up negative): the head
 	## sheet's frames have Terraria's walking bob in them.
@@ -276,9 +285,6 @@ class _Sheet extends Control:
 	func _worn(slot: String) -> String:
 		var s = player.armor.slots[Data.ARMOR_SLOTS.find(slot)]
 		return "" if s == null else s.item
-
-	func _skin(layer: int) -> Texture2D:
-		return Assets.texture("Images/Player_0_%d" % layer)
 
 	## Frame `f` of a strip sheet (head, hair, legs, helmets).
 	func _strip(tex: Texture2D, f: int, at: Vector2, tint := Color.WHITE) -> void:

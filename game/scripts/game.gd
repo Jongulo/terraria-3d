@@ -111,6 +111,13 @@ var kill_counts := {}
 var boss_life_max := {}
 
 var _save_path := ""
+## The character you play (PlayerFile): its file and data; none ("" and {})
+## when a world carries its own player (tests, worlds from before characters).
+var _player_path := ""
+var _player_data := {}
+## This world's own number (Terraria's worldID): your bed in it is kept on
+## your character by this.
+var world_id := 0
 var _pending_meta := {}
 var _stream_wait := 0.0
 var _autosave := AUTOSAVE_INTERVAL
@@ -121,12 +128,18 @@ const LIQUID_TPS := 20.0
 const LIQUID_CELLS_PER_TICK := 30000
 
 
-## params: {mode: "new"|"load", name, seed, path}
+## params: {mode: "new"|"load"|"test", name, seed, path, player: a
+## character's file (PlayerFile)}
 func start(params: Dictionary) -> void:
 	current = self
 	Settings.changed.connect(_on_setting_changed)
 	world_name = params.get("name", "World")
 	_save_path = params.get("path", SAVE_DIR + world_name.validate_filename() + ".twld")
+	_player_path = params.get("player", "")
+	if _player_path != "":
+		_player_data = PlayerFile.read(_player_path)
+		if _player_data.is_empty():
+			_player_path = ""
 	add_child(sky)
 	sun_shadows.sky = sky
 	add_child(sun_shadows)
@@ -276,13 +289,18 @@ func _on_world_ready() -> void:
 	var spawn := Vector3(world.get_spawn()) + Vector3(0.5, 0, 0.5)
 	player.spawn_point = spawn
 	player.global_position = spawn
+	world_id = int(meta.get("id", 0))
+	if world_id == 0:
+		world_id = randi_range(1, 2147483647)
 	if not meta.is_empty():
 		_pending_meta = meta
 		_apply_meta(_pending_meta)
 	elif test_world:
 		test_world.give_loadout(player)
-	elif not creative:  # creative starts empty-handed, like Minecraft's
+	elif _player_data.is_empty() and not creative:  # creative starts empty-handed, like Minecraft's
 		_give_starting_items()
+	if not _player_data.is_empty():
+		_enter_as_character()
 	player.creative = creative
 	# Worldgen leaves which way some blocks face (island house chests and
 	# banners) as "rotation" decorations; the player's own choices win.
@@ -296,6 +314,7 @@ func _on_world_ready() -> void:
 	player.input_enabled = false
 	hud.bind(player)
 	player.died.connect(func(): hud.show_death())
+	player.died.connect(_on_player_died)
 	player.respawned.connect(func(): hud.hide_death())
 	sky.dusk.connect(_on_dusk)
 	sky.slime_rain_news.connect(func(started: bool):
@@ -338,12 +357,70 @@ func _begin_play() -> void:
 	message("Welcome to %s!" % world_name, Color(0.6, 0.9, 1.0))
 
 
+## You come in as your character: its name and look; its things and your
+## bed in this world, at which you start (else at the world's spawn), as
+## Terraria spawns you. A test world keeps its own things on you (its
+## sandbox loadout), and your character is left as it was.
+func _enter_as_character() -> void:
+	var d := _player_data
+	player.player_name = str(d.get("name", ""))
+	player.look = PlayerLook.from_data(d.get("look", {}))
+	player.body.redraw()
+	if test_world:
+		_player_path = ""
+		return
+	player.difficulty = int(d.get("difficulty", PlayerFile.CLASSIC))
+	player.load_state(d.get("state", {}))
+	if d.get("fresh", false):
+		_give_starting_items()
+		d.erase("fresh")
+	var b: Array = d.get("spawns", {}).get(str(world_id), [])
+	player.bed = Vector3i(int(b[0]), int(b[1]), int(b[2])) if b.size() == 3 else Player.NO_BED
+	player.global_position = player.respawn_point()
+	player._fall_start = player.global_position.y
+	player.look_at_yaw_pitch(0.0, 0.0)
+
+
+## Writes your character back (its things, and your bed here), unless the
+## world carries its own player.
+func save_character() -> bool:
+	if _player_path == "":
+		return false
+	var st := player.save_state()
+	for k in ["pos", "yaw", "pitch", "bed"]:
+		st.erase(k)
+	_player_data["state"] = st
+	var spawns: Dictionary = _player_data.get("spawns", {})
+	if player.bed == Player.NO_BED:
+		spawns.erase(str(world_id))
+	else:
+		spawns[str(world_id)] = [player.bed.x, player.bed.y, player.bed.z]
+	_player_data["spawns"] = spawns
+	return PlayerFile.write(_player_path, _player_data)
+
+
+## A Hardcore character's death (Player.KillMeForGood): its file is gone
+## (to the trash, where there is one), and after the death screen, so are
+## you, back to the menu with the world saved.
+func _on_player_died() -> void:
+	if _player_path == "" or player.difficulty != PlayerFile.HARDCORE:
+		return
+	PlayerFile.delete(_player_path)
+	_player_path = ""
+	player.gone = true
+	await get_tree().create_timer(5.0).timeout
+	if is_inside_tree():
+		quit_to_menu()
+
+
 func _give_starting_items() -> void:
 	for item in ["CopperShortsword", "CopperPickaxe", "CopperAxe"]:
 		player.inventory.add(item, 1)
 
 
 func _update_playing(delta: float) -> void:
+	if _player_path != "":
+		_player_data["play_time"] = float(_player_data.get("play_time", 0.0)) + delta
 	var pos := player.global_position
 	renderer.focus = pos
 	_update_hell_light()
@@ -1610,13 +1687,17 @@ func save_world() -> bool:
 	hud.stow_temporary_items()
 	var meta := {
 		"name": world_name,
-		"player": player.save_state(),
+		"id": world_id,
 		"sky": sky.save_state(),
 		"chests": chests.save_state(),
 		"bosses": defeated_bosses,
 		"kills": kill_counts,
 		"saved_at": Time.get_datetime_string_from_system(),
 	}
+	# Your things go with your character; a world without one (a test world,
+	# tests) keeps its player.
+	if _player_data.is_empty() or test_world:
+		meta["player"] = player.save_state()
 	if test_world:
 		meta["test_world"] = test_world.save_state()
 	meta["rotations"] = block_rotations
@@ -1632,13 +1713,18 @@ func save_world() -> bool:
 	meta["invasion"] = invasion.save_state()
 	meta["meteors"] = meteors.save_state()
 	var ok := world.save(ProjectSettings.globalize_path(_save_path), JSON.stringify(meta))
+	if _player_path != "":
+		ok = save_character() and ok
 	message("World saved" if ok else "Saving failed!", Color(0.7, 0.9, 0.7) if ok else Color(1, 0.4, 0.4))
 	return ok
 
 
 func _apply_meta(meta: Dictionary) -> void:
 	world_name = meta.get("name", world_name)
-	player.load_state(meta.get("player", {}))
+	# (With your character, a player saved in the world before characters is
+	# left behind.)
+	if _player_data.is_empty() or test_world:
+		player.load_state(meta.get("player", {}))
 	sky.load_state(meta.get("sky", {}))
 	chests.load_state(meta.get("chests", {}))
 	defeated_bosses = meta.get("bosses", {})

@@ -70,6 +70,7 @@ Run npc_scale_editor_test 90 -Headless
 Run npc_picker_test 120 -Headless
 Run model_sculptor_test 180 -Headless
 Run menu_world_test 60 -Headless
+Run player_test 240 -Headless
 Run creative_test 120 -Headless
 
 if ($Visual) {

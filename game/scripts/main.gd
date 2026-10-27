@@ -1,10 +1,18 @@
 extends Node
-## Title screen: create or load a world, then hand over to a Game session.
+## Title screen, as Terraria's menus go: Single Player, then pick (or
+## create) a character (PlayerFile), then pick (or create) a world, then
+## hand over to a Game session as that character.
 
 var _menu: Control
 var _game: Game
-## Deleted worlds go to the system trash (tests turn this off).
+## Deleted worlds and characters go to the system trash (tests turn this off).
 var use_trash := true
+## The page shown under the logo, and the character picked for the worlds.
+var _ui: Control
+var _layout: VBoxContainer
+var _logo: TextureRect
+var _content: Control
+var _player_path := ""
 
 
 func _ready() -> void:
@@ -22,21 +30,24 @@ func _show_missing_assets() -> void:
 	add_child(l)
 
 
-func _show_menu() -> void:
+## The backdrop, the logo and the first page (`page`: "title", "players",
+## "create" or "worlds").
+func _show_menu(page := "title") -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Audio.set_music("TitleClassic")
 	# Full-screen art stays unscaled; the menu UI follows the UI scale setting.
 	var backdrop := Control.new()
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_menu = backdrop
-	var ui := Control.new()
+	_ui = Control.new()
 	var theme := Theme.new()
 	theme.default_font = Assets.font("Mouse_Text")
 	theme.default_font_size = 26
 	theme.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0.9))
 	theme.set_constant("shadow_offset_x", "Label", 2)
 	theme.set_constant("shadow_offset_y", "Label", 2)
-	ui.theme = theme
+	_ui.theme = theme
+	_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_menu)
 
 	var bg := TextureRect.new()
@@ -52,35 +63,215 @@ func _show_menu() -> void:
 	hills.position.y = -435
 	hills.size.y = 435
 	_menu.add_child(hills)
-	_menu.add_child(ui)
-	Settings.track_ui_scale(ui)
-	# Layout: the logo on top (shrinking with the window), then two columns:
-	# creating worlds and settings on the left, the saved worlds on the right
-	# (scrolling to fill the height). Fits down to 640 x 360 at any UI scale.
-	var layout := VBoxContainer.new()
-	layout.name = "Layout"
-	layout.set_anchors_preset(Control.PRESET_FULL_RECT)
-	layout.offset_left = 16
-	layout.offset_right = -16
-	layout.offset_top = 8
-	layout.offset_bottom = -30  # the credit line
-	layout.add_theme_constant_override("separation", 8)
-	ui.add_child(layout)
-	var logo := TextureRect.new()
-	logo.texture = Assets.texture("Images/Logo")
-	logo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	layout.add_child(logo)
+	_menu.add_child(_ui)
+	Settings.track_ui_scale(_ui)
+	# Layout: the logo on top (shrinking with the window), then the page.
+	# Fits down to 640 x 360 at any UI scale.
+	_layout = VBoxContainer.new()
+	_layout.name = "Layout"
+	_layout.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_layout.offset_left = 16
+	_layout.offset_right = -16
+	_layout.offset_top = 8
+	_layout.offset_bottom = -30  # the credit line
+	_layout.add_theme_constant_override("separation", 8)
+	_ui.add_child(_layout)
+	_logo = TextureRect.new()
+	_logo.texture = Assets.texture("Images/Logo")
+	_logo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_layout.add_child(_logo)
 	var sub := Label.new()
 	sub.text = "3D"
-	logo.add_child(sub)
+	_logo.add_child(sub)
+	_content = MarginContainer.new()
+	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_layout.add_child(_content)
 
+	# The logo gets what height the page leaves (up to 30%), and the "3D"
+	# sits on its lower right as the logo scales.
+	var fit := func():
+		var free := _ui.size.y - 54.0 - _content.get_combined_minimum_size().y
+		var h := clampf(minf(_ui.size.y * 0.3, free), 48.0, 180.0)
+		_logo.custom_minimum_size.y = h
+		var k := minf(h / 142.0, maxf(_logo.size.x, 1.0) / 486.0)  # the logo's drawn scale
+		sub.add_theme_font_size_override("font_size", maxi(int(48 * k), 12))
+		sub.position = (_logo.size - Vector2(486, 142) * k) / 2.0 + Vector2(443, 110) * k
+	_ui.resized.connect(fit)
+	_logo.resized.connect(fit)
+	_content.resized.connect(fit)
+
+	var credit := Label.new()
+	credit.text = "Fan project using assets from your own Terraria install. Terraria (c) Re-Logic."
+	credit.add_theme_font_size_override("font_size", 18)
+	credit.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	credit.position = Vector2(12, -28)
+	_ui.add_child(credit)
+	show_page(page)
+	fit.call()
+
+
+## Swaps the page under the logo.
+func show_page(page: String) -> void:
+	for c in _content.get_children():
+		c.queue_free()
+	var node: Control
+	match page:
+		"players":
+			node = _players_page()
+		"create":
+			var creator := CharacterCreator.new()
+			creator.name = "CharacterCreator"
+			creator.created.connect(func(path: String):
+				_player_path = path
+				show_page("players"))
+			creator.cancelled.connect(show_page.bind("players"))
+			node = creator
+		"worlds":
+			node = _worlds_page()
+		_:
+			node = _title_page()
+	node.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content.add_child(node)
+
+
+func _title_page() -> Control:
+	var center := CenterContainer.new()
+	center.name = "TitlePage"
+	var box := VBoxContainer.new()
+	box.custom_minimum_size.x = 300
+	box.add_theme_constant_override("separation", 10)
+	center.add_child(box)
+	for b in [["Single Player", show_page.bind("players")], ["Settings", _open_settings], ["Exit", func(): get_tree().quit()]]:
+		var button := Button.new()
+		button.name = b[0].replace(" ", "")
+		button.text = b[0]
+		button.pressed.connect(b[1])
+		box.add_child(button)
+	return center
+
+
+func _open_settings() -> void:
+	_layout.visible = false
+	var menu := OptionsMenu.new()
+	_ui.add_child(menu)
+	menu.closed.connect(func(): _layout.visible = true)
+
+
+## Your characters (last played first), New Character and Back.
+func _players_page() -> Control:
+	var page := VBoxContainer.new()
+	page.name = "PlayersPage"
+	page.add_theme_constant_override("separation", 8)
+	var center := HBoxContainer.new()
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page.add_child(center)
+	var col := VBoxContainer.new()
+	col.custom_minimum_size.x = 460
+	col.add_theme_constant_override("separation", 8)
+	center.add_child(col)
+	var title := Label.new()
+	title.text = "Select Player"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var list := VBoxContainer.new()
+	list.name = "PlayerList"
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+	col.add_child(scroll)
+	var players := PlayerFile.list()
+	if players.is_empty():
+		var none := Label.new()
+		none.text = "No characters yet"
+		none.modulate = Color(1, 1, 1, 0.7)
+		none.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		list.add_child(none)
+	for path in players:
+		var d := PlayerFile.read(path)
+		if not d.is_empty():
+			list.add_child(_player_row(path, d))
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	var back := Button.new()
+	back.name = "Back"
+	back.text = "Back"
+	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	back.pressed.connect(show_page.bind("title"))
+	buttons.add_child(back)
+	var new_char := Button.new()
+	new_char.name = "NewCharacter"
+	new_char.text = "New Character"
+	new_char.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	new_char.pressed.connect(show_page.bind("create"))
+	buttons.add_child(new_char)
+	col.add_child(buttons)
+	return page
+
+
+## A character: its figure, its name (in its difficulty's colour; picks it),
+## its life, mana and time played, and Delete (asking first, in the row).
+func _player_row(path: String, d: Dictionary) -> HBoxContainer:
+	var difficulty := clampi(int(d.get("difficulty", 0)), 0, PlayerFile.DIFFICULTIES.size() - 1)
+	var st: Dictionary = d.get("state", {})
+	var info := "%s   Life %d   Mana %d   %s" % [PlayerFile.DIFFICULTIES[difficulty], int(st.get("life_max", 100)),
+			int(st.get("mana_max", 20)), PlayerFile.play_time_text(float(d.get("play_time", 0.0)))]
+	return _confirm_row("Player_" + path.get_file().get_basename().validate_node_name(), str(d.name), func():
+		var b := Button.new()
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size.y = 64
+		b.tooltip_text = info
+		b.pressed.connect(func():
+			_player_path = path
+			show_page("worlds"))
+		var doll := PaperDoll.new()
+		doll.look = PlayerLook.from_data(d.get("look", {}))
+		doll.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		doll.size = PaperDoll.FRAME
+		doll.position = Vector2(6, 4)
+		doll.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(doll)
+		var text := VBoxContainer.new()
+		text.position = Vector2(56, 2)
+		text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var n := Label.new()
+		n.text = str(d.name)
+		n.add_theme_color_override("font_color", PlayerFile.DIFFICULTY_COLOURS[difficulty])
+		text.add_child(n)
+		var i := Label.new()
+		i.text = info
+		i.add_theme_font_size_override("font_size", 18)
+		text.add_child(i)
+		b.add_child(text)
+		var forget := func():
+			PlayerFile.use_trash = use_trash
+			PlayerFile.delete(path)
+			if _player_path == path:
+				_player_path = ""
+		return [b, forget])
+
+
+## Pick a world for your character: create one (left), your saved worlds
+## (right), and Back to the characters.
+func _worlds_page() -> Control:
+	var d := PlayerFile.read(_player_path)
+	var page := VBoxContainer.new()
+	page.name = "WorldsPage"
+	page.add_theme_constant_override("separation", 8)
+	var title := Label.new()
+	title.text = "Select World  -  playing as %s" % str(d.get("name", "?"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	page.add_child(title)
 	var columns := HBoxContainer.new()
 	columns.alignment = BoxContainer.ALIGNMENT_CENTER
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	columns.add_theme_constant_override("separation", 24)
-	layout.add_child(columns)
+	page.add_child(columns)
 	# Scrolls only when the window is too short for it.
 	var left_scroll := ScrollContainer.new()
 	left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -133,6 +324,7 @@ func _show_menu() -> void:
 	evil_row.add_child(evil_pick)
 	box.add_child(evil_row)
 	var new_btn := Button.new()
+	new_btn.name = "CreateWorld"
 	new_btn.text = "Create World"
 	new_btn.pressed.connect(func():
 		var seed_text := seed_edit.text.strip_edges()
@@ -140,7 +332,8 @@ func _show_menu() -> void:
 		_start({"mode": "new", "name": name_edit.text.strip_edges() if name_edit.text.strip_edges() != "" else "World", "seed": seed,
 				"evil": evil_pick.selected, "size": Game.WORLD_SIZES.keys()[size_pick.selected], "creative": mode_pick.selected == 1}))
 	box.add_child(new_btn)
-	# Test worlds: the whole sandbox, or one theme of it (TestWorld.KINDS).
+	# Test worlds: the whole sandbox, or one theme of it (TestWorld.KINDS),
+	# with their own things on you (your character's are left as they are).
 	var test_row := HBoxContainer.new()
 	var test_pick := OptionButton.new()
 	for k in TestWorld.KINDS:
@@ -150,29 +343,17 @@ func _show_menu() -> void:
 	test_row.add_child(test_pick)
 	var test_btn := Button.new()
 	test_btn.text = "Create"
-	test_btn.tooltip_text = "Flat sandbox with every item in chests, and what the picked kind is for"
+	test_btn.tooltip_text = "Flat sandbox with every item in chests, and what the picked kind is for.\nIt has its own items for you: your character's stay as they are."
 	test_btn.pressed.connect(func():
 		var k: String = TestWorld.KINDS.keys()[test_pick.selected]
 		_start({"mode": "test", "test_kind": k, "name": _unique_name(TestWorld.KINDS[k]), "seed": 1}))
 	test_row.add_child(test_btn)
 	box.add_child(test_row)
-	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 10)
-	box.add_child(bottom)
-	var options := Button.new()
-	options.text = "Settings"
-	options.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	options.pressed.connect(func():
-		layout.visible = false
-		var menu := OptionsMenu.new()
-		ui.add_child(menu)
-		menu.closed.connect(func(): layout.visible = true))
-	bottom.add_child(options)
-	var quit := Button.new()
-	quit.text = "Exit"
-	quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	quit.pressed.connect(func(): get_tree().quit())
-	bottom.add_child(quit)
+	var back := Button.new()
+	back.name = "Back"
+	back.text = "Back"
+	back.pressed.connect(show_page.bind("players"))
+	box.add_child(back)
 
 	var right := VBoxContainer.new()
 	var worlds := _saved_worlds()
@@ -192,47 +373,45 @@ func _show_menu() -> void:
 		right.add_child(scroll)
 		for w in worlds:
 			list.add_child(_world_row(w))
-
-	# Columns up to 340 wide; the logo gets what height the left column leaves
-	# (up to 30%), and the "3D" sits on its lower right as the logo scales.
+	# Columns up to 340 wide.
 	var fit := func():
-		var col_w := clampf((ui.size.x - 56.0) / 2.0, 200.0, 340.0)
+		var col_w := clampf((_ui.size.x - 56.0) / 2.0, 200.0, 340.0)
 		left_scroll.custom_minimum_size.x = col_w
 		right.custom_minimum_size.x = col_w
-		var free := ui.size.y - 54.0 - box.get_combined_minimum_size().y
-		var h := clampf(minf(ui.size.y * 0.3, free), 48.0, 180.0)
-		logo.custom_minimum_size.y = h
-		var k := minf(h / 142.0, maxf(logo.size.x, 1.0) / 486.0)  # the logo's drawn scale
-		sub.add_theme_font_size_override("font_size", maxi(int(48 * k), 12))
-		sub.position = (logo.size - Vector2(486, 142) * k) / 2.0 + Vector2(443, 110) * k
 	fit.call()
-	ui.resized.connect(fit)
-	logo.resized.connect(fit)
+	_ui.resized.connect(fit)
+	page.tree_exiting.connect(func(): _ui.resized.disconnect(fit))
+	return page
 
-	var credit := Label.new()
-	credit.text = "Fan project using assets from your own Terraria install. Terraria (c) Re-Logic."
-	credit.add_theme_font_size_override("font_size", 18)
-	credit.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	credit.position = Vector2(12, -28)
-	ui.add_child(credit)
 
 ## A saved world: its name (loads it) and a Delete button, which asks first
 ## in the same row.
 func _world_row(file: String) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.name = "World_" + file.get_basename().validate_node_name()
-	var show_normal := func():
-		for c in row.get_children():
-			c.queue_free()
+	return _confirm_row("World_" + file.get_basename().validate_node_name(), file.get_basename(), func():
 		var b := Button.new()
 		b.text = file.get_basename()
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func(): _start({"mode": "load", "name": file.get_basename(), "path": Game.SAVE_DIR + file}))
-		row.add_child(b)
+		return [b, delete_world.bind(file)])
+
+
+## A list row: what `make` gives ([its main button, what deleting does]),
+## and a Delete button, which asks "Delete <what>?" in the same row first
+## (Cancel puts the row back). The last row gone, the page is redrawn.
+func _confirm_row(row_name: String, what: String, make: Callable) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = row_name
+	var on_delete := [Callable()]
+	var show_normal := func():
+		for c in row.get_children():
+			c.queue_free()
+		var made: Array = make.call()
+		on_delete[0] = made[1]
+		row.add_child(made[0])
 		var del := Button.new()
 		del.name = "Delete"
 		del.text = "Delete"
-		del.tooltip_text = "Delete this world (it goes to the trash)"
+		del.tooltip_text = "Delete %s (it goes to the trash)" % what
 		row.add_child(del)
 		return del
 	var del: Button = show_normal.call()
@@ -240,7 +419,7 @@ func _world_row(file: String) -> HBoxContainer:
 		for c in row.get_children():
 			c.queue_free()
 		var q := Label.new()
-		q.text = "Delete %s?" % file.get_basename()
+		q.text = "Delete %s?" % what
 		q.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		q.clip_text = true
 		q.add_theme_color_override("font_color", Color(1, 0.55, 0.45))
@@ -249,11 +428,11 @@ func _world_row(file: String) -> HBoxContainer:
 		yes.name = "Confirm"
 		yes.text = "Delete"
 		yes.pressed.connect(func():
-			delete_world(file)
+			on_delete[0].call()
+			var list := row.get_parent()
 			row.queue_free()
-			if row.get_parent().get_child_count() <= 1:
-				_menu.queue_free()
-				_show_menu.call_deferred())  # last one gone: drop the list
+			if list.get_child_count() <= 1:
+				show_page.call_deferred(_content.get_child(0).name.trim_suffix("Page").to_lower()))
 		row.add_child(yes)
 		var no := Button.new()
 		no.name = "Cancel"
@@ -298,7 +477,9 @@ func _saved_worlds() -> Array:
 	return out
 
 
+## Plays `params` as the picked character.
 func _start(params: Dictionary) -> void:
+	params["player"] = _player_path
 	_menu.queue_free()
 	_game = Game.new()
 	add_child(_game)
@@ -306,7 +487,9 @@ func _start(params: Dictionary) -> void:
 	_game.start(params)
 
 
+## Back from a game: to the worlds, as your character (or, if it's gone, the
+## characters).
 func _on_exit() -> void:
 	_game.queue_free()
 	_game = null
-	_show_menu.call_deferred()
+	_show_menu.call_deferred("worlds" if FileAccess.file_exists(_player_path) else "players")

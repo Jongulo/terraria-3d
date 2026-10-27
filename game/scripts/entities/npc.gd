@@ -1441,6 +1441,8 @@ static func dialog(n: int) -> String:
 static func fill(text: String) -> String:
 	var game := Game.current
 	text = text.replace("{InventoryKey}", "Tab").replace("{WorldName}", game.world_name)
+	if game.player.player_name != "":
+		text = text.replace("{PlayerName}", game.player.player_name)
 	text = text.replace("{AnglerCompletedQuestsCount}", str(game.player.angler_quests))
 	if "{WorldEvilStone}" in text:
 		text = text.replace("{WorldEvilStone}", "Crimstone" if game.town.world_evil() == "crimson" else "Ebonstone")

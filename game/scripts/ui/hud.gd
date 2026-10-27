@@ -652,7 +652,10 @@ func _process(delta: float) -> void:
 	if player == null:
 		return
 	if _death.visible:
-		_death_label.text = "You were slain...\n%d" % ceili(player.respawn_timer)
+		if player.gone:
+			_death_label.text = "You were slain...\n%s has died for good" % player.player_name
+		else:
+			_death_label.text = "You were slain...\n%d" % ceili(player.respawn_timer)
 	var game := Game.current
 	var b := game.boss_status() if game else {}
 	_invasion.visible = game != null and game.invasion.near(player.global_position)

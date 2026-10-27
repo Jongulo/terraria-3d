@@ -2,20 +2,13 @@ class_name PaperDoll
 extends Control
 ## The player as Terraria draws them, standing and facing right, wearing
 ## their armor: shown in the inventory beside the armor slots (in first
-## person you never see yourself). Built from Terraria's player layers
-## (Player_0_N, tinted with a new character's default colours) and the
+## person you never see yourself), and alone (a look, no player) in the
+## character creator. Built from Terraria's player layers (PlayerLook: its
+## clothing style's Player_<style>_N, tinted with its colours) and the
 ## armor's equip sprites; a 1.4 body is a composite sheet of 40x56 cells
 ## (torso, arms and shoulders apart).
 
 const FRAME := Vector2(40, 56)
-## Terraria's default new-character colours.
-const SKIN := Color8(255, 125, 90)
-const HAIR := Color8(215, 90, 55)
-const EYES := Color8(105, 90, 75)
-const SHIRT := Color8(175, 165, 140)
-const UNDERSHIRT := Color8(160, 180, 215)
-const PANTS := Color8(255, 230, 175)
-const SHOES := Color8(160, 105, 60)
 ## Composite cells (column, row) of a standing pose.
 const TORSO := Vector2i(0, 0)
 const FRONT_ARM := Vector2i(2, 0)
@@ -24,27 +17,31 @@ const BACK_ARM := Vector2i(2, 2)
 const BACK_SHOULDER := Vector2i(1, 1)
 
 var player: Player
+## Drawn without a player (the character creator): this look, no armor.
+var look: PlayerLook
 ## The player's height in the world (Player.half.y), which the standing
 ## figure is drawn at: so one art pixel of the player is this / its height.
 const PLAYER_HEIGHT := 1.8
 static var _standing: Image
 
 
-## The player standing in plain clothes, cropped to the figure (texture
-## pixels, as in Terraria's sheets).
+## A new character standing in plain clothes (Terraria's default look),
+## cropped to the figure (texture pixels, as in Terraria's sheets): the
+## player's size in the world, whatever they look like.
 static func standing_image() -> Image:
 	if _standing != null:
 		return _standing
+	var lk := PlayerLook.new()
 	var img := Image.create(40, 56, false, Image.FORMAT_RGBA8)
-	for layer in [[7, BACK_ARM, SKIN], [10, null, SKIN], [11, null, PANTS], [12, null, SHOES], [3, TORSO, SKIN],
-			[4, TORSO, UNDERSHIRT], [6, TORSO, SHIRT], [0, null, SKIN], [1, null, Color.WHITE], [2, null, EYES],
-			["hair", null, HAIR], [7, FRONT_ARM, SKIN], [8, FRONT_ARM, UNDERSHIRT], [13, FRONT_ARM, SHIRT], [9, FRONT_ARM, SKIN]]:
-		var src: Image = Assets.image("Images/Player_Hair_1" if layer[0] is String else "Images/Player_0_%d" % layer[0])
+	for layer in [[7, BACK_ARM, "skin"], [10, null, "skin"], [11, null, "pants"], [12, null, "shoes"], [3, TORSO, "skin"],
+			[4, TORSO, "undershirt"], [6, TORSO, "shirt"], [0, null, "skin"], [1, null, ""], [2, null, "eyes"],
+			["hair", null, "hair"], [7, FRONT_ARM, "skin"], [8, FRONT_ARM, "undershirt"], [13, FRONT_ARM, "shirt"], [9, FRONT_ARM, "skin"]]:
+		var src: Image = lk.hair_texture().get_image() if layer[0] is String else lk.layer_image(layer[0])
 		var cell = layer[1]
 		var at := Vector2i(cell) * Vector2i(FRAME) if cell != null else Vector2i.ZERO
 		if at.x + 40 > src.get_width() or at.y + 56 > src.get_height():
 			continue
-		var tint: Color = layer[2]
+		var tint: Color = Color.WHITE if layer[2] == "" else lk.colour(layer[2])
 		for y in 56:
 			for x in 40:
 				var c := src.get_pixel(at.x + x, at.y + y)
@@ -61,7 +58,8 @@ static func player_pixel_size() -> float:
 
 
 func _draw() -> void:
-	if player == null:
+	var lk := player.look if player != null else look
+	if lk == null:
 		return
 	var head := _worn("head")
 	var body := _worn("body")
@@ -70,57 +68,61 @@ func _draw() -> void:
 	var body_tex := Assets.armor_texture("body", body) if body != "" else null
 	var legs_tex := Assets.armor_texture("legs", legs) if legs != "" else null
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.08, 0.1, 0.22, 0.35))
+	var skin := lk.colour("skin")
+	var shirt := lk.colour("shirt")
+	var undershirt := lk.colour("undershirt")
+	var rows := lk.torso_rows()
 	# Back arm, behind everything.
-	_cell(_skin(7), BACK_ARM, SKIN)
+	_cell(lk.layer_texture(7), BACK_ARM, skin)
 	if body_tex == null:
-		_cell(_skin(8), BACK_ARM, UNDERSHIRT)
-		_cell(_skin(13), BACK_ARM, SHIRT)
+		_cell(lk.layer_texture(8), BACK_ARM, undershirt)
+		_cell(lk.layer_texture(13), BACK_ARM, shirt)
 	else:
 		_cell(body_tex, BACK_ARM)
-		_cell(body_tex, BACK_SHOULDER)
-	# Legs.
-	_frame(_skin(10), SKIN)
+		_cell(body_tex, BACK_SHOULDER + rows)
+	# Legs (a long coat or dress over them, unless armor covers the body).
+	_frame(lk.layer_texture(10), skin)
 	if legs_tex == null:
-		_frame(_skin(11), PANTS)
-		_frame(_skin(12), SHOES)
+		_frame(lk.layer_texture(11), lk.colour("pants"))
+		_frame(lk.layer_texture(12), lk.colour("shoes"))
 	else:
 		_frame(legs_tex)
+	if body_tex == null and lk.has_long_coat():
+		_frame(lk.layer_texture(14), shirt)
 	# Torso.
-	_cell(_skin(3), TORSO, SKIN)
+	_cell(lk.layer_texture(3), TORSO + rows, skin)
 	if body_tex == null:
-		_cell(_skin(4), TORSO, UNDERSHIRT)
-		_cell(_skin(6), TORSO, SHIRT)
+		_cell(lk.layer_texture(4), TORSO + rows, undershirt)
+		_cell(lk.layer_texture(6), TORSO + rows, shirt)
 	else:
-		_cell(body_tex, TORSO)
+		_cell(body_tex, TORSO + rows)
 	# Head: face, eyes, hair (hats keep a trimmed fringe), helmet.
-	_frame(_skin(0), SKIN)
-	_frame(_skin(1))
-	_frame(_skin(2), EYES)
+	_frame(lk.layer_texture(0), skin)
+	_frame(lk.layer_texture(1))
+	_frame(lk.layer_texture(2), lk.colour("eyes"))
 	var hair: String = Data.item(head).get("hair", "") if head != "" else "full"
 	if hair == "full":
-		_frame(Assets.texture("Images/Player_Hair_1"), HAIR)
+		_frame(lk.hair_texture(), lk.colour("hair"))
 	elif hair == "hat":
-		_frame(Assets.texture("Images/Player_HairAlt_1"), HAIR)
+		_frame(lk.hair_texture(true), lk.colour("hair"))
 	if head_tex != null:
 		_frame(head_tex)
 	# Front arm and hand.
-	_cell(_skin(7), FRONT_ARM, SKIN)
+	_cell(lk.layer_texture(7), FRONT_ARM, skin)
 	if body_tex == null:
-		_cell(_skin(8), FRONT_ARM, UNDERSHIRT)
-		_cell(_skin(13), FRONT_ARM, SHIRT)
+		_cell(lk.layer_texture(8), FRONT_ARM, undershirt)
+		_cell(lk.layer_texture(13), FRONT_ARM, shirt)
 	else:
 		_cell(body_tex, FRONT_ARM)
-		_cell(body_tex, FRONT_SHOULDER)
-	_cell(_skin(9), FRONT_ARM, SKIN)
+		_cell(body_tex, FRONT_SHOULDER + rows)
+	_cell(lk.layer_texture(9), FRONT_ARM, skin)
 
 
 func _worn(slot: String) -> String:
+	if player == null:
+		return ""
 	var s = player.armor.slots[Data.ARMOR_SLOTS.find(slot)]
 	return "" if s == null else s.item
-
-
-func _skin(layer: int) -> Texture2D:
-	return Assets.texture("Images/Player_0_%d" % layer)
 
 
 ## The first 40x56 frame of a strip sheet (head, hair, legs).

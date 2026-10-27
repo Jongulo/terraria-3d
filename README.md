@@ -25,7 +25,7 @@ none of Terraria's assets and copies them from your own install.
 
 After a Terraria update, or if Terraria wasn't installed when you ran the installer, run
 **Extract Terraria assets** from the Start menu (its log is `extract\extract.log`). Uninstalling
-removes the extracted assets but keeps your worlds and settings
+removes the extracted assets but keeps your characters, worlds and settings
 (`%APPDATA%\Godot\app_userdata\Terraria 3D`).
 
 To make the installer yourself, see [Building the Windows installer](#building-the-windows-installer).
@@ -69,6 +69,24 @@ volumes and optional shaders.
 | Space twice (creative) | Start / stop flying (Space up, Shift down) |
 | MMB (creative) | Pick block: the targeted block into the hotbar |
 
+### Characters and worlds
+
+As in Terraria, characters and worlds are saved apart. **Single Player** lists your characters.
+Pick one, then pick or create a world for it.
+
+- **New Character:** choose a name and a difficulty. For the look, choose one of Terraria's 213
+  starting hairstyles, one of its 10 clothing styles and seven colours, or press **Random**.
+- **Your character keeps its things** from world to world: inventory, armor and accessories,
+  piggy bank and safe, life and mana, buffs and pets. A new character starts with Terraria's
+  copper shortsword, pickaxe and axe.
+- **A world keeps none of your things.** You start at your bed in that world if you set one,
+  otherwise at the world's spawn.
+- **Difficulty** decides what a death costs:
+  - **Classic** drops half your coins.
+  - **Mediumcore** drops everything you carry and wear. The starting copper tools are lost.
+  - **Hardcore** dies for good. The character is deleted (to the system trash) and you go back
+    to the menu.
+
 ### Creative mode
 
 Creative mode works like Minecraft's. You pick **Game mode: Creative** when creating a world,
@@ -78,7 +96,7 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 - **Flying:** double-tap jump to fly, and touch the ground to land.
 - **Breaking:** blocks break in one hit (even altars), and nothing drops.
 - **Nothing used up:** placed blocks, ammo, potions, mana and buckets stay.
-- **Starting out:** a creative world starts empty-handed.
+- **Starting out:** your character brings its own things, as in any world.
 - **Inventory (Tab):** shows every item under the hotbar, in tabs (Blocks, Tools, Weapons,
   Accessories, Armor, Consumables, Materials) with a search box. The full inventory has its own tab.
   - Click takes a full stack.
@@ -88,7 +106,9 @@ or switch any time with the pause menu's game mode button. The mode is saved wit
 
 ## Test world
 
-**Create Test World** on the title screen builds a flat sandbox for trying everything:
+**Test World** (under Create World, once you've picked a character) builds a flat sandbox
+for trying everything. You play as your character, but with the test world's own items, so your
+character's things are left as they were:
 
 - **North:** chests holding every item (full stacks, sorted by category); crafting stations at spawn.
 - **East:** an enemy arena walled 5 blocks high (above a zombie's best jump), entered through a

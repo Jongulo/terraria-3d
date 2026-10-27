@@ -14,6 +14,8 @@ var _images := {}
 ## Guards _images: block art is built on worker threads too (BlockModels).
 var _image_lock := Mutex.new()
 var _textures := {}
+## Which images exist (has()).
+var _exists := {}
 var _streams := {}
 var _fonts := {}
 
@@ -62,6 +64,13 @@ func image(name: String) -> Image:
 	_images[name] = img
 	_image_lock.unlock()
 	return img
+
+
+## Whether the image `name` (as image()) was extracted.
+func has(name: String) -> bool:
+	if not _exists.has(name):
+		_exists[name] = FileAccess.file_exists(disk_path(name + ".png"))
+	return _exists[name]
 
 
 func texture(name: String) -> Texture2D:

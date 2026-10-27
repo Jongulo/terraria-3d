@@ -57,6 +57,7 @@ run npc_scale_editor_test 90 --headless --fixed-fps 60
 run npc_picker_test 120 --headless --fixed-fps 60
 run model_sculptor_test 180 --headless --fixed-fps 60
 run menu_world_test 60 --headless --fixed-fps 60
+run player_test 240 --headless --fixed-fps 60
 run creative_test 120 --headless --fixed-fps 60
 
 if [ "${1:-}" = "--visual" ]; then
