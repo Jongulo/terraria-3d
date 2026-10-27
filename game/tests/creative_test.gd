@@ -344,7 +344,7 @@ func _run() -> void:
 
 	# Gem trees in the caves: their gems, drops, recipes and light.
 	var gem_tops := w.get_decorations().filter(func(d): return d.kind == "tree_top" and int(d.style) / 10 >= 16 and int(d.style) / 10 <= 22)
-	check(gem_tops.size() > 5 and gem_tops.all(func(d): return int(d.pos.y) < int(w.get_layers().surface)), "gem trees grow underground (%d)" % gem_tops.size())
+	check(gem_tops.size() >= 3 and gem_tops.all(func(d): return int(d.pos.y) < int(w.get_layers().surface)), "gem trees grow underground, now and then (%d)" % gem_tops.size())
 	var ruby := Data.block(Data.block_id("ruby_tree_trunk"))
 	var gems_dropped := 0
 	var check_drop_ok := true

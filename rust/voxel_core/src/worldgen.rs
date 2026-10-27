@@ -297,9 +297,17 @@ pub const GEM_CANOPY: i32 = 16;
 const GEM_TOP_ROOM: i32 = 7;
 pub const GEMS: [&str; 7] = ["topaz", "amethyst", "sapphire", "emerald", "ruby", "diamond", "amber"];
 
+/// The surface layer's foot, below `Layers::surface_base` (the spawner's line
+/// between the surface and the underground; Terraria's Main.worldSurface).
+pub const SURFACE_LAYER_DEPTH: i32 = 12;
+/// One floor in this many tries a gem tree: Terraria's 1 in 5 is per tile of
+/// its 2D floors, and a 3D cave's floor is a sheet, so 1 in 5 crowded them.
+const GEM_TREE_ODDS: i32 = 20;
+
 /// Gem trees in the caves, like Terraria's ("Speleothems and Gem Trees"): every
-/// floor of stone (or ebonstone, crimstone) below the surface layer gets a 1 in
-/// 5 try, if no water lies on it, at one of the seven gem trees at random;
+/// floor of stone (or ebonstone, crimstone) below the surface layer, under a
+/// roof (never open to the sky), gets a 1 in GEM_TREE_ODDS try (Terraria's 1
+/// in 5), if no water lies on it, at one of the seven gem trees at random;
 /// one grows (TryGrowingTreeByType, the GemTree profiles) 7-12 cells tall
 /// where that is clear above, and room for its top (Terraria asks for 4 cells;
 /// the 96 px top is 6, which in 3D would sink into the cave's roof), the trunk not hard against a
@@ -326,9 +334,9 @@ pub fn gem_trees(w: &mut World, seed: i32, l: &Layers) -> usize {
             if x < 3 || z < 3 || x >= w.sx - 3 || z >= w.sz - 3 {
                 continue;
             }
-            let mut y = l.surface_base - 8;
+            let mut y = l.surface_base - SURFACE_LAYER_DEPTH - 1;
             while y > l.underworld_top + 2 {
-                if grounds.contains(&w.get(x, y, z)) && w.get(x, y + 1, z) == 0 && rng.range(0, 5) == 0 && w.liquid_at(x, y + 1, z).1 == 0 {
+                if grounds.contains(&w.get(x, y, z)) && w.get(x, y + 1, z) == 0 && rng.range(0, GEM_TREE_ODDS) == 0 && w.liquid_at(x, y + 1, z).1 == 0 {
                     let gem = rng.range(0, 7) as usize;
                     let h = rng.range(7, 13);
                     let clear_above = (1..=h + GEM_TOP_ROOM).all(|k| w.get(x, y + k, z) == 0 && w.liquid_at(x, y + k, z).1 == 0);
@@ -336,7 +344,8 @@ pub fn gem_trees(w: &mut World, seed: i32, l: &Layers) -> usize {
                     let alone = (-2..=2).all(|dx: i32| (-2..=2).all(|dz: i32| !trunks.contains(&w.get(x + dx, y + 1, z + dz))));
                     let top = y + h + GEM_TOP_ROOM;
                     let in_structure = w.structures.iter().any(|&(lo, hi)| x >= lo.0 - 2 && x <= hi.0 + 2 && z >= lo.2 - 2 && z <= hi.2 + 2 && top >= lo.1 && y <= hi.1);
-                    if clear_above && room_round && alone && !in_structure && !near_fall(x, y, z) {
+                    let roofed = clear_above && (top + 1..w.sy).any(|k| w.get(x, k, z) != 0);
+                    if clear_above && roofed && room_round && alone && !in_structure && !near_fall(x, y, z) {
                         for k in 1..=h {
                             let i = w.idx(x, y + k, z);
                             w.blocks[i] = trunks[gem];
@@ -3334,7 +3343,7 @@ mod tests {
         let trunks: Vec<u16> = GEMS.iter().map(|g| w.id_of(&format!("{}_tree_trunk", g))).collect();
         let (stone, ebon, crim) = (w.id_of("stone"), w.id_of("ebonstone"), w.id_of("crimstone"));
         let tops: Vec<&Decoration> = w.decorations.iter().filter(|d| d.kind == "tree_top" && (GEM_CANOPY..GEM_CANOPY + 7).contains(&(d.style / 10))).collect();
-        assert!(tops.len() > 20, "gem trees grow in the caves ({})", tops.len());
+        assert!(tops.len() > 10, "gem trees grow in the caves ({})", tops.len());
         let mut kinds = std::collections::HashSet::new();
         for d in tops {
             let gem = (d.style / 10 - GEM_CANOPY) as usize;
@@ -3349,8 +3358,9 @@ mod tests {
             assert!((7..=12).contains(&h), "a {} tree {} tall at {:?}", GEMS[gem], h, d.pos);
             // (On stone, or a gem ore the Gems pass made of it after.)
             let ground = w.get(x, y, z);
-            assert!(([stone, ebon, crim].contains(&ground) || w.def(ground).name.ends_with("_ore")) && y < l.surface_base - 8 && y > l.underworld_top, "on stone, underground: {} at {:?}", w.def(w.get(x, y, z)).name, (x, y, z));
+            assert!(([stone, ebon, crim].contains(&ground) || w.def(ground).name.ends_with("_ore")) && y < l.surface_base - SURFACE_LAYER_DEPTH && y > l.underworld_top, "on stone, below the surface layer: {} at {:?}", w.def(w.get(x, y, z)).name, (x, y, z));
             assert!((1..=GEM_TOP_ROOM).all(|k| w.get(x, d.pos.1 + k - 1, z) == 0), "room for its top: {:?}", (1..=GEM_TOP_ROOM).map(|k| w.def(w.get(x, d.pos.1 + k - 1, z)).name.clone()).collect::<Vec<_>>());
+            assert!((d.pos.1 + GEM_TOP_ROOM..w.sy).any(|k| w.get(x, k, z) != 0), "under a roof, not open to the sky: {:?}", d.pos);
             assert!(!w.decorations.iter().any(|f| f.kind == "waterfall" && f.pos.1 > y && (f.pos.0 - x).abs() <= 3 && (f.pos.2 - z).abs() <= 3), "no waterfall pouring through it");
         }
         assert!(kinds.len() >= 5, "several gems ({:?})", kinds);
