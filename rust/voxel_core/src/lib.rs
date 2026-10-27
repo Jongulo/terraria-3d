@@ -14,6 +14,7 @@ pub mod marble;
 pub mod mesher;
 pub mod moss;
 pub mod mushroom;
+pub mod oasis;
 pub mod physics;
 pub mod pyramids;
 pub mod temple;

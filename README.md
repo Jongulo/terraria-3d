@@ -320,7 +320,8 @@ and fishing catches are read from your Terraria.exe by the scripts in `tools/` (
 in this game.
 
 - **World:** forest, Snow, Desert, Jungle, Corruption or Crimson, Glowing Mushroom biome, bee hives,
-  ocean, floating islands, Dunes with Pyramids under them, the Jungle Temple, the Dungeon, and the
+  ocean, floating islands, Dunes with Pyramids under them, oases, the Jungle Temple, the Dungeon,
+  and the
   Underworld with its ash forests and ruined forts; caves, lakes, gem ores, gem trees, vanity
   trees, giant living trees and Living Mahogany trees, underground cabins, Granite and Marble caves,
   spider caves, moss (plain, lava and neon, with Long Moss), gem caves and loose gems,
@@ -353,7 +354,7 @@ in this game.
 **Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; minecarts and
 most mounts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
 NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
-Crawlers and Tomb Crawlers; the Shimmer, ocean caves and oases; the
+Crawlers and Tomb Crawlers; the Shimmer and ocean caves; the
 Underground Desert's open caverns; cages and terrariums; Expert mode. See
 [the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 

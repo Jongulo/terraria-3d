@@ -249,19 +249,27 @@ pub fn palms(w: &mut World, seed: i32, coast: &Coast, sand: u16) -> usize {
             if y <= sea.sea_level || w.get(x, y, z) != sand || w.liquid_at(x, y + 1, z).1 > 0 {
                 continue;
             }
-            let height = rng.range(10, 21);
-            if y + height + 6 >= w.sy || (1..=height + 2).any(|k| w.get(x, y + k, z) != 0) {
-                continue;
+            if grow_palm(w, &mut rng, (x, y, z), palm) {
+                n += 1;
             }
-            for k in 1..=height {
-                let i = w.idx(x, y + k, z);
-                w.blocks[i] = palm;
-            }
-            w.decorations.push(Decoration { kind: "tree_top".into(), pos: (x, y + height + 1, z), style: PALM_CANOPY * 10 + rng.range(0, 3) });
-            n += 1;
         }
     }
     n
+}
+
+/// A palm tree (WorldGen.GrowPalmTree) on the ground at `ground`: 10-20 cells
+/// of `palm` (palm_trunk) under a palm canopy, if there's room overhead.
+pub fn grow_palm(w: &mut World, rng: &mut Rng, (x, y, z): (i32, i32, i32), palm: u16) -> bool {
+    let height = rng.range(10, 21);
+    if y + height + 6 >= w.sy || (1..=height + 2).any(|k| w.get(x, y + k, z) != 0) {
+        return false;
+    }
+    for k in 1..=height {
+        let i = w.idx(x, y + k, z);
+        w.blocks[i] = palm;
+    }
+    w.decorations.push(Decoration { kind: "tree_top".into(), pos: (x, y + height + 1, z), style: PALM_CANOPY * 10 + rng.range(0, 3) });
+    true
 }
 
 /// Coral on the sea floor (Terraria's tile 81: on sand under the ocean's
@@ -2037,6 +2045,14 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     set_progress(0.71);
 
+    // Terraria's oases (oasis.rs: its Oasis pass, after its Pyramids and
+    // its Corruption, whose chasms would cut into them; and the palms, sea
+    // oats and oasis plants round them); their own random numbers.
+    {
+        let mut orng = Rng::new(seed as u64 ^ 0x0a515);
+        let oases = crate::oasis::oases(w, &mut orng, &coast, &clear_of_pyramids);
+        crate::oasis::plant(w, &mut orng, &oases);
+    }
     // Pass 3b: floating islands high in the sky, like Terraria's: in the Space
     // layer, well above the mountains and away from spawn, each a house island, a lake island or a
     // plain one (at least one house, so every world has a Skyware chest).
@@ -3895,6 +3911,10 @@ mod tests {
         crate::spiders::tests::add_spider_defs(&mut w);
         crate::moss::tests::add_moss_defs(&mut w);
         crate::gem_caves::tests::add_gem_defs(&mut w);
+        for name in ["sea_oats", "sea_oats_grown", "sea_oats_tall", "oasis_plant"] {
+            let id = w.defs.len() as u16;
+            w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CROSS, solid: false, opaque: false, variants: 1, ..Default::default() });
+        }
         for name in ["silt", "slush", "amethyst_ore", "topaz_ore", "sapphire_ore", "emerald_ore", "ruby_ore", "diamond_ore"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
@@ -4024,6 +4044,63 @@ mod tests {
             }
         }
         assert!(caves as f64 > 12.6 * per_area * 0.5, "gem caves lined with gem ore ({caves})");
+    }
+
+    /// Terraria's oases in a whole world: a pond on the desert's sand, water
+    /// from the ground down, a sand bed round it; palms, sea oats and oasis
+    /// plants by it.
+    #[test]
+    fn oases_in_the_desert() {
+        let mut found = 0;
+        for seed in [1, 2, 3] {
+            let w = gen_world_sized(seed, 0, (768, 384, 768));
+            let (sand, palm) = (w.id_of("sand"), w.id_of("palm_trunk"));
+            let oats = ["sea_oats", "sea_oats_grown", "sea_oats_tall"].map(|n| w.id_of(n));
+            let plant = w.id_of("oasis_plant");
+            for d in w.decorations.iter().filter(|d| d.kind == "oasis") {
+                found += 1;
+                let (x, y, z) = d.pos;
+                assert!(w.liquid_at(x, y - 1, z).0 == crate::world::LIQ_WATER && w.liquid_at(x, y - 1, z).1 > 0, "water in its pond at {:?}", d.pos);
+                // Its bed holds it: under the water, sand; and no water next
+                // to open air at its level, all round.
+                let mut bottom = y - 1;
+                while w.liquid_at(x, bottom - 1, z).1 > 0 {
+                    bottom -= 1;
+                }
+                assert!(y - bottom >= 4 && w.get(x, bottom - 1, z) == sand, "a pond {} deep on sand at {:?}", y - bottom, d.pos);
+                let mut leaks = 0;
+                for dz in -30..=30 {
+                    for dx in -30..=30 {
+                        let (t, a) = w.liquid_at(x + dx, y, z + dz);
+                        if t == crate::world::LIQ_WATER && a > 0 {
+                            for (ex, ez) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                                if w.get(x + dx + ex, y, z + dz + ez) == 0 && w.liquid_at(x + dx + ex, y, z + dz + ez).1 == 0 {
+                                    leaks += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+                assert_eq!(leaks, 0, "its water held all round at {:?}", d.pos);
+                let r = 40;
+                let (mut palms, mut by) = (0, 0);
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        for dy in -12..=16 {
+                            let b = w.get(x + dx, y + dy, z + dz);
+                            if b == palm && w.get(x + dx, y + dy - 1, z + dz) == sand {
+                                palms += 1;
+                            }
+                            if b == plant || oats.contains(&b) {
+                                by += 1;
+                            }
+                        }
+                    }
+                }
+                assert!((3..=40).contains(&palms) && by >= 20, "palms ({palms}) and sea oats and oasis plants ({by}) round it");
+            }
+        }
+        assert!(found >= 2, "oases in the deserts of three worlds ({found})");
     }
 
     /// Terraria's Marble, Granite and spider caves in a whole world: deep in

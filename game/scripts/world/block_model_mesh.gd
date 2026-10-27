@@ -405,6 +405,8 @@ static func _platform_face_colour(art: Image, fw: int, from_top: bool) -> Color:
 
 
 static func transformed(m: ArrayMesh, t: Transform3D) -> ArrayMesh:
+	if m.get_surface_count() == 0:
+		return m  # nothing to move (a model with nothing drawn)
 	var st := SurfaceTool.new()
 	st.create_from(m, 0)
 	var arrays := st.commit_to_arrays()
