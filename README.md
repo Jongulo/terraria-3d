@@ -319,7 +319,8 @@ and fishing catches are read from your Terraria.exe by the scripts in `tools/` (
 `extract_assets.sh`); an item is craftable here when everything its Terraria recipe takes exists
 in this game.
 
-- **World:** forest, Snow, Desert, Jungle, Corruption or Crimson, Glowing Mushroom biome, bee hives,
+- **World:** forest, Snow, Desert over the Underground Desert's caverns, Jungle, Corruption or
+  Crimson, Glowing Mushroom biome, bee hives,
   ocean with ocean caves, floating islands, Dunes with Pyramids under them, oases, the Jungle
   Temple, the Dungeon, and the
   Underworld with its ash forests and ruined forts; caves, lakes, gem ores, gem trees, vanity
@@ -347,15 +348,14 @@ in this game.
 - **Town NPCs:** the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist, Clothier, Goblin
   Tinkerer, Mechanic, Witch Doctor and Angler, with housing, shops, Terraria's lines and the
   Angler's quests; the Traveling Merchant and the Skeleton Merchant.
-- **Fishing:** poles, bait, crates, the Angler's quests, and the Extractinator for silt and slush.
+- **Fishing:** poles, bait, crates, the Angler's quests, and the Extractinator for silt, slush and Desert Fossil.
 - **Day and night:** the sky, clouds, wind and falling leaves, Fallen Stars, context music and
   sound effects; saving with autosave.
 
 **Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; minecarts and
 most mounts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
 NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
-Crawlers and Tomb Crawlers; the Shimmer; the
-Underground Desert's open caverns; cages and terrariums; Expert mode. See
+Crawlers and Tomb Crawlers; the Shimmer; cages and terrariums; Expert mode. See
 [the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 
 ## Tools

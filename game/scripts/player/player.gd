@@ -3462,7 +3462,7 @@ func _extract() -> bool:
 	var into: String = held().get("extract_to", "")
 	_use_up(selected)
 	Audio.play("Grab")
-	var drop := [into, 1] if into != "" else Extractinator.roll(_extract_rng)
+	var drop := [into, 1] if into != "" else Extractinator.roll(_extract_rng, int(held().get("extract_mode", 0)))
 	var at := camera.global_position + forward() * maxf(0.5, float(target.get("distance", 2.0)) - 0.4)
 	game.spawn_item(drop[0], drop[1], at, Vector3(0, 1.5, 0))
 	return true

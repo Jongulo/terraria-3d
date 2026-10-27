@@ -4,7 +4,9 @@ class_name Extractinator
 ## roll. Half the time coins; else 1 in 5000 an Amber Mosquito, 1 in 25 a gem,
 ## 1 in 50 Amber; else a third of the time coins again (better odds of the
 ## big ones), two thirds an ore of the eight early ores. Gems, Amber and ores
-## can come several to a block.
+## can come several to a block. Mode 1 (a Desert Fossil): first 1 in 10 a
+## Sturdy Fossil (1-7), else the same with an Amber Mosquito 1 in 1666, a gem
+## 1 in 50 and Amber 1 in 20.
 
 const GEMS := ["Amethyst", "Topaz", "Sapphire", "Emerald", "Ruby", "Diamond"]
 const ORES := ["CopperOre", "IronOre", "SilverOre", "GoldOre", "TinOre", "LeadOre", "TungstenOre", "PlatinumOre"]
@@ -20,15 +22,31 @@ static func _between(rng: RandomNumberGenerator, a: int, b: int) -> int:
 	return rng.randi_range(a, b - 1)
 
 
-## [item, count] for one block.
-static func roll(rng: RandomNumberGenerator) -> Array:
+## [item, count] for one block of ExtractinatorMode `mode`.
+static func roll(rng: RandomNumberGenerator, mode := 0) -> Array:
+	var mosquito := 5000
+	var gem := 25
+	var amber := 50
+	if mode == 1:
+		mosquito /= 3
+		gem *= 2
+		amber = 20
+		if _next(rng, 10) == 0:
+			var n := 1
+			if _next(rng, 5) == 0:
+				n += _next(rng, 2)
+			if _next(rng, 10) == 0:
+				n += _next(rng, 3)
+			if _next(rng, 15) == 0:
+				n += _next(rng, 4)
+			return ["FossilOre", n]
 	if _next(rng, 2) == 0:
 		return _coins(rng, [12000, 14, 3, 2], [800, 6], [60, 4], [3])
-	if _next(rng, 5000) == 0:
+	if _next(rng, mosquito) == 0:
 		return ["AmberMosquito", 1]
-	if _next(rng, 25) == 0:
+	if _next(rng, gem) == 0:
 		return [GEMS[_next(rng, 6)], _bonus(rng, 1)]
-	if _next(rng, 50) == 0:
+	if _next(rng, amber) == 0:
 		return ["Amber", _bonus(rng, 1)]
 	if _next(rng, 3) == 0:
 		return _coins(rng, [5000, 10, 5, 3], [400, 5], [30, 3], [2])

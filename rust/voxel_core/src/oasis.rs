@@ -208,8 +208,9 @@ fn place(w: &mut World, rng: &mut Rng, ids: &Ids, g: P, width: i32) -> Option<Oa
                         w.blocks[i] = 0;
                     }
                 } else if ax < r + dy_tiles.abs() * k && !w.is_solid(x, y, z) {
-                    // Its bed: sand filled in round it.
-                    w.blocks[i] = ids.sand;
+                    // Its bed: sand filled in round it (hardened over a gap,
+                    // a cave of the Underground Desert's, so it holds).
+                    w.blocks[i] = if w.is_solid(x, y - 1, z) { ids.sand } else { ids.hardened };
                     w.liquid[i] = 0;
                 }
             }

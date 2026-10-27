@@ -1724,6 +1724,21 @@ func _sand_checks(c: Vector3i) -> void:
 	var share := func(k: String) -> float: return float(kinds[k]) / n
 	check(all_known and absf(share.call("coin") - 0.657) < 0.015 and absf(share.call("ore") - 0.314) < 0.015 and absf(share.call("gem") - 0.02) < 0.005 and absf(share.call("Amber") - 0.0096) < 0.004,
 			"the Extractinator's odds: %.1f%% coins, %.1f%% ore, %.1f%% gems, %.1f%% Amber" % [share.call("coin") * 100, share.call("ore") * 100, share.call("gem") * 100, share.call("Amber") * 100])
+	# A Desert Fossil's (ExtractinatorMode 1): the wiki's 10% Sturdy Fossil
+	# (1-7), 2.2% Amber, 27.9% ore.
+	var fossils := 0
+	var amber := 0
+	var ore := 0
+	var most := 0
+	for i in n:
+		var r := Extractinator.roll(rng, int(Data.items["DesertFossil"].get("extract_mode", 0)))
+		if r[0] == "FossilOre":
+			fossils += 1
+			most = maxi(most, int(r[1]))
+		amber += int(r[0] == "Amber")
+		ore += int(r[0].ends_with("Ore") and r[0] != "FossilOre")
+	check(absf(float(fossils) / n - 0.1) < 0.008 and most <= 7 and absf(float(amber) / n - 0.022) < 0.004 and absf(float(ore) / n - 0.279) < 0.015,
+			"a Desert Fossil's odds: %.1f%% Sturdy Fossil (up to %d), %.1f%% Amber, %.1f%% ore" % [100.0 * fossils / n, most, 100.0 * amber / n, 100.0 * ore / n])
 	# Silt into an Extractinator: one block a use, something drops.
 	w.set_block(base + Vector3i(0, 0, -2), id.call("extractinator"))
 	p.global_position = Vector3(base) + Vector3(0.5, 0, 0.5)

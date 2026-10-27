@@ -2571,6 +2571,16 @@ pub fn biome_patch(w: &mut World, rng: &mut Rng, center: (i32, i32), radius: i32
             }
         }
     }
+    // Under the Desert, Terraria's Underground Desert (desert.rs: its Full
+    // Desert pass; its sand mound takes the trees over it, before
+    // their canopies are seen to); its own random numbers.
+    if biome == BIOME_DESERT {
+        if let Some(h) = crate::desert::underground_desert(w, seed, &l, center, radius, coast) {
+            w.decorations.push(Decoration { kind: "desert_hive".into(), pos: (h.center.0, h.top, h.center.1), style: h.bottom });
+            // Kept from the structures after it (Terraria's AddStructure).
+            w.structures.push(h.protected(w.sy));
+        }
+    }
     // Canopies: the world's snow and jungle tree tops; the desert's go.
     // (A canopy belongs to the region when the trunk under it was converted.)
     let tops = TreeTops::of(w);
@@ -3920,7 +3930,9 @@ mod tests {
         crate::gem_caves::tests::add_gem_defs(&mut w);
         let id = w.defs.len() as u16;
         w.set_def(id, BlockDef { name: "water_chest".into(), render: crate::world::RENDER_CUTOUT, solid: true, opaque: false, variants: 1, ..Default::default() });
-        for name in ["sea_oats", "sea_oats_grown", "sea_oats_tall", "oasis_plant"] {
+        let id = w.defs.len() as u16;
+        w.set_def(id, BlockDef { name: "desert_fossil".into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
+        for name in ["sea_oats", "sea_oats_grown", "sea_oats_tall", "oasis_plant", "sandstone_stalactite", "small_sandstone_stalactite", "sandstone_stalagmite", "small_sandstone_stalagmite"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CROSS, solid: false, opaque: false, variants: 1, ..Default::default() });
         }
@@ -4110,6 +4122,62 @@ mod tests {
             }
         }
         assert!(found >= 2, "oases in the deserts of three worlds ({found})");
+    }
+
+    /// Terraria's Underground Desert in a whole world: under the Desert a
+    /// hive of caves (about 41% open, as Terraria's), walled in sandstone,
+    /// in sand and hardened sand, with lumps of Desert Fossil; no sand that
+    /// would fall, stalactites and stalagmites on the sandstone.
+    #[test]
+    fn underground_desert() {
+        for seed in [1, 2] {
+            let t = std::time::Instant::now();
+            let w = gen_world_sized(seed, 0, (768, 384, 768));
+            let took = t.elapsed();
+            let d = w.decorations.iter().find(|d| d.kind == "desert_hive").expect("an Underground Desert");
+            let regions = biome_regions(w.sx, w.sz, seed);
+            let r = regions.iter().find(|r| r.0 == BIOME_DESERT).unwrap().3;
+            let h = crate::desert::Hive { center: (d.pos.0, d.pos.2), half: r as f64 * crate::desert::HIVE_OF_DESERT, top: d.pos.1, bottom: d.style, ground: 0 };
+            let id = |n: &str| w.id_of(n);
+            let (sand, hard, stone, fossil) = (id("sand"), id("hardened_sand"), id("sandstone"), id("desert_fossil"));
+            let (mut all, mut open, mut nf, mut ns, mut nsand, mut nhard, mut falls, mut hang) = (0, 0, 0, 0, 0, 0, 0, 0);
+            let hr = h.half.ceil() as i32;
+            for x in h.center.0 - hr..=h.center.0 + hr {
+                for z in h.center.1 - hr..=h.center.1 + hr {
+                    for y in h.bottom..=h.top {
+                        if !h.contains((x, y, z)) {
+                            continue;
+                        }
+                        all += 1;
+                        let b = w.get(x, y, z);
+                        match b {
+                            0 => open += 1,
+                            _ if b == fossil => nf += 1,
+                            _ if b == stone => ns += 1,
+                            _ if b == sand => {
+                                nsand += 1;
+                                if !w.is_solid(x, y - 1, z) {
+                                    falls += 1;
+                                }
+                            }
+                            _ if b == hard => nhard += 1,
+                            _ if !w.is_solid(x, y, z) => {
+                                open += 1;
+                                hang += 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            let pc = |n: i32| 100.0 * n as f64 / all as f64;
+            eprintln!("DESERT seed {seed} ({took:.1?}): {all} cells, open {:.1}%, fossil {:.1}%, sandstone {:.1}%, sand {:.1}%, hardened {:.1}%, falling sand {falls}, stalactites/mites {hang}, top {} bottom {}",
+                pc(open), pc(nf), pc(ns), pc(nsand), pc(nhard), h.top, h.bottom);
+            assert!(pc(open) > 30.0 && pc(open) < 50.0, "about 41% open ({:.1}%)", pc(open));
+            assert!(pc(nf) > 1.0 && pc(nf) < 6.0 && pc(ns) > 15.0 && pc(nsand) + pc(nhard) > 20.0, "fossil, sandstone and sand");
+            assert_eq!(falls, 0, "no sand over a gap");
+            assert!(hang > 100, "stalactites and stalagmites ({hang})");
+        }
     }
 
     /// Terraria's ocean caves and Water Chests in a whole world: a flooded

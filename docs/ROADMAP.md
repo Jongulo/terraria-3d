@@ -56,15 +56,18 @@ more.
 
 Taken from a pass-by-pass comparison with Terraria's world generation.
 
-- **Structures and biomes (L):** the Shimmer (Aether) and the open caverns of the Underground
-  Desert. (Done: moss, with neon patches, lava moss and Long Moss; gem caves and loose gems, amber
-  included; oases, with palms, sea oats and oasis plants; ocean caves and Water Chests.)
+- **Structures and biomes (L):** the Shimmer (Aether). (Done: moss, with neon patches, lava moss
+  and Long Moss; gem caves and loose gems, amber included; oases, with palms, sea oats and oasis
+  plants; ocean caves and Water Chests; the Underground Desert's caverns, Desert Fossil and its
+  four entrances.)
+- **Underground Desert extras (S):** Antlion Eggs and Rolling Cactus in its caverns, its piles,
+  and its enemies (Tomb Crawlers, Ghouls, Sand Poachers, Antlion Swarmers and Chargers).
 - **Micro biomes (M):** minecart tracks, campsites, thin ice in the snow, Dead Man's Chests.
 - **Placement passes (M):**
   - Cave statues and biome pots (snow, jungle, Dungeon, evil, desert, Underworld, marble,
     granite).
   - Cave piles: skeletons, coin stashes and rocks.
-  - Stone and ice stalactites, desert fossils.
+  - Stone and ice stalactites.
   - Beach shells and seaweed, sea oats on the beaches, dye plants.
 
 ### 7.3 Town and events

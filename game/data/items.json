@@ -1,7 +1,7 @@
 {
 	"_doc": [
 		"Keys are Terraria internal item names; ids, names and sprites come from the game files.",
-		"type: block | material | tool | melee | ranged | magic | thrown | ammo | consumable | accessory | armor | summon | coin | hook (a grappling hook, GrappleHook: Terraria's AI_007_GrapplingHooks; projectile: its ProjectileID, sheet Projectile_N; speed (shootSpeed), retract and reach in px a tick / px; fly: hooks out at once less those latched (QuickGrapple), out: firing with that many out drops the oldest, latched: latching past that many drops the oldest; updates: moves that many times a tick (extraUpdates + 1); chain: its chain sprite) | tool_use (used for its effect: rope_snake, ocean_teleport, rope_coil: thrown (RopeCoil), it lays a line of `rope` blocks, what it couldn't lay dropping as `item`) | pet (pet: its pet, a ProjectileID name in Minion.KINDS; using it again sends it off; light_pet: a light pet, the other pet slot). summon with minion: a summon staff (its minion, Minion.KINDS; damage is summon damage). mount (mount: Player.MOUNTS, on and off). summon with whip: a whip (Whip.KINDS; summon damage, tags enemies for your minions). extractinator: true: use it on an Extractinator to sift it (Terraria's ExtractinatorMode 0: silt and slush)",
+		"type: block | material | tool | melee | ranged | magic | thrown | ammo | consumable | accessory | armor | summon | coin | hook (a grappling hook, GrappleHook: Terraria's AI_007_GrapplingHooks; projectile: its ProjectileID, sheet Projectile_N; speed (shootSpeed), retract and reach in px a tick / px; fly: hooks out at once less those latched (QuickGrapple), out: firing with that many out drops the oldest, latched: latching past that many drops the oldest; updates: moves that many times a tick (extraUpdates + 1); chain: its chain sprite) | tool_use (used for its effect: rope_snake, ocean_teleport, rope_coil: thrown (RopeCoil), it lays a line of `rope` blocks, what it couldn't lay dropping as `item`) | pet (pet: its pet, a ProjectileID name in Minion.KINDS; using it again sends it off; light_pet: a light pet, the other pet slot). summon with minion: a summon staff (its minion, Minion.KINDS; damage is summon damage). mount (mount: Player.MOUNTS, on and off). summon with whip: a whip (Whip.KINDS; summon damage, tags enemies for your minions). extractinator: true: use it on an Extractinator to sift it (Terraria's ExtractinatorMode 0: silt and slush; extract_mode 1: the Desert Fossil's)",
 		"plant_on: grass seeds: used on that block it becomes the seeds' block (Mushroom Grass Seeds on mud).",
 		"auto_reuse: held down, it's used again and again (Terraria's autoReuse); otherwise each use takes a fresh click. By default tools, buckets and blocks do and nothing else does, like Terraria's items here (doors and the Bed are blocks that don't).",
 		"use_time is in ticks (1/60 s) like Terraria; for tools it's Terraria's mining / tool speed (ticks between hits). shoot_speed is in blocks per second.",
@@ -328,6 +328,8 @@
 		"IceBlock": {"type": "block", "place": "ice_block"},
 		"HardenedSand": {"type": "block", "place": "hardened_sand"},
 		"Sandstone": {"type": "block", "place": "sandstone"},
+		"DesertFossil": {"type": "block", "place": "desert_fossil", "extractinator": true, "extract_mode": 1, "tooltip": "Can be extractinated."},
+		"FossilOre": {"type": "block", "place": "sturdy_fossil", "rare": 1},
 		"Cactus": {"type": "material"},
 		"BorealWood": {"type": "block", "place": "boreal_wood"},
 		"PalmWood": {"type": "block", "place": "palm_wood"},

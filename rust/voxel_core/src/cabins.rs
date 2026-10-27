@@ -140,6 +140,9 @@ const CHEST_SANDSTONE_DEEP: i32 = 6;
 const CHEST_MUSHROOM: i32 = 15;
 
 struct Ids {
+    /// The tree tops already grown (a gem tree's in a cave): a cabin keeps
+    /// out of the room each needs over it.
+    tops: Vec<(i32, i32, i32)>,
     /// The paintings (FillRooms' pictures); furniture keeps out of them.
     pics: Paintings,
     door_top: u16,
@@ -236,6 +239,7 @@ impl Ids {
                 style(Kind::Mushroom, "mushroom", "mushroom_block", "mushroom_wall", "mushroom_beam", "mushroom_chest", CHEST_MUSHROOM),
             ],
             blacklist,
+            tops: w.decorations.iter().filter(|d| d.kind == "tree_top").map(|d| d.pos).collect(),
         }
     }
 
@@ -444,6 +448,10 @@ fn rooms_clear(w: &World, ids: &Ids, rooms: &[Room], built: &[Vec<Room>]) -> boo
         if w.structures.iter().any(|&(lo, hi)| {
             r.x0 - pad <= hi.0 && lo.0 <= r.x1() + pad && r.z0 - pad <= hi.2 && lo.2 <= r.z1() + pad && r.y0 - pad <= hi.1 && lo.1 <= r.ceiling() + pad
         }) {
+            return false;
+        }
+        let room = crate::worldgen::GEM_TOP_ROOM;
+        if ids.tops.iter().any(|t| t.0 >= r.x0 - 1 && t.0 <= r.x1() + 1 && t.2 >= r.z0 - 1 && t.2 <= r.z1() + 1 && t.1 <= r.ceiling() + 1 && t.1 + room >= r.y0 - 1) {
             return false;
         }
         for other in built.iter().flatten() {

@@ -163,6 +163,12 @@ fn in_structure(w: &World, p: P) -> bool {
     w.structures.iter().any(|&(a, b)| p.0 >= a.0 && p.0 <= b.0 && p.1 >= a.1 && p.1 <= b.1 && p.2 >= a.2 && p.2 <= b.2)
 }
 
+/// In a structure other than `desert` (the Underground Desert's: Terraria's
+/// loose gems go by its walls, amber in them).
+fn in_walled_structure(w: &World, p: P, desert: Option<(P, P)>) -> bool {
+    w.structures.iter().any(|&(a, b)| Some((a, b)) != desert && p.0 >= a.0 && p.0 <= b.0 && p.1 >= a.1 && p.1 <= b.1 && p.2 >= a.2 && p.2 <= b.2)
+}
+
 /// gemCave and Spread.Gem: the cave's gems (one for sure, each other 1 in
 /// 6); its walls turn to their ores (1 in 20 to stone), and loose gems of
 /// them lie about it (CAVE_GEMS).
@@ -254,6 +260,7 @@ fn weighted(rng: &mut Rng) -> usize {
 /// Loose gems through the caves: clusters by snow and ice, amber clusters in
 /// the underground desert's sandstone, and single gems everywhere else.
 pub fn loose_gems(w: &mut World, rng: &mut Rng, l: &Layers) {
+    let desert = crate::desert::Hive::of(w).map(|h| h.protected(w.sy));
     let ids = Ids::new(w);
     if !ids.ready() {
         return;
@@ -261,9 +268,9 @@ pub fn loose_gems(w: &mut World, rng: &mut Rng, l: &Layers) {
     let per_area = w.sx as f64 * w.sz as f64 / (640.0 * 640.0);
     let y = |d: f64| crate::dungeon::depth_y(l, d);
     // Gems In Ice Biome: from halfway to the cavern layer to the lava line.
-    clusters(w, rng, &ids, (ICE_GEMS * per_area) as usize, (y(540.0), y(65.0)), &ids.snow_ice, None);
+    clusters(w, rng, &ids, (ICE_GEMS * per_area) as usize, (y(540.0), y(65.0)), &ids.snow_ice, None, desert);
     // Amber, in the sandstone under the desert (Terraria's desert walls).
-    clusters(w, rng, &ids, (AMBER_GEMS * per_area) as usize, (y(563.0), y(0.0)), &ids.sandstone, Some(AMBER));
+    clusters(w, rng, &ids, (AMBER_GEMS * per_area) as usize, (y(563.0), y(0.0)), &ids.sandstone, Some(AMBER), desert);
     // Random Gems: from the cavern layer to 300 tiles over the bottom, not in
     // lava or a structure (Terraria's dungeon walls).
     let (bottom, top) = (y(563.0), y(130.0));
@@ -274,7 +281,7 @@ pub fn loose_gems(w: &mut World, rng: &mut Rng, l: &Layers) {
             break;
         }
         let p = (rng.range(20, w.sx - 20), rng.range(bottom, top.max(bottom + 1)), rng.range(20, w.sz - 20));
-        if w.get(p.0, p.1, p.2) != 0 || in_structure(w, p) {
+        if w.get(p.0, p.1, p.2) != 0 || in_walled_structure(w, p, desert) {
             continue;
         }
         let k = weighted(rng);
@@ -287,7 +294,7 @@ pub fn loose_gems(w: &mut World, rng: &mut Rng, l: &Layers) {
 /// Clusters of loose gems by blocks of `by` open to a cave, till `want` lie
 /// about: each fills the open cells 1-3 tiles round its spot (amber if
 /// `gem`, else a gem picked for each cluster).
-fn clusters(w: &mut World, rng: &mut Rng, ids: &Ids, want: usize, (bottom, top): (i32, i32), by: &[u16], gem: Option<usize>) {
+fn clusters(w: &mut World, rng: &mut Rng, ids: &Ids, want: usize, (bottom, top): (i32, i32), by: &[u16], gem: Option<usize>, desert: Option<(P, P)>) {
     if by.is_empty() {
         return;
     }
@@ -306,7 +313,7 @@ fn clusters(w: &mut World, rng: &mut Rng, ids: &Ids, want: usize, (bottom, top):
         for z in p.2 - z0..p.2 + z1 {
             for yy in p.1 - y0..p.1 + y1 {
                 for x in p.0 - x0..p.0 + x1 {
-                    if placed < want && !in_structure(w, (x, yy, z)) && place(w, ids, (x, yy, z), k) {
+                    if placed < want && !in_walled_structure(w, (x, yy, z), desert) && place(w, ids, (x, yy, z), k) {
                         placed += 1;
                     }
                 }
