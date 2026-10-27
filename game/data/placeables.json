@@ -459,6 +459,19 @@
 			"bevel_size": 1.0,
 			"depth": 3.0
 		},
+		"copper_coin_stash": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
+			"one_color": true
+		},
 		"coral": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1792,6 +1805,19 @@
 			"depth": 3.0
 		},
 		"gold_chest": {
+			"one_color": true
+		},
+		"gold_coin_stash": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
 			"one_color": true
 		},
 		"gothic_bathtub": {
@@ -3287,6 +3313,45 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"pyramid_pot": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
+			"one_color": true
+		},
+		"pyramid_pot_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
+			"one_color": true
+		},
+		"pyramid_pot_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
+			"one_color": true
+		},
 		"red_pressure_plate": {
 			"no_outline": false,
 			"one_color": false
@@ -3355,6 +3420,19 @@
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
 			"depth": 3.0
+		},
+		"silver_coin_stash": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 3,
+			"depth": 7,
+			"one_color": true
 		},
 		"skull_lantern": {
 			"bevel": "chamfer",
@@ -6008,6 +6086,7 @@
 		"clay_pot": "hull",
 		"cooking_pot": "hull",
 		"copper_chandelier": "billboard",
+		"copper_coin_stash": "extruded",
 		"coral": "rendered",
 		"coral_2": "rendered",
 		"coral_3": "rendered",
@@ -6117,6 +6196,7 @@
 		"glowing_mushroom_5": "rendered",
 		"gold_chandelier": "billboard",
 		"gold_chest": "extruded",
+		"gold_coin_stash": "extruded",
 		"gothic_lamp": "hull",
 		"grandfather_clock": "hull",
 		"granite_stalactite": "rendered",
@@ -6266,6 +6346,9 @@
 		"pot_2": "hull",
 		"pot_3": "hull",
 		"purple_torch": "hull",
+		"pyramid_pot": "extruded",
+		"pyramid_pot_2": "extruded",
+		"pyramid_pot_3": "extruded",
 		"red_pressure_plate": "extruded",
 		"red_torch": "hull",
 		"rich_mahogany_chest": "extruded",
@@ -6280,6 +6363,7 @@
 		"shiverthorn": "rendered",
 		"silk_rope": "hull",
 		"silver_chandelier": "billboard",
+		"silver_coin_stash": "extruded",
 		"skull_lantern": "billboard",
 		"skyware_chest": "rendered",
 		"skyware_lantern": "hull",
