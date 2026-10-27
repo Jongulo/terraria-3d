@@ -151,5 +151,23 @@
 		"pick_one": [["HellwingBow", 1, 1]],
 		"extras": [["TreasureMagnet", 1, 1, 0.2], ["Dynamite", 1, 1, 0.3333], ["RestorationPotion", 15, 20, 0.5], ["Torch", 15, 29, 0.25], ["GoldCoin", 2, 4, 0.5]],
 		"either": [[[["MeteoriteBar", 15, 29], ["GoldBar", 15, 29]], 0.5], [[["HellfireArrow", 50, 74], ["SilverBullet", 50, 74]], 0.5], [[["SpelunkerPotion", 1, 2], ["FeatherfallPotion", 1, 2], ["ManaRegenerationPotion", 1, 2], ["ObsidianSkinPotion", 1, 2], ["MagicPowerPotion", 1, 2], ["InvisibilityPotion", 1, 2], ["HunterPotion", 1, 2], ["HeartreachPotion", 1, 2]], 0.75], [[["GravitationPotion", 1, 2], ["ThornsPotion", 1, 2], ["WaterWalkingPotion", 1, 2], ["ObsidianSkinPotion", 1, 2], ["BattlePotion", 1, 2], ["TeleportationPotion", 1, 2], ["InfernoPotion", 1, 2], ["LifeforcePotion", 1, 2]], 0.6667]]
+	},
+	"pyramid": {
+		"_doc": "Terraria's Pyramid chest (Pyramid: AddBuriedChest with its item, a Gold Chest): Pharaoh's Mask with its Robe 1 time in 9, else Sandstorm in a Bottle or the Flying Carpet (rand(3), a 0 rolled again), then a surface chest's loot whatever its depth.",
+		"pick_one": [["PharaohsMask", 1, 1, [["PharaohsRobe", 1, 1]]], ["SandstorminaBottle", 1, 1], ["SandstorminaBottle", 1, 1], ["SandstorminaBottle", 1, 1], ["SandstorminaBottle", 1, 1], ["FlyingCarpet", 1, 1], ["FlyingCarpet", 1, 1], ["FlyingCarpet", 1, 1], ["FlyingCarpet", 1, 1]],
+		"extras": [["Rope", 50, 100, 0.5], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05], ["RecallPotion", 3, 5, 0.6667]],
+		"either": [[[["IronskinPotion", 1, 2], ["ShinePotion", 1, 2], ["NightOwlPotion", 1, 2], ["SwiftnessPotion", 1, 2], ["MiningPotion", 1, 2], ["BuilderPotion", 1, 2]], 0.6667]]
+	},
+	"copper_coin_stash": {
+		"_doc": "Terraria's coin stashes (small pile 185, 2 x 1, styles 16-18; WorldGen.Check2x1): copper coins in up to 12 handfuls, silver in up to 3, gold in up to 3 of 1-5.",
+		"extras": [["CopperCoin", 10, 99, 1], ["CopperCoin", 20, 99, 1], ["CopperCoin", 10, 99, 0.6667], ["CopperCoin", 20, 99, 0.6667], ["CopperCoin", 10, 99, 0.5], ["CopperCoin", 20, 99, 0.5], ["CopperCoin", 10, 99, 0.3333], ["CopperCoin", 20, 99, 0.3333], ["CopperCoin", 10, 99, 0.25], ["CopperCoin", 20, 99, 0.25], ["CopperCoin", 10, 99, 0.2], ["CopperCoin", 20, 99, 0.2]]
+	},
+	"silver_coin_stash": {
+		"_doc": "See copper_coin_stash.",
+		"extras": [["SilverCoin", 10, 99, 1], ["SilverCoin", 20, 99, 0.5], ["SilverCoin", 30, 99, 0.3333]]
+	},
+	"gold_coin_stash": {
+		"_doc": "See copper_coin_stash.",
+		"extras": [["GoldCoin", 1, 5, 1], ["GoldCoin", 2, 5, 0.5], ["GoldCoin", 3, 5, 0.3333]]
 	}
 }

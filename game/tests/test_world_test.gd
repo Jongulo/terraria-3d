@@ -431,6 +431,7 @@ func _run() -> void:
 	await _flora_checks(c)
 	await _cut_checks(c)
 	await _cabin_loot_checks(c)
+	await _pyramid_checks(c)
 	await _sand_checks(c)
 	await _dust_checks(c)
 	await _knockback_checks(c)
@@ -1314,6 +1315,75 @@ func _run_checks(p: Player) -> void:
 	var stopped: float = Vector2(p.velocity.x, p.velocity.z).length()
 	check(stopped < 7.0, "letting go slows you by 30 blocks/s a second (%.2f a third of a second after 15)" % stopped)
 	p.velocity = saved
+
+
+## Pyramids (pyramids.rs): their blocks, their chest's loot (Pharaoh's Mask
+## and Robe 1 time in 9, else Sandstorm in a Bottle or the Flying Carpet),
+## the coin stashes' coins, the Sandstorm's double jump and the Flying
+## Carpet's float.
+func _pyramid_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var blocks := ["sandstone_brick", "gold_chest", "pyramid_pot", "pyramid_pot_2", "pyramid_pot_3", "copper_coin_stash", "silver_coin_stash",
+			"gold_coin_stash", "ankh_banner", "snake_banner", "omega_banner"]
+	check(blocks.all(func(b): return Data.block_id(b) > 0) and Chests.LOOT[29] == "pyramid", "a Pyramid's blocks, and its chest's loot (Chests style 29)")
+	var firsts := {}
+	var robed := true
+	for i in 1800:
+		var drops := Game.roll_loot("pyramid")
+		firsts[drops[0][0]] = firsts.get(drops[0][0], 0) + 1
+		if drops[0][0] == "PharaohsMask":
+			robed = robed and drops.any(func(d): return d[0] == "PharaohsRobe")
+	check(robed and firsts.get("PharaohsMask", 0) > 120 and firsts.get("PharaohsMask", 0) < 280 and firsts.get("SandstorminaBottle", 0) > 680
+			and firsts.get("FlyingCarpet", 0) > 680, "a Pyramid's chest: the Pharaoh's Mask and Robe 1 in 9, else the Sandstorm or the Carpet (%s)" % [firsts])
+	# Coin stashes: copper in handfuls of 10-99 (two at least), gold 1-5 a handful.
+	var spot := c + Vector3i(30, 0, 30)
+	w.set_block(spot + Vector3i.DOWN, Data.block_id("stone"))
+	var coins := {}
+	for kind in ["copper_coin_stash", "gold_coin_stash"]:
+		w.set_block(spot, Data.block_id(kind))
+		game._collected_drops = {}
+		game.break_block(spot)
+		coins[kind] = game._collected_drops
+		game._collected_drops = null
+	check(int(coins.copper_coin_stash.get("CopperCoin", 0)) >= 30 and int(coins.gold_coin_stash.get("GoldCoin", 0)) >= 1 and int(coins.gold_coin_stash.get("GoldCoin", 0)) <= 15,
+			"coin stashes break into coins (%s)" % [coins])
+	# Double jumps in Terraria's order: the Cloud's, the Sandstorm's (3 jumps
+	# long), the Blizzard's.
+	p.accessories.slots[0] = Inventory.stack("BlizzardinaBottle", 1)
+	p.accessories.slots[1] = Inventory.stack("SandstorminaBottle", 1)
+	p.accessories.slots[2] = Inventory.stack("CloudinaBottle", 1)
+	check(p.extra_jumps() == [0.75, 3.0, 1.5], "Cloud, then Sandstorm, then Blizzard in a Bottle (%s)" % [p.extra_jumps()])
+	# The Flying Carpet: jump and hold it, and at the top you float level, up
+	# to 5 seconds; let go and you fall.
+	for i in 3:
+		p.accessories.slots[i] = null
+	p.accessories.slots[0] = Inventory.stack("FlyingCarpet", 1)
+	var god: bool = p.god_mode
+	p.god_mode = true
+	p.flying = false
+	p.velocity = Vector3.ZERO
+	p.global_position = Vector3(spot) + Vector3(0.5, 0.05, 0.5)
+	for i in 10:
+		await frames(1)
+	Input.action_press("jump")
+	for i in 60:
+		await frames(1)
+	var y1: float = p.global_position.y
+	for i in 60:
+		await frames(1)
+	var y2: float = p.global_position.y
+	p._carpet_time = 0.05
+	for i in 20:
+		await frames(1)
+	var y3: float = p.global_position.y
+	Input.action_release("jump")
+	check(not p.on_floor and y1 > spot.y + 1.0 and absf(y2 - y1) < 0.05 and y3 < y2 - 0.2,
+			"holding jump on the Flying Carpet floats you level (%.2f, then %.2f), and when it's done you fall (%.2f)" % [y1, y2, y3])
+	for i in 60:
+		await frames(1)
+	p.accessories.slots[0] = null
+	p.god_mode = god
 
 
 func _cabin_loot_checks(c: Vector3i) -> void:
@@ -4346,6 +4416,9 @@ func _armor_checks(c: Vector3i) -> void:
 		var d := Data.item(n)
 		var dropped: bool = Data.npcs.values().any(func(e): return e.get("drops", []).any(func(x): return x[0] == n) or n in e.get("drops_one_of", []) or e.get("drops_chain", []).any(func(x): return x[0] == n if x[0] is String else n in x[0]))
 		var in_set: bool = Data.loot.values().any(func(t): return t is Dictionary and t.get("sets", []).any(func(e): return n in e[0]))
+		# (A chest's main item, or what comes with it: the Pyramid's Pharaoh's set.)
+		in_set = in_set or Data.loot.values().any(func(t): return t is Dictionary and t.get("pick_one", []).any(
+				func(e): return e[0] == n or (e.size() > 3 and e[3] is Array and e[3].any(func(x): return x[0] == n))))
 		# (The Angler's armor: his rewards for the 10th, 15th and 20th quests.)
 		var sold: bool = Data.npcs.values().any(func(e): return e.get("town", {}).get("shop", []).any(func(x): return (x if x is String else x[0]) == n))
 		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set \

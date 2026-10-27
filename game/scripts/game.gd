@@ -1161,6 +1161,10 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 		if b.get("on_break") == "pot":
 			for d in roll_loot("pot"):
 				spawn_item(d[0], d[1], c)
+		# Its own loot table (a pyramid's coin stashes).
+		if b.get("on_break") == "loot":
+			for d in roll_loot(b.loot):
+				spawn_item(d[0], d[1], c)
 		if b.has("herb"):
 			for d in herbs.drops(b, p, regrowth):
 				spawn_item(d[0], d[1], c)

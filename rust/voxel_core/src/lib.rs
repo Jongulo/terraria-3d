@@ -13,6 +13,7 @@ pub mod marble;
 pub mod mesher;
 pub mod mushroom;
 pub mod physics;
+pub mod pyramids;
 pub mod save;
 pub mod shrines;
 pub mod shrink;

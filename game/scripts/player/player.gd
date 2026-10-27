@@ -350,6 +350,10 @@ var _wing_time := 0.0
 var _rocket_time := 0
 var _rocket_burst := 0.0
 var _rocket_release := false
+## The Flying Carpet: seconds of float left (Terraria's carpetTime), and
+## whether it can start again (once each time you leave the ground).
+var _carpet_time := 0.0
+var _can_carpet := false
 ## Lava Charm: seconds of lava immunity left (Terraria's lavaTime).
 var lava_time := 0.0
 var _rope_cooldown := 0.0
@@ -1011,6 +1015,7 @@ func _move(delta: float, game) -> void:
 			_rocket_time = ROCKET_TIME
 			_rocket_burst = 0.0
 			_rocket_release = false
+			_can_carpet = true
 		elif not jump:
 			_rocket_release = true
 		if hovering and not on_floor:
@@ -1021,6 +1026,11 @@ func _move(delta: float, game) -> void:
 			_wing_flight(delta, {"lift_max": 1.5})
 			_rocket_burst -= delta
 			_rocket_effects(delta)
+		elif _carpeting(jump, wing):
+			# On the Flying Carpet: level, and the fall starts over.
+			velocity.y = 0.0
+			_carpet_time -= delta
+			_fall_start = global_position.y
 		elif not wing.is_empty() and jump and velocity.y < 0.0:
 			# Gliding: a third of gravity, a third of the fall speed, no fall.
 			velocity.y = maxf(velocity.y - GRAVITY / 3.0 * delta, -MAX_FALL / 3.0)
@@ -1218,6 +1228,22 @@ const ROCKET_TIME := 7
 const ROCKET_BURST := 10.0 / 60.0
 var _rocket_sound := 0.0
 
+## The Flying Carpet (Terraria's CarpetMovement): in the air with no double
+## jump, jump, wing flight or rocket left, holding jump floats you level for
+## up to CARPET_TIME, once each time you leave the ground.
+func _carpeting(jump: bool, wing: Dictionary) -> bool:
+	if not jump or on_floor or _jump_ticks > 0 or not _extra_jumps.is_empty() or mount != "":
+		return false
+	if (not wing.is_empty() and _wing_time > 0.0) or (stat("rocket") > 0.0 and _rocket_time > 0):
+		return false
+	if not equipment().any(func(d): return d.get("carpet", false)):
+		return false
+	if _can_carpet:
+		_can_carpet = false
+		_carpet_time = CARPET_TIME
+	return _carpet_time > 0.0
+
+
 func _rocketing(jump: bool, wing: Dictionary) -> bool:
 	if stat("rocket") <= 0.0 or not jump or on_floor or _jump_ticks > 0 or not _rocket_release:
 		return false
@@ -1379,8 +1405,10 @@ func best(key: String) -> float:
 ## hardened sand of every kind; not smooth sandstone or its brick).
 const SAND_RUN_BLOCKS := ["sand", "ebonsand", "crimsand", "pearlsand", "sandstone", "hardened_sand"]
 ## Double jumps, as a share of the jump's length (Terraria's: the Cloud 0.75,
-## the Blizzard 1.5).
-const EXTRA_JUMPS := {"cloud": 0.75, "blizzard": 1.5}
+## the Sandstorm 3, the Blizzard 1.5), in the order they're used.
+const EXTRA_JUMPS := {"cloud": 0.75, "sandstorm": 3.0, "blizzard": 1.5}
+## The Flying Carpet's float (Terraria's carpetTime, 300 ticks).
+const CARPET_TIME := 5.0
 
 
 ## The jumps you get in the air from what you wear (each bottle once; the

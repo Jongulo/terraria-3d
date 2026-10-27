@@ -1819,8 +1819,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
 
     // Terraria's surface tunnels, mountain caves and surface caves (caves.rs),
     // on their own random numbers so the passes after them come out as
-    // before.
-    {
+    // before. Then its Dunes (pyramids.rs), before the grass and trees.
+    let dunes = {
         let mut crng = Rng::new(seed as u64 ^ 0x5ca7_e5ca);
         // (Nothing dug near the coast: the sea floor stays whole.)
         let keep = |x: i32, _y: i32, z: i32, _b: u16| coast.inland(x, z) < sea.width + sea.beach + 4.0;
@@ -1831,7 +1831,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         crate::caves::surface_caves(w, &mut crng, &coast, &keep);
         // Terraria's lakes (surface.rs), away from the mountains.
         crate::surface::lakes(w, &mut crng, &coast, &peaks, &|b| ground.contains(&b), ids.dirt);
-    }
+        crate::pyramids::dunes(w, &mut Rng::new(seed as u64 ^ 0xd0_e5d0_e5), &coast, &sea, &peaks, &l)
+    };
 
     // Surface ponds in hollows (before plants, which would let them leak).
     let area = (sx * sz) as f32;
@@ -1977,11 +1978,17 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         dungeon_entrance(w, (x, y, z), door, dungeon_brick);
     }
     set_progress(0.705);
+    // Terraria's Pyramids (pyramids.rs): one in each dune patch that rolled
+    // one. Terraria builds them after its Dungeon and the caves' structures;
+    // here they come first and those keep out of them (a small world has no
+    // room for one round them). Their own random numbers.
+    let pyramids = crate::pyramids::pyramids(w, &mut Rng::new(seed as u64 ^ 0x9e7a_3d15), &l, &dunes, dungeon.map(|(x, _, z, _)| (x, z)));
+    let clear_of_pyramids = |x: i32, z: i32, by: i32| pyramids.iter().all(|p| (p.x - x).abs().max((p.z - z).abs()) > crate::pyramids::REACH + by);
 
     // Pass 3-a: Terraria's Marble and Granite caves (marble.rs, granite.rs),
     // deep in the caverns away from the coast; their own random numbers.
     {
-        let inland = |x: i32, z: i32| coast.inland(x, z) > sea.width + sea.beach + 30.0;
+        let inland = |x: i32, z: i32| coast.inland(x, z) > sea.width + sea.beach + 30.0 && clear_of_pyramids(x, z, 40);
         crate::marble::marble_caves(w, &mut Rng::new(seed as u64 ^ 0x3a2b_1e00), &l, &inland);
         crate::granite::granite_caves(w, &mut Rng::new(seed as u64 ^ 0x62a_417e), &l, &inland);
     }
@@ -2013,7 +2020,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             // Inland, clear of the beach and of the other biomes.
             if coast.inland(x, z) < sea.width + sea.beach + r as f32 * 0.5
                 || regions.iter().any(|&(_, bx, bz, br)| d2(bx, bz) < (br + r * 3 / 4) * (br + r * 3 / 4))
-                || dungeon.map_or(false, |(dx, _, dz, _)| d2(dx, dz) < (r + 30) * (r + 30)) {
+                || dungeon.map_or(false, |(dx, _, dz, _)| d2(dx, dz) < (r + 30) * (r + 30))
+                || dunes.iter().any(|dn| (d2(dn.x, dn.z) as f64).sqrt() < dn.half_len + r as f64 + 10.0)
+                || !clear_of_pyramids(x, z, r) {
                 continue;
             }
             evil_patch(w, &mut rng, (x, z), r, evil, seed + 100 + attempt as i32);
@@ -2073,7 +2082,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // random numbers, so the passes after it come out as before.
     let shrooms = {
         let mut mrng = Rng::new(seed as u64 ^ 0x5_4800_0000);
-        let keep_out: Vec<(i32, i32, i32)> = dungeon.map(|(x, _, z, _)| (x, z, 150)).into_iter().collect();
+        let mut keep_out: Vec<(i32, i32, i32)> = dungeon.map(|(x, _, z, _)| (x, z, 150)).into_iter().collect();
+        keep_out.extend(pyramids.iter().map(|p| (p.x, p.z, crate::pyramids::REACH + 40)));
         let inland = |x: i32, z: i32| coast.inland(x, z) > sea.width + sea.beach + 60.0;
         crate::mushroom::mushroom_biomes(w, &mut mrng, &l, &inland, &keep_out)
     };
@@ -2205,6 +2215,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     if let Some((x, y, z, door)) = dungeon {
         crate::dungeon::dungeon(w, seed as u64, &l, (x, y, z), door, dungeon_brick, 1.0);
     }
+    // What the passes since put in the Pyramids' passages goes.
+    crate::pyramids::restore(w, &pyramids);
     // Gem trees after the Dungeon and the hives, as Terraria grows them late
     // (its Speleothems And Gem Trees pass), and out of them.
     gem_trees(w, seed, &l);
@@ -3673,12 +3685,84 @@ mod tests {
         }
     }
 
+    /// Dunes and a Pyramid (pyramids.rs) in a small world: buried under the
+    /// dune, a square pyramid of Sandstone Brick, its chest, pots, coin
+    /// stashes and banners, and its passages joining its face, its treasure
+    /// room and the shaft below it.
+    #[test]
+    fn a_pyramid_under_the_dunes() {
+        let w = gen_world_sized(1, 0, (768, 384, 768));
+        let (sand, brick) = (w.id_of("sand"), w.id_of("sandstone_brick"));
+        let tips: Vec<(i32, i32, i32)> = w.decorations.iter().filter(|d| d.kind == "pyramid").map(|d| d.pos).collect();
+        assert_eq!(tips.len(), 1, "a pyramid");
+        let (cx, tip, cz) = tips[0];
+        let ground = w.surface_y(cx, cz);
+        assert!(w.get(cx, ground, cz) == sand || w.get(cx, ground, cz) == w.id_of("cactus"), "under a dune");
+        assert!((13..=20).contains(&(ground - tip)), "buried 13-19 under it ({})", ground - tip);
+        // Each row one wider each way, solid where nothing's dug.
+        for k in [0, 10, 30] {
+            let y = tip - k;
+            assert_eq!(w.get(cx + k, y, cz + k), brick, "its corner {k} down");
+            assert_ne!(w.get(cx + k + 1, y, cz), brick, "and no further");
+        }
+        let chests: Vec<(i32, i32, i32)> = w.decorations.iter().filter(|d| d.kind == "chest" && d.style == crate::pyramids::PYRAMID_LOOT).map(|d| d.pos).collect();
+        assert_eq!(chests.len(), 1, "its treasure room's chest");
+        let c = chests[0];
+        assert_eq!(w.def(w.get(c.0, c.1, c.2)).name, "gold_chest");
+        assert!(w.decorations.iter().any(|d| d.kind == "rotation" && d.pos == c), "facing into the room");
+        let near = |names: &[&str]| {
+            let mut n = 0;
+            for y in c.1 - 2..c.1 + 16 {
+                for z in c.2 - 30..=c.2 + 30 {
+                    for x in c.0 - 30..=c.0 + 30 {
+                        if names.iter().any(|&m| w.def(w.get(x, y, z)).name.starts_with(m)) {
+                            n += 1;
+                        }
+                    }
+                }
+            }
+            n
+        };
+        assert!(near(&["pyramid_pot"]) > 20, "pots ({})", near(&["pyramid_pot"]));
+        assert!(near(&["copper_coin_stash", "silver_coin_stash", "gold_coin_stash"]) >= 1, "coin stashes");
+        assert!(near(&["ankh_banner", "snake_banner", "omega_banner"]) >= 2, "banners by the ceiling");
+        // Through its passages: the chest's room reaches its face (the sand
+        // fallen into its entrance) and its shaft, below its deepest row.
+        let inside = |x: i32, y: i32, z: i32| y <= tip && (x - cx).abs().max((z - cz).abs()) <= tip - y;
+        let open = |x: i32, y: i32, z: i32| { let b = w.get(x, y, z); b == 0 || !w.def(b).solid };
+        let mut seen = std::collections::HashSet::new();
+        let mut todo = std::collections::VecDeque::from([(c.0, c.1 + 1, c.2)]);
+        let (mut face, mut below) = (false, false);
+        while let Some((x, y, z)) = todo.pop_front() {
+            if face && below || !seen.insert((x, y, z)) || seen.len() > 3_000_000 {
+                continue;
+            }
+            if y < tip - 130 {
+                below = true;
+                continue;
+            }
+            for (dx, dy, dz) in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
+                let q = (x + dx, y + dy, z + dz);
+                if inside(x, y, z) && !inside(q.0, q.1, q.2) && q.1 > tip - 60 && w.get(q.0, q.1, q.2) == sand {
+                    face = true;
+                }
+                if open(q.0, q.1, q.2) && (inside(q.0, q.1, q.2) || q.1 < tip - 60) {
+                    todo.push_back(q);
+                }
+            }
+        }
+        assert!(face, "its entrance reaches its face (full of sand)");
+        assert!(below, "its shaft goes on below it");
+    }
+
     fn gen_world_sized(seed: i32, evil: i32, size: (i32, i32, i32)) -> World {
         let mut w = World::new();
         for (i, name) in ["dirt", "stone", "grass", "copper_ore", "iron_ore", "tree_trunk", "cloud", "sunplate", "skyware_chest", "sunplate_trim", "disc_wall", "ebonstone", "corrupt_grass", "crimstone", "crimson_grass", "sand", "mud", "clay", "tall_grass", "snow_block", "ice_block", "hardened_sand", "sandstone", "cactus", "jungle_grass", "jungle_plants", "jungle_spores", "boreal_trunk", "mahogany_trunk", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "sunflower", "small_rocks", "twigs", "large_rocks", "fallen_log", "vines", "vine_flowers", "lily_pad", "cattail", "cattail_stem", "cattail_top", "cobweb", "blue_brick", "green_brick", "pink_brick", "chain_lantern", "sign", "wall_torch",
             "marching_bones_banner", "necromantic_sign", "ragged_brotherhood_sigil", "palm_trunk",
             "topaz_tree_trunk", "amethyst_tree_trunk", "sapphire_tree_trunk", "emerald_tree_trunk", "ruby_tree_trunk", "diamond_tree_trunk", "amber_tree_trunk",
-            "ash", "ash_grass", "sakura_trunk", "willow_trunk", "ash_trunk", "living_wood", "leaf_block", "chest", "jungle_cave_trunk", "living_mahogany", "mahogany_leaves", "ivy_chest", "sword_in_stone"].iter().enumerate() {
+            "ash", "ash_grass", "sakura_trunk", "willow_trunk", "ash_trunk", "living_wood", "leaf_block", "chest", "jungle_cave_trunk", "living_mahogany", "mahogany_leaves", "ivy_chest", "sword_in_stone",
+            "sandstone_brick", "gold_chest", "pyramid_pot", "pyramid_pot_2", "pyramid_pot_3", "copper_coin_stash", "silver_coin_stash", "gold_coin_stash",
+            "ankh_banner", "snake_banner", "omega_banner"].iter().enumerate() {
             // The forest's plants and debris (and the dungeon's furnishings)
             // are sprites you walk through.
             let plant = (i >= 29 || ["jungle_plants", "jungle_spores"].contains(name)) && !name.ends_with("_brick") && !name.ends_with("_trunk");
@@ -4405,3 +4489,4 @@ mod bench {
         println!("save {:?}, {} MB", t.elapsed(), out.len() / 1_000_000);
     }
 }
+
