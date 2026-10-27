@@ -2652,8 +2652,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"lihzahrd_statue": {
@@ -2665,8 +2665,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"lihzahrd_watcher_statue": {
@@ -2678,8 +2678,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"lily_pad_10": {
@@ -2886,8 +2886,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_argon_2": {
@@ -2899,8 +2899,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_argon_3": {
@@ -2912,8 +2912,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_argon_hanging": {
@@ -2925,8 +2925,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_argon_hanging_2": {
@@ -2938,8 +2938,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_argon_hanging_3": {
@@ -2951,8 +2951,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_blue": {
@@ -2964,8 +2964,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_blue_2": {
@@ -2977,8 +2977,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_blue_3": {
@@ -2990,8 +2990,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_blue_hanging": {
@@ -3003,8 +3003,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_blue_hanging_2": {
@@ -3016,8 +3016,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_blue_hanging_3": {
@@ -3029,8 +3029,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_brown": {
@@ -3042,8 +3042,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_brown_2": {
@@ -3055,8 +3055,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_brown_3": {
@@ -3068,8 +3068,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_brown_hanging": {
@@ -3081,8 +3081,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_brown_hanging_2": {
@@ -3094,8 +3094,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_brown_hanging_3": {
@@ -3107,8 +3107,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_green": {
@@ -3120,8 +3120,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_green_2": {
@@ -3133,8 +3133,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_green_3": {
@@ -3146,8 +3146,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_green_hanging": {
@@ -3159,8 +3159,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_green_hanging_2": {
@@ -3172,8 +3172,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_green_hanging_3": {
@@ -3185,8 +3185,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_krypton": {
@@ -3198,8 +3198,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_krypton_2": {
@@ -3211,8 +3211,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_krypton_3": {
@@ -3224,8 +3224,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_krypton_hanging": {
@@ -3237,8 +3237,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_krypton_hanging_2": {
@@ -3250,8 +3250,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_krypton_hanging_3": {
@@ -3263,8 +3263,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_lava": {
@@ -3276,8 +3276,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_lava_2": {
@@ -3289,8 +3289,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_lava_3": {
@@ -3302,8 +3302,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_lava_hanging": {
@@ -3315,8 +3315,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_lava_hanging_2": {
@@ -3328,8 +3328,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_lava_hanging_3": {
@@ -3341,8 +3341,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_purple": {
@@ -3354,8 +3354,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_purple_2": {
@@ -3367,8 +3367,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_purple_3": {
@@ -3380,8 +3380,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_purple_hanging": {
@@ -3393,8 +3393,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_purple_hanging_2": {
@@ -3406,8 +3406,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_purple_hanging_3": {
@@ -3419,8 +3419,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_red": {
@@ -3432,8 +3432,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_red_2": {
@@ -3445,8 +3445,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_red_3": {
@@ -3458,8 +3458,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_red_hanging": {
@@ -3471,8 +3471,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_red_hanging_2": {
@@ -3484,8 +3484,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_red_hanging_3": {
@@ -3497,8 +3497,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_violet": {
@@ -3510,8 +3510,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_violet_2": {
@@ -3523,8 +3523,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_violet_3": {
@@ -3536,8 +3536,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_violet_hanging": {
@@ -3549,8 +3549,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_violet_hanging_2": {
@@ -3562,8 +3562,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_violet_hanging_3": {
@@ -3575,8 +3575,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_xenon": {
@@ -3588,8 +3588,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_xenon_2": {
@@ -3601,8 +3601,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_xenon_3": {
@@ -3614,8 +3614,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_xenon_hanging": {
@@ -3627,8 +3627,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_xenon_hanging_2": {
@@ -3640,8 +3640,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"long_moss_xenon_hanging_3": {
@@ -3653,8 +3653,8 @@
 				"front",
 				"back"
 			],
-			"bevel_size": 6,
-			"depth": 13,
+			"bevel_size": 6.0,
+			"depth": 13.0,
 			"one_color": true
 		},
 		"loom": {
@@ -4016,6 +4016,69 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"oasis_plant": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_2": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_3": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_4": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_5": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_6": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_7": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_8": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
+		"oasis_plant_9": {
+			"bevel": "chamfer",
+			"bevel_size": 5,
+			"depth": 12,
+			"no_outline": false,
+			"one_color": true
+		},
 		"obsidian_bathtub": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -4199,6 +4262,111 @@
 			],
 			"bevel_size": 6.0,
 			"depth": 16.0
+		},
+		"sea_oats": {
+			"bevel": "chamfer",
+			"bevel_size": 2,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_4": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_5": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_grown": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_grown_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_grown_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_grown_4": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_grown_5": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_tall": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_tall_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_tall_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_tall_4": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"sea_oats_tall_5": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
 		},
 		"shadewood_platform": {
 			"noise": "grain",
@@ -7392,6 +7560,15 @@
 		"mushroom_vines_7": "rendered",
 		"mushroom_vines_8": "rendered",
 		"mushroom_vines_9": "rendered",
+		"oasis_plant": "rendered",
+		"oasis_plant_2": "rendered",
+		"oasis_plant_3": "rendered",
+		"oasis_plant_4": "rendered",
+		"oasis_plant_5": "rendered",
+		"oasis_plant_6": "rendered",
+		"oasis_plant_7": "rendered",
+		"oasis_plant_8": "rendered",
+		"oasis_plant_9": "rendered",
 		"obsidian_lamp": "hull",
 		"obsidian_vase": "hull",
 		"oil_rag_sconse": "billboard",
@@ -7422,6 +7599,21 @@
 		"sandstone_stalactite": "rendered",
 		"sandstone_stalactite_2": "rendered",
 		"sandstone_stalactite_3": "rendered",
+		"sea_oats": "rendered",
+		"sea_oats_2": "rendered",
+		"sea_oats_3": "rendered",
+		"sea_oats_4": "rendered",
+		"sea_oats_5": "rendered",
+		"sea_oats_grown": "rendered",
+		"sea_oats_grown_2": "rendered",
+		"sea_oats_grown_3": "rendered",
+		"sea_oats_grown_4": "rendered",
+		"sea_oats_grown_5": "rendered",
+		"sea_oats_tall": "rendered",
+		"sea_oats_tall_2": "rendered",
+		"sea_oats_tall_3": "rendered",
+		"sea_oats_tall_4": "rendered",
+		"sea_oats_tall_5": "rendered",
 		"shadewood_lamp": "hull",
 		"shadow_orb": "extruded",
 		"shiverthorn": "rendered",
@@ -8697,6 +8889,42 @@
 		"mushroom_vines_9": {
 			"model": "extruded"
 		},
+		"oasis_plant": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_2": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_3": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_4": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_5": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_6": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_7": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_8": {
+			"model": "extruded",
+			"outline": false
+		},
+		"oasis_plant_9": {
+			"model": "extruded",
+			"outline": false
+		},
 		"platinum_chandelier": {
 			"model": "auto"
 		},
@@ -8708,6 +8936,51 @@
 		},
 		"sandstone_stalactite_3": {
 			"model": "hull"
+		},
+		"sea_oats": {
+			"model": "extruded"
+		},
+		"sea_oats_2": {
+			"model": "extruded"
+		},
+		"sea_oats_3": {
+			"model": "extruded"
+		},
+		"sea_oats_4": {
+			"model": "extruded"
+		},
+		"sea_oats_5": {
+			"model": "extruded"
+		},
+		"sea_oats_grown": {
+			"model": "extruded"
+		},
+		"sea_oats_grown_2": {
+			"model": "extruded"
+		},
+		"sea_oats_grown_3": {
+			"model": "extruded"
+		},
+		"sea_oats_grown_4": {
+			"model": "extruded"
+		},
+		"sea_oats_grown_5": {
+			"model": "extruded"
+		},
+		"sea_oats_tall": {
+			"model": "extruded"
+		},
+		"sea_oats_tall_2": {
+			"model": "extruded"
+		},
+		"sea_oats_tall_3": {
+			"model": "extruded"
+		},
+		"sea_oats_tall_4": {
+			"model": "extruded"
+		},
+		"sea_oats_tall_5": {
+			"model": "extruded"
 		},
 		"shadow_orb": {
 			"model": "extruded"
