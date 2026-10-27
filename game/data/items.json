@@ -889,6 +889,9 @@
 		"Starfury": {"value": 20000, "type": "melee", "damage": 22, "use_time": 20, "knockback": 5, "style": "swing", "star": true,
 			"tooltip": "Causes stars to rain from the sky"},
 		"Flipper": {"value": 10000, "rare": 1, "type": "accessory", "flipper": true, "tooltip": "Allows swimming"},
+		"FloatingTube": {"value": 10000, "type": "accessory", "float_in_water": true},
+		"WaterWalkingBoots": {"value": 200000, "rare": 4, "type": "accessory", "water_walk": true},
+		"BreathingReed": {"value": 10000, "rare": 1, "type": "melee", "damage": 10, "use_time": 27, "knockback": 4, "style": "swing", "breathing_reed": true},
 		"LuckyHorseshoe": {"value": 10000, "type": "accessory", "no_fall_damage": true, "tooltip": "Negates fall damage"},
 		"ShinyRedBalloon": {"value": 15000, "type": "accessory", "jump_boost": true, "tooltip": "Increases jump height"},
 
@@ -1469,6 +1472,7 @@
 		"Marble": {"type": "block", "place": "marble"},
 		"MarbleBlock": {"type": "block", "place": "smooth_marble"},
 		"WebCoveredChest": {"value": 500, "type": "block", "place": "web_covered_chest", "max_stack": 99},
+		"WaterChest": {"value": 500, "type": "block", "place": "water_chest", "max_stack": 99},
 		"WebSlinger": {"value": 20000, "rare": 2, "type": "hook", "use_time": 20, "style": "throw", "max_stack": 1, "hook": {"projectile": 165, "speed": 10, "reach": 375, "retract": 11, "fly": 8, "out": 999, "latched": 8, "updates": 1, "chain": "Chain15"}},
 		"NightVisionHelmet": {"value": 50000, "rare": 2, "type": "armor", "slot": "head", "defense": 4, "night_owl": true, "hair": "hat", "tooltip": "Improves vision"},
 		"GladiatorHelmet": {"value": 17500, "type": "armor", "slot": "head", "defense": 5, "hair": "hat"},

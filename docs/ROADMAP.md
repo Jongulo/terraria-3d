@@ -43,7 +43,8 @@ more.
 - **Meteorite gear (S):** Meteor armor, the Space Gun and the Star Cannon. Meteorites already land.
 - **Gaps in the gear (M):**
   - Weapons: the Minishark, the Sandgun, the Volcano, the Blade Staff, Abigail's Flower.
-  - Accessories: the Water Walking Boots line, Terraspark Boots, the Magic Quiver.
+  - Accessories: the rest of the Water Walking Boots line, Terraspark Boots, the Magic Quiver.
+  - The Water Chest's Sandcastle Bucket (a wand placing sandcastles) and Shark Bait (a pet).
   - Hooks: the Dual Hook and the Skeletron Hook.
   - Info combinations: the Fish Finder, the PDA and the Cell Phone.
 - **Missing enemies (M):** the Devourer, Blood Crawler, Tomb Crawler, Dune Splicer and Doctor Bones.
@@ -55,13 +56,13 @@ more.
 
 Taken from a pass-by-pass comparison with Terraria's world generation.
 
-- **Structures and biomes (L):** the Shimmer (Aether), ocean caves, and the open caverns of the
-  Underground Desert. (Done: moss, with neon patches, lava moss and Long Moss; gem caves and loose
-  gems, amber included; oases, with palms, sea oats and oasis plants.)
+- **Structures and biomes (L):** the Shimmer (Aether) and the open caverns of the Underground
+  Desert. (Done: moss, with neon patches, lava moss and Long Moss; gem caves and loose gems, amber
+  included; oases, with palms, sea oats and oasis plants; ocean caves and Water Chests.)
 - **Micro biomes (M):** minecart tracks, campsites, thin ice in the snow, Dead Man's Chests.
 - **Placement passes (M):**
-  - Cave statues, water chests, and biome pots (snow, jungle, Dungeon, evil, desert, Underworld,
-    marble, granite).
+  - Cave statues and biome pots (snow, jungle, Dungeon, evil, desert, Underworld, marble,
+    granite).
   - Cave piles: skeletons, coin stashes and rocks.
   - Stone and ice stalactites, desert fossils.
   - Beach shells and seaweed, sea oats on the beaches, dye plants.

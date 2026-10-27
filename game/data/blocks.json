@@ -1934,6 +1934,7 @@
 		{"name": "oasis_plant_6", "vary": true, "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_530", "tiles": [3, 2], "frames": [[270, 0]]}}, "variant_of": "oasis_plant"},
 		{"name": "oasis_plant_7", "vary": true, "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_530", "tiles": [3, 2], "frames": [[324, 0]]}}, "variant_of": "oasis_plant"},
 		{"name": "oasis_plant_8", "vary": true, "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_530", "tiles": [3, 2], "frames": [[378, 0]]}}, "variant_of": "oasis_plant"},
-		{"name": "oasis_plant_9", "vary": true, "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_530", "tiles": [3, 2], "frames": [[432, 0]]}}, "variant_of": "oasis_plant"}
+		{"name": "oasis_plant_9", "vary": true, "render": "cross", "solid": false, "opaque": false, "tool": "any", "sound": "grass", "default_method": "billboard", "tex": {"all": {"sheet": "Tiles_530", "tiles": [3, 2], "frames": [[432, 0]]}}, "variant_of": "oasis_plant"},
+		{"name": "water_chest", "render": "cutout", "opaque": false, "tool": "any", "drop": "WaterChest", "sound": "dig", "interact": "chest", "settings": "chest", "tex": {"side": {"sheet": "Tiles_21", "tiles": [2, 2], "frames": [[612, 0]]}, "top": {"sheet": "Tiles_30", "frames": [[18, 18]]}, "bottom": {"sheet": "Tiles_30", "frames": [[18, 18]]}}}
 	]
 }

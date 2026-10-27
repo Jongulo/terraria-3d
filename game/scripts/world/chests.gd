@@ -29,14 +29,16 @@ var ores := 0
 ## in the game yet, so they stay locked), 27 a living tree's Living Wood
 ## Chest, 28 a spider cave's Web Covered Chest (spiders.rs: WEB_CHEST_LOOT), 29
 ## a Pyramid's Gold Chest (pyramids.rs), 30 a Lihzahrd Chest in the Jungle
-## Temple (temple.rs).
+## Temple (temple.rs), 31 a Water Chest and 32 one in an ocean cave
+## (ocean_caves.rs).
 ## SHADOW_KEY added to a style: a Shadow Key in it too (the Dungeon's first
 ## chest, and 1 in 3 after it).
 const LOOT := ["chest", "sky_chest", "ivy_chest", "chest", "frozen_chest", "sandstone_chest", "sandstone_chest_deep",
 		"dungeon_Muramasa", "dungeon_CobaltShield", "dungeon_AquaScepter", "dungeon_BlueMoon", "dungeon_MagicMissile",
 		"dungeon_Valor", "dungeon_GoldenKey", "dungeon_Handgun", "mushroom_chest",
 		"shadow_DarkLance", "shadow_Sunfury", "shadow_FlowerofFire", "shadow_Flamelash", "shadow_HellwingBow",
-		"biome_jungle", "biome_corruption", "biome_crimson", "biome_hallowed", "biome_frozen", "biome_desert", "living_chest", "web_chest", "pyramid", "lihzahrd_chest"]
+		"biome_jungle", "biome_corruption", "biome_crimson", "biome_hallowed", "biome_frozen", "biome_desert", "living_chest", "web_chest", "pyramid", "lihzahrd_chest",
+		"water_chest", "water_chest_ocean"]
 const SHADOW_KEY := 64
 ## The second ore of each pair's things, by the first's: what a world with it
 ## puts in its chests instead.

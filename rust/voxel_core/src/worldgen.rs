@@ -1985,6 +1985,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     if let Some((x, y, z, door)) = dungeon {
         dungeon_entrance(w, (x, y, z), door, dungeon_brick);
     }
+    // Terraria's ocean caves (ocean_caves.rs: its Create Ocean Caves pass),
+    // not on the Dungeon's side; their own random numbers. Their treasure
+    // spots are kept for the Water Chests.
+    let ocean_spots = crate::ocean_caves::ocean_caves(w, &mut Rng::new(seed as u64 ^ 0x0cea_ca7e), &l, &coast, dungeon.map(|(x, _, z, _)| (x, z)));
     set_progress(0.705);
     // Terraria's Pyramids (pyramids.rs): one in each dune patch that rolled
     // one. Terraria builds them after its Dungeon and the caves' structures;
@@ -2260,6 +2264,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // that many go in each 640 x 640 blocks of the map (about 95 in 1024 x 1024).
     let cabin_count = (rng.range(35, 41) as f32 * area / (640.0 * 640.0)).round() as usize;
     let cabins = crate::cabins::underground_cabins(w, &mut rng, &l, cabin_count);
+    // Terraria's Water Chests pass (ocean_caves.rs), after its Buried Chests:
+    // the ocean caves' and the rest in deep water; their own random numbers.
+    crate::ocean_caves::water_chests(w, &mut Rng::new(seed as u64 ^ 0x3a7e_c4e5), &l, &ocean_spots);
     // Pass 7a: spider caves (Terraria's Spider Caves pass, after its Buried
     // Chests), out of the structures; their own random numbers.
     crate::spiders::spider_caves(w, &mut Rng::new(seed as u64 ^ 0x5b1d_e125), &l);
@@ -3911,6 +3918,8 @@ mod tests {
         crate::spiders::tests::add_spider_defs(&mut w);
         crate::moss::tests::add_moss_defs(&mut w);
         crate::gem_caves::tests::add_gem_defs(&mut w);
+        let id = w.defs.len() as u16;
+        w.set_def(id, BlockDef { name: "water_chest".into(), render: crate::world::RENDER_CUTOUT, solid: true, opaque: false, variants: 1, ..Default::default() });
         for name in ["sea_oats", "sea_oats_grown", "sea_oats_tall", "oasis_plant"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CROSS, solid: false, opaque: false, variants: 1, ..Default::default() });
@@ -4101,6 +4110,58 @@ mod tests {
             }
         }
         assert!(found >= 2, "oases in the deserts of three worlds ({found})");
+    }
+
+    /// Terraria's ocean caves and Water Chests in a whole world: a flooded
+    /// sandy burrow from the sea floor in under the coast (not on the
+    /// Dungeon's side), a Water Chest of its treasures, and Water Chests in
+    /// deep water elsewhere, on floors, apart.
+    #[test]
+    fn ocean_caves_and_water_chests() {
+        let (mut caves, mut ocean_chests, mut chests) = (0, 0, 0);
+        for seed in [1, 2, 3, 4] {
+            let w = gen_world_sized(seed, 0, (768, 384, 768));
+            let (sand, hard, chest) = (w.id_of("sand"), w.id_of("hardened_sand"), w.id_of("water_chest"));
+            for d in w.decorations.iter().filter(|d| d.kind == "ocean_cave") {
+                caves += 1;
+                // Inland of its start (and to either side, as it wanders),
+                // under the sea floor: water walled with sand and hardened
+                // sand, going well down.
+                let dir = [(1, 0), (-1, 0), (0, 1), (0, -1)][d.style as usize];
+                let (mut water, mut sandy) = (0, 0);
+                let mut lowest = d.pos.1;
+                for k in 0..70 {
+                    for side in -30..=30 {
+                        let (x, z) = (d.pos.0 + dir.0 * k + dir.1 * side, d.pos.2 + dir.1 * k + dir.0 * side);
+                        for y in d.pos.1 - 60..d.pos.1 - 3 {
+                            let (t, a) = w.liquid_at(x, y, z);
+                            if t == crate::world::LIQ_WATER && a > 0 && !w.is_solid(x, y, z) {
+                                water += 1;
+                                lowest = lowest.min(y);
+                            }
+                            let b = w.get(x, y, z);
+                            if b == sand || b == hard {
+                                sandy += 1;
+                            }
+                        }
+                    }
+                }
+                assert!(water > 2000 && sandy > 5000 && d.pos.1 - lowest > 15, "a flooded sandy burrow in and down from {:?} ({water} water, {sandy} sand, {} deep)", d.pos, d.pos.1 - lowest);
+            }
+            for d in w.decorations.iter().filter(|d| d.kind == "chest" && (d.style == crate::ocean_caves::WATER_CHEST_LOOT || d.style == crate::ocean_caves::OCEAN_CHEST_LOOT)) {
+                let (x, y, z) = d.pos;
+                assert_eq!(w.get(x, y, z), chest, "a Water Chest at {:?}", d.pos);
+                let wet = [(0, 1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1)].iter().any(|o| w.liquid_at(x + o.0, y + o.1, z + o.2).1 > 0);
+                assert!(w.is_solid(x, y - 1, z) && wet, "on a floor in water at {:?}", d.pos);
+                if d.style == crate::ocean_caves::OCEAN_CHEST_LOOT {
+                    ocean_chests += 1;
+                } else {
+                    chests += 1;
+                }
+            }
+        }
+        assert!(caves >= 2 && ocean_chests >= 1, "ocean caves in four worlds ({caves}) with their chests ({ocean_chests})");
+        assert!(chests >= 4 * 13, "Water Chests in deep water: 9 rounds of two a small Terraria world's width ({chests})");
     }
 
     /// Terraria's Marble, Granite and spider caves in a whole world: deep in
@@ -4615,12 +4676,13 @@ mod tests {
                     while y > 0 && a.get(x, y, z) == 0 {
                         y -= 1;
                     }
-                    floor_holes += (y - 12..y).filter(|&yy| a.get(x, yy, z) == 0).count();
+                    // (Ocean caves are holes full of water.)
+                    floor_holes += (y - 12..y).filter(|&yy| a.get(x, yy, z) == 0 && a.liquid_at(x, yy, z).1 == 0).count();
                 }
             }
         }
         assert!(beach > 1000 && beach_sand * 10 > beach * 9, "a sand beach ({beach_sand} of {beach})");
-        assert_eq!(floor_holes, 0, "the sea floor has no caves under it");
+        assert_eq!(floor_holes, 0, "the sea floor has no dry caves under it");
         assert!(a.liquid_active.iter().all(|&(x, _, z)| coast.inland(x, z) > o.width + o.beach), "the sea is still");
         // The big biomes: Snow, Desert and Jungle regions with their blocks,
         // trees (boreal, mahogany with their canopies) and cacti; spawn stays forest.

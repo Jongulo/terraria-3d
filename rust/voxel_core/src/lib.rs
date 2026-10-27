@@ -15,6 +15,7 @@ pub mod mesher;
 pub mod moss;
 pub mod mushroom;
 pub mod oasis;
+pub mod ocean_caves;
 pub mod physics;
 pub mod pyramids;
 pub mod temple;

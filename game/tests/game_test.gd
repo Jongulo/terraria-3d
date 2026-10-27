@@ -723,6 +723,26 @@ func _run() -> void:
 	var air := p.breath
 	await get_tree().create_timer(1.0).timeout
 	check(p.breath < air, "breath runs down underwater (%.1f -> %.1f)" % [air, p.breath])
+	# The Breathing Reed held: breath goes half as fast (its tip's under too).
+	var was := p.selected
+	p.inventory.slots[9] = Inventory.stack("BreathingReed", 1)
+	p.select(9)
+	var air2 := p.breath
+	await get_tree().create_timer(1.0).timeout
+	var reed_loss := air2 - p.breath
+	check(absf(reed_loss - 0.5) < 0.12, "holding a Breathing Reed, breath runs down half as fast (%.2f a second, else 1)" % reed_loss)
+	p.inventory.slots[9] = null
+	p.select(was)
+	# The Inner Tube: up to float in the water, head out.
+	p.accessories.slots[4] = Inventory.stack("FloatingTube", 1)
+	for i in 120:
+		await get_tree().physics_frame
+	var surface := pit.y - 1 + 0.94
+	check(p.head_liquid == 0 and absf(p.global_position.y + p.half.y * 0.5 - Player.FLOAT_OVER - surface) < 0.3,
+			"an Inner Tube floats you up, your middle 8 px over the water (%.2f over it)" % (p.global_position.y + p.half.y * 0.5 - surface))
+	p.accessories.slots[4] = null
+	for i in 120:
+		await get_tree().physics_frame
 	await frames(5)
 	await shot("underwater")
 	p.global_position = Vector3(pit) + Vector3(1.5, 1.2, 4.5)

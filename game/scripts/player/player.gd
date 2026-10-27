@@ -29,6 +29,14 @@ const LIQUID_GRAVITY := 30.0
 const FLIPPER_SWIM := 6.0
 const LIQUID_MAX_FALL := 12.5
 const LIQUID_MOVE := 0.5
+## The Inner Tube: 8 px it floats over your middle, its rise (0.4 px a tick²),
+## fastest rise (6 px a tick) and last bit's (3) (blocks: 24 px, a tick a
+## 60th of a second).
+const FLOAT_OVER := 8.0 / 24.0
+const FLOAT_RISE := 0.4 * 2.5 * 60.0
+const FLOAT_UP_MAX := 6.0 * 2.5
+const FLOAT_SETTLE_MAX := 3.0 * 2.5
+const TICK := 1.0 / 60.0
 ## In honey: gravity 0.1, maxFallSpeed 3, a quarter as far.
 const HONEY_GRAVITY := 15.0
 const HONEY_MAX_FALL := 7.5
@@ -1033,6 +1041,19 @@ func _move(delta: float, game) -> void:
 		# Flippers and the Flipper Potion (accFlipper): jump swims you up.
 		if jump and has_effect("flipper") and in_liquid != LIQ_LAVA:
 			velocity.y = maxf(velocity.y, FLIPPER_SWIM)
+		# The Inner Tube (canFloatInWater: Player.TryFloatingInFluid): unless
+		# you hold Drop down, water and honey bear you up (0.4 px a tick², to
+		# 6) till you float 8 px over your middle, rising the last of it at
+		# up to 3 px a tick.
+		if has_effect("float_in_water") and in_liquid != LIQ_LAVA and not (input_enabled and Input.is_action_pressed("drop_down")):
+			var mid := global_position.y + half.y * 0.5
+			var line := water_line(game.world, mid)
+			var low := mid - FLOAT_OVER
+			if line > -INF and low + velocity.y * delta <= line:
+				if mid < line:
+					velocity.y = minf(velocity.y + FLOAT_RISE * delta, FLOAT_UP_MAX)
+				else:
+					velocity.y = minf((line - low) / TICK, FLOAT_SETTLE_MAX)
 		_fall_start = global_position.y
 	else:
 		var wing := wings()
@@ -1992,6 +2013,18 @@ func toggle_creative_flight() -> void:
 ## below the cell's surface height.
 ## The top of the water or honey you'd stand on at `pos` (its surface, with
 ## you no lower than a little under it), or -INF.
+## The top of the water or honey at height `y` over your feet's column, up
+## through it (Collision.GetWaterLine), or -INF when `y` isn't in any.
+func water_line(w: VoxelWorld, y: float) -> float:
+	var cell := Vector3i(Vector3(global_position.x, y, global_position.z).floor())
+	var l: Vector2i = w.get_liquid(cell)
+	if l.y <= 0 or l.x == LIQ_LAVA:
+		return -INF
+	while w.get_liquid(cell + Vector3i.UP).y > 0:
+		cell += Vector3i.UP
+	return cell.y + w.get_liquid(cell).y / 63.0 * 0.94
+
+
 static func liquid_top(w: VoxelWorld, pos: Vector3) -> float:
 	for dy in [0.0, -1.0]:
 		var cell := Vector3i((pos + Vector3(0, dy - 0.01, 0)).floor())
@@ -2024,6 +2057,16 @@ func _update_liquid(game) -> void:
 			game.spawn_dust(global_position, col, 20 if in_liquid == LIQ_HONEY else 14)
 
 
+## Whether the Breathing Reed's tip is in the air (CheckDrowning: 44 px over
+## your feet, 6 ahead): its cell neither half full of liquid nor solid.
+func _reed_in_air() -> bool:
+	var f := forward()
+	var tip := global_position + Vector3.UP * (44.0 / 24.0) + Vector3(f.x, 0, f.z).normalized() * (6.0 / 24.0)
+	var cell := Vector3i(tip.floor())
+	var w: VoxelWorld = Game.current.world
+	return w.get_liquid(cell).y < 32 and not w.is_solid(cell)
+
+
 ## No damage of any kind: the test world's god mode, or creative mode.
 func invulnerable() -> bool:
 	return god_mode or creative
@@ -2043,8 +2086,11 @@ func _liquid_effects(delta: float) -> void:
 	# The Diving Helmet: breath lasts six times as long (breathCD 7 -> 42
 	# ticks), drowning hurts a sixth as much.
 	var diving := 6.0 if has_effect("diving") else 1.0
-	if head_liquid != 0 and not has_effect("gills"):
-		breath = maxf(0.0, breath - delta / diving)
+	# The Breathing Reed held (not swung: Player.hasBreathingReed): breath
+	# lasts twice as long, and none goes while its tip is out of the water.
+	var reed: bool = held().get("breathing_reed", false) and _use_timer <= 0.0
+	if head_liquid != 0 and not has_effect("gills") and not (reed and _reed_in_air()):
+		breath = maxf(0.0, breath - delta / diving / (2.0 if reed else 1.0))
 	else:
 		breath = minf(BREATH_MAX, breath + delta * 6.0)
 	var dot := 0.0
