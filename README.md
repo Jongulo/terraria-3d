@@ -320,35 +320,40 @@ and fishing catches are read from your Terraria.exe by the scripts in `tools/` (
 in this game.
 
 - **World:** forest, Snow, Desert, Jungle, Corruption or Crimson, Glowing Mushroom biome, bee hives,
-  ocean, floating islands, the Dungeon, and the Underworld with its ash forests and ruined forts;
-  caves, lakes, gem ores, gem trees, vanity trees, giant living trees and Living Mahogany trees,
-  underground cabins, Granite and Marble caves, spider caves, Enchanted Sword Shrines, traps, pots,
-  life crystals and loot chests, Shadow Chests, and forest plants and debris.
+  ocean, floating islands, Dunes with Pyramids under them, the Jungle Temple, the Dungeon, and the
+  Underworld with its ash forests and ruined forts; caves, lakes, gem ores, gem trees, vanity
+  trees, giant living trees and Living Mahogany trees, underground cabins, Granite and Marble caves,
+  spider caves, Enchanted Sword Shrines, meteorites, traps, pots, life crystals and loot chests,
+  Shadow Chests, and forest plants and debris.
 - **Liquids:** water, lava and honey that fall, level out and settle; waterfalls and lavafalls, and
   springs you open with a hammer.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
   stairs, platforms, doors, furniture in every wood, lights, paintings, signs, beds, containers,
-  falling sand and explosives.
-- **Weapons:** swords, spears, yoyos, boomerangs, flails, bows, guns, magic and thrown weapons, with
-  prefixes and reforging.
+  falling sand and explosives; wires, actuators, switches, pressure plates and timers.
+- **Weapons:** swords, spears, yoyos, boomerangs, flails, bows, guns, magic and thrown weapons,
+  summon staves and whips, with prefixes and reforging.
 - **Gear:** armor sets and set bonuses, accessories (including the informational ones, which work
   anywhere in your inventory), grappling hooks, ropes and rope coils, wings, boots, climbing gear,
-  the Tinkerer's Workshop combinations.
+  the Tinkerer's Workshop combinations; pets, light pets and a few mounts (the Slimy Saddle, roller
+  skates); buff potions, alchemy and herbs, and Well Fed foods.
 - **Enemies and critters** of every biome above, with Terraria's spawn rules, knockback, gores and
   blood; the bug net and critters as bait.
 - **Bosses and events:** the Eye of Cthulhu, King Slime, the Eater of Worlds, the Brain of Cthulhu,
-  the Queen Bee, Skeletron (and the Dungeon Guardian), and the Goblin Army.
+  the Queen Bee, Skeletron (and the Dungeon Guardian), the Wall of Flesh; the Goblin Army, the
+  Blood Moon, Slime Rain, rain, storms and windy days.
 - **Town NPCs:** the Guide, Merchant, Nurse, Arms Dealer, Dryad, Demolitionist, Clothier, Goblin
-  Tinkerer and Angler, with housing, shops, Terraria's lines and the Angler's quests.
+  Tinkerer, Mechanic, Witch Doctor and Angler, with housing, shops, Terraria's lines and the
+  Angler's quests; the Traveling Merchant and the Skeleton Merchant.
 - **Fishing:** poles, bait, crates, the Angler's quests, and the Extractinator for silt and slush.
 - **Day and night:** the sky, clouds, wind and falling leaves, Fallen Stars, context music and
   sound effects; saving with autosave.
 
-**Not yet:** Hardmode and the Wall of Flesh; summons and minions, pets, mounts and minecarts;
-alchemy, Well Fed and buff potions; placing wires; the Painter, Traveling Merchant, other town NPCs
-and NPC happiness; Devourers, Blood Crawlers and Giant Worms; the Underground Desert's open
-caverns; the Topaz, Sapphire, Emerald and Ruby Staves' gem effects;
-Blood Moons; swimming (Flippers); herbs growing from seeds; cages and terrariums; Expert mode.
+**Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; minecarts and
+most mounts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
+NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
+Crawlers and Tomb Crawlers; the Shimmer, moss caves, gem caves, ocean caves and oases; the
+Underground Desert's open caverns; cages and terrariums; Expert mode. See
+[the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 
 ## Tools
 
