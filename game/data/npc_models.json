@@ -136,6 +136,19 @@
 		"FaceMonster": {
 			"depth": 17.0
 		},
+		"GiantWormBody": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"GiantWormHead": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"GiantWormTail": {
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
 		"Hornet": {
 			"bevel": "chamfer",
 			"bevel_size": 2.0,
@@ -251,6 +264,9 @@
 		"EaterofWorldsHead": "rendered",
 		"EaterofWorldsTail": "rendered",
 		"EyeofCthulhu": "rendered",
+		"GiantWormBody": "rendered",
+		"GiantWormHead": "extruded",
+		"GiantWormTail": "rendered",
 		"ManEater": "rendered",
 		"ServantofCthulhu": "rendered",
 		"SkeletronArm": "rendered",
@@ -312,6 +328,18 @@
 			"outline": true
 		},
 		"EyeofCthulhu": {
+			"outline": true
+		},
+		"GiantWormBody": {
+			"model": "extruded",
+			"outline": true
+		},
+		"GiantWormHead": {
+			"model": "extruded",
+			"outline": true
+		},
+		"GiantWormTail": {
+			"model": "extruded",
 			"outline": true
 		},
 		"Hornet": {
