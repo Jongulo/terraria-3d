@@ -8140,6 +8140,15 @@ func _summon_checks(c: Vector3i) -> void:
 	var bird: Minion = p.minions[0]
 	var sits := await _until(func(): return bird.frame == 4 and bird.vel == Vector3.ZERO, 5.0)
 	check(sits and bird.center().y > p.center().y + 0.8, "the Finch sits on your head")
+	var behind := func() -> float:
+		var f := p.forward()
+		return (bird.center() - p.camera.global_position).dot(Vector3(f.x, 0, f.z).normalized())
+	check(behind.call() < -0.3, "at the back of it, out of your first-person view (%.2f blocks behind your eyes)" % -behind.call())
+	var yaw0 := p._yaw
+	p.look_at_yaw_pitch(yaw0 + PI, 0.0)
+	await frames(2)
+	check(bird._perched and bird.vel == Vector3.ZERO and behind.call() < -0.3, "and stays there when you turn round, not flying past your eyes")
+	p.look_at_yaw_pitch(yaw0, 0.0)
 	foe = enemy.call(Vector3i(4, 0, 4))
 	life0 = foe.life
 	hurt = await _until(func(): return not is_instance_valid(foe) or foe.life < life0, 6.0)

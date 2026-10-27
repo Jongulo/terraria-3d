@@ -24,8 +24,9 @@ extends Node3D
 ##     beside you), to an enemy it can see within 2000 px, shooting at it
 ##     (the Hornet's stingers every 90 ticks or so, the Imp's fireballs every
 ##     60); back to you through the blocks when 500 px off (1000 fighting).
-##   bird: AI_158 (the Finch): sits on your head, darts at enemies within
-##     800 px and pecks them (each every 15 ticks).
+##   bird: AI_158 (the Finch): sits on your head (the back of it, out of
+##     your first-person view), darts at enemies within 800 px and pecks
+##     them (each every 15 ticks).
 ##   orb: AI_011 (the Shadow Orb): drifts after you at 3 px a tick, shining.
 ##   lantern: AI_090 (the Magic Lantern): floats 40 px beside you and 40 above
 ##     your middle, dimly lit, and every 10 ticks sparkles the treasure within
@@ -86,6 +87,12 @@ const KINDS := {
 ## Terraria's jumps for a wall in the way (AI_026: 5.1 px/tick for a tile,
 ## up to 11.1 for five), and how many blocks each clears (gravity 0.4).
 const JUMPS := [5.1, 7.1, 9.1, 10.1, 11.1]
+## How far behind your eyes the Finch sits on your head (px): Terraria's
+## head-top seat is in your face in first person.
+const PERCH_BACK := 12.0
+## How far its seat can move away under it (you turning, walking) before a
+## sitting Finch takes off to catch up (px).
+const PERCH_HOLD := 40.0
 
 var player: Player
 ## Its ProjectileID name, its KINDS entry and the item that summoned it.
@@ -121,6 +128,8 @@ var _face := 1.0
 ## 1 right, -1 left on your screen, 0 not.
 var _face_target := 0.0
 var _cooldowns := {}  # npc -> ticks left (its own, Terraria's localNPCHitCooldown)
+## A Finch sitting on your head: it stays on its seat as you turn.
+var _perched := false
 ## The physics frame each enemy can next be hurt by any of a kind
 ## (Terraria's idStaticNPCHitCooldown: all Baby Slimes share one).
 static var _shared := {}
@@ -830,6 +839,7 @@ func _bird_tick(game) -> void:
 			target = npc
 	friendly = true
 	if target != null:
+		_perched = false
 		var collide := not _in_solid(game)
 		var to: Vector3 = (target.center() - center()) * PX
 		var dist := to.length()
@@ -854,13 +864,19 @@ func _bird_tick(game) -> void:
 			frame = (frame + 1) % (int(cfg.frames) - 1)
 		return
 	# Home: on your head (Terraria's 21 px above your middle, the others
-	# beside it in sixes, 16 px higher for each six).
-	var home := _you() + Vector3(0, 23.0, 0) / PX
+	# beside it in sixes, 16 px higher for each six), at the back of it.
+	var home := _you() + Vector3(0, 23.0, 0) / PX - _facing() * PERCH_BACK / PX
 	var spots := [Vector2.ZERO, Vector2(8, 2), Vector2(-10, 2), Vector2(10, 10), Vector2(-12, 10), Vector2(0, 10)]
 	var spot: Vector2 = spots[index % 6]
-	home += _facing() * spot.x / PX + Vector3(0, spot.y + 16.0 * (index / 6), 0) / PX
+	home += _facing().cross(Vector3.UP) * spot.x / PX + Vector3(0, spot.y + 16.0 * (index / 6), 0) / PX
 	var d := (home - center()) * PX
 	var dist := d.length()
+	if _perched and dist <= PERCH_HOLD:
+		global_position = home - Vector3(0, box.y / 2.0, 0)
+		vel = Vector3.ZERO
+		frame = int(cfg.frames) - 1
+		return
+	_perched = false
 	if dist > 2000.0:
 		global_position = home - Vector3(0, box.y / 2.0, 0)
 		vel = Vector3.ZERO
@@ -888,6 +904,7 @@ func _bird_tick(game) -> void:
 		global_position = home - Vector3(0, box.y / 2.0, 0)
 		vel = Vector3.ZERO
 		frame = int(cfg.frames) - 1
+		_perched = true
 
 
 # ------------------------------------------------------------- AI_067
