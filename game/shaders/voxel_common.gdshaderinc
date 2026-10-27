@@ -1,6 +1,9 @@
 // Shared by voxel.gdshader / voxel_cutout.gdshader. Vertex data comes from
 // rust/voxel_core/src/mesher.rs: COLOR = (block r, g, b, sun), UV2 = (layer, ao).
 uniform sampler2DArray block_textures : source_color, filter_nearest_mipmap, repeat_disable;
+// The layers from 2048 on (Data.block_textures_2): one array holds no more
+// on many GPUs.
+uniform sampler2DArray block_textures_2 : source_color, filter_nearest_mipmap, repeat_disable;
 // Each layer's art pixels across a block (Data.layer_texels): the sun's
 // shadow is looked up once per art pixel.
 uniform sampler2D layer_texels : filter_nearest, repeat_disable;
@@ -19,6 +22,18 @@ float layer_art_pixels() {
 	int layer = int(v_layer_ao.x + 0.5);
 	int w = textureSize(layer_texels, 0).x;
 	return max(1.0, texelFetch(layer_texels, ivec2(layer % w, layer / w), 0).r);
+}
+
+// A block face's colour at `uv` from texture layer `layer`, in whichever
+// array holds it. The mipmap gradients are taken before choosing, so they're
+// right where faces from the two arrays meet.
+vec4 block_tex(vec2 uv, float layer) {
+	vec2 dx = dFdx(uv);
+	vec2 dy = dFdy(uv);
+	if (layer < 2047.5) {
+		return textureGrad(block_textures, vec3(uv, layer), dx, dy);
+	}
+	return textureGrad(block_textures_2, vec3(uv, layer - 2048.0), dx, dy);
 }
 
 void vertex() {

@@ -835,6 +835,18 @@ func _mushroom_checks(c: Vector3i) -> void:
 	p.target = {"block": mud_at, "normal": Vector3i.UP, "id": w.get_block(mud_at), "distance": 3.0}
 	check(not p._place(Data.item("MushroomGrassSeeds")), "not on anything else")
 	check(Data.item("GlowingMushroom").place == "mushroom_block", "a Glowing Mushroom places a Mushroom Block")
+	# Moss (Terraria's moss items) goes on stone; mined it's stone, glowing
+	# as its kind does.
+	w.set_block(mud_at, id.call("stone"))
+	p.inventory.slots[9] = Inventory.stack("XenonMoss", 2)
+	p.target = {"block": mud_at, "normal": Vector3i.UP, "id": w.get_block(mud_at), "distance": 3.0}
+	check(p._place(Data.item("XenonMoss")) and w.get_block(mud_at) == id.call("xenon_moss") and p.inventory.count_of("XenonMoss") == 1,
+			"Xenon Moss turns stone to xenon moss")
+	p.target = {"block": mud_at, "normal": Vector3i.UP, "id": w.get_block(mud_at), "distance": 3.0}
+	check(not p._place(Data.item("XenonMoss")), "and nothing else")
+	check(Data.block(id.call("xenon_moss")).drop == "StoneBlock" and Data.block(id.call("xenon_moss")).get("emit", []) == [0.0, 0.16, 0.34]
+			and not Data.block(id.call("green_moss")).has("emit"), "moss drops stone; neon moss glows (Terraria's light), plain moss doesn't")
+	w.set_block(mud_at, id.call("stone"))
 	p.inventory.slots[9] = null
 	p.select(was_selected)
 	# The Mushroom Chest: a cabin chest's loot, half the time the Mushroom set.
@@ -8499,7 +8511,8 @@ func _summon_checks(c: Vector3i) -> void:
 	check(orb.has("ShadowOrb") and orb.has("Vilethorn"), "a Shadow Orb can hold the Shadow Orb pet")
 	check(Data.npcs.GreenSlime.drops.any(func(dd): return dd[0] == "SlimeStaff" and is_equal_approx(dd[3], 0.0001)),
 			"slimes drop the Slime Staff, 1 in 10000")
-	check(Data.block_textures.get_layers() <= Data.MAX_LAYERS, "block textures fit the GPU (%d layers)" % Data.block_textures.get_layers())
+	check(Data.block_textures.get_layers() <= Data.MAX_LAYERS and Data.block_textures_2.get_layers() <= Data.MAX_LAYERS,
+			"block textures fit the GPU (%d + %d layers)" % [Data.block_textures.get_layers(), Data.block_textures_2.get_layers()])
 	p.armor.slots = worn
 	p.inventory.slots[9] = null
 	p.select(held)

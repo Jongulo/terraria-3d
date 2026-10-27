@@ -323,7 +323,8 @@ in this game.
   ocean, floating islands, Dunes with Pyramids under them, the Jungle Temple, the Dungeon, and the
   Underworld with its ash forests and ruined forts; caves, lakes, gem ores, gem trees, vanity
   trees, giant living trees and Living Mahogany trees, underground cabins, Granite and Marble caves,
-  spider caves, Enchanted Sword Shrines, meteorites, traps, pots, life crystals and loot chests,
+  spider caves, moss (plain, lava and neon, with Long Moss), Enchanted Sword Shrines, meteorites,
+  traps, pots, life crystals and loot chests,
   Shadow Chests, and forest plants and debris.
 - **Liquids:** water, lava and honey that fall, level out and settle; waterfalls and lavafalls, and
   springs you open with a hammer.
@@ -351,7 +352,7 @@ in this game.
 **Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; minecarts and
 most mounts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
 NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
-Crawlers and Tomb Crawlers; the Shimmer, moss caves, gem caves, ocean caves and oases; the
+Crawlers and Tomb Crawlers; the Shimmer, gem caves, ocean caves and oases; the
 Underground Desert's open caverns; cages and terrariums; Expert mode. See
 [the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 

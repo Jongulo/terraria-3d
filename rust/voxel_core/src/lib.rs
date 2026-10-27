@@ -11,6 +11,7 @@ pub mod liquid;
 pub mod lod;
 pub mod marble;
 pub mod mesher;
+pub mod moss;
 pub mod mushroom;
 pub mod physics;
 pub mod pyramids;

@@ -340,7 +340,8 @@ func _run() -> void:
 		await frames(20)
 		check(cards.call() <= before_cards - tree_branches.filter(func(b): return b.cell >= 1).size(), "felled: its branches go with it (%d -> %d)" % [before_cards, cards.call()])
 
-	check(Data.block_textures.get_layers() <= Data.MAX_LAYERS, "block textures fit a GPU's texture array (%d of %d layers)" % [Data.block_textures.get_layers(), Data.MAX_LAYERS])
+	check(Data.block_textures.get_layers() <= Data.MAX_LAYERS and Data.block_textures_2.get_layers() <= Data.MAX_LAYERS,
+			"block textures fit a GPU's texture arrays (%d + %d layers, %d an array)" % [Data.block_textures.get_layers(), Data.block_textures_2.get_layers(), Data.MAX_LAYERS])
 
 	# Gem trees in the caves: their gems, drops, recipes and light.
 	var gem_tops := w.get_decorations().filter(func(d): return d.kind == "tree_top" and int(d.style) / 10 >= 16 and int(d.style) / 10 <= 22)

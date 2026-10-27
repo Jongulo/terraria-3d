@@ -6,7 +6,7 @@ render_mode cull_back, specular_disabled;
 #include "res://shaders/sun_shadow.gdshaderinc"
 
 void fragment() {
-	vec4 c = texture(block_textures, vec3(UV, v_layer_ao.x));
+	vec4 c = block_tex(UV, v_layer_ao.x);
 	VOXEL_SHADED(c.rgb);
 	if (SUN_SHADOWS_ON) {
 		// The shadow looked up at the middle of each of the texture's art pixels.

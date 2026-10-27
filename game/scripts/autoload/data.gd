@@ -49,6 +49,9 @@ var biome_blocks := {}
 ## CatBast), as buff -> PackedInt32Array.
 var near_buff_ids := {}
 var block_textures: Texture2DArray
+## The layers past MAX_LAYERS, in a second array (voxel_common.gdshaderinc's
+## block_tex picks the array): up to twice as many in all.
+var block_textures_2: Texture2DArray
 ## Each block texture layer's art pixels across a block (Terraria's art is
 ## drawn at 2x, and the layers are upscaled to LAYER_SIZE): the shaders look
 ## the sun's shadow up once per art pixel (shaders/sun_shadow.gdshaderinc).
@@ -158,7 +161,8 @@ func block(id: int) -> Dictionary:
 	return blocks[id] if id > 0 and id < blocks.size() else {}
 
 
-## Texture array layers a GPU is sure to allow (Vulkan's maxImageArrayLayers).
+## Texture array layers a GPU is sure to allow (Vulkan's maxImageArrayLayers):
+## the blocks' textures fill one array, then a second (block_textures_2).
 const MAX_LAYERS := 2048
 ## Terraria's Main.tileCut: the tiles a swung weapon or the player's
 ## projectiles break (grass, flowers, plants, vines, cobwebs, herbs, pots, lily
@@ -277,12 +281,15 @@ func _load_blocks() -> void:
 				near_buff_ids[b] = PackedInt32Array()
 			near_buff_ids[b].append(id)
 	_migrate_placeables()
-	if layers.size() > MAX_LAYERS:
-		push_error("block textures: %d layers, more than GPUs allow (%d): blocks would draw white" % [layers.size(), MAX_LAYERS])
+	if layers.size() > 2 * MAX_LAYERS:
+		push_error("block textures: %d layers, more than two arrays hold (%d): blocks would draw white" % [layers.size(), 2 * MAX_LAYERS])
 	for img in layers:
 		img.generate_mipmaps()
 	block_textures = Texture2DArray.new()
-	block_textures.create_from_images(layers)
+	block_textures.create_from_images(layers.slice(0, MAX_LAYERS))
+	# (Never empty: a layer of the first when nothing's past it.)
+	block_textures_2 = Texture2DArray.new()
+	block_textures_2.create_from_images(layers.slice(MAX_LAYERS) if layers.size() > MAX_LAYERS else layers.slice(0, 1))
 	var rows := maxi(1, ceili(float(texels.size()) / LAYER_TEXELS_WIDTH))
 	texels.resize(rows * LAYER_TEXELS_WIDTH)
 	layer_texels = ImageTexture.create_from_image(Image.create_from_data(LAYER_TEXELS_WIDTH, rows, false, Image.FORMAT_RF, texels.to_byte_array()))
@@ -1369,3 +1376,10 @@ func block_item(block_id: int) -> String:
 ## Item that a block drops when mined.
 func block_drop(block_id: int) -> String:
 	return block(block_id).get("drop", "")
+
+
+## Block texture layer `layer`'s picture, from whichever array holds it.
+func layer_image(layer: int) -> Image:
+	if layer >= MAX_LAYERS:
+		return block_textures_2.get_layer_data(layer - MAX_LAYERS)
+	return block_textures.get_layer_data(layer)

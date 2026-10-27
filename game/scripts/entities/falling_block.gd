@@ -22,7 +22,7 @@ func setup(id: int) -> void:
 	block = id
 	var d := Data.block(id)
 	var layer: int = d.get("tex_side", d.get("tex_top", 0))
-	var tex := ImageTexture.create_from_image(Data.block_textures.get_layer_data(layer))
+	var tex := ImageTexture.create_from_image(Data.layer_image(layer))
 	_mat.albedo_texture = tex
 	_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

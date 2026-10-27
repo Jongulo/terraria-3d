@@ -55,8 +55,9 @@ more.
 
 Taken from a pass-by-pass comparison with Terraria's world generation.
 
-- **Structures and biomes (L):** the Shimmer (Aether), moss caves (including lava moss in the
-  Underworld), gem caves, ocean caves, oases, and the open caverns of the Underground Desert.
+- **Structures and biomes (L):** the Shimmer (Aether), gem caves, ocean caves, oases, and the
+  open caverns of the Underground Desert. (Moss is done: plain moss in thirds, neon patches, moss
+  caves, lava moss and Long Moss.)
 - **Micro biomes (M):** minecart tracks, campsites, thin ice in the snow, Dead Man's Chests.
 - **Placement passes (M):**
   - Cave statues, water chests, and biome pots (snow, jungle, Dungeon, evil, desert, Underworld,

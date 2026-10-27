@@ -6,7 +6,7 @@ render_mode cull_disabled, specular_disabled;
 #include "res://shaders/sun_shadow.gdshaderinc"
 
 void fragment() {
-	vec4 c = texture(block_textures, vec3(UV, v_layer_ao.x));
+	vec4 c = block_tex(UV, v_layer_ao.x);
 	VOXEL_SHADED(c.rgb);
 	ALPHA = c.a;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;

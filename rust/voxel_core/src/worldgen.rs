@@ -294,7 +294,7 @@ pub fn corals(w: &mut World, seed: i32, coast: &Coast, sand: u16) -> usize {
 /// Terraria's order (tiles 583-589).
 pub const GEM_CANOPY: i32 = 16;
 /// Clear cells a gem tree needs above its trunk, for its top.
-const GEM_TOP_ROOM: i32 = 7;
+pub(crate) const GEM_TOP_ROOM: i32 = 7;
 pub const GEMS: [&str; 7] = ["topaz", "amethyst", "sapphire", "emerald", "ruby", "diamond", "amber"];
 
 /// The surface layer's foot, below `Layers::surface_base` (the spawner's line
@@ -2247,6 +2247,9 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // Pass 7a: spider caves (Terraria's Spider Caves pass, after its Buried
     // Chests), out of the structures; their own random numbers.
     crate::spiders::spider_caves(w, &mut Rng::new(seed as u64 ^ 0x5b1d_e125), &l);
+    // Pass 7b: moss (moss.rs: Terraria's Moss pass, after its Spider Caves);
+    // its own random numbers.
+    crate::moss::moss(w, &mut Rng::new(seed as u64 ^ 0x3055_ca5e), &l);
     // Pass 8: Enchanted Sword Shrines (Terraria's Micro Biomes pass, after its
     // Buried Chests), kept out of the cabins and chests.
     crate::shrines::sword_shrines(w, &mut rng, &l);
@@ -2259,6 +2262,8 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     // Terraria's Herbs pass: herb sprouts on their soils; their own random numbers.
     crate::alchemy::herbs_pass(w, &mut Rng::new(seed as u64 ^ 0x4e2b_5a17), &l);
+    // Terraria's Moss Grass pass: Long Moss on the moss (moss.rs).
+    crate::moss::long_moss(w);
     // The passes since the temple that don't keep out of it, undone in it.
     if let Some(t) = &temple {
         crate::temple::restore(w, t);
@@ -3378,9 +3383,10 @@ mod tests {
                 y -= 1;
             }
             assert!((7..=12).contains(&h), "a {} tree {} tall at {:?}", GEMS[gem], h, d.pos);
-            // (On stone, or a gem ore the Gems pass made of it after.)
+            // (On stone, or a gem ore the Gems pass or moss the Moss pass
+            // made of it after.)
             let ground = w.get(x, y, z);
-            assert!(([stone, ebon, crim].contains(&ground) || w.def(ground).name.ends_with("_ore")) && y < l.surface_base - SURFACE_LAYER_DEPTH && y > l.underworld_top, "on stone, below the surface layer: {} at {:?}", w.def(w.get(x, y, z)).name, (x, y, z));
+            assert!(([stone, ebon, crim].contains(&ground) || w.def(ground).name.ends_with("_ore") || w.def(ground).name.ends_with("_moss")) && y < l.surface_base - SURFACE_LAYER_DEPTH && y > l.underworld_top, "on stone, below the surface layer: {} at {:?}", w.def(w.get(x, y, z)).name, (x, y, z));
             assert!((1..=GEM_TOP_ROOM).all(|k| w.get(x, d.pos.1 + k - 1, z) == 0), "room for its top: {:?}", (1..=GEM_TOP_ROOM).map(|k| w.def(w.get(x, d.pos.1 + k - 1, z)).name.clone()).collect::<Vec<_>>());
             assert!((d.pos.1 + GEM_TOP_ROOM..w.sy).any(|k| w.get(x, k, z) != 0), "under a roof, not open to the sky: {:?}", d.pos);
             assert!(!w.decorations.iter().any(|f| f.kind == "waterfall" && f.pos.1 > y && (f.pos.0 - x).abs() <= 3 && (f.pos.2 - z).abs() <= 3), "no waterfall pouring through it");
@@ -3882,6 +3888,7 @@ mod tests {
         crate::mushroom::tests::add_mushroom_defs(&mut w);
         crate::marble::tests::add_cave_defs(&mut w);
         crate::spiders::tests::add_spider_defs(&mut w);
+        crate::moss::tests::add_moss_defs(&mut w);
         for name in ["silt", "slush", "amethyst_ore", "topaz_ore", "sapphire_ore", "emerald_ore", "ruby_ore", "diamond_ore"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
@@ -3892,6 +3899,63 @@ mod tests {
         w.gen_evil = evil;
         generate(&mut w, seed, &AtomicU32::new(0));
         w
+    }
+
+    /// Terraria's moss in a whole world: as much of the caverns' walls (the
+    /// stone and moss open to a cave) moss as in Terraria's (28% in the upper
+    /// caverns, 18% lower down, a small world its server made), lava moss
+    /// down where the lava is, three plain mosses across the world in thirds,
+    /// and Long Moss on it.
+    #[test]
+    fn moss_in_the_caverns() {
+        let w = gen_world_sized(3, 0, (768, 384, 768));
+        let l = layers(w.sy);
+        let stone = w.id_of("stone");
+        let names = crate::moss::MOSSES.map(|m| w.id_of(&format!("{m}_moss")));
+        let mid = (l.cavern_top + l.underworld_top) / 2;
+        let open = |x: i32, y: i32, z: i32| [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)].iter().any(|d: &(i32, i32, i32)| !w.is_solid(x + d.0, y + d.1, z + d.2));
+        let mut kinds = [[0usize; 10]; 2];
+        let mut bare = [0usize; 2];
+        let mut thirds = [[0usize; 10]; 3];
+        for z in 1..w.sz - 1 {
+            for y in l.underworld_top..l.cavern_top {
+                for x in 1..w.sx - 1 {
+                    let b = w.get(x, y, z);
+                    let k = names.iter().position(|&m| m == b);
+                    if (b != stone && k.is_none()) || !open(x, y, z) {
+                        continue;
+                    }
+                    let band = if y >= mid { 0 } else { 1 };
+                    match k {
+                        Some(k) => {
+                            kinds[band][k] += 1;
+                            thirds[(x * 3 / w.sx) as usize][k] += 1;
+                        }
+                        None => bare[band] += 1,
+                    }
+                }
+            }
+        }
+        let share = |band: usize| {
+            let m: usize = kinds[band].iter().sum();
+            100.0 * m as f64 / (m + bare[band]).max(1) as f64
+        };
+        let (upper, lower) = (share(0), share(1));
+        assert!((22.0..38.0).contains(&upper) && (12.0..26.0).contains(&lower), "moss on {upper:.1}% of the upper caverns' walls, {lower:.1}% lower down");
+        // Lava moss (5) down where the lava is; a neon moss (6-9) somewhere.
+        assert!(kinds[1][5] > 20 * kinds[0][5].max(1) / 10 && kinds[1][5] > 10_000, "lava moss lower down ({:?})", kinds.map(|k| k[5]));
+        assert!((6..10).any(|k| kinds[0][k] + kinds[1][k] > 10_000), "a neon moss ({kinds:?})");
+        // Each third its own plain moss, mostly.
+        let plain = |t: usize| (0..5).max_by_key(|&k| thirds[t][k]).unwrap();
+        let picks = [plain(0), plain(1), plain(2)];
+        assert!(picks[0] != picks[1] && picks[1] != picks[2] && picks[0] != picks[2], "three different mosses across the world ({picks:?})");
+        for t in 0..3 {
+            let all: usize = thirds[t][..5].iter().sum();
+            assert!(thirds[t][picks[t]] * 10 > all * 9, "third {t} mostly its moss ({:?})", thirds[t]);
+        }
+        let long = |hanging: bool| w.blocks.iter().filter(|&&b| w.def(b).name.starts_with("long_moss_") && w.def(b).name.ends_with("_hanging") == hanging).count();
+        let moss: usize = kinds.iter().flatten().sum();
+        assert!(long(false) > moss / 5 && long(true) > moss / 5, "Long Moss on its floors ({}) and under its ceilings ({})", long(false), long(true));
     }
 
     /// Terraria's Marble, Granite and spider caves in a whole world: deep in
