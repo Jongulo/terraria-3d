@@ -65,6 +65,8 @@ static func voxels(sp: Dictionary, art: Image, faces := {}, body := {}) -> Dicti
 				_mouth(vox, c, r, art, op, faces)
 			"outside":
 				_outside(vox, c, r, art, float(op.get("drift", 16.0)), float(op.get("rise", 20.0)), float(op.get("wave", 0.1)))
+			"wall_of_flesh":
+				WofSculpt.build(vox, art, op)
 	var out := {}
 	for v: Vector3i in vox:
 		if v.x >= 0 and v.x < w and v.y >= 0 and v.y < h and v.z >= 0 and v.z < w:

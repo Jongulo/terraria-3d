@@ -13,7 +13,8 @@ extends Node3D
 ## ticks: your minions' hits on it do the whip's tag damage more (the
 ## Snapthorn's also poison it 1 in 5, and give you its speed buff), and it's
 ## your minions' target from then on. The Meteor Whip's tag readies a
-## falling meteor for your minions' next hit on it (1.33x that hit).
+## falling meteor for your minions' next hit on it (1.33x that hit); the
+## Firecracker's (Hellfire 4 s each crack) an explosion on the next.
 
 const PX := 24.0
 const TICK := 1.0 / 60.0
@@ -35,6 +36,8 @@ const KINDS := {
 		"string": [88 / 255.0, 85 / 255.0, 155 / 255.0]},
 	"ThornWhip": {"speed": 4, "segments": 20, "range": 1.0, "falloff": 0.6, "tag": 6, "rows": 5, "middle": "cycle3", "poison": [5, 180],
 		"buff": ["ThornWhipPlayerBuff", 180], "string": [34 / 255.0, 139 / 255.0, 34 / 255.0]},
+	"FireWhip": {"speed": 4, "segments": 20, "range": 1.4, "falloff": 0.66, "tag": 0, "rows": 5, "middle": "fire", "proc": "firecracker", "hellfire": 240,
+		"string": [178 / 255.0, 34 / 255.0, 34 / 255.0]},
 	"BoneWhip": {"speed": 5, "segments": 20, "range": 0.95, "falloff": 0.9, "tag": 7, "rows": 5, "middle": "cycle3", "string": [210 / 255.0, 180 / 255.0, 140 / 255.0]},
 }
 ## The whip's own box at each point (its projectile: 18 x 18 px).
@@ -205,6 +208,8 @@ func _strike(game, npc) -> void:
 			"proc": cfg.get("proc", "")}
 	player.minion_target = npc
 	player.imbue_hit(npc)
+	if cfg.has("hellfire"):
+		npc.ignite_hellfire(float(cfg.hellfire) / 60.0)
 	if cfg.has("poison") and randi() % int(cfg.poison[0]) == 0:
 		npc.poison(float(cfg.poison[1]) / 60.0)
 	if cfg.has("buff"):
@@ -246,6 +251,10 @@ func _draw(game) -> void:
 				"lerp":
 					row = int(round(lerpf(1.0, float(maxi(1, rows - 2)), float(i - 1) / maxf(1.0, last - 1.0))))
 					shown = i % 3 == 0
+				"fire":
+					# (The Firecracker's: every other one from the third.)
+					shown = i >= 3 and i % 2 == 1
+					row = 1 if i <= 7 else (2 if i <= 13 else 3)
 		s.visible = shown
 		if not shown:
 			continue

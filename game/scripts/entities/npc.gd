@@ -107,6 +107,16 @@ var _help_index := 0
 ## your right of the head, 1 to your left), the head's spin, a timer in ticks
 ## (Terraria's ai[2]) and a hand's two arm bones.
 var _head: NPC = null
+## The Wall of Flesh's parts: whose life is theirs (the eyes': the mouth's;
+## Terraria's realLife), where they look (aim_at), and a Hungry's tether on
+## the wall (WallOfFlesh.anchor).
+var life_owner: NPC = null
+var _aim_at := Vector3.INF
+var tether := Vector3.INF
+var _hungry_stun := 0.0
+var _hungry_t := 0.0
+## Their wandering turn (wobble): its clock, from a random start.
+var _wobble_t := randf() * 1000.0
 var _side := 1
 var _spin := 0.0
 var _sk_timer := 0.0
@@ -159,6 +169,7 @@ static func look(kind_name: String) -> Dictionary:
 	var hs: float = s if sc.hitbox else 1.0
 	var size: Array = d.size
 	var flier: bool = d.ai in ["flyer", "bat", "harpy", "flying_fish", "hover", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper",
+			"wall_of_flesh", "wall_of_flesh_eye", "hungry",
 			"skull", "spike_ball", "wheel", "granite_flyer"]
 	var tex := Assets.texture(image_path(kind_name))
 	var frame_h := float(tex.get_height()) / int(d.frames)
@@ -311,7 +322,7 @@ func _physics_process(delta: float) -> void:
 			_worm_despawn(game)
 			return
 
-	if def.ai in ["skeletron", "skeletron_hand", "queen_bee", "brain", "creeper", "skull", "spike_ball", "wheel"]:
+	if def.ai in ["skeletron", "skeletron_hand", "queen_bee", "brain", "creeper", "skull", "spike_ball", "wheel", "wall_of_flesh", "wall_of_flesh_eye", "hungry"]:
 		# Through the blocks (Terraria's noTileCollide), like the worms (the
 		# Blazing Wheel moves itself, along them).
 		if def.ai == "skull":
@@ -328,6 +339,14 @@ func _physics_process(delta: float) -> void:
 			_ai_brain(delta, game, player)
 		elif def.ai == "creeper":
 			_ai_creeper(delta, game, player)
+		elif def.ai == "hungry":
+			_ai_hungry(delta, game, player)
+		elif def.ai in ["wall_of_flesh", "wall_of_flesh_eye"]:
+			# (The wall moves them: WallOfFlesh._place.)
+			velocity = Vector3.ZERO
+			if game.wof == null or not is_instance_valid(game.wof):
+				queue_free()
+				return
 		else:
 			_ai_skeletron_hand(delta, game, player)
 		if is_queued_for_deletion():
@@ -472,6 +491,21 @@ func _update_sprite(delta: float, game) -> void:
 			var z := (yaw * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
 			var x := Vector3.UP.cross(z).normalized()
 			sprite.orient(Basis(x, z.cross(x), z) * Basis(Vector3.BACK, _spin))
+	elif def.ai in ["wall_of_flesh", "wall_of_flesh_eye", "hungry"] and (sprite is NPCModel or sprite is RenderedSprite):
+		# Its art's front (its left) toward what it looks at, upright.
+		if _aim_at != Vector3.INF:
+			var f := (_aim_at - center()).normalized()
+			if f.length() > 0.01:
+				_wobble_t += delta
+				var turn := _wobble()
+				f = f.rotated(Vector3.UP, turn.x)
+				var side := f.cross(Vector3.UP)
+				if side.length() > 0.01:
+					f = f.rotated(side.normalized(), turn.y)
+				var up := Vector3.UP if absf(f.dot(Vector3.UP)) < 0.98 else Vector3.BACK
+				var x := -f
+				var zz := x.cross(up).normalized()
+				sprite.orient(Basis(x, zz.cross(x), zz) * Basis(Vector3.RIGHT, turn.z))
 	elif sprite is NPCModel or sprite is RenderedSprite:
 		var heading := velocity if look_dir == Vector3.ZERO else look_dir
 		if look_dir == Vector3.ZERO and Vector2(velocity.x, velocity.z).length() < 0.3 and not flying:
@@ -910,10 +944,23 @@ func _worm_head_tick(game, player) -> void:
 	var w := _worm()
 	var speed: float = w.speed
 	var accel: float = w.accel
+	if w.get("wof_boost", false) and game.wof != null and is_instance_valid(game.wof) and is_instance_valid(game.wof.mouth):
+		# The Leech: faster as the Wall weakens (below half, a quarter, a tenth).
+		var share := float(game.wof.mouth.life) / float(game.wof.mouth.life_max)
+		if share < 0.5:
+			speed += 1.0
+			accel += 0.1
+		if share < 0.25:
+			speed += 1.0
+			accel += 0.1
+		if share < 0.1:
+			speed += 2.0
+			accel += 0.1
 	var v := velocity / PX_TICK  # px/tick
 	var c := center()
 	var to: Vector3 = (player.center() - c) * WORM_PX
-	var dug := _worm_in_ground(game)
+	# A flying worm (the Leech) goes through the air as through the ground.
+	var dug: bool = w.get("flies", false) or _worm_in_ground(game)
 	if not dug and (absf(to.x) > 1000.0 or absf(to.y) > 1000.0 or absf(to.z) > 1000.0):
 		dug = true  # far from you: on its way through anything
 	# Out of its biome (or you're dead): straight down, and gone when deep.
@@ -3548,6 +3595,10 @@ const SK_PX := 24.0
 const SK_TURN := 0.6
 const SK_TILT := 0.35
 const SK_TILT_MAX := deg_to_rad(25.0)
+## How far the Wall of Flesh's parts and the Hungry wander off their aim
+## (_wobble): yaw, pitch, roll.
+const WOBBLE_WALL := Vector3(deg_to_rad(16.0), deg_to_rad(10.0), deg_to_rad(5.0))
+const WOBBLE_HUNGRY := Vector3(deg_to_rad(24.0), deg_to_rad(16.0), deg_to_rad(10.0))
 
 
 ## One axis of Skeletron's steering (aiStyles 11 and 12), in px a tick: toward
@@ -3841,6 +3892,103 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 		_die(game)
 
 
+## Where a Wall of Flesh part looks (its art turned toward `p`).
+func aim_at(p: Vector3) -> void:
+	_aim_at = p
+
+
+## A Wall of Flesh part's (or a Hungry's) subtle wandering turn off where it
+## looks, so more of its rendered angles show: yaw, pitch and roll (radians),
+## each two slow sines of its own. A Hungry squirms more and faster.
+func _wobble() -> Vector3:
+	var hungry: bool = def.ai == "hungry"
+	var amp: Vector3 = WOBBLE_HUNGRY if hungry else WOBBLE_WALL
+	var t := _wobble_t * (1.8 if hungry else 1.0)
+	return Vector3(
+		amp.x * (0.65 * sin(t * 0.53) + 0.35 * sin(t * 1.37 + 1.1)),
+		amp.y * (0.65 * sin(t * 0.41 + 2.3) + 0.35 * sin(t * 1.19 + 0.4)),
+		amp.z * (0.65 * sin(t * 0.37 + 4.0) + 0.35 * sin(t * 0.97 + 2.9)))
+
+
+## The Hungry (Terraria's aiStyle 29): on its tether to the wall, it goes for
+## you at 0.1 px a tick each tick (more turning round), up to 4, never more
+## than its reach from its spot - 300 px, 500 below 75% of the wall's life
+## (defense 20, 45 damage), 700 below half (defense 30, 60 damage) - and 1.3
+## times that for 100 of every 200 ticks. Hit, it stops 10 ticks.
+func _ai_hungry(delta: float, game, player) -> void:
+	var wof = game.wof
+	if wof == null or not is_instance_valid(wof) or not is_instance_valid(wof.mouth) or tether == Vector3.INF:
+		if wof == null or not is_instance_valid(wof):
+			queue_free()
+		return
+	var share := float(wof.mouth.life) / float(wof.mouth.life_max)
+	var accel := 0.1
+	var reach := 300.0
+	damage = int(def.damage)
+	defense = int(def.defense)
+	if share < 0.5:
+		damage = 60
+		defense = 30
+		reach = 700.0
+	elif share < 0.75:
+		damage = 45
+		defense = 20
+		reach = 500.0
+	if _just_hit:
+		_hungry_stun = 10.0
+	var ticks := delta * 60.0
+	_hungry_t += ticks
+	if _hungry_t > 100.0:
+		reach = int(reach * 1.3)
+		if _hungry_t > 200.0:
+			_hungry_t = 0.0
+	var to: Vector3 = (player.center() - tether) * PX_PER_BLOCK
+	if to.length() > reach:
+		to = to.normalized() * reach
+	var v := velocity / PX_TICK
+	if _hungry_stun > 0.0:
+		_hungry_stun -= ticks
+	else:
+		var here := (center() - tether) * PX_PER_BLOCK
+		for a in 3:
+			if here[a] < to[a]:
+				v[a] += accel * ticks
+				if v[a] < 0.0 and to[a] > 0.0:
+					v[a] += accel * 2.5 * ticks
+			elif here[a] > to[a]:
+				v[a] -= accel * ticks
+				if v[a] > 0.0 and to[a] < 0.0:
+					v[a] -= accel * 2.5 * ticks
+			v[a] = clampf(v[a], -4.0, 4.0)
+	velocity = v * PX_TICK
+	aim_at(player.center())
+	if sprite is EntitySprite:
+		# Its mouth (the art's left) toward you.
+		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), player.center() - center()) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
+	_draw_tether(game)
+
+
+## A Hungry's tether: Terraria's Chain12 links from its spot on the wall.
+func _draw_tether(game) -> void:
+	if _chain.is_empty():
+		var tex := Assets.texture("Images/Chain12")
+		for i in 30:
+			var link := EntitySprite.new()
+			link.setup(tex, 1, Vector2(tex.get_width(), tex.get_height()) / PX_PER_BLOCK, true, true)
+			game.entities.add_child(link)
+			_chain.append(link)
+	var to := center()
+	var step := 28.0 / PX_PER_BLOCK
+	var n := clampi(int(tether.distance_to(to) / step), 1, _chain.size())
+	for i in _chain.size():
+		var link: EntitySprite = _chain[i]
+		link.visible = i < n
+		if i < n:
+			link.global_position = tether.lerp(to, (i + 0.5) / n)
+			link.set_axis(to - tether)
+			link.update_light(game.world, game.sky, link.global_position)
+
+
 ## Sets it on fire for `seconds` (Terraria's On Fire!; longer burns win).
 func ignite(seconds: float) -> void:
 	if def.get("fire_immune", false):
@@ -4017,6 +4165,8 @@ func _blood_color() -> Color:
 ## Whose life it takes hits from: its head's for a worm sharing one (the
 ## Bone Serpent), else its own.
 func _life_owner() -> NPC:
+	if life_owner != null and is_instance_valid(life_owner):
+		return life_owner
 	if def.ai != "worm" or not _worm().get("shared_life", false):
 		return self
 	# (Along the segments still there: with the life gone they all have none.)
@@ -4034,6 +4184,11 @@ var _dying := false
 func _die(game, drops := true) -> void:
 	if is_queued_for_deletion():
 		return  # (killed twice in a tick: it counts once)
+	if life_owner != null and is_instance_valid(life_owner) and life_owner != self:
+		# A Wall of Flesh eye: the wall dies, and drops its loot.
+		life_owner._die(game, drops)
+		queue_free()
+		return
 	if def.ai == "worm" and _worm().get("shared_life", false) and not _dying:
 		# The whole worm dies with its life: its head drops the loot.
 		var head := _life_owner()
@@ -4080,9 +4235,10 @@ func _die(game, drops := true) -> void:
 				var side := Vector3(randf_range(-1.0, 1.0), 0, randf_range(-1.0, 1.0)).normalized()
 				baby.velocity = Vector3(velocity.x * 2.0, velocity.y, velocity.z * 2.0) \
 						+ side * (randi_range(-20, 19) * 0.1 + i * 0.3) * PX_TICK + Vector3(0, (randi_range(0, 9) * 0.1 + i) * PX_TICK, 0)
+	# One of these (or one from each list: the Wall of Flesh's emblem and its weapon).
 	var one_of: Array = def.get("drops_one_of", []) if drops else []
-	if not one_of.is_empty():
-		game.spawn_item(one_of[randi() % one_of.size()], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
+	for list in one_of if not one_of.is_empty() and one_of[0] is Array else ([one_of] if not one_of.is_empty() else []):
+		game.spawn_item(list[randi() % list.size()], 1, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	# Skeletron brings a Hellforge to a world without one (Terraria's
 	# NPCLoot_DropHellforge: no Hellforge or Adamantite Forge anywhere).
 	if drops and def.get("hellforge_if_none", false) and not game.world.has_block(Data.block_id("hellforge")):
@@ -4097,6 +4253,11 @@ func _die(game, drops := true) -> void:
 		game.dust.npc_dust(self, g.get("death_dust", []), 1.0, _last_hit_dir, _dust_tint())
 		gib(game, g.get("gores", []))
 	game.on_npc_killed(self)
+	# A Hungry torn off the wall: the Hungry II, free (here as it dies).
+	if def.has("becomes_on_death") and drops:
+		var free: NPC = game.spawn_npc(str(def.becomes_on_death), global_position)
+		if free != null:
+			free.velocity = velocity
 	queue_free()
 
 

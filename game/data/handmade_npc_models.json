@@ -109,5 +109,25 @@
 				"back_inset": 2
 			}
 		]
+	},
+	"WallofFlesh": {
+		"ops": [
+			{
+				"op": "wall_of_flesh",
+				"part": "mouth",
+				"seed": 113,
+				"tendrils": 16
+			}
+		]
+	},
+	"WallofFleshEye": {
+		"ops": [
+			{
+				"op": "wall_of_flesh",
+				"part": "eye",
+				"seed": 114,
+				"tendrils": 14
+			}
+		]
 	}
 }

@@ -6,6 +6,14 @@
 		},
 		"SkeletronHead": {
 			"one_color": true
+		},
+		"WallofFlesh": {
+			"noise": "none",
+			"one_color": true
+		},
+		"WallofFleshEye": {
+			"noise": "none",
+			"one_color": true
 		}
 	},
 	"extruded": {
@@ -159,6 +167,27 @@
 		"KingSlime": {
 			"depth": 87.0
 		},
+		"LeechBody": {
+			"bevel": "chamfer",
+			"bevel_size": 2,
+			"no_outline": true,
+			"one_color": true
+		},
+		"LeechHead": {
+			"bevel": "chamfer",
+			"bevel_size": 2,
+			"depth": 5,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true
+		},
+		"LeechTail": {
+			"bevel": "chamfer",
+			"bevel_size": 4,
+			"depth": 9,
+			"no_outline": true,
+			"one_color": true
+		},
 		"ManEater": {
 			"bevel": "chamfer",
 			"bevel_size": 2.0,
@@ -225,6 +254,31 @@
 		"TargetDummy": {
 			"depth": 16.0
 		},
+		"TheHungry": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"bottom",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 22,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"TheHungryII": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"depth": 15,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true
+		},
 		"WalkingAntlion": {
 			"bevel": "round",
 			"bevel_size": 6.0,
@@ -249,7 +303,14 @@
 			"noise": "none"
 		}
 	},
-	"hull_top": {},
+	"hull_top": {
+		"TheHungry": {
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		}
+	},
 	"lathe": {
 		"BlueSlime": {
 			"no_outline": true,
@@ -267,12 +328,19 @@
 		"GiantWormBody": "rendered",
 		"GiantWormHead": "extruded",
 		"GiantWormTail": "rendered",
+		"LeechBody": "rendered",
+		"LeechHead": "rendered",
+		"LeechTail": "rendered",
 		"ManEater": "rendered",
 		"ServantofCthulhu": "rendered",
 		"SkeletronArm": "rendered",
 		"SkeletronHand": "rendered",
 		"SkeletronHead": "rendered",
-		"Snatcher": "rendered"
+		"Snatcher": "rendered",
+		"TheHungry": "rendered",
+		"TheHungryII": "rendered",
+		"WallofFlesh": "rendered",
+		"WallofFleshEye": "rendered"
 	},
 	"rendered": {
 		"Antlion": {
@@ -349,6 +417,18 @@
 		"KingSlime": {
 			"outline": true
 		},
+		"LeechBody": {
+			"model": "extruded",
+			"outline": true
+		},
+		"LeechHead": {
+			"model": "extruded",
+			"outline": true
+		},
+		"LeechTail": {
+			"model": "extruded",
+			"outline": true
+		},
 		"ManEater": {
 			"model": "extruded",
 			"outline": true
@@ -384,8 +464,22 @@
 			"model": "extruded",
 			"outline": true
 		},
+		"TheHungry": {
+			"model": "extruded",
+			"outline": true
+		},
+		"TheHungryII": {
+			"model": "extruded",
+			"outline": true
+		},
 		"WalkingAntlion": {
 			"model": "extruded",
+			"outline": true
+		},
+		"WallofFlesh": {
+			"outline": true
+		},
+		"WallofFleshEye": {
 			"outline": true
 		},
 		"Zombie": {

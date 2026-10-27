@@ -127,6 +127,12 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"DemonSickle": {"scythe": true, "dust": [27], "size": 1.8, "radius": 0.9, "life": 5.0},
 		"DemonScythe": {"scythe": true, "dust": [27], "size": 1.8, "radius": 0.9, "pierce": 5, "life": 60.0},
 		"Stinger": {"dust": [18]}, "QueenBeeStinger": {"dust": [147], "life": 5.0, "xray": true},
+		# The Wall of Flesh's eyes' laser (83): 60 px long at scale 1.7, its red
+		# light 0.75; 600 updates of three a tick.
+		"EyeLaser": {"glow": true, "size": 4.25, "radius": 0.15, "light": [0.75, 0.0, 0.0], "life": 3.33},
+		# The Laser Rifle's (88): 60 px at scale 0.65 (16 px a block), 600
+		# updates of five a tick, through 3 enemies.
+		"PurpleLaser": {"glow": true, "pierce": 3, "size": 2.44, "radius": 0.2, "light": [0.5, 0.15, 0.75], "life": 2.0},
 		"BallofFire": {"bounce": 5, "bounce_sound": "Item_10", "gravity": 45.0, "gravity_after": 20, "max_fall": 60.0, "spin": 18.0,
 			"dust": [6], "glow": true, "size": 0.5, "radius": 0.25, "ignite": [2, 300, 300], "life": 60.0},
 		"Flamelash": {"dust": [6], "glow": true, "pierce": 2, "size": 1.5, "radius": 0.5, "ignite": [2, 240, 479], "life": 60.0},

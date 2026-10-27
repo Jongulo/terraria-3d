@@ -144,7 +144,7 @@ const CARRIED_DEBUFFS := {"StoneBlock": ["Stoned", 30, 59], "Cobweb": ["Webbed",
 		"SnowBlock": ["Frostburn", 180, 359], "SlushBlock": ["Frostburn", 180, 359]}
 ## Terraria's debuffs among timed_buffs (Main.debuff: no right-clicking
 ## them off).
-const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn", "Bleeding"]
+const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn", "Bleeding", "Horrified", "TheTongue"]
 ## Your minions (Minion), oldest first, and your pet and light pet (null:
 ## none). Minions go when you die; pets stay with you.
 var minions: Array = []
@@ -214,6 +214,10 @@ const BUFF_EFFECTS := {
 	"Cursed": {"cursed": true},
 	"Frostburn": {"frostburn": true},
 	"Bleeding": {"bleeding": true},
+	# The Wall of Flesh: Horrified (nothing of itself), the Tongue (hauled to
+	# its mouth: no items, no hooks; WallOfFlesh._tongue).
+	"Horrified": {},
+	"TheTongue": {"cursed": true},
 	# Jungle's Fury (the Snapthorn's tag): 12% summon weapon speed.
 	"ThornWhipPlayerBuff": {"whip_speed": 12},
 	"ObsidianSkin": {"lava_immune": true, "fire_walk": true, "fire_immune": true},
@@ -279,6 +283,8 @@ var ate_artisan_bread := false
 ## shown by the Fisherman's Pocket Guide): "12 Fishing Power", "Not Enough Water!".
 var fishing_info := ""
 var respawn_timer := 0.0
+## Where the Wall of Flesh's tongue hauls you (Player.WOFTongue; INF: it isn't).
+var tongue_to := Vector3.INF
 ## Liquid around the body / at the eyes: 0 none, 1 water, 2 lava.
 var in_liquid := 0
 var head_liquid := 0
@@ -310,6 +316,9 @@ var _swing_dust_ticks := 0.0
 ## The channelled projectile (Magic Missile) you're steering, if any.
 var channelled: Projectile = null
 var _free_shots := 0
+## Shots left in a gun's burst (Terraria's useAnimation over useTime, then
+## its reuseDelay), the first one's ammo the only one used.
+var _burst_left := 0
 var _free_shots_item := ""
 var _fall_start := 0.0
 var _panic := 0.0
@@ -763,6 +772,9 @@ func _physics_process(delta: float) -> void:
 		_highlight.scale = box.size
 	if input_enabled and Input.is_action_pressed("use_item") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		use_item()
+	elif _burst_left > 0 and held().get("internal", "") == _free_shots_item:
+		# A burst goes on once started (the Clockwork Assault Rifle's three).
+		use_item()
 	if yoyo_out():
 		# Held out while the use button is down and it's still in your hand.
 		yoyo.held = held().get("internal", "") == yoyo.def.internal and use_down()
@@ -859,6 +871,9 @@ func _move(delta: float, game) -> void:
 			_last_jump_press = -1000
 		else:
 			_last_jump_press = now
+	if tongue_to != Vector3.INF and has_buff("TheTongue"):
+		_tongued(delta, game)
+		return
 	if flying:
 		_fly(delta, game, dir)
 		return
@@ -2618,6 +2633,8 @@ func use_item() -> void:
 			used = _fish(def)
 		_:
 			duration = 0.25
+	if used and def.has("reuse_delay") and _burst_left == 0:
+		duration += float(def.reuse_delay) / 60.0
 	if used:
 		_use_timer = duration
 		_use_def = def
@@ -3004,8 +3021,16 @@ func _shoot_ranged(def: Dictionary) -> bool:
 	# The Hellwing Bow fires Hellwings for Wooden Arrows, Molten Fury Flaming
 	# Arrows (Terraria's PickAmmo; a Hellwing's flight has no drop).
 	var proj: String = def.get("converts", {}).get(inventory.slots[ammo_slot].item, ammo.projectile)
+	var free := false
+	if def.has("reuse_delay"):
+		if _burst_left > 0 and _free_shots_item == def.internal:
+			_burst_left -= 1
+			free = true
+		else:
+			_burst_left = int(def.use_animation) / int(def.use_time) - 1
+			_free_shots_item = def.internal
 	# Some armor has a chance to save ammo.
-	if randf() * 100.0 >= stat("ammo_save"):
+	if not free and randf() * 100.0 >= stat("ammo_save"):
 		_use_up(ammo_slot)
 	var is_arrow: bool = def.ammo == "WoodenArrow"
 	var drop := float(ammo.get("gravity", 6.0 if is_arrow else 0.0))
@@ -3882,6 +3907,36 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null,
 	if life <= 0:
 		_die()
 	return true
+
+
+## The Wall of Flesh's tongue: 11 px a tick straight to in front of its
+## mouth, through anything; there, it lets go.
+func _tongued(delta: float, game) -> void:
+	for h in hooks():
+		h.queue_free()
+	dismount()
+	var to := tongue_to - center()
+	var step := WallOfFlesh.TONGUE_SPEED * delta
+	if to.length() <= step:
+		global_position += to
+		velocity = Vector3.ZERO
+		timed_buffs.erase("TheTongue")
+		tongue_to = Vector3.INF
+		stats_changed.emit()
+	else:
+		velocity = to.normalized() * WallOfFlesh.TONGUE_SPEED
+		global_position += velocity * delta
+	_fall_start = global_position.y
+
+
+## Killed outright (the Wall of Flesh's tongue), with why.
+func die_by(why: String) -> void:
+	if not alive:
+		return
+	life = 0
+	stats_changed.emit()
+	Game.current.message(why, Color(0.88, 0.2, 0.2))
+	_die()
 
 
 func _die() -> void:

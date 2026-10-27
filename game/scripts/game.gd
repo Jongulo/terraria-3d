@@ -102,6 +102,8 @@ var ocean_width := 0.0
 var beach_width := 0.0
 var ocean_depth := 0.0
 var defeated_bosses := {}
+## The Wall of Flesh while it's here (WallOfFlesh), else null.
+var wof: WallOfFlesh = null
 ## Kills by banner kind (Terraria's NPC.killCount).
 var kill_counts := {}
 ## A boss made of many NPCs (the Eater of Worlds' segments, boss_group in
@@ -675,6 +677,23 @@ func boss() -> NPC:
 	return null
 
 
+## Hardmode: the Wall of Flesh beaten in this world (Main.hardMode).
+func hardmode() -> bool:
+	return defeated_bosses.has("WallofFlesh")
+
+
+## A Guide Voodoo Doll burned in lava: with the Guide alive, the Guide dies,
+## and in the Underworld the Wall of Flesh comes (NPC.SpawnWOF: one at a time).
+func voodoo_burned(at: Vector3) -> void:
+	for npc in npcs():
+		if npc.kind == "Guide" and npc.life > 0:
+			npc.life = 0
+			npc._die(self)
+			if at.y < underworld_level + 2:
+				WallOfFlesh.spawn(self)
+			return
+
+
 func summon_boss(kind: String) -> void:
 	if boss_alive():
 		return
@@ -755,6 +774,12 @@ func on_npc_killed(npc: NPC) -> void:
 	if npc.boss:
 		if npc.kind == "BrainofCthulhu":
 			meteors.boss_beaten(meteors.boss2_beaten())
+		if npc.kind == "WallofFlesh" and not hardmode():
+			# (Terraria's WorldGen.StartHardmode: here only the flag.)
+			defeated_bosses[npc.kind] = true
+			message("%s has been defeated!" % Assets.npc_name(npc.kind), Color(0.69, 0.29, 1.0))
+			message("The ancient spirits of light and dark have been released.", Color8(50, 255, 130))
+			return
 		defeated_bosses[npc.kind] = true
 		message("%s has been defeated!" % Assets.npc_name(npc.kind), Color(0.69, 0.29, 1.0))
 		# King Slime beaten: the Slime Rain is over.

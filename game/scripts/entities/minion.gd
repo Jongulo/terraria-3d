@@ -264,10 +264,23 @@ static func chaseable(npc) -> bool:
 ## A minion's hit (its own, or its shot's): a whip's tag on the enemy adds
 ## its damage (before defense) and crit chance (Terraria's
 ## WhipTagEffect.ModifyTaggedHit), and the Meteor Whip's waiting meteor
-## falls on it (1.33x the hit, from 280 px above at 8 px a tick).
+## falls on it (1.33x the hit, from 280 px above at 8 px a tick); the
+## Firecracker's mark blows up: the hit 2.75x, and 2.75x the hit (without
+## the tag) to every other enemy in its 96 px square.
 static func strike(game, npc, dmg: int, knockback: float, dir: Vector3) -> void:
 	var t: Dictionary = npc.tag()
 	var crit := 0.0
+	if t.get("proc", "") == "firecracker":
+		t.proc = ""
+		var blast := int(dmg * 2.75)
+		var half := 48.0 / PX
+		for other in game.npcs():
+			var d: Vector3 = other.center() - npc.center()
+			if other != npc and chaseable(other) and absf(d.x) <= half and absf(d.y) <= half and absf(d.z) <= half:
+				other.hit(blast, knockback, d.normalized(), 0.0)
+		dmg = blast
+		Audio.play_at("Item_14", npc.center(), 0.7)
+		game.spawn_dust(npc.center(), Color(1.0, 0.5, 0.15), 20)
 	if not t.is_empty():
 		dmg += int(t.damage)
 		crit = float(t.crit) / 100.0

@@ -67,6 +67,8 @@ func _physics_process(delta: float) -> void:
 		if liquid.x == 2 and liquid.y > 0:
 			# Terraria items burn up in lava.
 			Audio.play_at("Item_14", global_position, 0.5)
+			if item == "GuideVoodooDoll":
+				game.voodoo_burned(global_position)
 			game.spawn_dust(global_position, Color(1.0, 0.45, 0.1), 8)
 			queue_free()
 			return

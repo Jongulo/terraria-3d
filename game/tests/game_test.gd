@@ -866,6 +866,7 @@ func _run() -> void:
 				demonite += e.count
 		check(demonite >= 30, "boss dropped Demonite Ore (%d)" % demonite)
 	game.starfall.process_mode = Node.PROCESS_MODE_INHERIT
+	await _wall_of_flesh_checks(p)
 
 	# Spawner gets some enemies going at night.
 	game.spawner.process_mode = Node.PROCESS_MODE_INHERIT
@@ -952,3 +953,153 @@ func _run() -> void:
 	for f in failures:
 		print("  - " + f)
 	get_tree().quit(1 if failures.size() > 0 else 0)
+
+
+## The Wall of Flesh: summoned with a Guide Voodoo Doll in the Underworld's
+## lava, its wall sweeping south, its parts, its tongue, its loot, Hardmode;
+## and its loot's Clockwork Assault Rifle's burst.
+func _wall_of_flesh_checks(p: Player) -> void:
+	var w: VoxelWorld = game.world
+	var ul := game.underworld_level
+	var back := p.global_position
+	var spot := Vector3.ZERO
+	var c := Vector3i(w.get_size().x / 2, 0, w.get_size().z / 2 + 30)
+	for r in 150:
+		for y in range(ul - 2, 3, -1):
+			var at := Vector3i(c.x + r, y, c.z)
+			if w.is_solid(at - Vector3i(0, 1, 0)) and not w.is_solid(at) and not w.is_solid(at + Vector3i.UP) and not w.is_solid(at + Vector3i.UP * 2) \
+					and w.get_liquid(at).y == 0:
+				spot = Vector3(at) + Vector3(0.5, 0, 0.5)
+				break
+		if spot != Vector3.ZERO:
+			break
+	check(spot != Vector3.ZERO, "an open spot in the Underworld for the Wall of Flesh (%s)" % spot)
+	p.global_position = spot
+	p._fall_start = spot.y
+	p._immune = 999.0
+	await frames(5)
+	var guide: NPC = null
+	for n in game.npcs():
+		if n.kind == "Guide":
+			guide = n
+	if guide == null:
+		guide = game.spawn_npc("Guide", back)
+	# Burned out of the Underworld: the Guide dies, no Wall.
+	game.voodoo_burned(Vector3(spot.x, ul + 20, spot.z))
+	check(not is_instance_valid(guide) or guide.life <= 0, "a Guide Voodoo Doll burned anywhere kills the Guide")
+	check(game.wof == null, "but out of the Underworld no Wall of Flesh comes")
+	await frames(2)
+	guide = game.spawn_npc("Guide", back)
+	game.voodoo_burned(spot)
+	var wof := game.wof
+	check(wof != null and (not is_instance_valid(guide) or guide.life <= 0), "burned in the Underworld: the Guide dies and the Wall of Flesh comes")
+	if wof == null:
+		return
+	check(is_instance_valid(wof.mouth) and wof.eyes.size() == 2 and wof.hungry.size() == 11, "its mouth, two eyes and eleven Hungry")
+	check(is_equal_approx(spot.z - wof.z, WallOfFlesh.SPAWN_AWAY), "it comes 1200 px north of you (%.1f blocks)" % (spot.z - wof.z))
+	check(game.boss() == wof.mouth and game.boss_status().get("max", 0) == 8000, "the boss bar is the mouth's 8000 life")
+	var z0 := wof.z
+	await frames(60)
+	check(absf(wof.z - z0 - 1.5 * NPC.PX_TICK) < 0.2, "it moves south 1.5 px a tick (%.2f blocks in a second)" % (wof.z - z0))
+	check(p.has_buff("Horrified"), "in the Underworld near it you're Horrified")
+	var m := wof.mouth.center()
+	check(absf(m.x - p.global_position.x) < 1.0 and m.y > wof._bottom and m.y < wof._top, "the mouth keeps in front of you, between the floor and ceiling")
+	check(wof.eyes[0].center().y > m.y and wof.eyes[1].center().y < m.y, "an eye above it and one below")
+	var before := wof.mouth.life
+	wof.eyes[0].hit(100, 0.0, Vector3.FORWARD, 0.0)
+	check(wof.mouth.life < before, "an eye's hits come off the mouth's life (%d)" % (before - wof.mouth.life))
+	await frames(1)
+	check(wof.eyes[1].life == wof.mouth.life, "and the eyes show the mouth's life")
+	# The eyes' lasers, the Leeches, hurried (this small world's Underworld
+	# is too low for its eyes: open it up between them and you).
+	for e in wof.eyes:
+		var ec := Vector3i(e.center().floor())
+		for x in range(ec.x - 2, ec.x + 3):
+			for y in range(mini(ec.y, int(p.center().y)) - 1, maxi(ec.y, int(p.center().y)) + 2):
+				for z in range(int(wof.z), int(spot.z) + 2):
+					if w.is_solid(Vector3i(x, y, z)):
+						w.set_block(Vector3i(x, y, z), 0)
+	wof._eye_t = [599.0, 599.0]
+	wof._leech_count = 2699.0
+	var lasers := {}
+	for f in 200:
+		await get_tree().physics_frame
+		for n in game.entities.get_children():
+			if n is Projectile and n.kind == "EyeLaser":
+				lasers[n] = true
+	check(lasers.size() >= 2, "the eyes fire lasers (%d)" % lasers.size())
+	var heads := game.npcs().filter(func(n): return n.kind == "LeechHead")
+	check(heads.size() >= 1, "it spits Leeches (%d)" % heads.size())
+	if not heads.is_empty():
+		var n := 0
+		var seg: NPC = heads[0].behind
+		while seg != null and is_instance_valid(seg):
+			n += 1
+			seg = seg.behind
+		check(n >= 4 and n <= 6, "a Leech is 3 to 5 body segments and a tail (%d)" % n)
+	# A Hungry killed: a Hungry II flies loose.
+	var h: NPC = wof.hungry[0]
+	check(h.tether != Vector3.INF, "the Hungry are tethered to the wall")
+	h.hit(9999, 0.0, Vector3.FORWARD, 0.0)
+	await frames(2)
+	check(game.npcs().any(func(n): return n.kind == "TheHungryII"), "a Hungry killed lets loose a Hungry II")
+	# Out of the Underworld: the tongue hauls you back.
+	p.global_position = Vector3(m.x, ul + 8, wof.z + 14.0)
+	await frames(2)
+	check(p.has_buff("TheTongue") and p.tongue_to != Vector3.INF, "leaving the Underworld while Horrified, its tongue has you")
+	var d0 := p.center().distance_to(p.tongue_to)
+	await frames(10)
+	check(p.center().distance_to(p.tongue_to) < d0 - 3.0, "and hauls you toward its mouth")
+	# Beaten.
+	var at := wof.mouth.center()
+	wof.mouth.hit(99999, 0.0, Vector3.FORWARD, 0.0)
+	await frames(5)
+	var got := {}
+	for e in game.entities.get_children():
+		if e is ItemDrop and e.global_position.distance_to(at) < 15.0:
+			got[e.item] = true
+	check(got.has("Pwnhammer") and got.has("HealingPotion"), "it drops the Pwnhammer and Healing Potions")
+	check(["WarriorEmblem", "RangerEmblem", "SorcererEmblem", "SummonerEmblem"].filter(func(k): return got.has(k)).size() == 1, "one emblem")
+	check(["BreakerBlade", "ClockworkAssaultRifle", "LaserRifle", "FireWhip"].filter(func(k): return got.has(k)).size() == 1, "and one of its weapons")
+	check(game.hardmode() and game.wof == null and not game.npcs().any(func(n): return n.kind.begins_with("WallofFlesh") or n.kind == "TheHungry"),
+			"beaten: Hardmode, and all of it gone")
+	check(not p.has_buff("TheTongue") or p.tongue_to == Vector3.INF, "and the tongue lets go")
+	for e in game.entities.get_children():
+		if e is ItemDrop or e is Projectile:
+			e.queue_free()
+	for n in game.npcs():
+		n.queue_free()
+	game.defeated_bosses.erase("WallofFlesh")
+	# The Clockwork Assault Rifle: three shots a click, one round used, then a pause.
+	p.global_position = back
+	p._fall_start = back.y
+	p.timed_buffs.clear()
+	await frames(2)
+	p.inventory.slots[9] = Inventory.stack("ClockworkAssaultRifle", 1)
+	p.inventory.add("MusketBall", 50)
+	p.select(9)
+	var balls := p.inventory.count_of("MusketBall")
+	await aim(1.3)
+	var count := func() -> Array:
+		return game.entities.get_children().filter(func(e): return e is Projectile and e.friendly)
+	var shots := {}
+	for e in count.call():
+		shots[e] = true
+	p._use_timer = 0.0
+	p.use_item()
+	var pause := 0.0
+	for f in 30:
+		for e in count.call():
+			shots[e] = true
+		if shots.size() == 3 and pause == 0.0:
+			pause = p._use_timer
+		await get_tree().physics_frame
+	check(shots.size() == 3, "the Clockwork Assault Rifle fires a burst of three (%d)" % shots.size())
+	check(balls - p.inventory.count_of("MusketBall") == 1, "using one round")
+	check(pause > 10.0 / 60.0, "then waits its reuse delay (%.2f s)" % pause)
+	p.inventory.slots[9] = null
+	p.inventory.remove("MusketBall", p.inventory.count_of("MusketBall"))
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+
