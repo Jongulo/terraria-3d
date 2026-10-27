@@ -5,6 +5,7 @@ pub mod cabins;
 pub mod caves;
 pub mod dungeon;
 pub mod fishing;
+pub mod gem_caves;
 pub mod granite;
 pub mod hives;
 pub mod liquid;

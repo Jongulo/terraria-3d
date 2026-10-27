@@ -2247,8 +2247,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // Pass 7a: spider caves (Terraria's Spider Caves pass, after its Buried
     // Chests), out of the structures; their own random numbers.
     crate::spiders::spider_caves(w, &mut Rng::new(seed as u64 ^ 0x5b1d_e125), &l);
-    // Pass 7b: moss (moss.rs: Terraria's Moss pass, after its Spider Caves);
-    // its own random numbers.
+    // Pass 7b: gem caves (gem_caves.rs: Terraria's Gem Caves pass, after its
+    // Spider Caves), then moss (moss.rs: its Moss pass); their own random
+    // numbers.
+    crate::gem_caves::gem_caves(w, &mut Rng::new(seed as u64 ^ 0x6e3c_a7e5), &l);
     crate::moss::moss(w, &mut Rng::new(seed as u64 ^ 0x3055_ca5e), &l);
     // Pass 8: Enchanted Sword Shrines (Terraria's Micro Biomes pass, after its
     // Buried Chests), kept out of the cabins and chests.
@@ -2262,7 +2264,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     // Terraria's Herbs pass: herb sprouts on their soils; their own random numbers.
     crate::alchemy::herbs_pass(w, &mut Rng::new(seed as u64 ^ 0x4e2b_5a17), &l);
-    // Terraria's Moss Grass pass: Long Moss on the moss (moss.rs).
+    // Terraria's Gems In Ice Biome and Random Gems passes: loose gems
+    // (gem_caves.rs); then its Moss Grass pass: Long Moss on the moss
+    // (moss.rs).
+    crate::gem_caves::loose_gems(w, &mut Rng::new(seed as u64 ^ 0x6e3_1005e), &l);
     crate::moss::long_moss(w);
     // The passes since the temple that don't keep out of it, undone in it.
     if let Some(t) = &temple {
@@ -3889,6 +3894,7 @@ mod tests {
         crate::marble::tests::add_cave_defs(&mut w);
         crate::spiders::tests::add_spider_defs(&mut w);
         crate::moss::tests::add_moss_defs(&mut w);
+        crate::gem_caves::tests::add_gem_defs(&mut w);
         for name in ["silt", "slush", "amethyst_ore", "topaz_ore", "sapphire_ore", "emerald_ore", "ruby_ore", "diamond_ore"] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
@@ -3956,6 +3962,68 @@ mod tests {
         let long = |hanging: bool| w.blocks.iter().filter(|&&b| w.def(b).name.starts_with("long_moss_") && w.def(b).name.ends_with("_hanging") == hanging).count();
         let moss: usize = kinds.iter().flatten().sum();
         assert!(long(false) > moss / 5 && long(true) > moss / 5, "Long Moss on its floors ({}) and under its ceilings ({})", long(false), long(true));
+    }
+
+    /// Terraria's gem caves and loose gems in a whole world: gem caves lined
+    /// with gem ore and strewn with loose gems of a few kinds; loose gems by
+    /// snow and ice, amber in the desert's sandstone, and single ones
+    /// through the caverns, as many as in a small world Terraria's server
+    /// made (in each 640 x 640 blocks: 281 in its 13 gem caves, 249 by ice,
+    /// 105 amber, 169 elsewhere), lying on floors and hanging from ceilings.
+    #[test]
+    fn gem_caves_and_loose_gems() {
+        let w = gen_world_sized(5, 0, (768, 384, 768));
+        let per_area = 768.0 * 768.0 / (640.0 * 640.0);
+        let names: Vec<String> = (0..w.defs.len()).map(|i| w.def(i as u16).name.clone()).collect();
+        let (mut floor, mut hanging, mut amber) = (0, 0, 0);
+        let mut by_gem = [0usize; 7];
+        for &b in &w.blocks {
+            let n = &names[b as usize];
+            if let Some(g) = n.strip_prefix("loose_") {
+                let g = g.trim_end_matches("_hanging");
+                let k = crate::gem_caves::GEMS.iter().position(|&x| x == g).unwrap();
+                by_gem[k] += 1;
+                if n.ends_with("_hanging") { hanging += 1 } else { floor += 1 }
+                if k == 6 { amber += 1 }
+            }
+        }
+        let all = floor + hanging;
+        let want = (281.0 + 249.0 + 105.0 + 169.0) * per_area;
+        assert!(all as f64 > want * 0.6 && (all as f64) < want * 1.6, "about Terraria's count of loose gems ({all}, {want:.0})");
+        assert!(floor > hanging / 2 && hanging > floor / 4, "on floors ({floor}) and under ceilings ({hanging})");
+        assert!(amber as f64 > 60.0 * per_area * 0.5, "amber in the desert ({amber})");
+        assert!(by_gem[..6].iter().all(|&n| n > 10), "every gem ({by_gem:?})");
+        // Gem caves: gem ore round open cells strewn with loose gems.
+        let ores: Vec<u16> = crate::gem_caves::GEMS[..6].iter().map(|g| w.id_of(&format!("{g}_ore"))).collect();
+        let mut caves = 0;
+        let mut seen = std::collections::HashSet::new();
+        for (i, &b) in w.blocks.iter().enumerate() {
+            if !names[b as usize].starts_with("loose_") || seen.contains(&i) {
+                continue;
+            }
+            let (x, y, z) = unflat(&w, i);
+            // A gem cave's gem: its cave round it mostly gem ore.
+            let mut ore = 0;
+            let mut walls = 0;
+            for dz in -3..=3 {
+                for dy in -3..=3 {
+                    for dx in -3..=3 {
+                        let c = w.get(x + dx, y + dy, z + dz);
+                        if w.is_solid(x + dx, y + dy, z + dz) && (dx, dy, dz) != (0, 0, 0) {
+                            walls += 1;
+                            if ores.contains(&c) { ore += 1 }
+                        }
+                    }
+                }
+            }
+            if ore * 3 > walls {
+                caves += 1;
+                for dz in -12..=12 { for dy in -12..=12 { for dx in -12..=12 {
+                    if w.in_bounds(x + dx, y + dy, z + dz) { seen.insert(w.idx(x + dx, y + dy, z + dz)); }
+                } } }
+            }
+        }
+        assert!(caves as f64 > 12.6 * per_area * 0.5, "gem caves lined with gem ore ({caves})");
     }
 
     /// Terraria's Marble, Granite and spider caves in a whole world: deep in

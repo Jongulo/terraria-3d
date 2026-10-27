@@ -665,9 +665,10 @@ func in_ocean(pos: Vector3) -> bool:
 ## The block gallery: rows of GALLERY_ROW blocks, 2 apart, from GALLERY_Z
 ## south of the centre (south of the tower), 3 between rows; starting
 ## GALLERY_WEST of it (clear of the critter pen to the west) and running
-## east, so the rows stay inside the world.
+## east, so the rows stay inside the world (33 rows to its south edge: room
+## for 1056 blocks).
 const GALLERY_Z := 31
-const GALLERY_ROW := 26
+const GALLERY_ROW := 32
 const GALLERY_WEST := -18
 
 
