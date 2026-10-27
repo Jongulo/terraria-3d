@@ -41,6 +41,16 @@ const MECH_TICKS := 200.0
 
 const DART_SPEED := 12.0 * 3.75
 const DART_DAMAGE := 20
+## The Jungle Temple's traps (Wiring.HitWireSingle, tile 137 styles 1-4):
+## damage, speed (px a tick, as blocks a second) and ticks between shots.
+const SUPER_DART_DAMAGE := 40
+const FLAME_DAMAGE := 40
+const FLAME_SPEED := 5.0 * 3.75
+const SPIKY_BALL_DAMAGE := 40
+const SPIKY_BALL_TICKS := 300.0
+const SPEAR_DAMAGE := 60
+const SPEAR_SPEED := 8.0 * 3.75
+const SPEAR_TICKS := 90.0
 ## Terraria's Explosives: projectile 108 (500 damage, 260 px across).
 const EXPLOSION := {"radius": 130.0 / 24.0, "tiles": true}
 const EXPLOSIVES_DAMAGE := 500
@@ -222,6 +232,21 @@ func hit_single(game, p: Vector3i, colour := RED) -> void:
 		"dart":
 			if _ready_mech(p):
 				_shoot_dart(game, p)
+		"super_dart":
+			if _ready_mech(p):
+				_shoot_dart(game, p, "PoisonDartTrap", SUPER_DART_DAMAGE)
+		"flame":
+			if _ready_mech(p):
+				var dir := trap_dir(game, p)
+				game.spawn_projectile("FlamethrowerTrap", Vector3(p) + Vector3(0.5, 0.5, 0.5) + dir * 0.6, dir * FLAME_SPEED, FLAME_DAMAGE * 2, 0.0, 0.0, 0.0, 0.5, false)
+		"spiky_ball":
+			if _ready_mech(p, SPIKY_BALL_TICKS):
+				_spiky_ball(game, p)
+		"spear":
+			if _ready_mech(p, SPEAR_TICKS):
+				var dir := trap_dir(game, p)
+				game.spawn_projectile("SpearTrap", Vector3(p) + Vector3(0.5, 0.5, 0.5) + dir * 18.0 / 16.0, dir * SPEAR_SPEED, SPEAR_DAMAGE * 2, 0.0, 0.0, 0.0, 0.5, false)
+				Audio.play_at("Item_1", Vector3(p) + Vector3(0.5, 0.5, 0.5), 0.5)
 		"explosives":
 			w.set_block(p, 0)
 			game.explode(Vector3(p) + Vector3(0.5, 0.5, 0.5), EXPLOSIVES_DAMAGE, 10.0, EXPLOSION)
@@ -276,21 +301,53 @@ func toggle_timer(game, p: Vector3i) -> void:
 		Audio.play_at("Mech_0", Vector3(p) + Vector3(0.5, 0.5, 0.5))
 
 
-## Wiring.CheckMech: one shot per Dart Trap or Geyser every 200 ticks.
-func _ready_mech(p: Vector3i) -> bool:
+## Wiring.CheckMech: one shot per Dart Trap or Geyser every 200 ticks (a
+## Spiky Ball Trap every 300, a Spear Trap every 90).
+func _ready_mech(p: Vector3i, ticks := MECH_TICKS) -> bool:
 	if _cooldown.has(p):
 		return false
-	_cooldown[p] = MECH_TICKS / 60.0
+	_cooldown[p] = ticks / 60.0
 	return true
 
 
-func _shoot_dart(game, at: Vector3i) -> void:
+## The way a trap faces (Game.block_rotations): 0-3 its quarter turns across
+## (a dart trap's), 4 down and 5 up (a Spiky Ball Trap's, under a ceiling).
+static func trap_dir(game, at: Vector3i) -> Vector3:
 	var facing: int = int(game.block_rotations.get(Chests.key(at), 0))
+	if facing == 4:
+		return Vector3.DOWN
+	if facing == 5:
+		return Vector3.UP
 	var f: Vector2i = [Vector2i(0, 1), Vector2i(1, 0), Vector2i(0, -1), Vector2i(-1, 0)][posmod(facing, 4)]
-	var dir := Vector3(f.x, 0, f.y)
+	return Vector3(f.x, 0, f.y)
+
+
+func _shoot_dart(game, at: Vector3i, kind := "PoisonDart", damage := DART_DAMAGE) -> void:
+	var dir := trap_dir(game, at)
 	# Terraria doubles hostile shots' damage on you.
-	game.spawn_projectile("PoisonDart", Vector3(at) + Vector3(0.5, 0.5, 0.5) + dir * 0.6, dir * DART_SPEED, DART_DAMAGE * 2, 2.0, 0.0, 0.0, 0.5, false)
+	game.spawn_projectile(kind, Vector3(at) + Vector3(0.5, 0.5, 0.5) + dir * 0.6, dir * DART_SPEED, damage * 2, 2.0, 0.0, 0.0, 0.5, false)
 	Audio.play_at("Item_5", Vector3(at) + Vector3(0.5, 0.5, 0.5), 0.6)
+
+
+## The Spiky Ball Trap: a ball out of its face, a little off straight (up
+## to 1 px a tick either way across), unless too many lie about already:
+## Terraria's budget of 200, less 50 for each within 50 px of it, 15 within
+## 100, down to 1 for those 1200 px off and further.
+func _spiky_ball(game, at: Vector3i) -> void:
+	var c := Vector3(at) + Vector3(0.5, 0.5, 0.5)
+	var budget := 200
+	for e in game.entities.get_children():
+		if e is Projectile and e.kind == "SpikyBallTrap":
+			var d: float = e.global_position.distance_to(c) * 16.0
+			for step in [[50.0, 50], [100.0, 15], [200.0, 10], [300.0, 8], [400.0, 6], [500.0, 5], [700.0, 4], [900.0, 3], [1200.0, 2], [INF, 1]]:
+				if d < step[0]:
+					budget -= int(step[1])
+					break
+	if budget <= 0:
+		return
+	var dir := trap_dir(game, at)
+	var across := Vector3(randf_range(-1.0, 1.0), 0, randf_range(-1.0, 1.0)) if dir.y != 0.0 else Vector3(0, randf_range(-1.0, 1.0), 0)
+	game.spawn_projectile("SpikyBallTrap", c + dir * 14.0 / 16.0, across * 3.75, SPIKY_BALL_DAMAGE * 2, 0.0, 0.0, 0.0, 0.5, false)
 
 
 ## Wiring.GeyserTrap: a spout of fire up from it (Projectile "GeyserTrap").

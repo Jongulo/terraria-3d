@@ -14,6 +14,7 @@ pub mod mesher;
 pub mod mushroom;
 pub mod physics;
 pub mod pyramids;
+pub mod temple;
 pub mod save;
 pub mod shrines;
 pub mod shrink;

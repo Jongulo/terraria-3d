@@ -144,7 +144,7 @@ const CARRIED_DEBUFFS := {"StoneBlock": ["Stoned", 30, 59], "Cobweb": ["Webbed",
 		"SnowBlock": ["Frostburn", 180, 359], "SlushBlock": ["Frostburn", 180, 359]}
 ## Terraria's debuffs among timed_buffs (Main.debuff: no right-clicking
 ## them off).
-const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn"]
+const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn", "Bleeding"]
 ## Your minions (Minion), oldest first, and your pet and light pet (null:
 ## none). Minions go when you die; pets stay with you.
 var minions: Array = []
@@ -205,13 +205,15 @@ const BUFF_EFFECTS := {
 	# Debuffs (DEBUFFS): Chilled, a quarter slower (strongestMoveSpeedDebuff
 	# 0.75); Frozen, Stoned and Webbed, held still and helpless (CCed: no
 	# moving, jumping or using anything); Cursed, no using items (noItems);
-	# Frostburn, 8 life a second (lifeRegen -16).
+	# Frostburn, 8 life a second (lifeRegen -16); Bleeding, no natural
+	# healing (bleed).
 	"Chilled": {"chilled": true},
 	"Frozen": {"cc": true},
 	"Stoned": {"cc": true},
 	"Webbed": {"cc": true},
 	"Cursed": {"cursed": true},
 	"Frostburn": {"frostburn": true},
+	"Bleeding": {"bleeding": true},
 	# Jungle's Fury (the Snapthorn's tag): 12% summon weapon speed.
 	"ThornWhipPlayerBuff": {"whip_speed": 12},
 	"ObsidianSkin": {"lava_immune": true, "fire_walk": true, "fire_immune": true},
@@ -2042,7 +2044,10 @@ func _liquid_effects(delta: float) -> void:
 	# Spikes (Terraria's TouchDamageImmediate): hurt at once, give or take 15%.
 	var spikes := _touch_damage()
 	if spikes > 0:
-		hurt(int(round(spikes * randf_range(0.85, 1.15))), Vector3.ZERO)
+		var hit := hurt(int(round(spikes * randf_range(0.85, 1.15))), Vector3.ZERO)
+		# Wooden Spikes make you bleed (Terraria's TouchDamageBleeding).
+		if hit and not _touch_debuff.is_empty():
+			debuff(_touch_debuff[0], float(_touch_debuff[1]))
 	elif in_liquid == LIQ_WATER or in_liquid == LIQ_HONEY:
 		on_fire = 0.0
 	if on_fire > 0.0:
@@ -2093,7 +2098,11 @@ func _touching_hot() -> bool:
 	return false
 
 
-## The touch damage of a block you're in or standing on (Spikes), 0 for none.
+## The touch damage of a block you're in or standing on (Spikes), 0 for none;
+## _touch_debuff the debuff of the one that hurts most.
+var _touch_debuff: Array = []
+
+
 func _touch_damage() -> int:
 	var w := Game.current.world
 	var lo := (global_position - Vector3(half.x, 0.05, half.z)).floor()
@@ -2102,7 +2111,10 @@ func _touch_damage() -> int:
 	for x in range(int(lo.x), int(hi.x) + 1):
 		for y in range(int(lo.y), int(hi.y) + 1):
 			for z in range(int(lo.z), int(hi.z) + 1):
-				most = maxi(most, int(Data.block(w.get_block(Vector3i(x, y, z))).get("touch_damage", 0)))
+				var b := Data.block(w.get_block(Vector3i(x, y, z)))
+				if int(b.get("touch_damage", 0)) > most:
+					most = int(b.touch_damage)
+					_touch_debuff = b.get("touch_debuff", [])
 	return most
 
 
@@ -2464,9 +2476,9 @@ func _regen(delta: float) -> void:
 	# And a life a second more (lifeRegen +2).
 	if honey_time > 0.0:
 		rate += 1.0
-	# On fire or poisoned, no healing, and it starts over (lifeRegen 0,
-	# lifeRegenTime 0).
-	if on_fire > 0.0 or poisoned > 0.0 or has_effect("frostburn"):
+	# On fire, poisoned or bleeding, no healing, and it starts over
+	# (lifeRegen 0, lifeRegenTime 0).
+	if on_fire > 0.0 or poisoned > 0.0 or has_effect("frostburn") or has_effect("bleeding"):
 		rate = 0.0
 		_since_hurt = 0.0
 	if life < life_cap() and rate > 0.0:

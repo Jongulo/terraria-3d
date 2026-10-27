@@ -62,7 +62,7 @@ impl Ids {
         let id = |n: &str| w.id_of(n);
         let natural = ["stone", "dirt", "clay", "sand", "silt", "slush", "grass", "mud", "mushroom_grass", "ebonstone", "crimstone"];
         let terrain = w.defs.iter().map(|d| natural.contains(&d.name.as_str()) || d.name.ends_with("_ore")).collect();
-        let avoid = ["jungle_grass", "snow_block", "ice_block", "hardened_sand", "sandstone", "marble", "granite"]
+        let avoid = ["jungle_grass", "snow_block", "ice_block", "hardened_sand", "sandstone", "marble", "granite", "lihzahrd_brick"]
             .iter()
             .map(|n| id(n))
             .filter(|&i| i != 0)

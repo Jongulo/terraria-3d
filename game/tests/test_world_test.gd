@@ -432,6 +432,7 @@ func _run() -> void:
 	await _cut_checks(c)
 	await _cabin_loot_checks(c)
 	await _pyramid_checks(c)
+	await _temple_checks(c)
 	await _sand_checks(c)
 	await _dust_checks(c)
 	await _knockback_checks(c)
@@ -1384,6 +1385,109 @@ func _pyramid_checks(c: Vector3i) -> void:
 		await frames(1)
 	p.accessories.slots[0] = null
 	p.god_mode = god
+
+
+## The Jungle Temple (temple.rs): its blocks and items, the Lihzahrd Chest's
+## loot, its brick past any pickaxe and blast, the locked door the Temple Key
+## opens, Wooden Spikes' Bleeding, and the four traps' shots.
+func _temple_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var blocks := ["lihzahrd_brick", "wooden_spike", "lihzahrd_door_locked", "lihzahrd_door", "lihzahrd_door_open", "lihzahrd_altar", "lihzahrd_chest",
+			"lihzahrd_statue", "lihzahrd_watcher_statue", "lihzahrd_guardian_statue", "lihzahrd_work_bench", "lihzahrd_table", "lihzahrd_chair",
+			"super_dart_trap", "flame_trap", "spiky_ball_trap", "spear_trap", "lihzahrd_pressure_plate"]
+	check(blocks.all(func(b): return Data.block_id(b) > 0) and Chests.LOOT[30] == "lihzahrd_chest" and Data.loot.lihzahrd_chest.pick_one[0][0] == "LihzahrdPowerCell"
+			and ["TempleKey", "LihzahrdPowerCell", "LihzahrdBrick", "SuperDartTrap", "FlameTrap", "SpikyBallTrap", "SpearTrap"].all(func(i): return Data.items.has(i)),
+			"the Jungle Temple's blocks and items; a Lihzahrd Chest holds a Lihzahrd Power Cell")
+	var brick := Data.block(Data.block_id("lihzahrd_brick"))
+	check(int(brick.min_pick) == 210 and Game.blastproof(brick), "Lihzahrd Brick needs 210% pickaxe power and takes no blast")
+	var stone := Data.block_id("stone")
+	var o := c + Vector3i(40, 40, -40)
+	# A room: a stone floor and end walls, open above.
+	for x in range(-9, 10):
+		for z in range(-4, 5):
+			w.set_block(o + Vector3i(x, -1, z), stone)
+			for y in range(0, 8):
+				w.set_block(o + Vector3i(x, y, z), stone if absi(x) == 9 else 0)
+	# The locked door: shut without the Temple Key; the key, used up, unlocks it.
+	var door := o + Vector3i(-6, 0, 0)
+	w.set_block(door, Data.block_id("lihzahrd_door_locked"))
+	w.set_block(door + Vector3i.UP, Data.block_id("door_top"))
+	while p.inventory.count_of("TempleKey") > 0:
+		p.inventory.remove("TempleKey", 1)
+	var shut := not Doors.toggle(game, door, Vector3(o)) and w.get_block(door) == Data.block_id("lihzahrd_door_locked")
+	p.inventory.add("TempleKey", 1)
+	var unlocked := Doors.toggle(game, door, Vector3(o)) and w.get_block(door) == Data.block_id("lihzahrd_door") and p.inventory.count_of("TempleKey") == 0
+	var opens := Doors.toggle(game, door, Vector3(o)) and w.get_block(door) == Data.block_id("lihzahrd_door_open")
+	check(shut and unlocked and opens, "the Lihzahrd Door is locked; the Temple Key (used up) unlocks it for good")
+	# Wooden Spikes: 80 damage, give or take 15%, and Bleeding (no healing).
+	var god := p.god_mode
+	p.god_mode = false
+	p.flying = false
+	p.life = p.life_max
+	p._immune = 0.0
+	var spike := o + Vector3i(4, -1, 2)
+	w.set_block(spike, Data.block_id("wooden_spike"))
+	p.global_position = Vector3(spike) + Vector3(0.5, 1.0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	await frames(3)
+	var lost: int = p.life_max - p.life
+	check(lost >= 60 and lost <= 100 and p.has_buff("Bleeding") and p.has_effect("bleeding"), "Wooden Spikes: 80 damage (%d, less defense) and Bleeding" % lost)
+	w.set_block(spike, stone)
+	p.timed_buffs.erase("Bleeding")
+	p.life = p.life_max
+	p.god_mode = true
+	p.global_position = Vector3(o) + Vector3(0.5, 0, -3.5)
+	# The traps, each fired by a wire's signal (Wiring.hit_single).
+	var shot := func(kind: String) -> Array:
+		return game.entities.get_children().filter(func(e): return e is Projectile and e.kind == kind and not e.is_queued_for_deletion())
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	game.wiring._cooldown.clear()
+	var dart := o + Vector3i(8, 1, 0)
+	w.set_block(dart, Data.block_id("super_dart_trap"))
+	game.block_rotations[Chests.key(dart)] = 3
+	game.wiring.hit_single(game, dart)
+	game.wiring.hit_single(game, dart)
+	await frames(1)
+	var darts: Array = shot.call("PoisonDartTrap")
+	check(darts.size() == 1 and darts[0].damage == 80 and darts[0].velocity.x < -40.0, "a Super Dart Trap shoots one dart (40, doubled on you) at 12 px a tick, then rests")
+	var flame := o + Vector3i(8, 2, 0)
+	w.set_block(flame, Data.block_id("flame_trap"))
+	game.block_rotations[Chests.key(flame)] = 3
+	game.wiring.hit_single(game, flame)
+	await frames(20)
+	check(shot.call("FlamethrowerTrap").size() == 1 and shot.call("FlamesTrap").size() >= 2, "a Flame Trap lets out a jet of flames (%d)" % shot.call("FlamesTrap").size())
+	var balls := o + Vector3i(2, 7, 0)
+	w.set_block(balls + Vector3i.UP, stone)
+	w.set_block(balls, Data.block_id("spiky_ball_trap"))
+	game.block_rotations[Chests.key(balls)] = 4
+	game.wiring.hit_single(game, balls)
+	await frames(90)
+	var ball: Array = shot.call("SpikyBallTrap")
+	check(ball.size() == 1 and ball[0].global_position.y < o.y + 1.0, "a Spiky Ball Trap drops a spiky ball that falls to the floor (%s)" % [ball[0].global_position if not ball.is_empty() else null])
+	var spear := o + Vector3i(-8, 1, 3)
+	w.set_block(spear, Data.block_id("spear_trap"))
+	game.block_rotations[Chests.key(spear)] = 1
+	game.wiring.hit_single(game, spear)
+	var far := 0.0
+	for i in 90:
+		await frames(1)
+		for s2 in shot.call("SpearTrap"):
+			far = maxf(far, s2.global_position.x - spear.x)
+	check(far > 10.0 and far < 17.5 and shot.call("SpearTrap").is_empty(), "a Spear Trap thrusts its spear out to the wall and back (%.1f blocks)" % far)
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	for x in range(-9, 10):
+		for z in range(-4, 5):
+			for y in range(-1, 9):
+				w.set_block(o + Vector3i(x, y, z), 0)
+	p.god_mode = god
+	p.global_position = Vector3(c) + Vector3(0.5, 1, 0.5)
+	p._fall_start = p.global_position.y
 
 
 func _cabin_loot_checks(c: Vector3i) -> void:

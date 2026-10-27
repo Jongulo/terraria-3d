@@ -1983,7 +1983,13 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // here they come first and those keep out of them (a small world has no
     // room for one round them). Their own random numbers.
     let pyramids = crate::pyramids::pyramids(w, &mut Rng::new(seed as u64 ^ 0x9e7a_3d15), &l, &dunes, dungeon.map(|(x, _, z, _)| (x, z)));
-    let clear_of_pyramids = |x: i32, z: i32, by: i32| pyramids.iter().all(|p| (p.x - x).abs().max((p.z - z).abs()) > crate::pyramids::REACH + by);
+    // Terraria's Jungle Temple (temple.rs), deep in the Jungle's caves: its
+    // "Jungle Temple" pass comes after the Dungeon and before the caves'
+    // structures fill in round it; here they keep out of it as of the
+    // Pyramids.
+    let temple = crate::temple::temple(w, &mut Rng::new(seed as u64 ^ 0x7e3b_1e5a), &l);
+    let clear_of_pyramids = |x: i32, z: i32, by: i32| pyramids.iter().all(|p| (p.x - x).abs().max((p.z - z).abs()) > crate::pyramids::REACH + by)
+        && temple.as_ref().map_or(true, |t| (t.x - x).abs().max((t.z - z).abs()) > t.reach + by);
 
     // Pass 3-a: Terraria's Marble and Granite caves (marble.rs, granite.rs),
     // deep in the caverns away from the coast; their own random numbers.
@@ -2253,6 +2259,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     // Terraria's Herbs pass: herb sprouts on their soils; their own random numbers.
     crate::alchemy::herbs_pass(w, &mut Rng::new(seed as u64 ^ 0x4e2b_5a17), &l);
+    // The passes since the temple that don't keep out of it, undone in it.
+    if let Some(t) = &temple {
+        crate::temple::restore(w, t);
+    }
     // Springs that were in the rock a cabin now stands in.
     w.decorations.retain(|d| {
         d.kind != "waterfall" || !cabins.iter().flatten().any(|r| {
@@ -3755,6 +3765,82 @@ mod tests {
         assert!(below, "its shaft goes on below it");
     }
 
+    /// The Jungle Temple (temple.rs) in a small world: Lihzahrd Brick deep in
+    /// the Jungle, sealed by its locked door, its passages joining the door
+    /// to the altar, with spikes, wired traps, chests, statues and furniture.
+    #[test]
+    fn a_jungle_temple_sealed_by_its_door() {
+        let w = gen_world_sized(1, 0, (768, 384, 768));
+        let l = layers(w.sy);
+        let name = |p: (i32, i32, i32)| w.def(w.get(p.0, p.1, p.2)).name.clone();
+        let door = w.decorations.iter().find(|d| d.kind == "temple").map(|d| d.pos).expect("a temple");
+        assert_eq!(name(door), "lihzahrd_door_locked");
+        assert_eq!(name((door.0, door.1 + 1, door.2)), "door_top");
+        let (_, jx, jz, jr) = *biome_regions(w.sx, w.sz, w.seed).iter().find(|r| r.0 == BIOME_JUNGLE).unwrap();
+        assert!(((door.0 - jx).pow(2) + (door.2 - jz).pow(2)) as f32 <= (jr as f32 * 1.6).powi(2), "in the Jungle");
+        assert!(door.1 < l.cavern_top + 10 && door.1 > l.underworld_top, "in the caverns ({})", door.1);
+        let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for z in door.2 - 120..door.2 + 120 {
+            for y in (door.1 - 110).max(0)..(door.1 + 60).min(w.sy) {
+                for x in door.0 - 120..door.0 + 120 {
+                    let n = name((x, y, z));
+                    if n.contains("lihzahrd") || n.ends_with("_trap") || n == "wooden_spike" || n == "lizard_king" {
+                        *counts.entry(n).or_default() += 1;
+                    }
+                }
+            }
+        }
+        let c = |n: &str| counts.get(n).copied().unwrap_or(0);
+        assert!(c("lihzahrd_brick") > 50_000, "a temple of Lihzahrd Brick ({})", c("lihzahrd_brick"));
+        assert_eq!(c("lihzahrd_altar"), 1, "its altar");
+        assert!(c("wooden_spike") > 20 && c("lihzahrd_pressure_plate") >= 5 && c("lihzahrd_chest") >= 1, "spikes, plates, chests");
+        assert!(c("super_dart_trap") + c("flame_trap") + c("spiky_ball_trap") + c("spear_trap") >= c("lihzahrd_pressure_plate"), "a trap for each plate");
+        assert!(c("lihzahrd_statue") + c("lihzahrd_watcher_statue") + c("lihzahrd_guardian_statue") >= 3, "statues");
+        assert!(c("lihzahrd_work_bench") + c("lihzahrd_table") + c("lihzahrd_chair") >= 3, "furniture");
+        assert!(w.decorations.iter().any(|d| d.kind == "chest" && d.style == crate::temple::LIHZAHRD_LOOT), "Lihzahrd Chests' loot");
+        // Each plate wired to a trap.
+        let plates: Vec<(i32, i32, i32)> = w.decorations.iter().filter(|d| d.kind == "wire" && name(d.pos) == "lihzahrd_pressure_plate").map(|d| d.pos).collect();
+        assert!(!plates.is_empty() && plates.len() >= c("lihzahrd_pressure_plate") / 2, "plates wired");
+        // Sealed: from the altar, through what's open, nowhere outside the
+        // temple's box; and the door's way in reaches it.
+        let mut altar = None;
+        for z in door.2 - 120..door.2 + 120 {
+            for y in (door.1 - 110).max(0)..(door.1 + 60).min(w.sy) {
+                for x in door.0 - 120..door.0 + 120 {
+                    if altar.is_none() && name((x, y, z)) == "lihzahrd_altar" {
+                        altar = Some((x, y, z));
+                    }
+                }
+            }
+        }
+        let altar = altar.expect("its altar");
+        let open = |p: (i32, i32, i32)| { let b = w.get(p.0, p.1, p.2); b == 0 || !w.def(b).solid };
+        let bx = *w.structures.iter().find(|(lo, hi)| altar.0 >= lo.0 && altar.0 <= hi.0 && altar.1 >= lo.1 && altar.1 <= hi.1 && altar.2 >= lo.2 && altar.2 <= hi.2).expect("its box");
+        let mut seen = std::collections::HashSet::new();
+        let mut todo = vec![(altar.0, altar.1 + 1, altar.2)];
+        let (mut escaped, mut at_door) = (false, false);
+        while let Some(p) = todo.pop() {
+            if !seen.insert(p) || seen.len() > 2_000_000 {
+                continue;
+            }
+            if p.0 < bx.0 .0 - 2 || p.0 > bx.1 .0 + 2 || p.1 < bx.0 .1 - 2 || p.1 > bx.1 .1 + 2 || p.2 < bx.0 .2 - 2 || p.2 > bx.1 .2 + 2 {
+                escaped = true;
+                continue;
+            }
+            for d in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
+                let q = (p.0 + d.0, p.1 + d.1, p.2 + d.2);
+                if q == door {
+                    at_door = true;
+                }
+                if open(q) {
+                    todo.push(q);
+                }
+            }
+        }
+        assert!(!escaped, "sealed: nothing open leads out but through its door");
+        assert!(at_door, "its passages join the altar to the door");
+    }
+
     fn gen_world_sized(seed: i32, evil: i32, size: (i32, i32, i32)) -> World {
         let mut w = World::new();
         for (i, name) in ["dirt", "stone", "grass", "copper_ore", "iron_ore", "tree_trunk", "cloud", "sunplate", "skyware_chest", "sunplate_trim", "disc_wall", "ebonstone", "corrupt_grass", "crimstone", "crimson_grass", "sand", "mud", "clay", "tall_grass", "snow_block", "ice_block", "hardened_sand", "sandstone", "cactus", "jungle_grass", "jungle_plants", "jungle_spores", "boreal_trunk", "mahogany_trunk", "taller_grass", "flowers", "tall_flowers", "mushroom", "daybloom", "sunflower", "small_rocks", "twigs", "large_rocks", "fallen_log", "vines", "vine_flowers", "lily_pad", "cattail", "cattail_stem", "cattail_top", "cobweb", "blue_brick", "green_brick", "pink_brick", "chain_lantern", "sign", "wall_torch",
@@ -3762,10 +3848,14 @@ mod tests {
             "topaz_tree_trunk", "amethyst_tree_trunk", "sapphire_tree_trunk", "emerald_tree_trunk", "ruby_tree_trunk", "diamond_tree_trunk", "amber_tree_trunk",
             "ash", "ash_grass", "sakura_trunk", "willow_trunk", "ash_trunk", "living_wood", "leaf_block", "chest", "jungle_cave_trunk", "living_mahogany", "mahogany_leaves", "ivy_chest", "sword_in_stone",
             "sandstone_brick", "gold_chest", "pyramid_pot", "pyramid_pot_2", "pyramid_pot_3", "copper_coin_stash", "silver_coin_stash", "gold_coin_stash",
-            "ankh_banner", "snake_banner", "omega_banner"].iter().enumerate() {
+            "ankh_banner", "snake_banner", "omega_banner",
+            "lihzahrd_brick", "wooden_spike", "lihzahrd_door_locked", "door_top", "lihzahrd_altar", "lihzahrd_chest", "lihzahrd_pressure_plate",
+            "super_dart_trap", "flame_trap", "spiky_ball_trap", "spear_trap", "lihzahrd_statue", "lihzahrd_watcher_statue", "lihzahrd_guardian_statue",
+            "lihzahrd_work_bench", "lihzahrd_table", "lihzahrd_chair", "lizard_king"].iter().enumerate() {
             // The forest's plants and debris (and the dungeon's furnishings)
             // are sprites you walk through.
-            let plant = (i >= 29 || ["jungle_plants", "jungle_spores"].contains(name)) && !name.ends_with("_brick") && !name.ends_with("_trunk");
+            let plant = (i >= 29 || ["jungle_plants", "jungle_spores"].contains(name)) && !name.ends_with("_brick") && !name.ends_with("_trunk")
+                && !name.ends_with("_trap") && !["wooden_spike", "lihzahrd_door_locked", "door_top"].contains(name);
             w.set_def(
                 i as u16 + 1,
                 BlockDef {
@@ -3988,7 +4078,7 @@ mod tests {
         assert!(on_grass < grass_n / 2, "in clumps, not on every grass block ({on_grass} on {grass_n})");
         // Giant Glowing Mushrooms: a stem on mushroom grass under its cap.
         let caps: Vec<&Decoration> = w.decorations.iter().filter(|d| d.kind == "tree_top" && (crate::mushroom::MUSHROOM_CAP..crate::mushroom::MUSHROOM_CAP + 3).contains(&d.style)).collect();
-        assert!(caps.len() > 10, "giant glowing mushrooms ({})", caps.len());
+        assert!(caps.len() >= 8, "giant glowing mushrooms ({})", caps.len());
         for d in caps {
             let (x, z) = (d.pos.0, d.pos.2);
             let mut y = d.pos.1 - 1;

@@ -163,7 +163,20 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 			"ignite": [2, 60, 119, 239], "radius": 0.21, "life": 1.0},
 		"BoneArrowFromMerchant": {"pierce": 2, "life": 20.0},
 		"Glowstick": {"glowstick": true, "light": [0.7, 1.0, 0.8], "size": 0.25, "life": 300.0},
-		"SpelunkerGlowstick": {"glowstick": true, "light": [1.05, 0.95, 0.55], "spelunker": true, "size": 0.75, "life": 120.0}}
+		"SpelunkerGlowstick": {"glowstick": true, "light": [1.05, 0.95, 0.55], "spelunker": true, "size": 0.75, "life": 120.0},
+		# The Jungle Temple's traps (Wiring.HitWireSingle, tile 137): the Super
+		# Dart Trap's dart (184, AI 1); the Flame Trap's emitter (187, AI 38:
+		# through blocks, a burst of flames every 6 ticks for 60) and its flames
+		# (188, AI 23: 3 moves a tick, unseen but for their fire); the Spiky
+		# Ball Trap's ball (185, AI 14: falls, bounces and rolls, 900 ticks);
+		# the Spear Trap's spear (186, AI 37: out to a block or 300 px, then
+		# back, 300 ticks at most). They go on through what they hit.
+		"PoisonDartTrap": {"poison": 10.0, "life": 60.0},
+		"FlamethrowerTrap": {"emitter": "FlamesTrap", "every": 6, "hidden": true, "ghost": true, "harmless": true, "life": 1.0},
+		"FlamesTrap": {"hidden": true, "dust": [6], "glow": true, "pierce": 1000000, "lingers": true, "player_ignite": 7.0, "radius": 0.4,
+			"ignite": [1, 180, 420], "life": 20.0 / 60.0},
+		"SpikyBallTrap": {"spiky": true, "pierce": 1000000, "lingers": true, "size": 0.9, "radius": 0.45, "life": 15.0},
+		"SpearTrap": {"spear": true, "ghost": true, "pierce": 1000000, "lingers": true, "radius": 0.35, "life": 5.0}}
 ## Hostile shots that poison you one hit in three, for 10 s (Terraria's
 ## StatusPlayer: the Hornet's and the Queen Bee's stingers).
 const POISONS := ["Stinger", "QueenBeeStinger"]
@@ -198,6 +211,12 @@ var _book_style := 0
 var _launched := false
 var _flight := {}
 var _frames := 1
+## A Spear Trap's spear: where it came out (Terraria's localAI) and whether
+## it's on its way back (ai[0]).
+var _origin := Vector3.INF
+var _returning := false
+## A Flame Trap's emitter: ticks to its next burst.
+var _emit := 0.0
 var _fps := 20.0
 var _frame_t := 0.0
 ## The way a Hellwing steers toward (its "hellwing" flight).
@@ -347,6 +366,15 @@ func _physics_process(delta: float) -> void:
 	if geyser:
 		_geyser_step(delta, game)
 		return
+	if _flight.has("emitter"):
+		_emitter_step(delta, game)
+		return
+	if _flight.get("spiky", false):
+		_spiky_step(delta, game)
+		return
+	if _flight.get("spear", false):
+		_spear_step(delta, game)
+		return
 	if _aim != Vector3.ZERO:
 		velocity = velocity.lerp(_aim, 1.0 - pow(39.0 / 40.0, delta * 60.0))
 	if _flight.get("book", false):
@@ -446,6 +474,77 @@ func _physics_process(delta: float) -> void:
 		sprite.set_glow()
 	else:
 		sprite.update_light(game.world, game.sky, global_position)
+
+
+## A Flame Trap's emitter (AI 38): through blocks at its speed, letting out
+## its flames every few ticks, three times as fast (their extraUpdates 2).
+func _emitter_step(delta: float, game) -> void:
+	life -= delta
+	if life <= 0.0:
+		queue_free()
+		return
+	global_position += velocity * delta
+	_emit -= delta * 60.0
+	if _emit <= 0.0:
+		_emit += float(_flight.get("every", 6))
+		var f: Projectile = game.spawn_projectile(String(_flight.emitter), global_position, velocity * 3.0, damage, knockback, 0.0, 0.0, 0.5, friendly)
+		f.crit = 0.0
+		Audio.play_at("Item_34", global_position, 0.4)
+
+
+## A Spiky Ball (AI 14): it falls (0.2 px a tick, up to 16), bounces off
+## blocks at half the speed and rolls along the floor, slowing.
+func _spiky_step(delta: float, game) -> void:
+	life -= delta
+	if life <= 0.0:
+		_die(game)
+		return
+	velocity.y = maxf(velocity.y - 45.0 * delta, -60.0)
+	var step := velocity * delta
+	var on_floor := false
+	for axis in 3:
+		var probe := global_position
+		probe[axis] += step[axis] + signf(step[axis]) * radius
+		if step[axis] != 0.0 and game.world.is_solid(Vector3i(probe.floor())):
+			if axis == 1 and step.y < 0.0:
+				on_floor = true
+			velocity[axis] = -velocity[axis] * 0.5
+			if absf(velocity[axis]) < 0.5:
+				velocity[axis] = 0.0
+			step[axis] = 0.0
+	global_position += step
+	if on_floor:
+		var keep := pow(0.97, delta * 60.0)
+		velocity.x *= keep
+		velocity.z *= keep
+	_angle += Vector2(velocity.x, velocity.z).length() / maxf(radius, 0.1) * delta
+	sprite.set_rotation_angle(_angle)
+	sprite.update_light(game.world, game.sky, global_position)
+	_age += delta
+	_check_hits(game)
+
+
+## A Spear Trap's spear (AI 37): straight out from the trap until it meets a
+## block or is 300 px (18.75 blocks) out, then straight back, gone when it's
+## home (or meets a block on the way).
+func _spear_step(delta: float, game) -> void:
+	life -= delta
+	if _origin == Vector3.INF:
+		_origin = global_position - velocity * 1.5 / 60.0
+	global_position += velocity * delta
+	var solid: bool = game.world.is_solid(Vector3i(global_position.floor()))
+	if not _returning:
+		if solid or global_position.distance_to(_origin) > 300.0 / 16.0:
+			velocity = -velocity
+			_returning = true
+	elif solid or global_position.distance_to(_origin) < velocity.length() * delta or life <= 0.0:
+		queue_free()
+		return
+	# Its point away from the trap.
+	sprite.set_axis(global_position - _origin)
+	sprite.update_light(game.world, game.sky, global_position)
+	_age += delta
+	_check_hits(game)
 
 
 ## A lit explosive: falls, bounces off blocks (losing speed, rolling to a
@@ -1151,6 +1250,9 @@ func _check_hits(game) -> bool:
 			# (Only a hit that lands: Terraria's StatusPlayer.)
 			if landed:
 				p.take_debuffs(_flight.get("debuffs", []))
-			# The Librarian Skeleton's books go on through (penetrate -1).
-			return not _flight.get("book", false)
+				if _flight.has("player_ignite"):
+					p.ignite(float(_flight.player_ignite))
+			# The Librarian Skeleton's books go on through (penetrate -1), as
+			# do the temple traps' spikes, spears and flames.
+			return not (_flight.get("book", false) or _flight.get("lingers", false))
 	return false

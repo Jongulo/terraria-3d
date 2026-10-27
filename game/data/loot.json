@@ -169,5 +169,11 @@
 	"gold_coin_stash": {
 		"_doc": "See copper_coin_stash.",
 		"extras": [["GoldCoin", 1, 5, 1], ["GoldCoin", 2, 5, 0.5], ["GoldCoin", 3, 5, 0.3333]]
+	},
+	"lihzahrd_chest": {
+		"_doc": "Terraria's Lihzahrd Chests in the Jungle Temple (templePart2: AddBuriedChest with the Lihzahrd Power Cell, style 16): the Power Cell, then a cavern chest's loot (its Solar Tablet Fragment is Hardmode's).",
+		"pick_one": [["LihzahrdPowerCell", 1, 1]],
+		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05], ["RecallPotion", 2, 4, 0.6667]],
+		"either": [[[["RegenerationPotion", 1, 2], ["ShinePotion", 1, 2], ["NightOwlPotion", 1, 2], ["SwiftnessPotion", 1, 2], ["ArcheryPotion", 1, 2], ["GillsPotion", 1, 2], ["HunterPotion", 1, 2], ["MiningPotion", 1, 2], ["TrapsightPotion", 1, 2]], 0.6667]]
 	}
 }

@@ -158,6 +158,15 @@ static func toggle(game: Game, p: Vector3i, from: Vector3) -> bool:
 	var key := Chests.key(p)
 	var state := game.block_rotation(p)
 	var c := Vector3(p) + Vector3(0.5, 0, 0.5)
+	# A locked door (the Jungle Temple's): its key, used up, unlocks it for
+	# good (Terraria's WorldGen.UnlockDoor); else it stays shut.
+	if d.has("locked"):
+		if not game.player.inventory.remove(d.locked, 1):
+			game.message("It's locked", Color(0.9, 0.7, 0.7))
+			return false
+		w.set_block(p, Data.block_id(d.unlocks_to))
+		Audio.play_at("Unlock", c + Vector3(0, 1, 0))
+		return true
 	if is_open(d):
 		for q in [p, p + Vector3i.UP]:
 			if game.player.overlaps_block(q) or game.any_npc_in_block(q):
