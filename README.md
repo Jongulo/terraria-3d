@@ -328,7 +328,7 @@ in this game.
   Underworld with its ash forests and ruined forts; caves, lakes, gem ores, gem trees, vanity
   trees, giant living trees and Living Mahogany trees, underground cabins, Granite and Marble caves,
   spider caves, moss (plain, lava and neon, with Long Moss), gem caves and loose gems,
-  Water Chests, Enchanted Sword Shrines, meteorites,
+  Water Chests, Enchanted Sword Shrines, Jungle Shrines with their Ivy Chests, meteorites,
   traps, pots in each biome's style, life crystals and loot chests,
   Shadow Chests, cave statues, piles of rocks, bones, coins and gems, stalactites and stalagmites,
   dye plants, sea shells, seaweed and shell piles on the coast; campsites, thin ice in the snow,

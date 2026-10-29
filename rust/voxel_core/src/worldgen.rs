@@ -2248,6 +2248,10 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     // What the passes since put in the Pyramids' passages goes.
     crate::pyramids::restore(w, &pyramids);
+    // Terraria's Jungle Chests pass (jungle_shrines.rs): its shrines, after
+    // the hives and the Dungeon, with their Ivy Chests; their own random
+    // numbers.
+    crate::jungle_shrines::jungle_shrines(w, &mut Rng::new(seed as u64 ^ 0x5a1e_7e11), &l);
     // Gem trees after the Dungeon and the hives, as Terraria grows them late
     // (its Speleothems And Gem Trees pass), and out of them.
     gem_trees(w, seed, &l);
@@ -3660,7 +3664,7 @@ mod tests {
         assert!(woods > 2000 && leafs > 500, "living mahogany trees in the underground jungle (wood {}, leaves {})", woods, leafs);
         // Each has its Ivy Chest in its hollow foot, on living mahogany.
         let ivy = w.id_of("ivy_chest");
-        let chests = w.decorations.iter().filter(|d| d.kind == "chest" && d.style == 2 && w.get(d.pos.0, d.pos.1, d.pos.2) == ivy && w.get(d.pos.0, d.pos.1 - 1, d.pos.2) == wood).count();
+        let chests = w.decorations.iter().filter(|d| d.kind == "chest" && d.style & 63 == 2 && w.get(d.pos.0, d.pos.1, d.pos.2) == ivy && w.get(d.pos.0, d.pos.1 - 1, d.pos.2) == wood).count();
         assert!(chests >= 3 && chest != 0, "an Ivy Chest (jungle loot) in each tree's foot ({})", chests);
     }
 
@@ -4440,6 +4444,46 @@ mod tests {
         for &(x, y, z) in &cells {
             assert!(!w.structures.iter().any(|&(lo, hi)| x >= lo.0 && x <= hi.0 && y >= lo.1 && y <= hi.1 && z >= lo.2 && z <= hi.2), "no track in a structure ({x},{y},{z})");
         }
+    }
+
+    /// Terraria's Jungle Shrines: rooms of the world's one material in the
+    /// Jungle's caves, each an Ivy Chest on its floor, a Green Torch over its
+    /// doorways, open on every side at the bottom; the first Ivy Chest has
+    /// the Living Mahogany Wands.
+    #[test]
+    fn jungle_shrines() {
+        let w = gen_world_sized(2, 0, (768, 384, 768));
+        let mats: Vec<u16> = crate::jungle_shrines::MATERIALS.iter().map(|n| w.id_of(n)).collect();
+        let (ivy, torch) = (w.id_of("ivy_chest"), w.id_of("green_wall_torch"));
+        let shrines: Vec<_> = w
+            .decorations
+            .iter()
+            .filter(|d| d.kind == "chest" && d.style & 63 == 2 && mats.contains(&w.get(d.pos.0, d.pos.1 - 1, d.pos.2)))
+            .collect();
+        let used: std::collections::HashSet<u16> = shrines.iter().map(|d| w.get(d.pos.0, d.pos.1 - 1, d.pos.2)).collect();
+        eprintln!("SHRINES {} of {:?}", shrines.len(), used);
+        assert!((8..=20).contains(&shrines.len()), "7-11 a small world's worth ({})", shrines.len());
+        assert_eq!(used.len(), 1, "one material a world");
+        let jr = biome_regions(w.sx, w.sz, w.seed).into_iter().find(|r| r.0 == BIOME_JUNGLE).unwrap();
+        for d in &shrines {
+            let (x, y, z) = d.pos;
+            assert_eq!(w.get(x, y, z), ivy);
+            assert!(((x - jr.1).pow(2) + (z - jr.2).pow(2)) as f64 <= (jr.3 as f64).powi(2), "in the Jungle ({x},{z})");
+            // Walls round the room, doorways out of its bottom two blocks
+            // on each side, its torch.
+            let m = w.get(x, y - 1, z);
+            let out = (1..4).find(|&r| w.get(x + r, y + 2, z) == m).expect("a wall");
+            for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                assert!(!w.is_solid(x + dx * out, y, z + dz * out) && !w.is_solid(x + dx * out, y + 1, z + dz * out), "a doorway at ({x},{y},{z})");
+                assert_eq!(w.get(x + dx * out + dz * out, y, z + dz * out + dx * out), m, "a corner post");
+            }
+            let room = (-out..=out).flat_map(|i| (0..6).flat_map(move |j| (-out..=out).map(move |k| (x + i, y + j, z + k))));
+            assert!(room.into_iter().any(|(i, j, k)| w.get(i, j, k) == torch), "a Green Torch in ({x},{y},{z})");
+        }
+        let ivy_chests: Vec<_> = w.decorations.iter().filter(|d| d.kind == "chest" && d.style & 63 == 2).collect();
+        assert!(ivy_chests[0].style & crate::jungle_shrines::MAHOGANY_WANDS != 0, "the first Ivy Chest's wands");
+        let wands = ivy_chests.iter().filter(|d| d.style & crate::jungle_shrines::MAHOGANY_WANDS != 0).count();
+        assert!(wands < ivy_chests.len(), "then 1 in 5 ({wands} of {})", ivy_chests.len());
     }
 
     /// Terraria's ocean caves and Water Chests in a whole world: a flooded

@@ -16,6 +16,7 @@ var _worldgen := {}  # keys of unopened worldgen chests -> true
 var _tables := {}
 var _shadow_keys := {}
 var _sweaters := {}
+var _wands := {}
 ## Which ore of each pair the world has (worldgen.rs: the "ores" decoration,
 ## bit k for the second of pair k): its chests' bars are the world's, as
 ## Terraria's are (GenVars.goldBar...).
@@ -45,6 +46,10 @@ const SHADOW_KEY := 64
 ## A worldgen chest's style bit: a Dead Man's Sweater in its second slot
 ## (worldgen's Dead Man's Chests, 1 in 3: TurnGoldChestIntoDeadMansChest).
 const DEAD_MANS_SWEATER := 128
+## A worldgen chest's style bit: the Living Mahogany Wand and the Rich
+## Mahogany Leaf Wand after its main item (jungle_shrines.rs: the world's
+## first Ivy Chest, then 1 in 5).
+const MAHOGANY_WANDS := 256
 ## The second ore of each pair's things, by the first's: what a world with it
 ## puts in its chests instead.
 const WORLD_ORE := {"CopperBar": [0, "TinBar"], "IronBar": [1, "LeadBar"], "SilverBar": [2, "TungstenBar"],
@@ -64,6 +69,8 @@ func setup(world: VoxelWorld) -> void:
 				_shadow_keys[k] = true
 			if int(d.style) & DEAD_MANS_SWEATER:
 				_sweaters[k] = true
+			if int(d.style) & MAHOGANY_WANDS:
+				_wands[k] = true
 			if not _chests.has(k):
 				_worldgen[k] = true
 		elif d.kind == "ores":
@@ -98,6 +105,9 @@ func get_inventory(p: Vector3i) -> Inventory:
 			var drops := Game.roll_loot(table, lava)
 			if _shadow_keys.has(k):
 				drops.append(["ShadowKey", 1])
+			if _wands.has(k):
+				drops.insert(mini(1, drops.size()), ["LivingMahoganyLeafWand", 1])
+				drops.insert(mini(1, drops.size()), ["LivingMahoganyWand", 1])
 			for drop in drops:
 				var item := world_item(drop[0])
 				inv.add(item, drop[1], Prefixes.roll(Data.item(item)))
@@ -122,6 +132,7 @@ func remove(p: Vector3i) -> void:
 	_worldgen.erase(key(p))
 	_tables.erase(key(p))
 	_shadow_keys.erase(key(p))
+	_wands.erase(key(p))
 
 
 func save_state() -> Dictionary:

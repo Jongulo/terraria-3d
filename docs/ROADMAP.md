@@ -59,7 +59,7 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Structures and biomes:** done: moss, with neon patches, lava moss and Long Moss; gem caves
   and loose gems, amber included; oases, with palms, sea oats and oasis plants; ocean caves and
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
-  Aether and its shimmer; Terraria's placement passes (cave statues, biome pots, piles,
+  Aether and its shimmer; Jungle Shrines; Terraria's placement passes (cave statues, biome pots, piles,
   stalactites and stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed) and its
   micro biomes (campsites, thin ice and frozen pools, Dead Man's Chests, mining explosives, lava
   traps, minecart tracks).
@@ -70,6 +70,8 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
   feed (nothing uses luck yet).
 - **Underground Desert extras (S):** Antlion Eggs and Rolling Cactus in its caverns, its piles,
   and its enemies (Tomb Crawlers, Ghouls, Sand Poachers, Antlion Swarmers and Chargers).
+- **Ivy Chest extras (S):** the Bee Minecart, the Rat mount (item 5525), the Honey Dispenser (with
+  the honey furniture it makes) and Seaweed (the Pet Turtle).
 - **Placement extras (S):** the statues' traps (they need statues that spawn on a signal, see
   7.4); the strange plants, which grow later on; the piles of the spider caves and living trees.
 

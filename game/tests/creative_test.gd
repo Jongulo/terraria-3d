@@ -404,6 +404,26 @@ func _run() -> void:
 	w.add_decoration("chest", Vector3i(3, 70, 3), 2)
 	cs.setup(w)
 	check(cs._worldgen.has(Chests.key(Vector3i(3, 70, 3))) and cs._tables.get(Chests.key(Vector3i(3, 70, 3))) == "ivy_chest", "a worldgen chest of style 2 holds Ivy Chest loot")
+	# The world's first Ivy Chest (then 1 in 5): the Living Mahogany Wands
+	# after its main item.
+	w.add_decoration("chest", Vector3i(5, 70, 3), 2 | Chests.MAHOGANY_WANDS)
+	cs.setup(w)
+	var wanded := cs.get_inventory(Vector3i(5, 70, 3))
+	check(wanded.slots[1] != null and wanded.slots[1].item == "LivingMahoganyWand" and wanded.slots[2] != null and wanded.slots[2].item == "LivingMahoganyLeafWand"
+			and wanded.slots[0].item in ["FeralClaws", "AnkletoftheWind", "StaffofRegrowth", "Boomstick", "FiberglassFishingPole", "FlowerBoots"],
+			"an Ivy Chest with the Living Mahogany Wands after its main item")
+	var mwand := Data.item("LivingMahoganyWand")
+	var lwand := Data.item("LivingMahoganyLeafWand")
+	check(mwand.get("place") == "living_mahogany" and lwand.get("place") == "mahogany_leaves" and mwand.get("wand_ammo") == "RichMahogany" and lwand.get("wand_ammo") == "RichMahogany",
+			"the wands place living mahogany and its leaves from Rich Mahogany")
+	# The Jungle Shrines' bricks, Terraria's recipes: 5 Stone and an ore at a Furnace.
+	for brick in [["TinBrick", "TinOre"], ["GoldBrick", "GoldOre"]]:
+		var made := false
+		for r in Data.recipes:
+			if r.result == brick[0] and r.count == 5 and r.get("station") == "furnace" and r.ingredients.get(brick[1]) == 1 \
+					and (r.ingredients.get("StoneBlock") == 5 or r.ingredients.get("StoneBlock|EbonstoneBlock|CrimstoneBlock") == 5):
+				made = true
+		check(made, "%s: 5 Stone and 1 %s at a Furnace makes 5" % brick)
 	# The loot itself does what Terraria's does.
 	p.accessories.slots[0] = Inventory.stack("FeralClaws", 1)
 	check(p.stat("melee_speed") >= 12.0 and p.auto_reuses(Data.item("CopperBroadsword") if not Data.item("CopperBroadsword").is_empty() else {"type": "melee", "auto_reuse": false}),

@@ -8,6 +8,7 @@ pub mod fishing;
 pub mod gem_caves;
 pub mod granite;
 pub mod hives;
+pub mod jungle_shrines;
 pub mod liquid;
 pub mod lod;
 pub mod marble;

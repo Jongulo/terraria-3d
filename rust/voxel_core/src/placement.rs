@@ -942,13 +942,13 @@ pub mod tests {
                 w.set_def(id, BlockDef { name, render: RENDER_CROSS, solid: false, opaque: false, variants: 1, ..Default::default() });
             }
         }
-        for name in ["thin_ice", "gold_coin_pile"] {
+        for name in ["thin_ice", "gold_coin_pile", "iridescent_brick", "mudstone_block", "rich_mahogany", "tin_brick", "gold_brick"] {
             if w.id_of(name) == 0 {
                 let id = w.defs.len() as u16;
                 w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
             }
         }
-        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track"] {
+        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track", "green_wall_torch"] {
             if w.id_of(name) == 0 {
                 let id = w.defs.len() as u16;
                 w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CUTOUT, solid: false, opaque: false, variants: 1, ..Default::default() });
