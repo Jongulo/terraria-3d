@@ -82,6 +82,14 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"honey_bathtub": {
+			"noise": "speckle",
+			"strength": 0.85
+		},
+		"honey_sink": {
+			"noise": "speckle",
+			"strength": 1.0
+		},
 		"obsidian_bathtub": {
 			"noise": "grain",
 			"one_color": true,
@@ -3680,6 +3688,10 @@
 			"depth": 9.0,
 			"noise": "speckle",
 			"one_color": true,
+			"strength": 1.0
+		},
+		"honey_platform": {
+			"noise": "grain",
 			"strength": 1.0
 		},
 		"hoplite_statue": {
@@ -11804,6 +11816,20 @@
 			"one_color": true,
 			"strength": 1.0
 		},
+		"honey_cup": {
+			"noise": "speckle"
+		},
+		"honey_dispenser": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"honey_lamp": {
+			"one_color": true
+		},
+		"honey_platform": {
+			"noise": "grain"
+		},
 		"honey_stalactite": {
 			"no_outline": true
 		},
@@ -13566,6 +13592,9 @@
 		"green_dungeon_vase": "hull",
 		"green_mushroom": "rendered",
 		"green_torch": "hull",
+		"honey_cup": "hull",
+		"honey_dispenser": "hull",
+		"honey_lamp": "hull",
 		"honey_stalactite": "rendered",
 		"honey_stalactite_2": "rendered",
 		"honey_stalactite_3": "rendered",
