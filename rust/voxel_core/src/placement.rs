@@ -8,8 +8,11 @@
 //!   Dragonfly, the Heart and Star Statues twice) in a small world, here that
 //!   many in each 640 x 640 blocks, as the cabins count; on cave floors from
 //!   a third of the way down to the rock layer to 100 tiles over the
-//!   Underworld, each in turn. (Its statues with traps aren't wired: statues
-//!   don't spawn on a signal yet.)
+//!   Underworld, each in turn. Its statues with traps (StatuesWithTraps: the
+//!   Slime, Bat, Skeleton and Crab Statues) each get a Red Pressure Plate
+//!   wired to them (PlaceStatueTrap): the first floor within 10 tiles, from
+//!   one side (Terraria's left, here -x then -z) and the top down; stepping
+//!   on it makes the statue spawn its creature.
 //! - **Pots** (PotsGraveyardsAndBoulderPiles): on cave floors, the first
 //!   floor under a spot (in the last 7% of them a spot in the Underworld,
 //!   in the 18% before a spot at the surface), styled by what they stand on
@@ -109,6 +112,7 @@ struct Ids {
     plants: Vec<bool>,
     pots: [u16; 11],
     statues: Vec<u16>,
+    plate: u16,
     large: Vec<(&'static str, u16)>,
     small: Vec<(&'static str, u16)>,
     sword: u16,
@@ -196,6 +200,7 @@ impl Ids {
             pots: ["pot", "ice_pot", "jungle_pot", "dungeon_pot", "underworld_pot", "corruption_pot", "crimson_pot", "lihzahrd_pot",
                 "marble_pot", "desert_pot", "spider_pot"].map(id),
             statues: STATUES.iter().map(|n| id(n)).collect(),
+            plate: id("red_pressure_plate"),
             large: names(&["bone_pile", "large_rocks", "large_relic_rocks", "copper_rock_pile", "silver_rock_pile", "gold_rock_pile",
                 "ice_pile", "mushroom_pile", "jungle_pile", "ash_pile", "grassy_rocks", "lihzahrd_pile", "cave_ruins", "desert_pile",
                 "granite_pile", "marble_pile", "sand_pile"]),
@@ -279,11 +284,14 @@ fn worlds(w: &World) -> f64 {
     (w.sx as f64 * w.sz as f64) / (640.0 * 640.0)
 }
 
+/// The statues Terraria wires a trap to (GenVars.StatuesWithTraps: their
+/// places in STATUES).
+pub const TRAP_STATUES: [usize; 4] = [4, 7, 10, 18];
+
 /// Terraria's Statues pass: each statue in turn, twice over in a small world.
 pub fn statues(w: &mut World, rng: &mut Rng, l: &Layers, coast: &Coast) -> usize {
     let ids = Ids::new(w);
-    let list: Vec<u16> = ids.statues.iter().copied().filter(|&s| s != 0).collect();
-    if list.is_empty() {
+    if ids.statues.iter().all(|&s| s == 0) {
         return 0;
     }
     // From (2 worldSurface + rockLayer) / 3 to 300 tiles over the bottom
@@ -292,7 +300,10 @@ pub fn statues(w: &mut World, rng: &mut Rng, l: &Layers, coast: &Coast) -> usize
     let n = (STATUES.len() as f64 * 2.0 * worlds(w)).round() as usize;
     let (mut placed, mut k) = (0, 0);
     for _ in 0..n {
-        let s = list[k % list.len()];
+        while ids.statues[k % STATUES.len()] == 0 {
+            k += 1;
+        }
+        let s = ids.statues[k % STATUES.len()];
         for _ in 0..10_000 {
             let p = (rng.range(13, w.sx - 13), rng.range(y_lo, y_hi), rng.range(13, w.sz - 13));
             if coast.inland(p.0, p.2) < coast.ocean.width {
@@ -304,12 +315,37 @@ pub fn statues(w: &mut World, rng: &mut Rng, l: &Layers, coast: &Coast) -> usize
             }
             put(w, f, s);
             w.decorations.push(crate::world::Decoration { kind: "rotation".into(), pos: f, style: rng.range(0, 4) });
+            if TRAP_STATUES.contains(&(k % STATUES.len())) {
+                statue_trap(w, &ids, f);
+            }
             placed += 1;
             k += 1;
             break;
         }
     }
     placed
+}
+
+/// PlaceStatueTrap: a Red Pressure Plate on the first floor within 10 tiles
+/// of the statue at `at` (across from one side, each column from the top
+/// down), wired to it.
+fn statue_trap(w: &mut World, ids: &Ids, at: P) {
+    if ids.plate == 0 {
+        return;
+    }
+    let r = b(10.0);
+    for dx in -r..=r {
+        for dz in -r..=r {
+            for dy in (-r..=r).rev() {
+                let p = (at.0 + dx, at.1 + dy, at.2 + dz);
+                if p != at && floor_at(w, p) {
+                    put(w, p, ids.plate);
+                    crate::wires::lay(w, at, p, crate::wires::RED);
+                    return;
+                }
+            }
+        }
+    }
 }
 
 /// The pot for what it stands on (PlacePot's style), or the plain one.
@@ -935,7 +971,7 @@ pub mod tests {
             "small_stone_stalactite", "stone_stalagmite", "small_stone_stalagmite", "icicle", "small_icicle", "honey_stalactite",
             "honey_stalagmite", "teal_mushroom", "green_mushroom", "sky_blue_flower", "yellow_marigold", "blue_berries", "lime_kelp",
             "pink_prickly_pear", "orange_bloodroot", "seashell", "starfish", "lightning_whelk_shell", "tulip_shell", "junonia_shell",
-            "seaweed", "coral", "antlion_eggs"].map(String::from));
+            "seaweed", "coral", "antlion_eggs", "leaf_pile", "living_wood_pile", "living_wood_sprout"].map(String::from));
         for name in names {
             if w.id_of(&name) == 0 {
                 let id = w.defs.len() as u16;
@@ -948,7 +984,7 @@ pub mod tests {
                 w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
             }
         }
-        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track", "green_wall_torch", "rolling_cactus"] {
+        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track", "green_wall_torch", "rolling_cactus", "red_pressure_plate"] {
             if w.id_of(name) == 0 {
                 let id = w.defs.len() as u16;
                 w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CUTOUT, solid: false, opaque: false, variants: 1, ..Default::default() });

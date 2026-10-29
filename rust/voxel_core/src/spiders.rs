@@ -25,6 +25,12 @@
 //!   spiders). Terraria tries these in a third of its floor and ceiling
 //!   tiles; 3D caves have far more floor and ceiling for their size, so here
 //!   1 in 40 floor cells and 1 in 12 ceiling cells.
+//! - **Piles:** on the rest of its floor, Terraria's webbed piles (big pile
+//!   styles 9-13) wherever one fits, and 1 in 3 of the spots one doesn't
+//!   (here, as one always fits, 1 in 3 of the floor it doesn't take) a small
+//!   one, webbed rocks 2 x 1 (styles 34-37) or, where that doesn't fit
+//!   either, 1 x 1 (48-53): here half each. Thinned as the pots: 1 in 40 of
+//!   the floor cells a big pile, 1 in 120 a small one.
 //! - **Webs:** 9 in 10 of the nest's open cells with a block within 2 to 4
 //!   tiles get a cobweb (WebsInSpiderCaves), so the nest is thick with them
 //!   along its walls.
@@ -50,6 +56,9 @@ pub struct Ids {
     chest: u16,
     stalactite: u16,
     mushroom: u16,
+    pile: u16,
+    rock_pile: u16,
+    small_rocks: u16,
 }
 
 impl Ids {
@@ -61,6 +70,9 @@ impl Ids {
             chest: id("web_covered_chest"),
             stalactite: id("spider_stalactite"),
             mushroom: id("mushroom_grass"),
+            pile: id("webbed_pile"),
+            rock_pile: id("webbed_rock_pile"),
+            small_rocks: id("small_webbed_rocks"),
         }
     }
 }
@@ -173,6 +185,13 @@ pub fn nest(w: &mut World, rng: &mut Rng, ids: &Ids, cells: &[P]) -> P {
             }
         } else if w.is_solid(x, y + 1, z) && ids.stalactite != 0 && w.get(x, y - 1, z) == 0 && rng.range(0, 12) == 0 {
             w.blocks[i] = ids.stalactite;
+        } else if w.is_solid(x, y - 1, z) {
+            // The piles: a big one, else now and then a small one.
+            if rng.range(0, 40) == 0 {
+                w.blocks[i] = ids.pile;
+            } else if rng.range(0, 120) == 0 {
+                w.blocks[i] = if rng.range(0, 2) == 0 { ids.rock_pile } else { ids.small_rocks };
+            }
         }
     }
     // The webs.
@@ -204,7 +223,8 @@ pub(crate) mod tests {
     use crate::world::{BlockDef, RENDER_CROSS, RENDER_CUBE, RENDER_CUTOUT};
 
     pub fn add_spider_defs(w: &mut World) {
-        for (name, render) in [("spider_pot", RENDER_CROSS), ("web_covered_chest", RENDER_CUTOUT), ("spider_stalactite", RENDER_CROSS)] {
+        for (name, render) in [("spider_pot", RENDER_CROSS), ("web_covered_chest", RENDER_CUTOUT), ("spider_stalactite", RENDER_CROSS),
+            ("webbed_pile", RENDER_CUTOUT), ("webbed_rock_pile", RENDER_CUTOUT), ("small_webbed_rocks", RENDER_CUTOUT)] {
             let id = w.defs.len() as u16;
             w.set_def(id, BlockDef { name: name.into(), render, solid: false, opaque: false, variants: 1, ..Default::default() });
         }
@@ -255,8 +275,8 @@ pub(crate) mod tests {
         assert!(measure(&w, &ids, (40, 22, 40), 6000).is_none());
     }
 
-    /// The nest: webs thick along its walls, pots and stalactites, a chest
-    /// now and then, no liquid, and its decoration.
+    /// The nest: webs thick along its walls, pots, stalactites and piles, a
+    /// chest now and then, no liquid, and its decoration.
     #[test]
     fn spiders_nest_in_it() {
         let mut w = cave_world();
@@ -271,8 +291,16 @@ pub(crate) mod tests {
         // Within 1 to 3 of the walls (9 in 10): about half an 8-high cave.
         assert!(webs > cells.len() * 2 / 5, "webs ({webs} of {})", cells.len());
         assert!(pots > 10 && tites > 30, "pots ({pots}), stalactites ({tites})");
+        // The piles: big ones 1 in 40 of the floor, small ones a third as many.
+        let floor = cells.iter().filter(|c| c.1 == 20).count();
+        let (big, small) = (count(ids.pile), count(ids.rock_pile) + count(ids.small_rocks));
+        assert!(big * 40 > floor * 7 / 10 && big * 40 < floor * 13 / 10, "big piles ({big} on {floor})");
+        assert!(small > 0 && small < big, "small piles ({small})");
         for c in &cells {
             let b = w.get(c.0, c.1, c.2);
+            if [ids.pile, ids.rock_pile, ids.small_rocks].contains(&b) {
+                assert!(w.is_solid(c.0, c.1 - 1, c.2), "a pile on the floor");
+            }
             if b == ids.pot {
                 assert!(w.is_solid(c.0, c.1 - 1, c.2), "a pot on the floor");
             }

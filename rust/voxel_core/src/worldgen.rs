@@ -1010,6 +1010,13 @@ const LEAF_JITTER: f32 = 0.12;
 ///   roots   under the trunk it carries on 1-5 blocks into the ground; from
 ///           there 2 to width + 1 roots per trunk row, 3.5-6 widths long,
 ///           out and down, straight down where there's nothing under them.
+///   piles   each column of a cluster 1 in 30 a leaf pile on top of its
+///           leaves (big pile styles 50-51); under the branches' clusters
+///           (not the crown's) 1 in 15 one on the ground below, if that
+///           isn't leaves: half a pile of living wood (47-49), else a
+///           sprout (small pile 72) or twigs (59-61). A canopy in 3D has
+///           far more columns than Terraria's line of them, so here 3 times
+///           rarer (LIVING_PILE_THIN), as the speleothems.
 pub fn grow_living_tree(w: &mut World, rng: &mut Rng, base: (i32, i32, i32), wood: u16, leaves: u16) {
     let (bx, g, bz) = base;
     let set = |w: &mut World, x: i32, y: i32, z: i32, b: u16| {
@@ -1143,6 +1150,7 @@ pub fn grow_living_tree(w: &mut World, rng: &mut Rng, base: (i32, i32, i32), woo
         }
     }
     let mut placed: Vec<usize> = Vec::new();
+    let mut clusters: Vec<(f32, i32, f32, bool, f32, f32)> = Vec::new();
     // Leaves into the open (air or plants), never over the wood. Terraria's
     // branch clusters are diamonds twice as wide as tall, its crown's round:
     // here flattened balls and balls, their edge lumpy like Terraria's tiles.
@@ -1150,6 +1158,7 @@ pub fn grow_living_tree(w: &mut World, rng: &mut Rng, base: (i32, i32, i32), woo
         let r = if big { (rng.range(6, 12) + w0) as f32 } else { rng.range(5, 8) as f32 * (1.0 + w0 as f32 * 0.05) };
         let k = 2.0 - rng.range(0, 5) as f32 * 0.1;
         let (rh, rv) = if big { (r * 0.9, r * 0.9) } else { (r, r / k * 1.3) };
+        clusters.push((px, py as i32, pz, big, rh, rv));
         // Lumpy: smooth noise bulges and dents the cluster by up to LEAF_LUMPS of
         // its radius (lumps a few blocks across), finer jitter rags its edge.
         let lumps = noise(rng.range(0, 1 << 20), LEAF_LUMP_FREQ, 2);
@@ -1230,6 +1239,59 @@ pub fn grow_living_tree(w: &mut World, rng: &mut Rng, base: (i32, i32, i32), woo
             }
             if rng.range(0, 3) == 0 {
                 down = 1 - down;
+            }
+        }
+    }
+    living_tree_piles(w, rng, &clusters, leaves);
+}
+
+/// How much rarer a living tree's piles are here than Terraria's per column.
+const LIVING_PILE_THIN: i32 = 3;
+
+/// The piles round a living tree's leaf clusters (GrowLivingTree, at each
+/// cluster): leaf piles on the leaves, and under the branches' clusters piles
+/// of living wood, sprouts and twigs on the ground.
+fn living_tree_piles(w: &mut World, rng: &mut Rng, clusters: &[(f32, i32, f32, bool, f32, f32)], leaves: u16) {
+    let id = |n: &str| w.id_of(n);
+    let (leaf_pile, wood_pile, sprout, twigs) = (id("leaf_pile"), id("living_wood_pile"), id("living_wood_sprout"), id("twigs"));
+    let fall = (100.0 * 2.0 / 3.0) as i32;
+    for &(px, py, pz, big, rh, rv) in clusters {
+        let reach = rh.ceil() as i32;
+        let (top, bottom) = (py + (rv * (1.0 + LEAF_LUMPS)).ceil() as i32, py - (rv * (1.0 + LEAF_LUMPS)).ceil() as i32);
+        for dz in -reach..=reach {
+            for dx in -reach..=reach {
+                if (dx * dx + dz * dz) as f32 > rh * rh {
+                    continue;
+                }
+                let (x, z) = (px.floor() as i32 + dx, pz.floor() as i32 + dz);
+                // On the leaves: down from over the cluster to the first block.
+                if leaf_pile != 0 && rng.range(0, 30 * LIVING_PILE_THIN) == 0 && w.in_bounds(x, top, z) && w.get(x, top, z) == 0 {
+                    let mut y = top;
+                    while y > bottom && w.get(x, y - 1, z) == 0 {
+                        y -= 1;
+                    }
+                    if w.get(x, y - 1, z) == leaves {
+                        let i = w.idx(x, y, z);
+                        w.blocks[i] = leaf_pile;
+                    }
+                }
+                // On the ground under a branch's cluster.
+                if big || rng.range(0, 15 * LIVING_PILE_THIN) != 0 || !w.in_bounds(x, bottom, z) || w.get(x, bottom, z) != 0 {
+                    continue;
+                }
+                let mut y = bottom;
+                while y > bottom - fall && y > 1 && w.get(x, y - 1, z) == 0 {
+                    y -= 1;
+                }
+                let under = w.get(x, y - 1, z);
+                if under == 0 || under == leaves || !w.is_solid(x, y - 1, z) {
+                    continue;
+                }
+                let pile = if rng.range(0, 2) == 0 { wood_pile } else if rng.range(0, 2) == 0 { sprout } else { twigs };
+                if pile != 0 {
+                    let i = w.idx(x, y, z);
+                    w.blocks[i] = pile;
+                }
             }
         }
     }
@@ -3592,6 +3654,24 @@ mod tests {
             }
         }
         assert!(leaf_cells > 3000 && root_cells > 40, "leaves {} roots {}", leaf_cells, root_cells);
+        // Piles: leaf piles on the leaves, living wood piles and sprouts on the ground under them.
+        let (leaf_pile, wood_pile, sprout) = (w.id_of("leaf_pile"), w.id_of("living_wood_pile"), w.id_of("living_wood_sprout"));
+        let (mut on_leaves, mut on_ground) = (0, 0);
+        for dz in -30..=30 {
+            for dx in -30..=30 {
+                for yy in g - 5..g + 100 {
+                    let b = w.get(x + dx, yy, z + dz);
+                    if b == leaf_pile {
+                        assert_eq!(w.get(x + dx, yy - 1, z + dz), leaves, "a leaf pile on the leaves");
+                        on_leaves += 1;
+                    } else if b == wood_pile || b == sprout {
+                        assert!(w.is_solid(x + dx, yy - 1, z + dz) && w.get(x + dx, yy - 1, z + dz) != leaves, "a pile on the ground");
+                        on_ground += 1;
+                    }
+                }
+            }
+        }
+        assert!(on_leaves >= 3 && on_ground >= 1, "leaf piles {on_leaves}, piles under the branches {on_ground}");
         // No leaf left floating: each touches another leaf or the wood by a face.
         let faces = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
         for dz in -30..=30 {
@@ -4353,6 +4433,24 @@ mod tests {
         assert!(wrong_pots.is_empty(), "pots in their ground's style: {:?}", &wrong_pots[..wrong_pots.len().min(5)]);
         let worlds = (768.0 * 768.0) / (640.0 * 640.0);
         assert!(statues as f64 > 146.0 * worlds * 0.8, "statues ({statues})");
+        // The Slime, Bat, Skeleton and Crab Statues: each a Red Pressure Plate within 10 tiles, wired to it.
+        let plate = w.id_of("red_pressure_plate");
+        let r = (10.0 * 2.0 / 3.0f64).round() as i32;
+        let (mut traps, mut wired) = (0, 0);
+        for d in w.decorations.iter().filter(|d| d.kind == "rotation") {
+            let b = w.get(d.pos.0, d.pos.1, d.pos.2);
+            if !crate::placement::TRAP_STATUES.iter().any(|&k| w.id_of(crate::placement::tests::STATUE_NAMES[k]) == b) {
+                continue;
+            }
+            traps += 1;
+            let near = (-r..=r).flat_map(|dx| (-r..=r).flat_map(move |dy| (-r..=r).map(move |dz| (dx, dy, dz))))
+                .map(|(dx, dy, dz)| (d.pos.0 + dx, d.pos.1 + dy, d.pos.2 + dz))
+                .find(|&p| w.get(p.0, p.1, p.2) == plate && w.is_solid(p.0, p.1 - 1, p.2));
+            if near.is_some_and(|p| crate::wires::joined(&w, d.pos, p, crate::wires::RED)) {
+                wired += 1;
+            }
+        }
+        assert!(traps as f64 > 8.0 * worlds * 0.8 && wired * 10 >= traps * 9, "statue traps: {wired} of {traps} wired to a plate");
         assert!(n("ice_pot") > 20 && n("underworld_pot") > 20 && n("jungle_pot") > 10, "pots of the biomes");
         assert!(big > 3000 && small > 30_000 && n("bone_pile") > 200 && n("ice_pile") > 50, "piles ({big} big, {small} small)");
         assert!(tites > 10_000 && mites > 10_000 && icicles > 500, "speleothems");

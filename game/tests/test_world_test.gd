@@ -476,6 +476,7 @@ func _run() -> void:
 	await _micro_checks(c)
 	await _track_checks(c)
 	await _desert_checks(c)
+	await _statue_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -9582,3 +9583,98 @@ func _desert_checks(c: Vector3i) -> void:
 			"the Mandible Blade (16 damage, throws a claw each swing), 1 in 50 from Chargers and Swarmers")
 	p.god_mode = was_god
 
+
+## Statues on a signal (Wiring.HitWireSingle): a Slime Statue wired to a Red
+## Pressure Plate (worldgen's statue trap) spawns a Blue Slime when stepped
+## on, every 30 ticks at most and no more than 3 close by; a statue's
+## creature drops no coins, a Skeleton its loot only after you've hit it;
+## the Heart Statue makes a Heart every 600 ticks; a Hornet Statue with no
+## room round it puffs smoke.
+func _statue_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_god := p.god_mode
+	var was_at := p.global_position
+	p.god_mode = true
+	var stone := Data.block_id("stone")
+	# A room 14 x 4 x 7 deep in the rock.
+	var o := Vector3i(c.x - 60, TestWorld.GROUND - 31, c.z + 70)
+	for x in 16:
+		for y in 6:
+			for z in 9:
+				w.set_block(o + Vector3i(x, y, z), stone if x in [0, 15] or y in [0, 5] or z in [0, 8] else 0)
+	var count := func(k: String) -> int: return game.npcs().filter(func(n): return n.kind == k and not n.is_queued_for_deletion()).size()
+	for n in game.npcs():
+		if n.kind in ["BlueSlime", "Skeleton", "Hornet"]:
+			n.queue_free()
+	await frames(1)
+	var statue := o + Vector3i(4, 1, 4)
+	var plate := o + Vector3i(10, 1, 4)
+	w.set_block(statue, Data.block_id("slime_statue"))
+	w.set_block(plate, Data.block_id("red_pressure_plate"))
+	game.wiring.lay(plate, statue, Wiring.RED)
+	p.global_position = Vector3(o) + Vector3(12.5, 1.0, 2.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	await frames(2)
+	p.global_position = Vector3(plate) + Vector3(0.5, 0.05, 0.5)
+	p._fall_start = p.global_position.y
+	await frames(2)
+	var slimes := game.npcs().filter(func(n): return n.kind == "BlueSlime")
+	check(slimes.size() == 1 and slimes[0].from_statue and slimes[0].global_position.distance_to(Vector3(statue) + Vector3(0.5, 0, 0.5)) < 1.0,
+			"stepping on a statue trap's plate: its Slime Statue spawns a Blue Slime at its foot (%d)" % slimes.size())
+	game.wiring.trip(game, plate)
+	check(count.call("BlueSlime") == 1, "not again within 30 ticks")
+	for i in 6:
+		game.wiring._cooldown.clear()
+		game.wiring.trip(game, plate)
+	check(count.call("BlueSlime") == 3, "no more than 3 within 200 px of it (%d)" % count.call("BlueSlime"))
+	# Its creatures: no coins; a Skeleton's loot only once you've hit it.
+	game._collected_drops = {}
+	slimes = game.npcs().filter(func(n): return n.kind == "BlueSlime")
+	slimes[0]._die(game, true)
+	var got: Dictionary = game._collected_drops
+	check(got.get("Gel", 0) > 0 and not got.has("CopperCoin") and not got.has("SilverCoin"), "a statue's Blue Slime drops its Gel but no coins (%s)" % str(got))
+	var unhit := 0
+	var looted := 0
+	for i in 200:
+		var sk: NPC = game.spawn_npc("Skeleton", Vector3(o) + Vector3(7.5, 1, 6.5))
+		sk.from_statue = true
+		sk.hit_by_you = i >= 100
+		game._collected_drops = {}
+		sk._die(game, true)
+		if i < 100:
+			unhit += game._collected_drops.size()
+		elif game._collected_drops.has("Bone") or game._collected_drops.has("ThrowingKnife") or game._collected_drops.has("Hook"):
+			looted += 1
+	game._collected_drops = null
+	check(unhit == 0 and looted >= 5 and looted <= 25,
+			"a statue's Skeleton: nothing unhit (%d), else 1 in 5 its loot (%d of 100 with Bone, knives or a Hook)" % [unhit, looted])
+	# The Heart Statue: a Heart, then not again for 600 ticks.
+	var heart := o + Vector3i(4, 1, 2)
+	w.set_block(heart, Data.block_id("heart_statue"))
+	var hearts := func() -> int: return game.entities.get_children().filter(func(e): return e is ItemDrop and e.item == "Heart" and not e.is_queued_for_deletion()).size()
+	var h0: int = hearts.call()
+	game.wiring.hit_single(game, heart)
+	game.wiring.hit_single(game, heart)
+	check(hearts.call() == h0 + 1, "a Heart Statue makes a Heart, one every 600 ticks")
+	# A Hornet Statue against the wall: a puff of smoke, no Hornet.
+	var hornet := o + Vector3i(1, 1, 6)
+	w.set_block(hornet, Data.block_id("hornet_statue"))
+	game.wiring.hit_single(game, hornet)
+	check(count.call("Hornet") == 0, "a Hornet Statue with no room round it spawns no Hornet")
+	w.set_block(hornet, 0)
+	hornet = o + Vector3i(8, 1, 4)
+	w.set_block(hornet, Data.block_id("hornet_statue"))
+	game.wiring.hit_single(game, hornet)
+	check(count.call("Hornet") == 1, "with room, it does")
+	for n in game.npcs():
+		if n.kind in ["BlueSlime", "Skeleton", "Hornet"]:
+			n.queue_free()
+	for e in game.entities.get_children():
+		if e is ItemDrop or e is Gore:
+			e.queue_free()
+	p.global_position = was_at
+	p.velocity = Vector3.ZERO
+	p._fall_start = was_at.y
+	p.god_mode = was_god

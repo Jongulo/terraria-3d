@@ -61,8 +61,9 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
   Aether and its shimmer; Jungle Shrines; the Underground Desert's Antlion Eggs, Rolling
   Cactus, piles and enemies (Antlion Chargers, Swarmers and their Giant kinds, Tomb Crawlers,
-  Sand Slimes); Terraria's placement passes (cave statues, biome pots, piles, stalactites and
-  stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed) and its micro biomes
+  Sand Slimes); Terraria's placement passes (cave statues and their traps, biome pots, piles,
+  stalactites and stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed), the spider
+  caves' and living trees' piles, and its micro biomes
   (campsites, thin ice and frozen pools, Dead Man's Chests, mining explosives, lava traps,
   minecart tracks).
 - **Shimmer extras (M):** Faelings and the Shimmer Slime; enemies and town NPCs in shimmer
@@ -75,8 +76,8 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
   Basilisks, Dune Splicers) come with Hardmode.
 - **Ivy Chest extras (S):** the Bee Minecart, the Rat mount (item 5525), the Honey Dispenser (with
   the honey furniture it makes) and Seaweed (the Pet Turtle).
-- **Placement extras (S):** the statues' traps (they need statues that spawn on a signal, see
-  7.4); the strange plants, which grow later on; the piles of the spider caves and living trees.
+- **Placement extras (S):** the strange plants: they grow only in Hardmode, from Terraria's random
+  tile updates (which also regrow dye plants; there are none yet).
 
 ### 7.3 Town and events
 
@@ -93,7 +94,8 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Map (M):** a minimap and a full-screen map. There's no map of any kind yet.
 - **Paint and dyes (M):** painting blocks, dye items and the Dye Vat, and dye slots.
 - **Bestiary (M):** kill and sighting records, and the Zoologist's shop conditions.
-- **Wiring extras (S):** statues that spawn on a signal, pumps, logic gates.
+- **Wiring extras (S):** pumps, logic gates. (Statues spawn on a signal; those of Hardmode's
+  creatures and the Mimic's wait for them.)
 - **Equipment loadouts and vanity slots (S).**
 
 ### 7.5 Clean-up

@@ -331,7 +331,9 @@ in this game.
   spider caves, moss (plain, lava and neon, with Long Moss), gem caves and loose gems,
   Water Chests, Enchanted Sword Shrines, Jungle Shrines with their Ivy Chests, meteorites,
   traps, pots in each biome's style, life crystals and loot chests,
-  Shadow Chests, cave statues, piles of rocks, bones, coins and gems, stalactites and stalagmites,
+  Shadow Chests, cave statues (some wired to a pressure plate as traps), piles of rocks, bones,
+  coins and gems, webbed piles in the spider caves and leaf and root piles round living trees,
+  stalactites and stalagmites,
   dye plants, sea shells, seaweed and shell piles on the coast; campsites, thin ice in the snow,
   Dead Man's Chests, mining explosives, lava traps and minecart tracks; and forest plants and debris.
 - **Liquids:** water, lava, honey and shimmer that fall, level out and settle; waterfalls and
@@ -340,7 +342,8 @@ in this game.
   Vital Crystal, Aegis Fruit, Arcane Crystal and other permanent boosts come from it.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
   stairs, platforms, doors, furniture in every wood, lights, paintings, signs, beds, containers,
-  falling sand and explosives; wires, actuators, switches, pressure plates and timers.
+  falling sand and explosives; wires, actuators, switches, pressure plates and timers, and statues
+  that spawn their creature (or a Heart, Star or Bomb) on a signal.
 - **Weapons:** swords, spears, yoyos, boomerangs, flails, bows, guns, magic and thrown weapons,
   summon staves and whips, with prefixes and reforging.
 - **Gear:** armor sets and set bonuses, accessories (including the informational ones, which work

@@ -1880,7 +1880,11 @@ func _catch_critters(def: Dictionary) -> bool:
 			hurt(1, c, true)
 			on_fire = maxf(on_fire, 5.0)
 			continue
-		game.spawn_item(npc.catch_item(), 1, center())
+		if npc.from_statue:
+			# A statue's critter: a puff of smoke, nothing caught (NPC.CatchNPC).
+			Wiring.poof(game, c)
+		else:
+			game.spawn_item(npc.catch_item(), 1, center())
 		npc.queue_free()
 	Audio.play("Item_1", 0.6)
 	return true

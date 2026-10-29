@@ -8,7 +8,7 @@ extends RefCounted
 ##   block isn't solid, lets light and liquid through and is drawn dark).
 ## - Doors open or close, lights with an off look switch, Dart Traps shoot
 ##   (200 ticks at least between shots), Explosives blow up, Geysers spout,
-##   timers switch on or off.
+##   timers switch on or off, statues spawn their creature (or item).
 ## Triggers (HitSwitch): levers and switches (interact), pressure plates
 ## (Collision.SwitchTiles: red and green by anyone - you, NPCs, boulders;
 ## gray, brown, blue and orange by you, orange then breaking; yellow by
@@ -228,6 +228,8 @@ func hit_single(game, p: Vector3i, colour := RED) -> void:
 	elif b.get("teleporter", false):
 		if _teleporters.size() < 2 and not _teleporters.has(p):
 			_teleporters.append(p)
+	if STATUE_SPAWNS.has(b.name) or STATUE_ITEMS.has(b.name) or STATUE_TOWNSFOLK.has(b.name):
+		statue(game, p, b.name)
 	match b.get("trap", ""):
 		"dart":
 			if _ready_mech(p):
@@ -252,6 +254,131 @@ func hit_single(game, p: Vector3i, colour := RED) -> void:
 			game.explode(Vector3(p) + Vector3(0.5, 0.5, 0.5), EXPLOSIVES_DAMAGE, 10.0, EXPLOSION)
 		"geyser":
 			geyser(game, p)
+
+
+## Terraria's statues on a signal (HitWireSingle, tile 105): each spawns
+## one of its creatures (evenly) at its foot, at most every 30 ticks, while
+## there are fewer than 3 of that kind within 200 px of it, 6 within 600 and
+## 10 in all (NPC.MechSpawn, kin counted together). One spawned so is
+## worth no coins, drops its loot only now and then and can't be caught
+## (npc.gd from_statue). Kinds that aren't in the game yet (Hardmode's, the
+## Mimic) spawn nothing.
+const STATUE_SPAWNS := {
+	"slime_statue": ["BlueSlime"], "goblin_statue": ["GoblinScout"], "bat_statue": ["CaveBat"], "fish_statue": ["Goldfish"],
+	"bunny_statue": ["Bunny"], "skeleton_statue": ["Skeleton"], "imp_statue": ["FireImp"], "hornet_statue": ["Hornet"],
+	"crab_statue": ["Crab"], "jellyfish_statue": ["BlueJellyfish"], "chest_statue": ["Mimic"], "bird_statue": ["Bird", "BirdBlue", "BirdRed"],
+	"corrupt_statue": ["EaterofSouls"], "eyeball_statue": ["DemonEye"], "piranha_statue": ["Piranha"], "shark_statue": ["Shark"],
+	"squirrel_statue": ["Squirrel", "SquirrelRed"], "butterfly_statue": ["Butterfly"], "worm_statue": ["Worm"],
+	"firefly_statue": ["Firefly", "LightningBug"], "scorpion_statue": ["Scorpion", "ScorpionBlack"],
+	"snail_statue": ["Snail", "Snail", "Snail", "Snail", "GlowingSnail"], "grasshopper_statue": ["Grasshopper"], "mouse_statue": ["Mouse"],
+	"duck_statue": ["DuckWhite", "Duck"], "penguin_statue": ["Penguin"], "frog_statue": ["Frog"], "buggy_statue": ["Buggy", "Sluggy", "Grubby"],
+	"wall_creeper_statue": ["WallCreeper"], "unicorn_statue": ["Unicorn"], "drippler_statue": ["Drippler"], "wraith_statue": ["Wraith"],
+	"bone_skeleton_statue": ["BoneThrowingSkeleton"], "undead_viking_statue": ["UndeadViking"], "medusa_statue": ["Medusa"],
+	"harpy_statue": ["Harpy"], "pigron_statue": ["PigronCorruption", "PigronHallow", "PigronCrimson"], "hoplite_statue": ["GreekSkeleton"],
+	"granite_golem_statue": ["GraniteGolem"], "zombie_arm_statue": ["ArmedZombie"], "blood_zombie_statue": ["BloodZombie"],
+	"owl_statue": ["Owl"], "seagull_statue": ["Seagull"],
+	"dragonfly_statue": ["BlackDragonfly", "BlueDragonfly", "GreenDragonfly", "OrangeDragonfly", "RedDragonfly", "YellowDragonfly"],
+}
+## Statues whose creature needs room: no block within this many blocks
+## across and up from the statue's foot, else a puff of smoke instead
+## (Collision.SolidTiles round it).
+const STATUE_ROOM := {"hornet_statue": [1, 1], "shark_statue": [2, 2], "unicorn_statue": [2, 2], "pigron_statue": [2, 2]}
+## Kinds MechSpawn counts as one.
+const STATUE_KIN := [["Bird", "BirdBlue", "BirdRed"], ["DuckWhite", "Duck"], ["Turtle", "TurtleJungle"],
+		["PigronCorruption", "PigronHallow", "PigronCrimson"]]
+## Statues that make an item, every 600 ticks at most, while there are fewer
+## than 3 of it within 300 px, 6 within 800 and 10 in all (Item.MechSpawn).
+const STATUE_ITEMS := {"heart_statue": "Heart", "star_statue": "Star", "bomb_statue": "Bomb"}
+## The King and Queen Statues: a town NPC of theirs (Terraria's men, its
+## women) comes to stand at it, every 300 ticks at most.
+const STATUE_TOWNSFOLK := {
+	"king_statue": ["Merchant", "ArmsDealer", "Guide", "Demolitionist", "Clothier", "GoblinTinkerer", "Wizard", "SantaClaus", "Truffle",
+		"DyeTrader", "Cyborg", "Painter", "WitchDoctor", "Pirate", "TravellingMerchant", "Angler", "DD2Bartender", "TaxCollector", "Golfer"],
+	"queen_statue": ["Nurse", "Dryad", "Mechanic", "Steampunker", "PartyGirl", "Stylist", "BestiaryGirl", "Princess"],
+}
+## A Terraria pixel, in blocks.
+const PX := 1.0 / 24.0
+
+
+func statue(game, p: Vector3i, name: String) -> void:
+	var foot := Vector3(p) + Vector3(0.5, 0.05, 0.5)
+	if STATUE_ITEMS.has(name):
+		var item: String = STATUE_ITEMS[name]
+		if _ready_mech(p, 600.0) and _item_room(game, item, foot):
+			game.spawn_item(item, 1, foot + Vector3(0, 0.6, 0), Vector3(0, 0.1, 0))
+		return
+	if STATUE_TOWNSFOLK.has(name):
+		if not _ready_mech(p, 300.0):
+			return
+		var folk: Array = game.npcs().filter(func(n): return n.kind in STATUE_TOWNSFOLK[name])
+		if not folk.is_empty():
+			var who: NPC = folk[randi() % folk.size()]
+			who.global_position = foot
+			who.velocity = Vector3.ZERO
+		return
+	var kinds: Array = STATUE_SPAWNS[name]
+	var kind: String = kinds[randi() % kinds.size()]
+	if not Data.npcs.has(kind) or not _ready_mech(p, 30.0) or not _npc_room(game, kind, foot):
+		return
+	if STATUE_ROOM.has(name):
+		var r: int = STATUE_ROOM[name][0]
+		var up: int = STATUE_ROOM[name][1]
+		for dx in range(-r, r + 1):
+			for dz in range(-r, r + 1):
+				for dy in up + 1:
+					if game.world.is_solid(p + Vector3i(dx, dy, dz)):
+						poof(game, foot + Vector3(0, 0.5, 0))
+						return
+	var npc: NPC = game.spawn_npc(kind, foot)
+	if npc != null:
+		npc.from_statue = true
+
+
+## NPC.MechSpawn: room for another of `kind` (or its kin) by `at`.
+func _npc_room(game, kind: String, at: Vector3) -> bool:
+	var kin: Array = [kind]
+	for k in STATUE_KIN:
+		if kind in k:
+			kin = k
+	var all := 0
+	var near := 0
+	var mid := 0
+	for npc in game.npcs():
+		if npc.kind in kin:
+			all += 1
+			var d: float = npc.global_position.distance_to(at)
+			near += int(d < 200.0 * PX)
+			mid += int(d < 600.0 * PX)
+	return near < 3 and mid < 6 and all < 10
+
+
+## Item.MechSpawn: room for another `item` lying by `at`.
+func _item_room(game, item: String, at: Vector3) -> bool:
+	var all := 0
+	var near := 0
+	var mid := 0
+	for d in game.entities.get_children():
+		if d is ItemDrop and d.item == item:
+			all += 1
+			var dist: float = d.global_position.distance_to(at)
+			near += int(dist < 300.0 * PX)
+			mid += int(dist < 800.0 * PX)
+	return near < 3 and mid < 6 and all < 10
+
+
+## Utils.PoofOfSmoke: 3-6 smoke gores and 10 smoke dust drifting out.
+static func poof(game, at: Vector3) -> void:
+	var out := func() -> Vector3:
+		var a := randf() * TAU
+		return Vector3(cos(a) * 2.0, 0.7 * (randf() - 0.5), sin(a) * 2.0) * 0.7
+	for i in randi_range(3, 6):
+		var gore := Gore.new()
+		gore.setup(randi_range(11, 13), PX * 0.7)
+		game.entities.add_child(gore)
+		gore.global_position = at
+		gore.velocity = out.call() * 0.5
+	for i in 10:
+		game.dust.spawn(16, at, out.call() * (0.5 + 0.5 * randf()), 1.5)
 
 
 ## Wiring.Teleport: whoever stands on each of the two goes to the other (you

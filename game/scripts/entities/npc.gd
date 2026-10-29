@@ -46,6 +46,21 @@ var untouchable := false
 var dont_take_damage := false
 ## Hit since its AI last looked (Terraria's justHit).
 var _just_hit := false
+## Spawned by a statue on a signal (Terraria's SpawnedFromStatue): worth no
+## coins; its loot only 1 in so many (STATUE_LOOT), and only once you've hit
+## it; Hardmode's creatures none before Hardmode; a critter can't be caught.
+var from_statue := false
+## You've hit it (Terraria's playerInteraction).
+var hit_by_you := false
+## Terraria's NPCID.Sets.StatueSpawnedDropRarity: the chance a statue's
+## creature drops its loot (the rest drop theirs as ever).
+const STATUE_LOOT := {"Medusa": 0.05, "Wraith": 0.05, "Unicorn": 0.05, "Harpy": 0.05, "Drippler": 0.05, "BloodZombie": 0.05,
+	"PigronCorruption": 0.05, "PigronHallow": 0.05, "PigronCrimson": 0.05, "UndeadViking": 0.25, "GoblinScout": 0.01, "FireImp": 0.05,
+	"GreekSkeleton": 0.05, "Hornet": 0.05, "EaterofSouls": 0.05, "DemonEye": 0.05, "CaveBat": 0.2, "Zombie": 0.2, "Piranha": 0.2,
+	"Skeleton": 0.2, "Shark": 0.2, "BoneThrowingSkeleton": 0.2, "GraniteGolem": 0.2, "GreenJellyfish": 0.2, "PinkJellyfish": 0.2,
+	"BlueJellyfish": 0.2, "Mimic": 0.0}
+## NoEarlymodeLootWhenSpawnedFromStatue: nothing from a statue before Hardmode.
+const STATUE_NO_EARLY_LOOT := ["Medusa", "Wraith", "Unicorn", "PigronCorruption", "PigronHallow", "PigronCrimson"]
 ## Seconds of Terraria's On Fire! left (the Sunfury, the Flaming Mace): 4 life
 ## a second, taken (and shown) 1 at a time.
 var on_fire := 0.0
@@ -3937,6 +3952,7 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 	if untouchable or dont_take_damage:
 		return
 	_just_hit = true
+	hit_by_you = true
 	var game := Game.current
 	# The Tally Counter shows the last creature you hit (Terraria's
 	# lastCreatureHit, by its banner).
@@ -4292,6 +4308,12 @@ func _die(game, drops := true) -> void:
 		return
 	if def.ai == "worm":
 		_worm_unlink()
+	if from_statue and drops:
+		# NPCLoot: a statue's creature drops nothing at all, or only now and then.
+		if kind in STATUE_NO_EARLY_LOOT and not game.hardmode():
+			drops = false
+		elif STATUE_LOOT.has(kind) and (randf() >= float(STATUE_LOOT[kind]) or not hit_by_you):
+			drops = false
 	Audio.play_at(def.get("death_sound", "NPC_Killed_1"), center())
 	if carried != "" and drops:
 		var n: Array = CARRY_STACKS.get(carried, [1, 1])
@@ -4326,7 +4348,7 @@ func _die(game, drops := true) -> void:
 	# NPCLoot_DropHellforge: no Hellforge or Adamantite Forge anywhere).
 	if drops and def.get("hellforge_if_none", false) and not game.world.has_block(Data.block_id("hellforge")):
 		game.spawn_item("Hellforge", 1, center(), Vector3.ZERO)
-	game.spawn_coins(int(def.get("coins", 0)) if drops else 0, center())
+	game.spawn_coins(int(def.get("coins", 0)) if drops and not from_statue else 0, center())
 	if drops:
 		_drop_heals(game)
 	var g: Dictionary = Data.npc_gore.get(kind, {})
