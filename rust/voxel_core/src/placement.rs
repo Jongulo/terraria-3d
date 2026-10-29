@@ -935,7 +935,7 @@ pub mod tests {
             "small_stone_stalactite", "stone_stalagmite", "small_stone_stalagmite", "icicle", "small_icicle", "honey_stalactite",
             "honey_stalagmite", "teal_mushroom", "green_mushroom", "sky_blue_flower", "yellow_marigold", "blue_berries", "lime_kelp",
             "pink_prickly_pear", "orange_bloodroot", "seashell", "starfish", "lightning_whelk_shell", "tulip_shell", "junonia_shell",
-            "seaweed", "coral"].map(String::from));
+            "seaweed", "coral", "antlion_eggs"].map(String::from));
         for name in names {
             if w.id_of(&name) == 0 {
                 let id = w.defs.len() as u16;
@@ -948,7 +948,7 @@ pub mod tests {
                 w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
             }
         }
-        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track", "green_wall_torch"] {
+        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track", "green_wall_torch", "rolling_cactus"] {
             if w.id_of(name) == 0 {
                 let id = w.defs.len() as u16;
                 w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CUTOUT, solid: false, opaque: false, variants: 1, ..Default::default() });

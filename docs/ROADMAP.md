@@ -59,17 +59,20 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Structures and biomes:** done: moss, with neon patches, lava moss and Long Moss; gem caves
   and loose gems, amber included; oases, with palms, sea oats and oasis plants; ocean caves and
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
-  Aether and its shimmer; Jungle Shrines; Terraria's placement passes (cave statues, biome pots, piles,
-  stalactites and stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed) and its
-  micro biomes (campsites, thin ice and frozen pools, Dead Man's Chests, mining explosives, lava
-  traps, minecart tracks).
+  Aether and its shimmer; Jungle Shrines; the Underground Desert's Antlion Eggs, Rolling
+  Cactus, piles and enemies (Antlion Chargers, Swarmers and their Giant kinds, Tomb Crawlers,
+  Sand Slimes); Terraria's placement passes (cave statues, biome pots, piles, stalactites and
+  stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed) and its micro biomes
+  (campsites, thin ice and frozen pools, Dead Man's Chests, mining explosives, lava traps,
+  minecart tracks).
 - **Shimmer extras (M):** Faelings and the Shimmer Slime; enemies and town NPCs in shimmer
   (Terraria's shimmered look); critters and projectiles in it (critters become Faelings, some
   projectiles bounce up); the Aether's music and backdrop; the Shimmer Arrow, Flare, Campfire,
   Cloak and Monolith, Aetherium furniture and walls; luck, which coin luck and the Galaxy Pearl
   feed (nothing uses luck yet).
-- **Underground Desert extras (S):** Antlion Eggs and Rolling Cactus in its caverns, its piles,
-  and its enemies (Tomb Crawlers, Ghouls, Sand Poachers, Antlion Swarmers and Chargers).
+- **Underground Desert extras (S):** the sleeping Digtoise in its caverns (and the Digtoise tool it
+  gives); its Golfer, asleep in the sand; its Hardmode enemies (Ghouls, Sand Poachers, Lamias,
+  Basilisks, Dune Splicers) come with Hardmode.
 - **Ivy Chest extras (S):** the Bee Minecart, the Rat mount (item 5525), the Honey Dispenser (with
   the honey furniture it makes) and Seaweed (the Pet Turtle).
 - **Placement extras (S):** the statues' traps (they need statues that spawn on a signal, see

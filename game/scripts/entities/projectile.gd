@@ -149,6 +149,15 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"BouncyBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0}, "LavaBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0},
 		"RainbowBoulder": {"size": 1.0, "radius": 0.6, "life": 60.0, "glow": true},
 		"Ghoulder": {"size": 1.06, "radius": 0.6, "life": 15.0},
+		"RollingCactus": {"size": 1.0, "radius": 0.6, "life": 60.0},
+		# The Mandible Blade's claw (1082, AI 201): spinning 0.45 a tick, from
+		# its 16th tick slowing x0.95 a tick across and falling 0.4 px/tick².
+		"AntlionClaw": {"spin": 27.0, "gravity": 90.0, "gravity_after": 16, "drag": 0.954, "size": 0.75, "radius": 0.4, "melee": true, "life": 60.0},
+		# Its spikes (763, AI 1 with 2 updates a tick): 2 px an update, an
+		# arrow's fall (0.1 an update) from the 15th update, through
+		# everything they hit (you and enemies alike), gone at a block.
+		"RollingCactusSpike": {"pierce": 1000000, "lingers": true, "npcs_too": true, "gravity": 90.0, "gravity_after": 7.5, "max_fall": 120.0,
+			"size": 0.42, "radius": 0.25, "dust": [40], "life": 60.0},
 		"LibrarianSkeletonBook": {"book": true, "ghost": true, "size": 1.0, "radius": 0.35, "life": 7.0},
 		"Volcano": {"ghost": true, "pierce": 3, "radius": 3.33, "size": 2.2, "life": 10.0 / 60.0, "ignite": [1, 180, 180], "glow": true, "melee": true},
 		# The gem staves' bolts, trailing their gem's dust (Terraria's GemAmethyst
@@ -734,6 +743,9 @@ func _book_step(delta: float, game) -> void:
 ## - Bouncy Boulder: bounces off everything, keeping 95% of its speed (less
 ##   when slow); breaks after 20 hard bounces (faster than 5, or any once it's
 ##   500 ticks old) or when it stops after 50 ticks.
+## - Rolling Cactus (35 damage): landing faster than 5 bounces it up 0.65 of
+##   that and throws out 3-5 spikes; a wall breaks it, throwing them too; lava
+##   breaks it.
 ## - Rainbow Boulder (100 damage): friendly - it never hurts you - bounces as
 ##   the Bouncy one and on every bounce leaps (through blocks while it flies)
 ##   at the nearest enemy in view, else the best treasure in view (Terraria's
@@ -751,6 +763,9 @@ func _boulder_step(delta: float, game) -> void:
 		if not _bounce_step(delta, game):
 			return
 	elif not _roll_step(delta, game):
+		return
+	if kind == "RollingCactus" and _lava_at(w):
+		_boulder_break(game)
 		return
 	if kind == "LavaBoulder":
 		if randi() % 3 == 0:
@@ -787,8 +802,10 @@ func _roll_step(delta: float, game) -> bool:
 	var next := global_position + velocity * delta
 	if velocity.y < 0.0 and w.is_solid(Vector3i((next - Vector3(0, 0.5, 0)).floor())):
 		if velocity.y < -5.0 * 3.75:
-			velocity.y = -velocity.y * 0.2
+			velocity.y = -velocity.y * (0.65 if kind == "RollingCactus" else 0.2)
 			Audio.play_at("Dig_*", global_position, 0.6)
+			if kind == "RollingCactus":
+				_cactus_spikes(game)
 			if kind == "LavaBoulder":
 				for i in 10:
 					game.dust.spawn(6, global_position + Vector3(randf_range(-0.5, 0.5), -0.3, randf_range(-0.5, 0.5)), Vector3(randf_range(-1, 1), 0.5, randf_range(-1, 1)), 2.0)
@@ -806,6 +823,8 @@ func _roll_step(delta: float, game) -> bool:
 			velocity -= _roll * velocity.dot(_roll)
 			Audio.play_at("Dig_*", global_position, 0.6)
 			return true
+		if kind == "RollingCactus":
+			_cactus_spikes(game)
 		_boulder_break(game)
 		return false
 	global_position = next
@@ -1006,6 +1025,27 @@ func _ghoulder_step(delta: float, game) -> void:
 	frame = int(_ghost_frame)
 
 
+## Whether it's in lava (Terraria's lavaWet).
+func _lava_at(w: VoxelWorld) -> bool:
+	var l: Vector2i = w.get_liquid(Vector3i(global_position.floor()))
+	return l.x == 2 and l.y > 0
+
+
+## The Rolling Cactus's 3-5 spikes (30 damage, knockback 2), round a circle
+## from a random start: Terraria's ring in its side view, here each turned
+## to its own way round; those that would go down go up instead, at 0.7.
+func _cactus_spikes(game) -> void:
+	var n := randi_range(3, 5)
+	var start := randf()
+	for k in n:
+		var t := (start + float(k) / n) * TAU
+		var around := randf() * TAU
+		var v := Vector3(cos(t) * cos(around), sin(t), cos(t) * sin(around))
+		if v.y < 0.0:
+			v *= -0.7
+		game.spawn_projectile("RollingCactusSpike", global_position, v * 4.0 * 3.75, 30, 2.0, 0.0, 0.0, 0.42, false)
+
+
 ## Hurts what it rolls into: you (not the Rainbow Boulder's), each enemy once.
 func _boulder_hits(game) -> void:
 	var p = game.player
@@ -1044,7 +1084,7 @@ func _boulder_break(game) -> void:
 			game.spawn_item("BoulderPet", 1, global_position)
 		_:
 			Audio.play_at("Dig_*", global_position)
-			var dust_id: int = {"BouncyBoulder": 243}.get(kind, 1)
+			var dust_id: int = {"BouncyBoulder": 243, "RollingCactus": 40}.get(kind, 1)
 			for i in 30:
 				game.dust.spawn(dust_id, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(-0.5, 0.5), randf_range(-0.5, 0.5)), Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)), 1.2)
 	queue_free()
@@ -1260,5 +1300,13 @@ func _check_hits(game) -> bool:
 					p.ignite(float(_flight.player_ignite))
 			# The Librarian Skeleton's books go on through (penetrate -1), as
 			# do the temple traps' spikes, spears and flames.
-			return not (_flight.get("book", false) or _flight.get("lingers", false))
+			if not (_flight.get("book", false) or _flight.get("lingers", false)):
+				return true
+		# The Rolling Cactus's spikes hit enemies too, each once (as its
+		# hostile damage is doubled on you, they take half).
+		if _flight.get("npcs_too", false):
+			for npc in game.npcs():
+				if not _hit.has(npc) and npc.overlaps_point(global_position, radius):
+					_hit[npc] = _age
+					npc.hit(maxi(1, damage / 2), knockback, velocity.normalized(), 0.0)
 	return false

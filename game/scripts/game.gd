@@ -1307,6 +1307,10 @@ func break_block(p: Vector3i, drop := true, quiet := false) -> void:
 		_orb_smashed(c, b)
 	if b.get("on_break") == "cactus":
 		_fell_cactus(p, drop)
+	if b.get("on_break") == "antlion_eggs":
+		_eggs_hatch(c)
+	if b.get("on_break") == "boulder":
+		_loose_boulder(c, b)
 	_drop_dependents(p, drop)
 	# Sand resting on it falls.
 	settle_falling(p + Vector3i.UP)
@@ -1357,12 +1361,20 @@ func settle_falling(p: Vector3i) -> void:
 
 ## A boulder block at `p` comes loose: it falls and rolls (its block's
 ## "boulder": Projectile "Boulder", "LavaBoulder", "Ghoulder"...). Terraria's
-## Check2x2: 70 damage (doubled on you as hostile), the Rainbow Boulder's 100.
+## Check2x2: 70 damage (doubled on you as hostile), the Rainbow Boulder's 100,
+## the Rolling Cactus's 35 ("boulder_damage").
 func drop_boulder(p: Vector3i) -> void:
-	var kind: String = Data.block(world.get_block(p)).get("boulder", "Boulder")
+	var b := Data.block(world.get_block(p))
 	world.set_block(p, 0)
-	var b: Projectile = spawn_projectile(kind, Vector3(p) + Vector3(0.5, 0.5, 0.5), Vector3.ZERO, 100 if kind == "RainbowBoulder" else 70, 10.0, 0.0, 0.0, 1.0, false)
-	b.boulder = true
+	_loose_boulder(Vector3(p) + Vector3(0.5, 0.5, 0.5), b)
+
+
+func _loose_boulder(c: Vector3, b: Dictionary) -> Projectile:
+	var kind: String = b.get("boulder", "Boulder")
+	var damage: int = int(b.get("boulder_damage", 100 if kind == "RainbowBoulder" else 70))
+	var proj: Projectile = spawn_projectile(kind, c, Vector3.ZERO, damage, 10.0, 0.0, 0.0, 1.0, false)
+	proj.boulder = true
+	return proj
 
 
 ## Terraria's tile cutting: a block of Main.tileCut (grass, flowers, vines,
@@ -1468,6 +1480,18 @@ func _larva_burst(c: Vector3) -> void:
 	Audio.play_at("Item_173", c)
 	spawn_dust(c, Color(1.0, 0.75, 0.2), 16)
 	summon_boss("QueenBee")
+
+
+## Antlion Eggs broken (WorldGen.CheckSuper, tile 485): an Antlion Larva
+## hatches, tossed up 5 px a tick and 1.5 the way it faces you.
+func _eggs_hatch(c: Vector3) -> void:
+	var larva := spawn_npc("LarvaeAntlion", c - Vector3(0, 0.4, 0))
+	if larva == null:
+		return
+	var to := player.global_position - c if player != null else Vector3.RIGHT
+	to.y = 0.0
+	var side := to.normalized() if to.length() > 0.01 else Vector3.RIGHT
+	larva.velocity = side * 1.5 * 2.5 + Vector3(0, 5.0 * 2.5, 0)
 
 
 ## A Shadow Orb or Crimson Heart smashed: its loot, and Terraria's warnings.

@@ -475,6 +475,7 @@ func _run() -> void:
 	await _shimmer_checks(c)
 	await _micro_checks(c)
 	await _track_checks(c)
+	await _desert_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -9476,3 +9477,108 @@ func _merchant_checks(c: Vector3i) -> void:
 	# (Let the blocks changed here mesh before the next checks' key presses.)
 	for i in 30:
 		await get_tree().process_frame
+
+
+## The Underground Desert's extras: Antlion Eggs hatching a larva, the
+## Rolling Cactus rolling and throwing its spikes, its enemies (the
+## Chargers' run, the Swarmers' flight, the Tomb Crawler) and Terraria's odds
+## for them, the Mandible Blade.
+func _desert_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var stone := Data.block_id("stone")
+	# A tunnel 18 long along x, deep in the rock.
+	var o := Vector3i(c.x - 60, TestWorld.GROUND - 31, c.z + 60)
+	for x in 20:
+		for y in 5:
+			for z in 3:
+				w.set_block(o + Vector3i(x, y, z), stone if x in [0, 19] or y in [0, 4] or z != 1 else 0)
+	var count := func(k: String) -> int: return game.npcs().filter(func(n): return n.kind == k).size()
+	var shots := func(k: String) -> Array: return game.entities.get_children().filter(func(e): return e is Projectile and e.kind == k and not e.is_queued_for_deletion())
+	# Antlion Eggs: anything that cuts them hatches an Antlion Larva.
+	var eggs := o + Vector3i(3, 1, 1)
+	w.set_block(eggs, Data.block_id("antlion_eggs"))
+	var larvae: int = count.call("LarvaeAntlion")
+	check(Data.block(w.get_block(eggs)).get("cut", false) and game.cut_tile(eggs) and w.get_block(eggs) == 0 and count.call("LarvaeAntlion") == larvae + 1,
+			"Antlion Eggs break at a cut and hatch an Antlion Larva")
+	# Rolling Cactus: cut, it rolls; into a wall it breaks, throwing spikes.
+	var cactus := o + Vector3i(9, 1, 1)
+	w.set_block(cactus, Data.block_id("rolling_cactus"))
+	check(game.cut_tile(cactus) and w.get_block(cactus) == 0, "a Rolling Cactus is cut loose")
+	var rolling: Array = shots.call("RollingCactus")
+	check(rolling.size() == 1 and rolling[0].damage == 35 and rolling[0].boulder, "and rolls (35 damage, as Terraria's)")
+	var spiked := 0
+	for i in 240:
+		await frames(1)
+		spiked = maxi(spiked, shots.call("RollingCactusSpike").size())
+		if rolling.is_empty() or not is_instance_valid(rolling[0]):
+			break
+	check(not is_instance_valid(rolling[0]) and spiked >= 3 and spiked <= 5, "into the tunnel's end it breaks, throwing 3-5 spikes (%d)" % spiked)
+	# Dug out from under, one rolls too.
+	w.set_block(cactus, Data.block_id("rolling_cactus"))
+	w.set_block(cactus + Vector3i.DOWN, 0)
+	game.settle_falling(cactus)
+	check(w.get_block(cactus) == 0 and shots.call("RollingCactus").size() == 1, "a Rolling Cactus with nothing under it rolls")
+	await frames(120)
+	# Its spikes hurt enemies as well as you.
+	var z := game.spawn_npc("Zombie", Vector3(o) + Vector3(15.5, 1.0, 1.5))
+	var life0: int = z.life
+	game.spawn_projectile("RollingCactusSpike", z.center() + Vector3(-1.0, 0, 0), Vector3(15.0, 0, 0), 30, 2.0, 0.0, 0.0, 0.42, false)
+	await frames(10)
+	check(is_instance_valid(z) and z.life < life0, "Rolling Cactus spikes hurt enemies (%d -> %d)" % [life0, z.life if is_instance_valid(z) else -1])
+	if is_instance_valid(z):
+		z.queue_free()
+	# Terraria's odds for the Underground Desert's enemies.
+	var picks := {}
+	for i in 30000:
+		var k: String = Spawner.underground_desert_pick(float(game.cavern_level) + 5.0, float(game.cavern_level), false)
+		picks[k] = picks.get(k, 0) + 1
+	var share := func(k: String) -> float: return float(picks.get(k, 0)) / 30000.0
+	check(absf(share.call("SandSlime") - 1.0 / 15.0) < 0.01 and absf(share.call("Antlion") - 14.0 / 75.0) < 0.015
+			and absf(share.call("WalkingAntlion") - 14.0 / 25.0 * 0.9) < 0.02 and absf(share.call("GiantWalkingAntlion") - 14.0 / 25.0 * 0.1) < 0.01
+			and absf(share.call("FlyingAntlion") - 14.0 / 75.0 * 0.9) < 0.015 and share.call("GiantFlyingAntlion") > 0.01 and not picks.has("TombCrawlerHead"),
+			"Underground Desert spawns: Antlion 1, Charger 3, Swarmer 1, 1 in 15 a Sand Slime, 1 in 10 Giant (%s)" % [picks])
+	var crawlers := 0
+	for i in 20000:
+		if Spawner.underground_desert_pick(float(game.cavern_level) + 5.0, float(game.cavern_level), true) == "TombCrawlerHead":
+			crawlers += 1
+	check(absf(crawlers / 20000.0 - 1.0 / 65.0) < 0.006, "a Tomb Crawler 1 in 65 over the cavern layer (%d in 20000)" % crawlers)
+	# The Tomb Crawler: a worm of 6-9 segments and a tail, sharing its life.
+	var head := game.spawn_npc("TombCrawlerHead", Vector3(o) + Vector3(5.5, 2.0, 1.5))
+	await frames(3)
+	var parts: int = count.call("TombCrawlerBody") + count.call("TombCrawlerTail")
+	check(parts >= 7 and parts <= 10 and Data.npcs.TombCrawlerHead.worm.shared_life, "a Tomb Crawler: 6-9 segments and a tail (%d)" % parts)
+	for n in game.npcs():
+		if n.kind.begins_with("TombCrawler") or n.kind == "LarvaeAntlion":
+			n.queue_free()
+	await frames(2)
+	# In the arena: an Antlion Charger runs at you, up to 3.5 px/tick; an
+	# Antlion Swarmer flies at you.
+	p.global_position = Vector3(c.x + 14.5, TestWorld.GROUND + 1, c.z + 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	var ch := game.spawn_npc("WalkingAntlion", Vector3(c.x + 40.5, TestWorld.GROUND + 1, c.z + 0.5))
+	var sw := game.spawn_npc("FlyingAntlion", Vector3(c.x + 40.5, TestWorld.GROUND + 4, c.z + 4.5))
+	var top := 0.0
+	var d0: float = sw.global_position.distance_to(p.global_position)
+	var near := d0
+	for i in 150:
+		await frames(1)
+		if is_instance_valid(ch):
+			top = maxf(top, Vector2(ch.velocity.x, ch.velocity.z).length() / 2.5)
+		if is_instance_valid(sw):
+			near = minf(near, sw.global_position.distance_to(p.global_position))
+	check(top > 2.4 and top < 3.6, "an Antlion Charger charges at you, 2.5 px/tick up to 3.5 (%.2f)" % top)
+	check(near < d0 - 8.0, "an Antlion Swarmer flies at you (%.1f -> %.1f)" % [d0, near])
+	for n in [ch, sw]:
+		if is_instance_valid(n):
+			n.queue_free()
+	# The Mandible Blade: 1 in 50 from the antlions that fly and charge.
+	var blade := Data.item("AntlionClaw")
+	check(blade.get("damage") == 16 and blade.swing_shot.projectile == "AntlionClaw"
+			and ["WalkingAntlion", "GiantWalkingAntlion", "FlyingAntlion", "GiantFlyingAntlion"].all(func(k): return Data.npcs[k].drops.any(func(d): return d[0] == "AntlionClaw" and absf(float(d[3]) - 0.02) < 0.0001)),
+			"the Mandible Blade (16 damage, throws a claw each swing), 1 in 50 from Chargers and Swarmers")
+	p.god_mode = was_god
+

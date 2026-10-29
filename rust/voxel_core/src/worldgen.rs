@@ -4212,6 +4212,27 @@ mod tests {
             assert!(pc(nf) > 1.0 && pc(nf) < 6.0 && pc(ns) > 15.0 && pc(nsand) + pc(nhard) > 20.0, "fossil, sandstone and sand");
             assert_eq!(falls, 0, "no sand over a gap");
             assert!(hang > 100, "stalactites and stalagmites ({hang})");
+            // AddTileVariance's Antlion Eggs (1 in 20 of the floors) and
+            // Rolling Cactus (1 in 5 of the rest), on the sandstone.
+            let on_stone = |b: u16| {
+                let (mut n, mut on) = (0, 0);
+                for x in h.center.0 - hr..=h.center.0 + hr {
+                    for z in h.center.1 - hr..=h.center.1 + hr {
+                        for y in h.bottom..=h.top {
+                            if w.get(x, y, z) == b {
+                                n += 1;
+                                on += (w.get(x, y - 1, z) == stone) as i32;
+                            }
+                        }
+                    }
+                }
+                // (A few where a structure built over the sandstone since.)
+                assert!(on * 100 >= n * 98, "on sandstone ({on} of {n})");
+                n
+            };
+            let (eggs, cacti) = (on_stone(id("antlion_eggs")), on_stone(id("rolling_cactus")));
+            eprintln!("DESERT eggs {eggs}, rolling cactus {cacti}");
+            assert!(eggs > 10 && cacti > eggs * 2 && cacti < eggs * 6, "Antlion Eggs and Rolling Cactus, about 1 to 4 ({eggs}, {cacti})");
         }
     }
 

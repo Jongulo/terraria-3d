@@ -31,9 +31,13 @@
 //!   to it), so the caves round it stay.
 //! - **AddTileVariance:** sand with no ground under it (or the next one
 //!   down) turns to hardened sand, so it holds; on the sandstone round the
-//!   caves, stalactites under 1 in 5 of its ceilings and stalagmites on 15
-//!   in 100 of its floors (Terraria's other 5 in 100, Antlion Eggs, and its
-//!   Rolling Cactus and piles aren't here yet).
+//!   caves, in turn on each floor with 3 open over it: Antlion Eggs 1 in 20
+//!   (1 in 30 of those a sleeping Digtoise instead, which isn't in this game:
+//!   nothing), a Rolling Cactus 1 in 5, a stalagmite 1 in 5, a desert pile 1
+//!   in 5; under 1 in 5 of the ceilings with 3 open under them, a stalactite.
+//!   The eggs, cactus and piles each take their turn as Terraria's, then go
+//!   in 1 in SPARSE of them (as placement.rs thins its piles: a cave in 3D
+//!   has several floor cells across for each one you walk over).
 //!
 //! Terraria's tiles are 2/3 of a block here.
 
@@ -110,6 +114,9 @@ struct Ids {
     fossil: u16,
     stalactites: [u16; 2],
     stalagmites: [u16; 2],
+    eggs: u16,
+    cactus: u16,
+    pile: u16,
 }
 
 impl Ids {
@@ -122,6 +129,9 @@ impl Ids {
             fossil: id("desert_fossil"),
             stalactites: [id("sandstone_stalactite"), id("small_sandstone_stalactite")],
             stalagmites: [id("sandstone_stalagmite"), id("small_sandstone_stalagmite")],
+            eggs: id("antlion_eggs"),
+            cactus: id("rolling_cactus"),
+            pile: id("desert_pile"),
         }
     }
 }
@@ -802,8 +812,12 @@ fn carve_hive(w: &mut World, rng: &mut Rng, seed: i32, ids: &Ids, h: &Hive) {
     }
 }
 
-/// DesertHive.AddTileVariance: sand that would fall to hardened sand; the
-/// sandstone's stalactites and stalagmites.
+/// The share (1 in this) of AddTileVariance's eggs, cactus and piles placed.
+const SPARSE: i32 = 3;
+
+/// DesertHive.AddTileVariance: sand that would fall to hardened sand; on the
+/// sandstone Antlion Eggs, Rolling Cactus, stalactites, stalagmites and piles
+/// (a style each later: scatter_styles).
 fn variance(w: &mut World, rng: &mut Rng, ids: &Ids, h: &Hive) {
     let r = (h.half + ROUND).ceil() as i32;
     let (y0, y1) = (((h.bottom as f64 - ROUND) as i32).max(3), ((h.top as f64 + ROUND) as i32).min(w.sy - 4));
@@ -832,12 +846,21 @@ fn variance(w: &mut World, rng: &mut Rng, ids: &Ids, h: &Hive) {
                 }
                 let up = (1..=3).all(|k| w.get(x, y + k, z) == 0);
                 let down = (1..=3).all(|k| w.get(x, y - k, z) == 0);
-                // Antlion Eggs (1 in 20 on the floor) and Rolling Cactus (1 in
-                // 5 of the rest) take their turns, though not here yet.
+                let put = |w: &mut World, rng: &mut Rng, b: u16| {
+                    if b != 0 && rng.range(0, SPARSE) == 0 {
+                        let i = w.idx(x, y + 1, z);
+                        w.blocks[i] = b;
+                    }
+                };
                 if up && rng.range(0, 20) == 0 {
+                    // 1 in 30 a sleeping Digtoise (not in this game).
+                    if rng.range(0, 30) != 0 {
+                        put(w, rng, ids.eggs);
+                    }
                     continue;
                 }
                 if up && rng.range(0, 5) == 0 {
+                    put(w, rng, ids.cactus);
                     continue;
                 }
                 if (up ^ down) && rng.range(0, 5) == 0 {
@@ -848,6 +871,10 @@ fn variance(w: &mut World, rng: &mut Rng, ids: &Ids, h: &Hive) {
                         let i = w.idx(x, at, z);
                         w.blocks[i] = b;
                     }
+                    continue;
+                }
+                if up && rng.range(0, 5) == 0 {
+                    put(w, rng, ids.pile);
                 }
             }
         }

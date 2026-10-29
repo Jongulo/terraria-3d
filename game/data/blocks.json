@@ -2286,6 +2286,11 @@
 		{"name": "dead_mans_chest", "render": "cutout", "opaque": false, "tool": "any", "drop": "DeadMansChest", "sound": "dig", "interact": "chest", "trips": true, "settings": "chest", "tex": {"side": {"sheet": "Tiles_467", "tiles": [2, 2], "frames": [[144, 0]]}, "top": {"sheet": "Tiles_30", "frames": [[18, 18]]}, "bottom": {"sheet": "Tiles_30", "frames": [[18, 18]]}}},
 		{"name": "minecart_track", "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "tink", "drop": "MinecartTrack", "track": true, "interact": "track", "fixed_method": true, "floats": true, "tex": {"all": {"sheet": "Tiles_314", "frames": [[0, 0]]}}},
 		{"name": "tin_brick", "tex": {"all": {"sheet": "Tiles_175", "frames": [[18, 18], [36, 18], [54, 18]]}}, "drop": "TinBrick", "sound": "tink"},
-		{"name": "gold_brick", "tex": {"all": {"sheet": "Tiles_45", "frames": [[18, 18], [36, 18], [54, 18]]}}, "drop": "GoldBrick", "sound": "tink"}
+		{"name": "gold_brick", "tex": {"all": {"sheet": "Tiles_45", "frames": [[18, 18], [36, 18], [54, 18]]}}, "drop": "GoldBrick", "sound": "tink"},
+		{"name": "antlion_eggs", "vary": true, "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "on_break": "antlion_eggs", "default_method": "hull", "tex": {"all": {"tiles": [2, 2], "sheet": "Tiles_485", "frames": [[0, 0]]}}},
+		{"name": "antlion_eggs_2", "vary": true, "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "on_break": "antlion_eggs", "default_method": "hull", "tex": {"all": {"tiles": [2, 2], "sheet": "Tiles_485", "frames": [[36, 0]]}}, "variant_of": "antlion_eggs"},
+		{"name": "antlion_eggs_3", "vary": true, "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "on_break": "antlion_eggs", "default_method": "hull", "tex": {"all": {"tiles": [2, 2], "sheet": "Tiles_485", "frames": [[72, 0]]}}, "variant_of": "antlion_eggs"},
+		{"name": "antlion_eggs_4", "vary": true, "render": "cutout", "solid": false, "opaque": false, "tool": "any", "sound": "dig", "on_break": "antlion_eggs", "default_method": "hull", "tex": {"all": {"tiles": [2, 2], "sheet": "Tiles_485", "frames": [[108, 0]]}}, "variant_of": "antlion_eggs"},
+		{"name": "rolling_cactus", "render": "cutout", "opaque": false, "tool": "any", "sound": "dig", "trap": "boulder", "boulder": "RollingCactus", "boulder_damage": 35, "on_break": "boulder", "default_method": "lathe", "tex": {"all": {"sheet": "Tiles_484", "tiles": [2, 2], "frames": [[0, 0]]}}}
 	]
 }

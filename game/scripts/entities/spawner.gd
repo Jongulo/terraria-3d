@@ -168,6 +168,10 @@ func spawn_tick() -> void:
 		kind = cavern_pick(game.biome, deep, cavern_monsters(game.world.get_seed()))
 	elif depth == "underground" and game.biome in ["", "mushroom"] and randi() % 50 == 0:
 		kind = "GiantWormHead"
+	elif depth in ["underground", "caverns"] and game.biome == "desert":
+		var y: float = player.global_position.y
+		var crawler: bool = y < game.surface_level - 100.0 * 2.0 / 3.0 and not game.npcs().any(func(n): return n.kind == "TombCrawlerHead")
+		kind = underground_desert_pick(y, game.cavern_level, crawler)
 	else:
 		kind = surface_pick(game.biome, night, game.sky) if depth == "surface" else ""
 		if kind == "":
@@ -677,6 +681,28 @@ static func cavern_monsters(world_seed: int) -> Array:
 static var _cavern_kinds := {}
 
 
+## Terraria's Underground Desert (Spawner.SpawnAnNPC, before Hardmode): 1 in
+## 50 x k a Tomb Crawler (none about, 100 tiles under the surface; k 1.3,
+## x0.85 under the cavern layer, x0.5 a third of the way on to the bottom),
+## else one of Antlion, Antlion Charger x3, Antlion Swarmer: 1 in 15 a Sand
+## Slime instead, else 1 in 10 a Charger or Swarmer is a Giant one. (Its 1 in
+## 20 Golfer, asleep in the sand, isn't in this game.)
+static func underground_desert_pick(y: float, cavern_y: float, crawler_ok: bool) -> String:
+	var k := 1.3
+	if y < cavern_y * 2.0 / 3.0:
+		k *= 0.5
+	elif y < cavern_y:
+		k *= 0.85
+	if crawler_ok and randi() % int(50.0 * k) == 0:
+		return "TombCrawlerHead"
+	var kind: String = ["Antlion", "WalkingAntlion", "WalkingAntlion", "WalkingAntlion", "FlyingAntlion"][randi() % 5]
+	if randi() % 15 == 0:
+		return "SandSlime"
+	if randi() % 10 == 0:
+		kind = {"WalkingAntlion": "GiantWalkingAntlion", "FlyingAntlion": "GiantFlyingAntlion"}.get(kind, kind)
+	return kind
+
+
 ## Weighted spawn tables: [kind, weight].
 func _table(depth: String, night: bool, biome := "") -> Array:
 	# The ocean: crabs on the beach, jellyfish and sharks in the sea.
@@ -690,7 +716,8 @@ func _table(depth: String, night: bool, biome := "") -> Array:
 		return [["ZombieEskimo", 5], ["IceSlime", 3]] if night else [["IceSlime", 6]]
 	if biome == "desert" and depth != "space":
 		if under:
-			return [["WalkingAntlion", 4], ["Antlion", 2]]
+			# (Picked by underground_desert_pick; these its odds without the rest.)
+			return [["WalkingAntlion", 3], ["Antlion", 1], ["FlyingAntlion", 1]]
 		return [["Antlion", 4], ["Vulture", 2], ["Zombie", 3]] if night else [["Antlion", 4], ["Vulture", 3]]
 	if biome == "jungle" and depth != "space":
 		if under:

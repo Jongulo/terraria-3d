@@ -841,6 +841,8 @@ func _ks_spot_near(game, player) -> Vector3:
 ## length is rolled ("segments" [least, most]), it falls lighter while still
 ## rising ("rise_gravity": 0.08 px/tick², else 0.11), and as it has no home
 ## biome ("stays_in") it never digs off; far from you it's gone, all of it.
+## The Tomb Crawler shares its life too, and keeps to the Underground Desert
+## ("stays_in" the desert, "stays_under" its surface: AI_006's check for 513).
 const WORM_PX := 24.0
 const WORM_TICK := 1.0 / 60.0
 var ahead: NPC = null
@@ -977,6 +979,10 @@ func _worm_head_tick(game, player) -> void:
 		dug = true  # far from you: on its way through anything
 	# Out of its biome (or you're dead): straight down, and gone when deep.
 	var leaving: bool = not player.alive or (game.test_world == null and w.has("stays_in") and not game.biome in w.stays_in)
+	# The Tomb Crawler keeps to the Underground Desert: you up on the surface,
+	# it leaves too.
+	if w.get("stays_under", false) and game.test_world == null and player.global_position.y > game.surface_level:
+		leaving = true
 	if leaving:
 		to = Vector3(0, -speed, 0)
 		dug = true
@@ -1575,7 +1581,9 @@ func _ai_fighter(delta: float, player) -> void:
 	# on the ground and not at all in the air; else it speeds up 0.07 px/tick²
 	# toward where it's going.
 	var flat := Vector2(velocity.x, velocity.z)
-	if flat.length() > speed + 0.001:
+	if def.has("charger"):
+		flat = _charge(delta, flat, Vector2(dir.x, dir.z), player)
+	elif flat.length() > speed + 0.001:
 		if on_floor and velocity.y <= 0.0:
 			flat *= pow(0.8, delta * 60.0)
 	else:
@@ -1591,6 +1599,47 @@ func _ai_fighter(delta: float, player) -> void:
 		sprite.set_frame(int(wf[0]) + int(anim) % (int(wf[1]) - int(wf[0]) + 1))
 	else:
 		sprite.set_frame(int(wf[0]))
+
+
+## The Antlion Chargers' and the larva's run (AI_003 for 508, 580 and 582),
+## in px/tick: toward you each tick its speed is (speed x inertia + top) /
+## (inertia + 1): top 2.5 at inertia 10, and once it's going over 2.25 top 3
+## at 70, over 2.75 top 3.5 at 90 (the larva 2.25 at 7; over 2, 2.75 at 62;
+## over 2.5, 3 at 82); in the air the inertia's 3 times as much (the larva's
+## 2). Running the other way it slows only x0.99 a tick and turns 0.025 a
+## tick (x0.95 a tick on the ground while it's still turned away), so it
+## charges on past you.
+func _charge(delta: float, flat: Vector2, dir: Vector2, player) -> Vector2:
+	var ticks := delta * 60.0
+	var larva: bool = def.charger == "larva"
+	var v := flat / PX_TICK
+	var fast := v.length()
+	var top := 2.25 if larva else 2.5
+	var inertia := 7.0 if larva else 10.0
+	if larva and fast > 2.5:
+		top = 3.0
+		inertia += 75.0
+	elif larva and fast > 2.0:
+		top = 2.75
+		inertia += 55.0
+	elif not larva and fast > 2.75:
+		top = 3.5
+		inertia += 80.0
+	elif not larva and fast > 2.25:
+		top = 3.0
+		inertia += 60.0
+	if not on_floor:
+		inertia *= 2.0 if larva else 3.0
+	var to := dir.normalized() if dir.length() > 0.01 else Vector2.ZERO
+	if v.dot(to) >= 0.0:
+		var k := pow(inertia / (inertia + 1.0), ticks)
+		v = v * k + to * top * (1.0 - k)
+	else:
+		if on_floor:
+			v *= pow(0.95, ticks)
+		if (player.center() - center()).length() * PX_PER_BLOCK > 20.0 and on_floor:
+			v = v * pow(0.99, ticks) + to * 0.025 * ticks
+	return v * PX_TICK
 
 
 ## The Granite Golem's curl (AI_003 for NPC 482), in ticks: every "every"
@@ -2072,7 +2121,11 @@ func _ai_vulture(delta: float, player) -> void:
 ## across at 0.05 px/tick² (twice as hard turning round from too fast, half
 ## again from moving away) up to 3 while more than 30 px off, and up or down
 ## at 0.01 (twice that turning round) up to 1 toward your head, aiming 50 px
-## higher while more than 100 px off across. Out of sight for 90 ticks (you
+## higher while more than 100 px off across. The Antlion Swarmers have their
+## own numbers ("fly44": [across, up, top across, top up, near px, far px,
+## aim px higher]: 0.06, 0.02, 4, 2, 40, 150 and at your middle; the Giant
+## one 0.08, 0.03, 4.5), nudge apart from their kind (0.05 px/tick² while
+## closer than their width) and tilt with their speed across (0.1 a px/tick). Out of sight for 90 ticks (you
 ## in water don't count) it gives up and keeps on its way (x0.8 its top
 ## speed, x0.7 its push). Walls send it back at 1 px/tick; in water it
 ## leaps up (0.5 px/tick² up to 4).
@@ -2084,13 +2137,16 @@ func _ai_flying_fish(delta: float, player) -> void:
 		_sight_memory = 90
 	elif _sight_memory > 0:
 		_sight_memory -= int(round(ticks))
-	var top := 3.0
-	var push := 0.05
-	var up := 0.01
+	var f: Array = def.get("fly44", [0.05, 0.01, 3.0, 1.0, 30.0, 100.0, 50.0])
+	var top := float(f[2])
+	var push := float(f[0])
+	var up := float(f[1])
 	var to: Vector3 = player.global_position - global_position
 	var flat := Vector2(to.x, to.z)
 	var dir := flat.normalized() if flat.length() > 0.01 else Vector2.ZERO
 	var goal: float = player.global_position.y + player.half.y
+	if def.has("fly44"):
+		goal = player.global_position.y + player.half.y - float(def.size[1]) / 2.0
 	var lost: bool = _sight_memory <= 0 or not player.alive
 	if lost:
 		top *= 0.8
@@ -2102,7 +2158,7 @@ func _ai_flying_fish(delta: float, player) -> void:
 	var v := Vector2(velocity.x, velocity.z) / PX_TICK
 	var along := v.dot(dir)
 	var side := v - dir * along
-	if lost or flat.length() * PX_PER_BLOCK > 30.0:
+	if lost or flat.length() * PX_PER_BLOCK > float(f[4]):
 		if along < top:
 			along += push * ticks
 			if along < -top:
@@ -2114,8 +2170,8 @@ func _ai_flying_fish(delta: float, player) -> void:
 	v = dir * along + side
 	velocity.x = v.x * PX_TICK
 	velocity.z = v.y * PX_TICK
-	if not lost and flat.length() * PX_PER_BLOCK > 100.0:
-		goal += 50.0 / PX_PER_BLOCK
+	if not lost and flat.length() * PX_PER_BLOCK > float(f[5]):
+		goal += float(f[6]) / PX_PER_BLOCK
 	var vy := velocity.y / PX_TICK
 	if center().y > goal:
 		vy -= up * ticks
@@ -2125,7 +2181,17 @@ func _ai_flying_fish(delta: float, player) -> void:
 		vy += up * ticks
 		if vy < 0.0:
 			vy += up * ticks
-	vy = clampf(vy, -1.0, 1.0)
+	vy = clampf(vy, -float(f[3]), float(f[3]))
+	if def.has("fly44"):
+		# Apart from its own kind.
+		for o in Game.current.npcs():
+			if o != self and o.kind == kind:
+				var d: Vector3 = global_position - o.global_position
+				if absf(d.x) + absf(d.y) + absf(d.z) < float(def.size[0]):
+					var away := Vector3(signf(d.x), signf(d.y), signf(d.z)) * 0.05 * ticks * PX_TICK
+					velocity.x += away.x
+					velocity.z += away.z
+					vy += away.y / PX_TICK
 	if in_water(center()):
 		if vy < 0.0:
 			vy *= pow(0.95, ticks)
@@ -2134,7 +2200,10 @@ func _ai_flying_fish(delta: float, player) -> void:
 	# Its 4 frames, 6 ticks each, turned along its flight.
 	anim += delta * 10.0
 	sprite.set_frame(int(anim) % int(def.frames))
-	if velocity.length() > 0.05:
+	if def.get("upright", false):
+		var right: Vector3 = player.view().global_transform.basis.x
+		sprite.set_rotation_angle(-velocity.dot(right) / PX_TICK * 0.1)
+	elif velocity.length() > 0.05:
 		sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), velocity) + deg_to_rad(float(def.get("sprite_angle", 0.0))))
 
 

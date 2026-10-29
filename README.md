@@ -321,7 +321,8 @@ and fishing catches are read from your Terraria.exe by the scripts in `tools/` (
 `extract_assets.sh`); an item is craftable here when everything its Terraria recipe takes exists
 in this game.
 
-- **World:** forest, Snow, Desert over the Underground Desert's caverns, Jungle, Corruption or
+- **World:** forest, Snow, Desert over the Underground Desert's caverns (with Antlion Eggs and Rolling
+  Cactus), Jungle, Corruption or
   Crimson, Glowing Mushroom biome, bee hives,
   ocean with ocean caves, floating islands, Dunes with Pyramids under them, oases, the Jungle
   Temple, the Dungeon, the Aether with its pool of shimmer, and the
@@ -360,8 +361,8 @@ in this game.
 
 **Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; most mounts
 and the fancier minecarts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
-NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
-Crawlers and Tomb Crawlers; Faelings and shimmered enemies; luck's effects; cages and terrariums;
+NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers and Blood
+Crawlers; Faelings and shimmered enemies; luck's effects; cages and terrariums;
 Expert mode. See
 [the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 

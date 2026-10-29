@@ -442,6 +442,8 @@
 		"Stinger": {"value": 200, "type": "material"},
 		"Vine": {"value": 300, "type": "material"},
 		"AntlionMandible": {"value": 100, "type": "material"},
+		"AntlionClaw": {"value": 5000, "rare": 2, "type": "melee", "damage": 16, "knockback": 4.5, "use_time": 15, "crit": 7, "scale": 1.1, "style": "swing", "auto_reuse": true,
+			"swing_shot": {"projectile": "AntlionClaw", "every": 15, "speed": 24.375}},
 		"WoodenDoor": {"auto_reuse": false, "type": "block", "place": "wooden_door", "max_stack": 99},
 		"LihzahrdDoor": {"auto_reuse": false, "value": 200, "type": "block", "place": "lihzahrd_door", "max_stack": 99},
 		"LihzahrdBrick": {"type": "block", "place": "lihzahrd_brick"},
