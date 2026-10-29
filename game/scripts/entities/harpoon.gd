@@ -46,7 +46,7 @@ func setup(p, item: Dictionary, dir: Vector3) -> void:
 
 func _physics_process(delta: float) -> void:
 	var game := Game.current
-	if not is_instance_valid(player) or not player.alive:
+	if not is_instance_valid(player) or not player.alive or Projectile.in_shimmer(global_position):
 		queue_free()
 		return
 	_age += delta

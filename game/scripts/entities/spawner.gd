@@ -786,6 +786,31 @@ func _find_water_spot(game, origin: Vector3, size: Array, cave := false):
 
 
 ## A free spot 20-45 blocks away (closer in caves), behind the player's view if possible.
+## Spawner.SpawnFaelings (Player.TrySpawningFaelings): coming into the Aether
+## with no Faeling anywhere, 2-5 of them, each over the shimmer somewhere in
+## the spawn range round you (1000 tries each), not where you'd see it come.
+func spawn_faelings(game) -> void:
+	if game.npcs().any(func(n): return n.kind == "Shimmerfly"):
+		return
+	var world: VoxelWorld = game.world
+	var origin: Vector3 = game.player.global_position
+	var fwd: Vector3 = game.player.forward()
+	for i in randi_range(2, 5):
+		for attempt in 1000:
+			var off := Vector3(randf_range(-45.0, 45.0), randf_range(-20.0, 20.0), randf_range(-45.0, 45.0))
+			var flat := Vector3(off.x, 0, off.z)
+			if flat.length() < 14.0 or flat.normalized().dot(fwd) > 0.6:
+				continue
+			var c := Vector3i((origin + off).floor())
+			var l: Vector2i = world.get_liquid(c)
+			if l.y <= 0 or l.x != Player.LIQ_SHIMMER:
+				continue
+			while world.get_liquid(c).y > 0 and c.y < world.get_size().y - 2:
+				c.y += 1
+			game.spawn_npc("Shimmerfly", Vector3(c) + Vector3(0.5, 0.2, 0.5))
+			break
+
+
 func _find_spot(game, origin: Vector3, underground: bool, flying: bool):
 	var world: VoxelWorld = game.world
 	var fwd: Vector3 = game.player.forward()

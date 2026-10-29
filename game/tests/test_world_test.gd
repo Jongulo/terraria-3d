@@ -478,6 +478,8 @@ func _run() -> void:
 	await _desert_checks(c)
 	await _statue_checks(c)
 	await _ivy_checks(c)
+	await _shimmer_npc_checks(c)
+	await _aether_item_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -9798,3 +9800,188 @@ func _ivy_checks(c: Vector3i) -> void:
 	p.velocity = Vector3.ZERO
 	p._fall_start = was_at.y
 	p.god_mode = was_god
+
+
+## What shimmer does to creatures (NPC.GetShimmered): a Bunny becomes a
+## Faeling (Shimmerfly), a Blue Slime a Shimmer Slime, a Zombie a Skeleton;
+## a statue's creature vanishes; one with no shimmer form just fades out
+## and comes back slowly; a town NPC turns to its shimmered look; a caught
+## critter thrown in comes out a Faeling.
+## Coming into the Aether with none about, 2-5 Faelings appear over the
+## shimmer.
+func _shimmer_npc_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_god := p.god_mode
+	var was_at := p.global_position
+	p.god_mode = true
+	var pool := Vector3(c + TestWorld.SHIMMER_POOL) + Vector3(2.5, 0.5, 2.5)
+	p.global_position = pool + Vector3(0, 12, 0)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	for n in game.npcs():
+		if n.global_position.distance_to(pool) < 12.0:
+			n.queue_free()
+	await frames(1)
+	var put := func(kind: String, statue := false) -> NPC:
+		var n: NPC = game.spawn_npc(kind, pool + Vector3(randf_range(-1.0, 1.0), 0, randf_range(-1.0, 1.0)))
+		n.from_statue = statue
+		n.process_mode = Node.PROCESS_MODE_INHERIT
+		return n
+	var bunny: NPC = put.call("Bunny")
+	var slime: NPC = put.call("BlueSlime")
+	var zombie: NPC = put.call("Zombie")
+	var skeleton: NPC = put.call("Skeleton")
+	var statue_slime: NPC = put.call("BlueSlime", true)
+	var faded := 0.0
+	for i in 120:
+		await frames(1)
+		if is_instance_valid(skeleton):
+			skeleton.global_position = pool
+			faded = maxf(faded, skeleton.shimmer_fade)
+		for n in [bunny, slime, zombie]:
+			if is_instance_valid(n) and n.shimmer_fade < 0.9:
+				n.global_position = pool
+	check(is_instance_valid(bunny) and bunny.kind == "Shimmerfly" and bunny.flying and bunny.glowing() and bunny.sprite is FaelingSprite,
+			"a Bunny in shimmer becomes a Faeling (%s)" % (bunny.kind if is_instance_valid(bunny) else "gone"))
+	check(is_instance_valid(slime) and slime.kind == "ShimmerSlime" and is_instance_valid(zombie) and zombie.kind == "Skeleton",
+			"a Blue Slime becomes a Shimmer Slime, a Zombie a Skeleton")
+	check(not is_instance_valid(statue_slime), "a statue's slime vanishes")
+	check(faded > 0.9 and is_instance_valid(skeleton) and skeleton.kind == "Skeleton", "a Skeleton just fades out (%.2f)" % faded)
+	if is_instance_valid(skeleton):
+		skeleton.global_position = Vector3(pool.x + 9.0, TestWorld.GROUND + 1, pool.z)
+		skeleton.velocity = Vector3.ZERO
+		skeleton._shimmering = 0.0
+		var before: float = skeleton.shimmer_fade
+		await frames(30)
+		check(skeleton.shimmer_fade < before and skeleton.shimmer_fade > before - 0.1, "out of it, it comes back slowly, 0.001 a tick (%.3f -> %.3f)" % [before, skeleton.shimmer_fade])
+	check(Data.npcs.ShimmerSlime.drops.any(func(d): return d[0] == "Gel" and d[1] == 2 and d[2] == 5) and int(Data.npcs.ShimmerSlime.coins) == 150,
+			"the Shimmer Slime: 2-5 Gel, 1 silver 50 copper")
+	for n in game.npcs():
+		if n.global_position.distance_to(pool) < 14.0:
+			n.queue_free()
+	await frames(1)
+	# A town NPC: its shimmered look, floating up out of it.
+	var guide: NPC = game.spawn_npc("Guide", pool)
+	var floated := false
+	var top := pool.y
+	for i in 200:
+		await frames(1)
+		if guide._town_float and guide.town_shimmered:
+			floated = true
+		top = maxf(top, guide.global_position.y)
+	check(floated and top > pool.y + 2.0 and guide.sprite is EntitySprite,
+			"a Guide in shimmer turns to his shimmered look and floats up out of it (%.1f up)" % (top - pool.y))
+	guide.queue_free()
+	# A caught Bunny thrown in: out comes a Faeling, faded in.
+	var d: ItemDrop = game.spawn_item_drop("Bunny", 2, pool, Vector3.ZERO)
+	d.age = 0.0
+	await frames(110)
+	var flies := game.npcs().filter(func(n): return n.kind == "Shimmerfly" and n.global_position.distance_to(pool) < 6.0)
+	check(not is_instance_valid(d) and flies.size() == 2 and flies[0].released, "two caught Bunnies thrown in: two Faelings (%d)" % flies.size())
+	for n in flies:
+		n.queue_free()
+	# The Aether: a cave of shimmer deep in the rock; coming into it, Faelings.
+	var stone := Data.block_id("stone")
+	var o := Vector3i(c.x + 30, 14, c.z - 30)
+	for x in 62:
+		for z in 62:
+			for y in 6:
+				var edge := x == 0 or x == 61 or z == 0 or z == 61 or y == 0 or y == 5
+				w.set_block(o + Vector3i(x, y, z), stone if edge else 0)
+				if not edge and y < 3:
+					w.set_liquid(o + Vector3i(x, y, z), Player.LIQ_SHIMMER, 63)
+	await frames(2)
+	for n in game.npcs():
+		if n.kind == "Shimmerfly":
+			n.queue_free()
+	await frames(1)
+	p.global_position = Vector3(o) + Vector3(31.5, 3.2, 31.5)
+	p._fall_start = p.global_position.y
+	game.spawner.spawn_faelings(game)
+	var fae := game.npcs().filter(func(n): return n.kind == "Shimmerfly")
+	check(fae.size() >= 2 and fae.size() <= 5 and fae.all(func(n): return w.get_liquid(Vector3i(n.global_position.floor())).y == 0),
+			"coming into the Aether: 2-5 Faelings over the shimmer (%d)" % fae.size())
+	game.spawner.spawn_faelings(game)
+	check(game.npcs().filter(func(n): return n.kind == "Shimmerfly").size() == fae.size(), "not while there are Faelings about")
+	for n in fae:
+		n.queue_free()
+	for x in 62:
+		for z in 62:
+			for y in 6:
+				w.set_liquid(o + Vector3i(x, y, z), 0, 0)
+				w.set_block(o + Vector3i(x, y, z), stone)
+	p.global_position = was_at
+	p.velocity = Vector3.ZERO
+	p._fall_start = was_at.y
+	p.god_mode = was_god
+
+
+## The Aether's things: Aetherium furniture and walls from its blocks, the
+## Shimmer Campfire (a campfire, for its recipes too), Shimmerfly in a
+## Bottle; Wooden Arrows shimmer into Shimmer Arrows, which fall up; shots in
+## shimmer rise out, bounce off it or break; luck counts in rolls.
+func _aether_item_checks(c: Vector3i) -> void:
+	var p := game.player
+	var recipe := func(item: String) -> Dictionary:
+		var r := Data.recipes.filter(func(x): return x.result == item)
+		return r[0] if not r.is_empty() else {}
+	var aetherium := Data.recipes.filter(func(r): return r.ingredients.has("ShimmerBrick") and r.result.begins_with("Aetherium"))
+	check(aetherium.size() >= 20 and recipe.call("AetheriumChair").get("ingredients", {}).get("ShimmerBrick", 0) == 4
+			and recipe.call("AetheriumChair").get("station") == "work_bench" and recipe.call("AetheriumWorkbench").get("station", "") == "",
+			"Aetherium furniture from Aetherium Brick (%d recipes; the chair at a work bench, the work bench by hand)" % aetherium.size())
+	check(recipe.call("ShimmerWall").get("ingredients", {}).has("ShimmerBlock") and recipe.call("ShimmerBrickWall").get("ingredients", {}).has("ShimmerBrick"),
+			"Aetherium walls")
+	var fire: Dictionary = recipe.call("ShimmerCampfire")
+	check(fire.get("ingredients", {}).get("ShimmerTorch", 0) == 5 and Data.block(Data.block_id("shimmer_campfire")).get("station_as") == "campfire"
+			and Shimmer.transform_of("Campfire") == "ShimmerCampfire", "the Shimmer Campfire: 10 Wood and 5 Shimmer Torches, or a shimmered Campfire; it's a campfire")
+	check(recipe.call("ShimmerflyinaBottle").get("ingredients", {}).has("Shimmerfly"), "Shimmerfly in a Bottle")
+	check(Shimmer.transform_of("WoodenArrow") == "ShimmerArrow", "Wooden Arrows shimmer into Shimmer Arrows")
+	# Fired, a Shimmer Arrow climbs.
+	var held := p.selected
+	p.global_position = Vector3(c.x + 20.5, TestWorld.GROUND + 1, c.z + 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+	p.look_at_yaw_pitch(-PI / 2.0, 0.0)
+	p.inventory.slots[9] = Inventory.stack("WoodenBow", 1)
+	p.inventory.slots[8] = Inventory.stack("ShimmerArrow", 5)
+	p.select(9)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	var arrows := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "ShimmerArrow")
+	var rose := false
+	if not arrows.is_empty():
+		var a: Projectile = arrows[0]
+		var vy := a.velocity.y
+		await frames(20)
+		rose = is_instance_valid(a) and a.velocity.y > vy + 0.5
+	check(not arrows.is_empty() and rose, "a Shimmer Arrow falls up")
+	# In shimmer (Projectile.Shimmer): an arrow rises out, a bullet bounces off
+	# its top, a Magic Missile breaks.
+	var pool := Vector3(c + TestWorld.SHIMMER_POOL) + Vector3(2.5, 0.0, 2.5)
+	var surface := pool + Vector3(0, 2.6, 0)
+	var arrow: Projectile = game.spawn_projectile("WoodenArrowFriendly", surface, Vector3(0, -6, 0), 5, 0.0, 6.0)
+	var bullet: Projectile = game.spawn_projectile("Bullet", surface, Vector3(1, -20, 0), 5, 0.0)
+	var missile: Projectile = game.spawn_projectile("MagicMissile", surface + Vector3(0, -0.5, 0), Vector3(0, -1, 0), 5, 0.0)
+	await frames(12)
+	check(is_instance_valid(arrow) and arrow.velocity.y > 0.0, "an arrow in shimmer rises out of it")
+	check(is_instance_valid(bullet) and bullet.velocity.y > 0.0, "a bullet bounces off it")
+	check(not is_instance_valid(missile), "a Magic Missile breaks in it")
+	# Luck (coin luck, the Galaxy Pearl) in the rolls (Luck.RollLuck,
+	# Main.DamageVar): all luck, a 1 in 10 roll is from 0-8 at most, lower on
+	# the whole; your hits roll better.
+	var rolls: Array = range(2000).map(func(_i): return Player.roll_with_luck(1.0, 10))
+	var plain: Array = range(2000).map(func(_i): return Player.roll_with_luck(0.0, 10))
+	var mean := func(a: Array) -> float: return a.reduce(func(x, y): return x + y, 0.0) / a.size()
+	check(rolls.max() <= 8 and plain.max() == 9 and mean.call(rolls) < mean.call(plain) - 1.0,
+			"luck rolls low, so drops come more (%.2f against %.2f)" % [mean.call(rolls), mean.call(plain)])
+	var hits: Array = range(2000).map(func(_i): return Player.damage_var(1.0))
+	check(mean.call(hits) > 1.03 and hits.max() <= 1.15 and hits.min() >= 0.85, "with luck your hits roll better (%.3f)" % mean.call(hits))
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	p.inventory.slots[9] = null
+	p.inventory.slots[8] = null
+	p.select(held)

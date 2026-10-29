@@ -47,6 +47,9 @@ func _physics_process(delta: float) -> void:
 		game.spawn_item(coil, 1, global_position)
 		queue_free()
 		return
+	if Projectile.in_shimmer(global_position):
+		queue_free()
+		return
 	# In steps of at most a quarter block, so it can't skip through one.
 	var move := velocity * delta
 	var steps := maxi(1, ceili(move.length() / 0.25))

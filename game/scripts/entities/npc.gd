@@ -61,6 +61,64 @@ const STATUE_LOOT := {"Medusa": 0.05, "Wraith": 0.05, "Unicorn": 0.05, "Harpy": 
 	"BlueJellyfish": 0.2, "Mimic": 0.0}
 ## NoEarlymodeLootWhenSpawnedFromStatue: nothing from a statue before Hardmode.
 const STATUE_NO_EARLY_LOOT := ["Medusa", "Wraith", "Unicorn", "PigronCorruption", "PigronHallow", "PigronCrimson"]
+
+## Shimmer (NPC.Collision_WaterCollision, UpdateNPC_BuffApplyVFX, GetShimmered):
+## in it, an NPC is Shimmering (buff 353, 100 ticks after it leaves): it
+## fades out, 0.01 a tick; past 0.9 it's shimmered (SHIMMER_TO_NPC: it
+## becomes another; SHIMMER_TO_ITEM: it's that item; a statue's: gone).
+## Out of it, it comes back 0.001 a tick (0.015 if it's immune), 0.1 at a
+## hit. In it, it falls at 0.15 px/tick² up to 5.5, moving 0.375 as far.
+## A town NPC shimmered (ShimmerTownTransform) turns to its shimmered look
+## (or back: TownNPCs/Shimmered), and floats up out of it as it comes back
+## (AI_007's ai 25: 1/60 a tick from 0.89, up at 4 px a tick times that).
+const SHIMMER_TICKS := 100
+## Terraria's NPCID.Sets.ShimmerTownTransform, by its TownNPCs sheet's name.
+const SHIMMER_TOWN := {"Guide": "Guide", "Merchant": "Merchant", "Nurse": "Nurse", "Painter": "Painter", "DyeTrader": "DyeTrader",
+	"BestiaryGirl": "BestiaryGirl", "Golfer": "Golfer", "PartyGirl": "PartyGirl", "Angler": "Angler", "Stylist": "Stylist",
+	"Demolitionist": "Demolitionist", "Dryad": "Dryad", "DD2Bartender": "Tavernkeep", "ArmsDealer": "ArmsDealer",
+	"GoblinTinkerer": "GoblinTinkerer", "WitchDoctor": "WitchDoctor", "Clothier": "Clothier", "Mechanic": "Mechanic",
+	"TaxCollector": "TaxCollector", "Pirate": "Pirate", "Truffle": "Truffle", "Wizard": "Wizard", "Steampunker": "Steampunker",
+	"Cyborg": "Cyborg", "SantaClaus": "Santa", "Princess": "Princess", "OldMan": "OldMan", "SkeletonMerchant": "SkeletonMerchant",
+	"TravellingMerchant": "TravelingMerchant"}
+## Terraria's NPCID.Sets.ShimmerTransformToNPC (those here).
+const SHIMMER_TO_NPC := {"Zombie": "Skeleton", "BaldZombie": "MisassembledSkeleton", "PincushionZombie": "HeadacheSkeleton",
+	"SlimedZombie": "Skeleton", "SwampZombie": "Skeleton", "TwiggyZombie": "MisassembledSkeleton", "FemaleZombie": "PantlessSkeleton",
+	"TorchZombie": "Skeleton", "BlueSlime": "ShimmerSlime", "SlimeMasked": "ShimmerSlime", "SlimeRibbonGreen": "ShimmerSlime",
+	"SlimeRibbonRed": "ShimmerSlime", "SlimeRibbonYellow": "ShimmerSlime", "SlimeRibbonWhite": "ShimmerSlime", "UmbrellaSlime": "ShimmerSlime",
+	"ToxicSludge": "ShimmerSlime", "MotherSlime": "ShimmerSlime", "IceSlime": "ShimmerSlime", "SpikedIceSlime": "ShimmerSlime",
+	"SandSlime": "ShimmerSlime", "SpikedJungleSlime": "ShimmerSlime", "CorruptSlime": "ShimmerSlime", "Crimslime": "ShimmerSlime",
+	"IlluminantSlime": "ShimmerSlime", "Slimer": "ShimmerSlime", "ArmedTorchZombie": "BoneThrowingSkeleton", "ArmedZombie": "BoneThrowingSkeleton",
+	"ArmedZombieCenx": "BoneThrowingSkeleton4", "ArmedZombiePincussion": "BoneThrowingSkeleton2", "ArmedZombieSlimed": "BoneThrowingSkeleton",
+	"ArmedZombieSwamp": "BoneThrowingSkeleton", "ArmedZombieTwiggy": "BoneThrowingSkeleton3"}
+## The critters that become Faelings (Shimmerflies): all of Terraria's
+## ShimmerTransformToNPC's critters.
+const SHIMMER_TO_FAELING := ["ExplosiveBunny", "Bird", "BirdBlue", "BirdRed", "Toucan", "BlueMacaw", "ScarletMacaw", "GrayCockatiel",
+	"YellowCockatiel", "Duck", "Duck2", "DuckWhite", "DuckWhite2", "Grebe", "Grebe2", "Seagull", "Seagull2", "Owl", "OwlMimic", "Penguin",
+	"PenguinBlack", "Bunny", "BunnySlimed", "BunnyXmas", "PartyBunny", "Squirrel", "SquirrelRed", "Goldfish", "Pupfish", "Dolphin", "SeaTurtle",
+	"Seahorse", "Pufferfish", "Frog", "EnchantedNightcrawler", "LadyBug", "LightningBug", "Firefly", "Turtle", "TurtleJungle", "Lavafly",
+	"HellButterfly", "MagmaSnail", "FairyCritterBlue", "FairyCritterGreen", "FairyCritterPink", "BlackDragonfly", "BlueDragonfly",
+	"YellowDragonfly", "GreenDragonfly", "OrangeDragonfly", "RedDragonfly", "Worm", "Grasshopper", "Maggot", "Snail", "GlowingSnail",
+	"Scorpion", "ScorpionBlack", "Mouse", "Rat", "WaterStrider", "Buggy", "Sluggy", "Grubby", "Stinkbug", "Butterfly", "EmpressButterfly",
+	"TruffleWorm", "GoldBird", "GoldBunny", "GoldButterfly", "GoldDragonfly", "GoldFrog", "GoldGoldfish", "GoldGrasshopper", "GoldLadyBug",
+	"GoldMouse", "GoldSeahorse", "SquirrelGold", "GoldWaterStrider"]
+## Terraria's ShimmerTransformToItem: the gem critters and the Gold Worm.
+const SHIMMER_TO_ITEM := {"GemBunnyDiamond": "Diamond", "GemSquirrelDiamond": "Diamond", "GemBunnyRuby": "Ruby", "GemSquirrelRuby": "Ruby",
+	"GemBunnyEmerald": "Emerald", "GemSquirrelEmerald": "Emerald", "GemBunnySapphire": "Sapphire", "GemSquirrelSapphire": "Sapphire",
+	"GemSquirrelTopaz": "Topaz", "GemBunnyTopaz": "Topaz", "GemBunnyAmethyst": "Amethyst", "GemSquirrelAmethyst": "Amethyst",
+	"GemBunnyAmber": "Amber", "GemSquirrelAmber": "Amber", "GoldWorm": "GummyWorm"}
+## Terraria's NPCID.Sets.ShimmerImmunity (those here): untouched by it.
+const SHIMMER_IMMUNE := ["Butterfly", "Stinkbug", "ShimmerSlime", "RainbowSlime", "Shimmerfly", "WindyBalloon", "GoldenSlime", "PirateGhost",
+	"ServantofCthulhu", "TheHungry", "TheHungryII", "Probe", "KingSlime", "SlimeSpiked", "QueenSlimeBoss", "Deerclops", "BurningSphere",
+	"ChaosBall", "WaterSphere", "SpikeBall", "BlazingWheel", "ChaosBallTim", "VileSpitEaterOfWorlds", "VileSpit", "TownCat", "TownDog",
+	"TownBunny"]
+## How faded out it is by shimmer (Terraria's shimmerTransparency), and the
+## ticks of Shimmering left.
+var shimmer_fade := 0.0
+var _shimmering := 0.0
+var _shown_fade := 1.0
+## A town NPC in its shimmered look, and floating up out of the shimmer.
+var town_shimmered := false
+var _town_float := false
 ## Seconds of Terraria's On Fire! left (the Sunfury, the Flaming Mace): 4 life
 ## a second, taken (and shown) 1 at a time.
 var on_fire := 0.0
@@ -177,7 +235,7 @@ func setup(kind_name: String) -> void:
 ## centre), trim (pixels cut off each frame's bottom, -1 none), top (the
 ## sprite's top above the feet), flying, scale, tint}. The game and the editor both
 ## draw NPCs from this.
-static func look(kind_name: String) -> Dictionary:
+static func look(kind_name: String, shimmered := false) -> Dictionary:
 	var d: Dictionary = Data.npcs[kind_name]
 	var sc := Data.npc_scale(kind_name)
 	var s: float = sc.scale
@@ -186,7 +244,7 @@ static func look(kind_name: String) -> Dictionary:
 	var flier: bool = d.ai in ["flyer", "bat", "harpy", "flying_fish", "hover", "snatcher", "boss_eoc", "worm", "skeletron", "skeletron_hand", "skeletron_arm", "queen_bee", "bee", "brain", "creeper",
 			"wall_of_flesh", "wall_of_flesh_eye", "hungry",
 			"skull", "spike_ball", "wheel", "granite_flyer"]
-	var tex := Assets.texture(image_path(kind_name))
+	var tex := Assets.texture(image_path(kind_name, shimmered))
 	var frame_h := float(tex.get_height()) / int(d.frames)
 	var vis_h: float = float(size[1]) * s
 	var out := {"hitbox": [float(size[0]) * hs, float(size[1]) * hs], "tex": tex, "frames": int(d.frames), "frame_h": frame_h,
@@ -218,9 +276,12 @@ static func look(kind_name: String) -> Dictionary:
 	return out
 
 
-## Its sheet (Images/NPC_<sprite>, or its own "image").
-static func image_path(kind_name: String) -> String:
+## Its sheet (Images/NPC_<sprite>, or its own "image"; a town NPC shimmered,
+## its TownNPCs/Shimmered one).
+static func image_path(kind_name: String, shimmered := false) -> String:
 	var d: Dictionary = Data.npcs[kind_name]
+	if shimmered and SHIMMER_TOWN.has(kind_name):
+		return "Images/TownNPCs/Shimmered/%s_Default" % SHIMMER_TOWN[kind_name]
 	return "Images/" + str(d.image) if d.has("image") else "Images/NPC_%d" % int(d.sprite)
 
 
@@ -228,6 +289,10 @@ static func image_path(kind_name: String) -> String:
 ## Its look as a node: the billboard, or the 3D model its kind's method makes
 ## (bottom on the ground; fliers' middle where the billboard's middle was).
 static func make_look(kind_name: String, lk: Dictionary) -> Node3D:
+	if Data.npcs[kind_name].get("faeling", false):
+		var f := FaelingSprite.new()
+		f.setup(image_path(kind_name), Vector2(lk.tex.get_width() / 4.0, lk.frame_h) / 24.0, randi() % 1000)
+		return f
 	var m := NPCModels.method(kind_name)
 	var xray := shows_through(Data.npcs[kind_name])
 	if m == "rendered":
@@ -439,8 +504,13 @@ func _physics_process(delta: float) -> void:
 	var liquid: Vector2i = game.world.get_liquid(Vector3i(center().floor()))
 	# Swimmers move freely in water, like fliers in air.
 	var swimming: bool = def.ai == "swim" and in_water(center())
+	var in_shimmer: bool = liquid.y > 0 and liquid.x == Player.LIQ_SHIMMER
+	if _shimmer_tick(game, delta, in_shimmer):
+		return
 	if liquid.y > 0 and not boss:
-		if liquid.x == 2:
+		if in_shimmer:
+			pass
+		elif liquid.x == 2:
 			# Terraria's lava (NPC.Collision_LavaCollision): 50 damage and 7 s
 			# of On Fire! each 30 ticks, unless it's lava-immune.
 			_lava_timer -= delta
@@ -455,7 +525,12 @@ func _physics_process(delta: float) -> void:
 			velocity.z *= 0.92
 	if not flying and not swimming:
 		var g := GRAVITY * (0.3 if liquid.y > 0 else 1.0)
-		velocity.y = maxf(velocity.y - g * delta, -3.5 if liquid.y > 0 else -MAX_FALL)
+		var fall := -3.5 if liquid.y > 0 else -MAX_FALL
+		if in_shimmer:
+			# 0.15 px/tick² up to 5.5 px/tick.
+			g = 0.15 * PX_TICK * 60.0
+			fall = -5.5 * PX_TICK
+		velocity.y = maxf(velocity.y - g * delta, fall)
 	var step := 1.05 if def.ai in ["fighter", "town", "critter_walk", "duck", "shelly"] and not flying else 0.0
 	var blocked := Vector3i.ZERO
 	if def.get("through_blocks", false):
@@ -463,7 +538,7 @@ func _physics_process(delta: float) -> void:
 		global_position += velocity * delta
 		on_floor = false
 	else:
-		var r := game.world.move_aabb(global_position, half, velocity * delta, step, false)
+		var r := game.world.move_aabb(global_position, half, velocity * delta * (0.375 if in_shimmer else 1.0), step, false)
 		global_position = r.position
 		on_floor = r.on_floor
 		blocked = r.blocked
@@ -558,6 +633,10 @@ func _update_sprite(delta: float, game) -> void:
 		_carry_sprite.update_light(game.world, game.sky, c)
 	_flash = maxf(0.0, _flash - delta * 6.0)
 	sprite.set_flash(_flash)
+	# Faded by shimmer (GetAlpha: 1 - shimmerTransparency).
+	if (shimmer_fade > 0.0 or _shown_fade < 1.0) and sprite.has_method("set_fade"):
+		_shown_fade = 1.0 - shimmer_fade
+		sprite.set_fade(_shown_fade)
 	if glowing():
 		sprite.set_glow()
 	else:
@@ -1887,6 +1966,7 @@ func become(k: String) -> void:
 	var lk := look(k)
 	var size: Array = lk.hitbox
 	half = Vector3(size[0] * 0.5, size[1], size[0] * 0.5)
+	flying = lk.flying
 	var old := sprite
 	sprite = make_look(k, lk)
 	add_child(sprite)
@@ -3953,13 +4033,17 @@ func hit(base_damage: int, knockback: float, dir: Vector3, crit_chance := 0.04, 
 		return
 	_just_hit = true
 	hit_by_you = true
+	if _shimmering <= 0.0:
+		shimmer_fade = maxf(0.0, shimmer_fade - 0.1)
 	var game := Game.current
 	# The Tally Counter shows the last creature you hit (Terraria's
 	# lastCreatureHit, by its banner).
 	if def.ai != "dummy" and not def.get("invulnerable", false):
 		game.player.last_creature_hit = def.get("banner", kind)
 	var crit := randf() < crit_chance
-	var dmg := maxi(1, int(round(base_damage * randf_range(0.85, 1.15) - maxi(0, defense - armor_pen) * 0.5)))
+	# Your luck in it (Main.DamageVar).
+	var luck: float = game.player.luck() if game.player != null else 0.0
+	var dmg := maxi(1, int(round(base_damage * Player.damage_var(luck) - maxi(0, defense - armor_pen) * 0.5)))
 	if crit:
 		dmg *= 2
 	var owner := _life_owner()
@@ -4280,6 +4364,74 @@ func _life_owner() -> NPC:
 var _dying := false
 
 
+## Shimmer's hold on it this tick (see SHIMMER_TICKS); true when it's gone.
+func _shimmer_tick(game, delta: float, in_shimmer: bool) -> bool:
+	if _town_float:
+		shimmer_fade -= delta
+		if shimmer_fade <= 0.0:
+			shimmer_fade = 0.0
+			_town_float = false
+		velocity = Vector3(0, 4.0 * shimmer_fade * PX_TICK, 0)
+		global_position = game.world.move_aabb(global_position, half, velocity * delta, 0.0, false).position
+		_update_sprite(delta, game)
+		return true
+	var immune: bool = kind in SHIMMER_IMMUNE or (def.ai == "town" and not SHIMMER_TOWN.has(kind))
+	if in_shimmer and not immune:
+		_shimmering = SHIMMER_TICKS / 60.0
+	elif _shimmering > 0.0:
+		_shimmering -= delta
+	if _shimmering > 0.0:
+		shimmer_fade = minf(1.0, shimmer_fade + 0.01 * delta * 60.0)
+		if shimmer_fade > 0.9 and _get_shimmered(game):
+			return true
+	elif shimmer_fade > 0.0:
+		shimmer_fade = maxf(0.0, shimmer_fade - (0.015 if immune else 0.001) * delta * 60.0)
+	return false
+
+
+## A town NPC's shimmered look on or off (its sprite remade from that sheet;
+## a 3D look keeps its own).
+func set_town_shimmered(on: bool) -> void:
+	town_shimmered = on
+	if NPCModels.method(kind) != "billboard":
+		return
+	var lk := look(kind, on)
+	var old := sprite
+	sprite = make_look(kind, lk)
+	add_child(sprite)
+	old.queue_free()
+
+
+## NPC.GetShimmered: a statue's creature vanishes; one with a shimmer form
+## becomes it; a gem critter becomes its gem; a town NPC changes its look.
+## True when it's gone.
+func _get_shimmered(game) -> bool:
+	if from_statue:
+		Shimmer.effect(game, center())
+		queue_free()
+		return true
+	var to: String = SHIMMER_TO_NPC.get(kind, "Shimmerfly" if kind in SHIMMER_TO_FAELING else "")
+	if to != "" and Data.npcs.has(to):
+		become(to)
+		Shimmer.effect(game, center())
+		return false
+	if SHIMMER_TOWN.has(kind) and def.ai == "town":
+		set_town_shimmered(not town_shimmered)
+		shimmer_fade = 0.89
+		_shimmering = 0.0
+		_town_float = true
+		Shimmer.effect(game, center())
+		return false
+	var item: String = SHIMMER_TO_ITEM.get(kind, "")
+	if item != "" and Data.items.has(item):
+		var d: ItemDrop = game.spawn_item_drop(item, 1, center(), Vector3.ZERO)
+		d.shimmered = true
+		Shimmer.effect(game, center())
+		queue_free()
+		return true
+	return false
+
+
 func _die(game, drops := true) -> void:
 	if is_queued_for_deletion():
 		return  # (killed twice in a tick: it counts once)
@@ -4319,12 +4471,12 @@ func _die(game, drops := true) -> void:
 		var n: Array = CARRY_STACKS.get(carried, [1, 1])
 		game.spawn_item(carried, randi_range(int(n[0]), int(n[1])), center())
 	for d in def.get("drops", []) if drops else []:
-		if randf() < float(d[3]):
+		if game.player.lucky_drop(float(d[3])):
 			game.spawn_item(d[0], randi_range(int(d[1]), int(d[2])), center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
 	# One of these at most: the first that rolls (Skeletron's mask, hand, book).
 	# (A link can be one of several: the Queen Bee's bee hat, shirt or pants.)
 	for d in def.get("drops_chain", []) if drops else []:
-		if randf() < float(d[1]):
+		if game.player.lucky_drop(float(d[1])):
 			var item: String = d[0][randi() % d[0].size()] if d[0] is Array else d[0]
 			var n := randi_range(int(d[2]), int(d[3])) if d.size() > 3 else 1
 			game.spawn_item(item, n, center(), Vector3.ZERO, 0.0, Prefixes.NATURAL)
@@ -4394,12 +4546,12 @@ func _drop_heals(game) -> void:
 		return
 	if life_max <= 1 or int(def.get("damage", 0)) <= 0 or int(def.get("coins", 0)) <= 0:
 		return
-	if randi() % 6 == 0:
+	if p.roll_luck(6) == 0:
 		if randi() % 2 == 0 and low_mana:
 			game.spawn_item("Star", 1, center())
 		elif randi() % 2 == 0 and hurt:
 			game.spawn_item("Heart", 1, center())
-	if randi() % 2 == 0 and low_mana:
+	if p.roll_luck(2) == 0 and low_mana:
 		game.spawn_item("Star", 1, center())
 
 
@@ -4498,7 +4650,7 @@ static func roll_butterfly(rng: RandomNumberGenerator) -> int:
 func glowing() -> bool:
 	if not def.has("light"):
 		return false
-	return def.ai != "firefly" or _glow > 3.0
+	return def.ai != "firefly" or _glow > 3.0 or def.get("faeling", false)
 
 
 func hurt_critter(dir: Vector3) -> void:
@@ -4706,23 +4858,27 @@ func _ai_drifter(delta: float, player, butterfly: bool) -> void:
 			v.x *= -0.2
 			v.z *= -0.2
 			last_blocked = Vector3i.ZERO
-		if butterfly:
+		if butterfly or def.has("flee"):
+			# Away from enemies within 100 px and you within 150, every 15
+			# ticks: 2 px/tick more, up to 16 (the Faeling's "flee": [enemies,
+			# you, top speed], its 8).
+			var flee: Array = def.get("flee", [100, 150, 16])
 			_crit_timer2 -= 1.0
 			if _crit_timer2 <= -14.0:
 				_crit_timer2 = 1.0
 				var away := Vector3.ZERO
 				var n := 0
 				for o in game.npcs():
-					if o != self and o.damage > 0 and not o.is_critter() and o.center().distance_to(center()) < 100.0 * CRITTER_PX:
+					if o != self and o.damage > 0 and not o.is_critter() and o.center().distance_to(center()) < float(flee[0]) * CRITTER_PX:
 						away += (center() - o.center()).normalized()
 						n += 1
-				if player.alive and player.center().distance_to(center()) < 150.0 * CRITTER_PX:
+				if player.alive and player.center().distance_to(center()) < float(flee[1]) * CRITTER_PX:
 					away += (center() - player.center()).normalized()
 					n += 1
 				if n > 0:
 					v += away / n * 2.0
-					if v.length() > 16.0:
-						v = v.normalized() * 16.0
+					if v.length() > float(flee[2]):
+						v = v.normalized() * float(flee[2])
 		elif def.has("light"):
 			# Blinking: 10-30 ticks lit, every 30-180 (at night or underground).
 			if _glow > 0.0:

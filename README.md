@@ -339,7 +339,10 @@ in this game.
 - **Liquids:** water, lava, honey and shimmer that fall, level out and settle; waterfalls and
   lavafalls, and springs you open with a hammer. Shimmer turns items into others or takes them
   apart into what they were made of (Terraria's own tables), and sinks you through the ground; the
-  Vital Crystal, Aegis Fruit, Arcane Crystal and other permanent boosts come from it.
+  Vital Crystal, Aegis Fruit, Arcane Crystal and other permanent boosts come from it. Creatures in
+  it fade out and change: critters into Faelings, slimes into Shimmer Slimes, zombies into
+  skeletons, town NPCs into their shimmered look; shots rise out of it, bounce off it or break.
+  Coins shimmered near you give luck, which counts in your drops and your hits.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
   stairs, platforms, doors, furniture in every wood and the honey furniture of the Honey Dispenser,
   lights, paintings, signs, beds, containers,
@@ -366,7 +369,7 @@ in this game.
 **Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; most mounts
 and the fancier minecarts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
 NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers and Blood
-Crawlers; Faelings and shimmered enemies; luck's effects; cages and terrariums;
+Crawlers; the Shimmer Flare, Cloak and Gun and the Aether Monolith; cages and terrariums;
 Expert mode. See
 [the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 

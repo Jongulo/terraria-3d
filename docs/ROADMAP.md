@@ -59,7 +59,9 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Structures and biomes:** done: moss, with neon patches, lava moss and Long Moss; gem caves
   and loose gems, amber included; oases, with palms, sea oats and oasis plants; ocean caves and
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
-  Aether and its shimmer; Jungle Shrines and the Ivy Chests' extras (the Bee Minecart, the Rat
+  Aether and its shimmer, with Faelings, the Shimmer Slime, creatures and shots in it, Aetherium
+  furniture and walls, the Shimmer Arrow and Campfire, and luck in your drops and hits; Jungle
+  Shrines and the Ivy Chests' extras (the Bee Minecart, the Rat
   mount, the Honey Dispenser and its honey furniture, Seaweed's Pet Turtle); the Underground Desert's Antlion Eggs, Rolling
   Cactus, piles and enemies (Antlion Chargers, Swarmers and their Giant kinds, Tomb Crawlers,
   Sand Slimes); Terraria's placement passes (cave statues and their traps, biome pots, piles,
@@ -67,11 +69,12 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
   caves' and living trees' piles, and its micro biomes
   (campsites, thin ice and frozen pools, Dead Man's Chests, mining explosives, lava traps,
   minecart tracks).
-- **Shimmer extras (M):** Faelings and the Shimmer Slime; enemies and town NPCs in shimmer
-  (Terraria's shimmered look); critters and projectiles in it (critters become Faelings, some
-  projectiles bounce up); the Aether's music and backdrop; the Shimmer Arrow, Flare, Campfire,
-  Cloak and Monolith, Aetherium furniture and walls; luck, which coin luck and the Galaxy Pearl
-  feed (nothing uses luck yet).
+- **Shimmer extras (S):** the Aether's backdrop and the Aether Monolith (no underground backdrops
+  are drawn yet); the Shimmer Flare, Cloak, Gun, Shimmerfall and Magic Shimmer Dropper, which come
+  with the Flare, Star Cloak, Slime Gun, Waterfall Block and Empty Dropper they're shimmered from;
+  luck's other sources (torch luck with the Torch God, ladybugs, Luck Potions, the Garden Gnome)
+  and its other uses (pots, tree shaking, spawns, the Traveling Merchant's stock); flails and
+  yoyos in shimmer.
 - **Underground Desert extras (S):** the sleeping Digtoise in its caverns (and the Digtoise tool it
   gives); its Golfer, asleep in the sand; its Hardmode enemies (Ghouls, Sand Poachers, Lamias,
   Basilisks, Dune Splicers) come with Hardmode.

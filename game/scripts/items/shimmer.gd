@@ -9,9 +9,15 @@ class_name Shimmer
 ##     for Skeletron, Lihzahrd Bricks for Golem;
 ##   - coins go into your coin luck (Player.AddCoinLuck: a copper coin 1, a
 ##     silver 100, a gold 10,000, a platinum fills it), if you're near;
-##   - a Slime Crown starts the Slime Rain (one of the stack).
+##   - a Slime Crown starts the Slime Rain (one of the stack);
+##   - a caught critter is let go, as its shimmer form (most become
+##     Faelings: NPC.SHIMMER_TO_FAELING), up to 50 of the stack at a time,
+##     faded out at first (shimmerTransparency 1).
 ## What comes out rises to the top and hangs there, glowing, until you take it.
-## Not here yet: critters (Terraria's become Faelings) and Moon Lord's items.
+## Not here yet: Moon Lord's items.
+
+## Critters let go at a time from a stack.
+const CRITTERS_AT_ONCE := 50
 
 ## Seconds an item must lie in it (shimmerTime 0.01 a tick to 0.9).
 const TIME := 1.5
@@ -66,6 +72,8 @@ static func can_shimmer(item: String, count: int, game) -> bool:
 		return true
 	if item == "SlimeCrown":
 		return game != null and not game.sky.slime_rain
+	if Data.item(item).has("release"):
+		return true
 	var r := decraft_of(item, game)
 	return not r.is_empty() and count >= int(r.count)
 
@@ -89,6 +97,19 @@ static func apply(drop: ItemDrop, game) -> bool:
 			return false
 		game.sky.start_slime_rain()
 		drop.count -= 1
+		drop.shimmered = drop.count > 0
+	elif Data.item(item).has("release"):
+		var def := Data.item(item)
+		var kind: String = def.release
+		kind = NPC.SHIMMER_TO_NPC.get(kind, "Shimmerfly" if kind in NPC.SHIMMER_TO_FAELING else kind)
+		for i in mini(drop.count, CRITTERS_AT_ONCE):
+			var npc: NPC = game.spawn_npc(kind, pos)
+			if npc != null:
+				npc.released = true
+				npc.shimmer_fade = 1.0
+				if kind == def.release and def.has("variant"):
+					npc.variant = int(def.variant)
+		drop.count -= mini(drop.count, CRITTERS_AT_ONCE)
 		drop.shimmered = drop.count > 0
 	else:
 		var r := decraft_of(item, game)

@@ -401,7 +401,7 @@ func save_state() -> Dictionary:
 		var n: NPC = residents[kind]
 		var p := n.global_position
 		list.append({"kind": kind, "name": n.display_name, "pos": [p.x, p.y, p.z], "home": n.home_key,
-				"spot": [n.home_spot.x, n.home_spot.y, n.home_spot.z]})
+				"spot": [n.home_spot.x, n.home_spot.y, n.home_spot.z], "shimmered": n.town_shimmered})
 	var out := {"residents": list, "arrived": arrived.keys(), "angler_quest": angler_quest, "angler_done": angler_done}
 	if traveler_here():
 		var p := traveler.global_position
@@ -417,6 +417,8 @@ func load_state(d: Dictionary) -> void:
 		npc.home_key = r.get("home", "")
 		var s: Array = r.get("spot", [0, 0, 0])
 		npc.home_spot = Vector3i(int(s[0]), int(s[1]), int(s[2]))
+		if r.get("shimmered", false):
+			npc.set_town_shimmered(true)
 	for k in d.get("arrived", []):
 		arrived[k] = true
 	angler_quest = d.get("angler_quest", "")

@@ -138,6 +138,9 @@ const FLIGHT := {"ThunderStaffShot": {"zigzag": [0.35, 0.1], "life": 1.0},
 		"Flamelash": {"dust": [6], "glow": true, "pierce": 2, "size": 1.5, "radius": 0.5, "ignite": [2, 240, 479], "life": 60.0},
 		"Hellwing": {"hellwing": [0.3927, 0.19635], "gravity": 0.0, "pierce": 1000000, "dust": [6], "glow": true, "size": 0.94, "radius": 0.375, "life": 20.0},
 		"HellfireArrow": {"blast": 1.35, "dust": [31, 6]},
+		# The Shimmer Arrow (AI 1 with its gravity turned round: the ammo's
+		# "gravity" is negative), shedding shimmer sparkles.
+		"ShimmerArrow": {"dust": [306]},
 		"FireArrow": {"ignite": [3, 180, 180], "dust": [6], "glow": true},
 		"WaterSphere": {"ghost": true, "hidden": true, "dust": [172]},
 		"PoisonDart": {"poison": 10.0, "life": 60.0},
@@ -342,8 +345,71 @@ static func _turned(v: Vector3, most: float) -> Vector3:
 	return v.rotated(axis, randf() * most - most / 2.0)
 
 
+## Terraria's Projectile.Shimmer: what shimmer does to yours (and to a
+## boulder, anyone's), by kind (its AI style). Arrows and some others rise
+## out of it (0.4 px/tick² a tick; bees 0.2, a Bee Arrow rising breaks),
+## thrown ones 0.7, glowsticks and Spiky Balls 0.5, boulders 0.7 to 10 px
+## a tick; shots and bombs bounce off it (their time cut to 10 s less 1),
+## breaking where it's two cells deep; the Magic Missile and the Flamelash
+## break in it.
+const SHIMMER_RISE := {"WoodenArrowFriendly": 0.4, "FireArrow": 0.4, "UnholyArrow": 0.4, "HellfireArrow": 0.4,
+	"BoneArrowFromMerchant": 0.4, "Bee": 0.2, "BeeArrow": 0.2, "Shuriken": 0.7, "ThrowingKnife": 0.7, "FrostDaggerfish": 0.7,
+	"SnowBallFriendly": 0.7, "WandOfSparkingSpark": 0.7, "Glowstick": 0.5, "SpelunkerGlowstick": 0.5, "SpikyBall": 0.5, "Beenade": 0.5}
+const SHIMMER_BOUNCE := ["Bullet", "SilverBullet", "Hellwing", "JavelinFriendly", "PurpleLaser", "Seed", "BookOfSkullsSkull", "ShimmerArrow",
+	"Starfury", "MeteorWhipMeteor", "BallofFire", "WaterBolt", "AmethystBolt", "TopazBolt", "SapphireBolt", "EmeraldBolt", "RubyBolt",
+	"DiamondBolt", "AmberBolt", "ThunderStaffShot", "Bomb", "Dynamite", "Grenade", "StickyBomb", "StickyDynamite", "BombFish"]
+const SHIMMER_BREAK := ["MagicMissile", "Flamelash"]
+## A px/tick² of a projectile here, in blocks/s² (a px/tick is 3.75 blocks/s).
+const PX_TICK2 := 225.0
+
+
+## Whether `at` is in shimmer (hooks, the harpoon and rope coils break there:
+## Projectile.Shimmer's AI styles 7, 13 and 35).
+static func in_shimmer(at: Vector3) -> bool:
+	var l: Vector2i = Game.current.world.get_liquid(Vector3i(at.floor()))
+	return l.y > 0 and l.x == Player.LIQ_SHIMMER
+
+
+## Shimmer's hold on it this tick; true when that's the end of it.
+func _shimmer_step(delta: float, game) -> bool:
+	if not friendly and not boulder:
+		return false
+	var w: VoxelWorld = game.world
+	var c := Vector3i(global_position.floor())
+	var l: Vector2i = w.get_liquid(c)
+	if l.y <= 0 or l.x != Player.LIQ_SHIMMER:
+		return false
+	if boulder:
+		if velocity.y < -10.0 * 3.75:
+			velocity.y *= pow(0.97, delta * 60.0)
+		velocity.y = minf(velocity.y + 0.7 * PX_TICK2 * delta, 10.0 * 3.75)
+	elif SHIMMER_RISE.has(kind):
+		velocity.y += float(SHIMMER_RISE[kind]) * PX_TICK2 * delta
+		if kind == "BeeArrow" and velocity.y > 0.0:
+			_die(game)
+			return true
+	elif kind in SHIMMER_BOUNCE:
+		var up: Vector2i = w.get_liquid(c + Vector3i.UP)
+		var deep: bool = l.y >= 63 and up.x == Player.LIQ_SHIMMER and up.y > 0
+		if deep:
+			if not explosive.is_empty():
+				life = 0.0
+				return false
+			_die(game)
+			return true
+		if velocity.y < 0.0:
+			velocity.y = -velocity.y
+			life = minf(life, 10.0) - 1.0
+	elif kind in SHIMMER_BREAK:
+		_die(game)
+		return true
+	return false
+
+
 func _physics_process(delta: float) -> void:
 	var game := Game.current
+	if _shimmer_step(delta, game):
+		return
 	if _flight.has("home") and friendly:
 		var best: NPC = null
 		var best_d := 25.0

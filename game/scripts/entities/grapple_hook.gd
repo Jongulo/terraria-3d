@@ -70,7 +70,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var w: VoxelWorld = game.world
 	var dist := global_position.distance_to(player.center())
-	if dist > LOST:
+	if dist > LOST or Projectile.in_shimmer(global_position):
 		queue_free()
 		return
 	match state:

@@ -439,7 +439,10 @@ func _update_playing(delta: float) -> void:
 	if _biome_timer <= 0.0:
 		_biome_timer = 0.5
 		biome = detect_biome(pos)
+		var was_in_aether := in_aether
 		in_aether = world.count_liquid(Vector3i(pos.floor()), BIOME_RADIUS, Player.LIQ_SHIMMER) >= SHIMMER_THRESHOLD
+		if in_aether and not was_in_aether and player.alive:
+			spawner.spawn_faelings(self)
 	sky.evil_amount = move_toward(sky.evil_amount, 1.0 if EVIL_SKY.has(biome) else 0.0, delta * 0.5)
 	if EVIL_SKY.has(biome):
 		sky.evil_color = EVIL_SKY[biome]

@@ -965,8 +965,9 @@ func add_coin_luck(amount: int) -> void:
 const COIN_LUCK_MAX := 1000000.0
 
 
-## Terraria's luck from Shimmer: coin luck (CalculateCoinLuck: 0.025 to 0.2
-## by how much) and the Galaxy Pearl's 0.03. (Nothing here uses luck yet.)
+## Terraria's luck (Player.RecalculateLuck), from Shimmer: coin luck
+## (CalculateCoinLuck: 0.025 to 0.2 by how much) and the Galaxy Pearl's
+## 0.03. It counts in your drops (roll_luck) and your damage (damage_var).
 func luck() -> float:
 	var c := 0.0
 	if coin_luck > 0.0:
@@ -976,6 +977,47 @@ func luck() -> float:
 				c = step[1]
 				break
 	return c + stat("luck")
+
+
+## Terraria's Luck.RollLuck: 0 to n - 1, as Next(n); with luck, that often
+## from a range half as wide (more often low: drops more likely); with bad
+## luck, twice as wide.
+func roll_luck(n: int) -> int:
+	return roll_with_luck(luck(), n)
+
+
+static func roll_with_luck(l: float, n: int) -> int:
+	if l > 0.0 and randf() < l:
+		return randi() % maxi(1, randi_range(n / 2, n - 1))
+	if l < 0.0 and randf() < -l:
+		return randi() % maxi(1, randi_range(n, n * 2 - 1))
+	return randi() % maxi(1, n)
+
+
+## A drop with this chance comes, by Terraria's CommonDrop (RollLuck(den) <
+## num, the chance as num / den: 1 / n, else in thousandths).
+func lucky_drop(chance: float) -> bool:
+	if chance >= 1.0:
+		return true
+	if chance <= 0.0:
+		return false
+	var den := int(round(1.0 / chance))
+	var num := 1
+	if den < 1 or absf(den * chance - 1.0) > 0.01:
+		den = 1000
+		num = int(round(chance * 1000.0))
+	return roll_luck(den) < num
+
+
+## Terraria's Main.DamageVar: a hit's damage 85% to 115% (by whole percent);
+## with luck, that often the better of two rolls, with bad luck the worse.
+static func damage_var(luck: float) -> float:
+	var v := 1.0 + randi_range(-15, 15) * 0.01
+	if luck > 0.0 and randf() < luck:
+		v = maxf(v, 1.0 + randi_range(-15, 15) * 0.01)
+	elif luck < 0.0 and randf() < -luck:
+		v = minf(v, 1.0 + randi_range(-15, 15) * 0.01)
+	return v
 
 
 func _move(delta: float, game) -> void:
