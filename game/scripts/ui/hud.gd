@@ -690,6 +690,8 @@ func _update_liquid_ui(delta: float) -> void:
 		tint = Color(1.0, 0.35, 0.05, 0.6)
 	elif player.head_liquid == Player.LIQ_HONEY:
 		tint = Color(1.0, 0.72, 0.1, 0.5)
+	elif player.head_liquid == Player.LIQ_SHIMMER or player.has_buff("Shimmer"):
+		tint = Color(0.7, 0.55, 0.95, 0.35)
 	_liquid_tint.color = _liquid_tint.color.lerp(tint, minf(1.0, delta * 12.0))
 	# Bubbles: one per tenth of breath, only while short of air; else the
 	# Lava Charm's flames while its time runs down (Terraria's breath meter).

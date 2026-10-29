@@ -62,6 +62,7 @@ try {
 	Step "textures, sounds, music, fonts" "$here\xnb-extract.exe" @((Join-Path $Terraria "Content"), $out)
 	Step "IDs and names" $py @("-I", "-X", "utf8", "$here\tools\terraria_ids.py", $exe, "$out\ids.json")
 	Step "recipes" $py @("-I", "-X", "utf8", "$here\tools\terraria_recipes.py", $exe, "$out\ids.json", "$out\recipes.json")
+	Step "shimmer" $py @("-I", "-X", "utf8", "$here\tools\terraria_shimmer.py", $exe, "$out\ids.json", "$out\shimmer.json")
 	Step "tile dust" $py @("-I", "-X", "utf8", "$here\tools\terraria_dust.py", $exe, "$here\data\blocks.json", "$out\tile_dust.json")
 	Step "NPC gore" $py @("-I", "-X", "utf8", "$here\tools\terraria_gore.py", $exe, "$here\data\npcs.json", "$out\ids.json", "$out\npc_gore.json")
 	Say "Done."

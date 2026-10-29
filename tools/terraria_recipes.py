@@ -11,7 +11,9 @@ many, each ingredient and its stack, the crafting stations, recipe groups
 written as constant arrays (SetIngredients) are read from the assembly's data.
 
 Writes [{"result": internal item name, "count", "ingredients": [[name, n]...],
-"tiles": [TileID names], "groups": [RecipeGroups names], "flags": [...]}].
+"tiles": [TileID names], "groups": [RecipeGroups names], "flags": [...]},
+plus "shimmer": [[name, n]...] where a recipe sets what shimmering its item
+gives back instead of its ingredients (AddCustomShimmerResult)].
 """
 import json
 import os
@@ -296,6 +298,8 @@ class RecipeReader:
             elif name == "M:Recipe.RequireGroup":
                 g = cargs[0]
                 cur["groups"].append(g[1] if isinstance(g, tuple) else g)
+            elif name == "M:Recipe.AddCustomShimmerResult" and this == "R":
+                cur.setdefault("shimmer", []).append(cargs[:2])
             elif name == "M:Recipe.AddRecipe":
                 self.recipes.append(cur)
                 self.cur = self._new()
@@ -319,6 +323,8 @@ def extract(exe, ids):
             "tiles": [tiles.get(v, v) for v in r["tiles"] if isinstance(v, int) and v >= 0],
             "groups": r["groups"], "flags": r["flags"],
         })
+        if r.get("shimmer"):
+            out[-1]["shimmer"] = [[items.get(v[0], v[0]), v[1]] for v in r["shimmer"] if isinstance(v[0], int)]
     return out
 
 

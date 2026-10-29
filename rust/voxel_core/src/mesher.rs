@@ -6,7 +6,7 @@
 //! - UV    = face texture coordinates
 //! - UV2   = (texture array layer, ambient occlusion 0..1)
 
-use crate::world::{ramp_height, CS, RAMP_STEPS, SHAPE_CEILING, SHAPE_FULL, SHAPE_HALF, SHAPE_RAMP, LIQ_HONEY, LIQ_LAVA, LIQ_MAX, LIQ_WATER, RENDER_CROSS, RENDER_CUBE, RENDER_CUTOUT, RENDER_NONE, World, unpack_light};
+use crate::world::{ramp_height, CS, RAMP_STEPS, SHAPE_CEILING, SHAPE_FULL, SHAPE_HALF, SHAPE_RAMP, LIQ_HONEY, LIQ_LAVA, LIQ_MAX, LIQ_SHIMMER, LIQ_WATER, RENDER_CROSS, RENDER_CUBE, RENDER_CUTOUT, RENDER_NONE, World, unpack_light};
 
 /// Texture layer meaning "don't draw this face" (sprite furniture tops).
 pub const NO_TEX: u16 = u16::MAX;
@@ -51,6 +51,7 @@ pub struct ChunkMesh {
     pub water: Surface,
     pub lava: Surface,
     pub honey: Surface,
+    pub shimmer: Surface,
 }
 
 /// (normal, tangent1, tangent2) with tangent1 x tangent2 = normal.
@@ -83,6 +84,7 @@ pub fn mesh_chunk(w: &World, cx: i32, cy: i32, cz: i32) -> ChunkMesh {
     let mut water = Surface::default();
     let mut lava = Surface::default();
     let mut honey = Surface::default();
+    let mut shimmer = Surface::default();
     let (ox, oy, oz) = (cx * CS, cy * CS, cz * CS);
 
     for lz in 0..CS {
@@ -98,6 +100,7 @@ pub fn mesh_chunk(w: &World, cx: i32, cy: i32, cz: i32) -> ChunkMesh {
                     let surf = match t {
                         LIQ_LAVA => &mut lava,
                         LIQ_HONEY => &mut honey,
+                        LIQ_SHIMMER => &mut shimmer,
                         _ => &mut water,
                     };
                     add_liquid(w, surf, (x, y, z), [lx as f32, ly as f32, lz as f32], t);
@@ -154,7 +157,7 @@ pub fn mesh_chunk(w: &World, cx: i32, cy: i32, cz: i32) -> ChunkMesh {
             }
         }
     }
-    ChunkMesh { opaque, cutout, water, lava, honey }
+    ChunkMesh { opaque, cutout, water, lava, honey, shimmer }
 }
 
 /// Liquid pouring through open space: nothing solid below and the cell below

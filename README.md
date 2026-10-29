@@ -118,6 +118,8 @@ character's things are left as they were:
 - **Southeast of spawn:** two target dummies that never die and show your DPS.
 - **West:** a 6-deep water pool with a natural waterfall, hammer-spring tanks (water already
   flowing, lava ready to hammer), a fenced lava pit and obsidian.
+- **Far north-west:** a shimmer pool: throw items in; jump in and you sink through the ground into
+  a room under it, with a rope back up.
 - **Above the plaza:** two floating islands (fly up with F3): a house island with a Skyware chest
   and a lake island, both in the Space layer.
 - **South-west / south-east:** a small Corruption and Crimson patch, with Shadow Orbs and
@@ -322,15 +324,17 @@ in this game.
 - **World:** forest, Snow, Desert over the Underground Desert's caverns, Jungle, Corruption or
   Crimson, Glowing Mushroom biome, bee hives,
   ocean with ocean caves, floating islands, Dunes with Pyramids under them, oases, the Jungle
-  Temple, the Dungeon, and the
+  Temple, the Dungeon, the Aether with its pool of shimmer, and the
   Underworld with its ash forests and ruined forts; caves, lakes, gem ores, gem trees, vanity
   trees, giant living trees and Living Mahogany trees, underground cabins, Granite and Marble caves,
   spider caves, moss (plain, lava and neon, with Long Moss), gem caves and loose gems,
   Water Chests, Enchanted Sword Shrines, meteorites,
   traps, pots, life crystals and loot chests,
   Shadow Chests, and forest plants and debris.
-- **Liquids:** water, lava and honey that fall, level out and settle; waterfalls and lavafalls, and
-  springs you open with a hammer.
+- **Liquids:** water, lava, honey and shimmer that fall, level out and settle; waterfalls and
+  lavafalls, and springs you open with a hammer. Shimmer turns items into others or takes them
+  apart into what they were made of (Terraria's own tables), and sinks you through the ground; the
+  Vital Crystal, Aegis Fruit, Arcane Crystal and other permanent boosts come from it.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
   stairs, platforms, doors, furniture in every wood, lights, paintings, signs, beds, containers,
   falling sand and explosives; wires, actuators, switches, pressure plates and timers.
@@ -355,7 +359,8 @@ in this game.
 **Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; minecarts and
 most mounts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
 NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
-Crawlers and Tomb Crawlers; the Shimmer; cages and terrariums; Expert mode. See
+Crawlers and Tomb Crawlers; Faelings and shimmered enemies; luck's effects; cages and terrariums;
+Expert mode. See
 [the roadmap](docs/ROADMAP.md) for the full list and the order planned.
 
 ## Tools

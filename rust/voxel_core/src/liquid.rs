@@ -1,12 +1,13 @@
-//! Terraria-style finite liquids. Each cell holds 0..=LIQ_MAX of water, lava
-//! or honey; volume is conserved as it falls and levels out sideways. Only
+//! Terraria-style finite liquids. Each cell holds 0..=LIQ_MAX of water, lava,
+//! honey or shimmer; volume is conserved as it falls and levels out sideways. Only
 //! "active" cells (recently changed, or next to a change) are simulated, so
 //! settled pools cost nothing. Two liquids meeting make a block, as in
 //! Terraria (Liquid.GetLiquidMergeTypes): water and lava obsidian (where the
 //! lava was), water and honey a honey block (where the honey was), lava and
-//! honey crispy honey (where the lava was).
+//! honey crispy honey (where the lava was), and shimmer and any other an
+//! Aetherium Block (where the shimmer was).
 
-use crate::world::{LIQ_HONEY, LIQ_LAVA, LIQ_MAX, LIQ_NONE, LIQ_WATER, World};
+use crate::world::{LIQ_HONEY, LIQ_LAVA, LIQ_MAX, LIQ_NONE, LIQ_SHIMMER, LIQ_WATER, World};
 
 const SIDES: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 /// Lava only moves every Nth tick and needs a bigger level difference to spread.
@@ -25,13 +26,16 @@ struct Merge {
     obsidian: u16,
     honey_block: u16,
     crispy_honey: u16,
+    aetherium: u16,
 }
 
 impl Merge {
     /// Which of two liquids hardens, and into what block (0: none here).
     fn of(&self, a: u8, b: u8) -> (u8, u16) {
         let has = |t: u8| a == t || b == t;
-        if has(LIQ_LAVA) && has(LIQ_WATER) {
+        if has(LIQ_SHIMMER) {
+            (LIQ_SHIMMER, self.aetherium)
+        } else if has(LIQ_LAVA) && has(LIQ_WATER) {
             (LIQ_LAVA, self.obsidian)
         } else if has(LIQ_LAVA) && has(LIQ_HONEY) {
             (LIQ_LAVA, self.crispy_honey)
@@ -56,7 +60,7 @@ impl World {
                 self.liquid_active.insert(c);
             }
         }
-        let merge = Merge { obsidian: self.id_of("obsidian"), honey_block: self.id_of("honey_block"), crispy_honey: self.id_of("crispy_honey_block") };
+        let merge = Merge { obsidian: self.id_of("obsidian"), honey_block: self.id_of("honey_block"), crispy_honey: self.id_of("crispy_honey_block"), aetherium: self.id_of("aetherium_block") };
         for (x, y, z) in cells {
             self.update_liquid_cell(x, y, z, merge);
         }
@@ -111,7 +115,7 @@ impl World {
 
         // 2. Level out with lower horizontal neighbours.
         if a > 0 {
-            let threshold = if t == LIQ_WATER { 2 } else { 4 };
+            let threshold = if t == LIQ_WATER || t == LIQ_SHIMMER { 2 } else { 4 };
             let mut targets: Vec<(i32, i32, u8)> = Vec::with_capacity(4);
             for (dx, dz) in SIDES {
                 let (nx, nz) = (x + dx, z + dz);
@@ -323,6 +327,33 @@ mod tests {
         settle(&mut w, 60);
         assert_eq!(w.get(10, 29, 10), 4, "honey and water: a honey block where the honey was");
         assert_eq!(w.get(13, 29, 14), 5, "honey and lava: crispy honey where the lava was");
+    }
+
+    #[test]
+    fn shimmer_glows_and_meeting_any_liquid_makes_aetherium() {
+        let mut w = world();
+        w.set_def(4, BlockDef { name: "aetherium_block".into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
+        dig_pit(&mut w);
+        w.set_liquid(10, 29, 10, LIQ_SHIMMER, LIQ_MAX);
+        assert_eq!(w.liquid_at(10, 29, 10), (LIQ_SHIMMER, LIQ_MAX));
+        assert_eq!(unpack_light(w.light_at(12, 29, 10))[3], crate::world::SHIMMER_EMIT[2] - 2, "violet glow");
+        w.set_liquid(11, 29, 10, LIQ_WATER, LIQ_MAX);
+        w.set_liquid(14, 29, 14, LIQ_SHIMMER, LIQ_MAX);
+        w.set_liquid(13, 29, 14, LIQ_LAVA, LIQ_MAX);
+        settle(&mut w, 60);
+        assert_eq!(w.get(10, 29, 10), 4, "shimmer and water: Aetherium where the shimmer was");
+        assert_eq!(w.get(14, 29, 14), 4, "shimmer and lava too");
+    }
+
+    #[test]
+    fn shimmer_packs_apart_from_the_other_liquids() {
+        use crate::world::{liq_pack, liq_unpack};
+        for t in [LIQ_WATER, LIQ_LAVA, LIQ_HONEY, LIQ_SHIMMER] {
+            for a in [1, 30, LIQ_MAX] {
+                assert_eq!(liq_unpack(liq_pack(t, a)), (t, a));
+            }
+        }
+        assert_eq!(liq_pack(LIQ_NONE, 20), 0, "no type, no liquid");
     }
 
     #[test]

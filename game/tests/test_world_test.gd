@@ -472,6 +472,7 @@ func _run() -> void:
 	await _mini_biome_checks(c)
 	await _cave_enemy_checks(c)
 	await _merchant_checks(c)
+	await _shimmer_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -8950,6 +8951,104 @@ func _stock(kind: String) -> Array:
 		if e is String or Hud.shop_condition(e[1]):
 			out.append(e if e is String else e[0])
 	return out
+
+
+## The shimmer pool: Terraria's item transmutations, decrafting, coin luck,
+## the player shimmering through the ground, buckets, and the permanent boosts.
+func _shimmer_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_flying := p.flying
+	var was_god := p.god_mode
+	p.flying = true
+	p.god_mode = true
+	var pool := Vector3(c + TestWorld.SHIMMER_POOL) + Vector3(2.5, 0.2, 2.5)
+	check(w.get_liquid(Vector3i(pool.floor())) == Vector2i(Player.LIQ_SHIMMER, 63), "the test world's shimmer pool holds shimmer")
+	# Drops in it, the player out of their reach (near enough for coin luck).
+	p.global_position = pool + Vector3(0, 12, 0)
+	var drop := func(item: String, n: int) -> ItemDrop:
+		var d: ItemDrop = game.spawn_item_drop(item, n, pool, Vector3.ZERO)
+		d.age = 0.0
+		return d
+	var torch: ItemDrop = drop.call("Torch", 30)
+	var sword: ItemDrop = drop.call("WoodenSword", 1)
+	var dirt: ItemDrop = drop.call("DirtBlock", 5)
+	var gold: ItemDrop = drop.call("GoldCoin", 3)
+	var pick: ItemDrop = drop.call("CopperPickaxe", 1)
+	p.coin_luck = 0.0
+	await frames(70)
+	check(torch.item == "Torch" and torch.shimmer_time > 0.0, "an item in shimmer starts shimmering (%.2f)" % torch.shimmer_time)
+	await frames(40)
+	check(is_instance_valid(torch) and torch.item == "ShimmerTorch" and torch.count == 30 and torch.shimmered,
+			"Torches turn into Shimmer Torches in 1.5 s (ShimmerTransformToItem)")
+	check(not is_instance_valid(sword), "a Wooden Sword comes apart")
+	var drops: Array = game.entities.get_children().filter(func(e): return e is ItemDrop and e.global_position.distance_to(pool) < 6.0)
+	var count := func(item: String) -> int:
+		return drops.filter(func(d): return d.item == item).reduce(func(a, d): return a + d.count, 0)
+	check(count.call("Wood") == 7 + 1, "into the Wood it was made of (7), and the Copper Pickaxe into Terraria's own (1 Wood): %d" % count.call("Wood"))
+	check(count.call("CopperOre") == 1 and count.call("CopperBar") == 0, "the Copper Pickaxe gives a Copper Ore, not its bars (AddCustomShimmerResult)")
+	check(is_instance_valid(dirt) and dirt.item == "DirtBlock" and dirt.shimmer_time == 0.0, "Dirt doesn't shimmer")
+	check(not is_instance_valid(gold) and p.coin_luck > 29000.0, "Gold Coins go into coin luck (%.0f)" % p.coin_luck)
+	check(p.luck() > 0.17, "coin luck counts as luck (%.3f)" % p.luck())
+	# What came out rises out and hangs over it, glowing; then it can be taken.
+	await frames(150)
+	var line: float = Vector3(c + TestWorld.SHIMMER_POOL).y + 3.0
+	check(is_instance_valid(torch) and torch.global_position.y > line and torch.global_position.y < line + 3.0 and torch.velocity.length() < 0.5,
+			"shimmered items rise out of the pool and hang over it (%.2f over its top)" % (torch.global_position.y - line))
+	check(is_instance_valid(torch) and torch.shimmer_time == 0.0, "and their glow comes up")
+	for d in game.entities.get_children():
+		if d is ItemDrop:
+			d.queue_free()
+	await frames(2)
+	# Decrafting waits for its boss: a Skull Lantern (Bones) until Skeletron.
+	var had := game.defeated_bosses.has("SkeletronHead")
+	game.defeated_bosses.erase("SkeletronHead")
+	check(not Shimmer.can_shimmer("SkullLantern", 1, game), "a Skull Lantern doesn't come apart before Skeletron")
+	game.defeated_bosses["SkeletronHead"] = true
+	check(Shimmer.can_shimmer("SkullLantern", 1, game), "it does after")
+	if not had:
+		game.defeated_bosses.erase("SkeletronHead")
+	check(Shimmer.transform_of("Torch") == "ShimmerTorch" and Shimmer.transform_of("IronOre") == "TinOre" and Shimmer.transform_of("LifeCrystal") == "AegisCrystal",
+			"Terraria's transmutations: Iron Ore to Tin Ore, a Life Crystal to a Vital Crystal")
+	check(not Shimmer.can_shimmer("LesserHealingPotion", 1, game) or Shimmer.decraft_of("LesserHealingPotion", game).alchemy,
+			"potions made at a bottle come apart with losses (alchemy)")
+	# Shimmering: head in it, you sink through the ground to the room under it.
+	p.flying = false
+	p.velocity = Vector3.ZERO
+	p.global_position = pool + Vector3(0, -0.2, 0)
+	await frames(3)
+	check(p.has_buff("Shimmer") and not p.can_act(), "head in shimmer: Shimmering (you can't act)")
+	var room_floor: float = Vector3(c + TestWorld.SHIMMER_POOL).y - 10.0
+	var through := false
+	for i in 600:
+		await get_tree().physics_frame
+		if not p.has_buff("Shimmer"):
+			through = true
+			break
+	check(through and p.global_position.y < room_floor + 4.0 and p.global_position.y > room_floor - 0.5 and p.alive,
+			"you sink through the ground into the room under the pool (y %.2f, room floor %.1f)" % [p.global_position.y, room_floor])
+	await frames(60)
+	check(p.on_floor and absf(p.global_position.y - room_floor) < 0.1 and p.life == p.life_cap(), "and land there unhurt")
+	# Buckets can't scoop it.
+	p.global_position = pool + Vector3(1.5, 4.2, 0)
+	p.look_at_yaw_pitch(0.0, -PI / 2.0 + 0.05)
+	p.flying = true
+	var held = p.inventory.slots[p.selected]
+	p.inventory.slots[p.selected] = {"item": "EmptyBucket", "count": 1}
+	check(not p._use_bucket(Data.item("EmptyBucket")) and p.inventory.slots[p.selected].item == "EmptyBucket", "an Empty Bucket can't scoop shimmer")
+	p.inventory.slots[p.selected] = held
+	# The permanent boosts: each once.
+	var def0 := p.defense()
+	var boosts_before: Array = p.boosts.duplicate()
+	p.boosts.clear()
+	p.inventory.slots[p.selected] = {"item": "AegisFruit", "count": 2}
+	check(p._consume(Data.item("AegisFruit")) and p.defense() == def0 + 4, "the Aegis Fruit: 4 defense for good")
+	check(not p._consume(Data.item("AegisFruit")) and p.inventory.slots[p.selected].count == 1, "only once")
+	check(p.save_state().boosts == ["AegisFruit"], "kept with the character")
+	p.inventory.slots[p.selected] = held
+	p.boosts = boosts_before
+	p.flying = was_flying
+	p.god_mode = was_god
 
 
 func _merchant_checks(c: Vector3i) -> void:

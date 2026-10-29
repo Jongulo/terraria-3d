@@ -20,7 +20,8 @@
 //! - **Water Chests:** maxTilesX / 4200 x 9 rounds, here that many in each
 //!   640 x 640 blocks of the map, as the cabins do: one chest anywhere in
 //!   deep water (mostly the sea), one in water underground; on the floor
-//!   under it, not within 30 tiles of another chest.
+//!   under it, not within 30 tiles of another chest (nor in water the
+//!   Aether's clean-up takes away: shimmer.rs).
 //!
 //! Terraria's tiles are 2/3 of a block here.
 
@@ -296,6 +297,16 @@ pub fn water_chests(w: &mut World, rng: &mut Rng, l: &Layers, spots: &[P]) {
     if ids.chest == 0 {
         return;
     }
+    // Not in water the Aether's clean-up will take (shimmer.rs), where it
+    // would land.
+    let aether = crate::shimmer::of(w);
+    let deep_water = |w: &World, p: P| {
+        let mut y = p.1;
+        while y > 1 && !w.is_solid(p.0, y - 1, p.2) {
+            y -= 1;
+        }
+        deep_water(w, p) && !aether.as_ref().is_some_and(|a| crate::shimmer::dries(l, a, (p.0, y, p.2)))
+    };
     for &s in spots {
         // Out from its spot, a little further each try, till one lands.
         let mut reach = 2.0;

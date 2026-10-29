@@ -15,6 +15,7 @@ pub mod mesher;
 pub mod moss;
 pub mod mushroom;
 pub mod desert;
+pub mod shimmer;
 pub mod oasis;
 pub mod ocean_caves;
 pub mod physics;
@@ -345,6 +346,25 @@ impl VoxelWorld {
             }
         }
         PackedInt32Array::from(counts.as_slice())
+    }
+
+    /// How many cells of liquid `liquid_type` lie in the cube of `radius`
+    /// around `center` (the Aether's zone: its shimmer).
+    #[func]
+    fn count_liquid(&self, center: Vector3i, radius: i32, liquid_type: i32) -> i32 {
+        let w = self.world();
+        let mut n = 0;
+        for z in center.z - radius..=center.z + radius {
+            for x in center.x - radius..=center.x + radius {
+                for y in center.y - radius..=center.y + radius {
+                    let (t, a) = w.liquid_at(x, y, z);
+                    if a > 0 && t as i32 == liquid_type {
+                        n += 1;
+                    }
+                }
+            }
+        }
+        n
     }
 
     /// Terraria's housing check in 3D (World::flood_room): the room around
@@ -789,7 +809,7 @@ impl VoxelWorld {
         Self::hit_dict(physics::raycast(&self.world(), v3(origin), v3(dir), max_dist, true))
     }
 
-    /// Liquid in a cell as Vector2i(type, amount): type 0 none, 1 water, 2 lava, 3 honey;
+    /// Liquid in a cell as Vector2i(type, amount): type 0 none, 1 water, 2 lava, 3 honey, 4 shimmer;
     /// amount 0..63 (63 = full).
     #[func]
     fn get_liquid(&self, p: Vector3i) -> Vector2i {
@@ -879,7 +899,7 @@ impl VoxelWorld {
     }
 
     /// Returns up to `max` finished meshes as
-    /// [chunk: Vector3i, opaque, cutout, water, lava, honey] (surface arrays or null).
+    /// [chunk: Vector3i, opaque, cutout, water, lava, honey, shimmer] (surface arrays or null).
     /// Stale results (superseded by a newer edit) are dropped.
     #[func]
     fn poll_meshes(&mut self, max: i32) -> VarArray {
@@ -898,6 +918,7 @@ impl VoxelWorld {
             item.push(&surface_arrays(&r.mesh.water));
             item.push(&surface_arrays(&r.mesh.lava));
             item.push(&surface_arrays(&r.mesh.honey));
+            item.push(&surface_arrays(&r.mesh.shimmer));
             out.push(&item.to_variant());
         }
         out

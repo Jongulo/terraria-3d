@@ -193,13 +193,13 @@ func _tick() -> void:
 
 ## Terraria's AI_061_FishingBobber_GetWaterLine: the liquid's surface in the
 ## column the bobber is in (the cell above it, its own, or the one below);
-## NAN if there's none.
+## NAN if there's none. Shimmer doesn't bear it up (no fishing in it).
 func _water_line(world: VoxelWorld) -> float:
 	var c := Vector3i(global_position.floor())
 	for dy in [1, 0, -1]:
 		var p := c + Vector3i(0, dy, 0)
 		var l := world.get_liquid(p)
-		if l.y > 0:
+		if l.y > 0 and l.x != Player.LIQ_SHIMMER:
 			liquid = l.x
 			var full := world.get_liquid(p + Vector3i.UP).y > 0
 			return p.y + (1.0 if full else l.y / 63.0 * 0.94)

@@ -56,10 +56,15 @@ more.
 
 Taken from a pass-by-pass comparison with Terraria's world generation.
 
-- **Structures and biomes (L):** the Shimmer (Aether). (Done: moss, with neon patches, lava moss
-  and Long Moss; gem caves and loose gems, amber included; oases, with palms, sea oats and oasis
-  plants; ocean caves and Water Chests; the Underground Desert's caverns, Desert Fossil and its
-  four entrances.)
+- **Structures and biomes:** done: moss, with neon patches, lava moss and Long Moss; gem caves
+  and loose gems, amber included; oases, with palms, sea oats and oasis plants; ocean caves and
+  Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
+  Aether and its shimmer.
+- **Shimmer extras (M):** Faelings and the Shimmer Slime; enemies and town NPCs in shimmer
+  (Terraria's shimmered look); critters and projectiles in it (critters become Faelings, some
+  projectiles bounce up); the Aether's music and backdrop; the Shimmer Arrow, Flare, Campfire,
+  Cloak and Monolith, Aetherium furniture and walls; luck, which coin luck and the Galaxy Pearl
+  feed (nothing uses luck yet).
 - **Underground Desert extras (S):** Antlion Eggs and Rolling Cactus in its caverns, its piles,
   and its enemies (Tomb Crawlers, Ghouls, Sand Poachers, Antlion Swarmers and Chargers).
 - **Micro biomes (M):** minecart tracks, campsites, thin ice in the snow, Dead Man's Chests.

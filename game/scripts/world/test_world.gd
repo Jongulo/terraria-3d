@@ -44,6 +44,7 @@ const HELP := [
 	["npc", "West of the gallery: the critter pen (a spawner for each critter; catch them with a Bug Net)"],
 	["npc biome", "Far west: the Dungeon (the Old Man by its door)"],
 	["building", "West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower (rope and chain)"],
+	["building", "Far north-west: a shimmer pool (throw items in; jump in to sink through the ground)"],
 	["building", "North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks"],
 	["building", "South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)"],
 	["biome", "North-west of the plaza: the fishing pond (deep enough for full fishing power) with a dock"],
@@ -492,6 +493,25 @@ func _build_liquids(c: Vector3i) -> void:
 				_b(Vector3i(x, GROUND + 1, z), "gray_brick")
 	_box(Vector3i(lb.x + 3, GROUND + 1, la.z), Vector3i(lb.x + 4, GROUND + 2, la.z + 1), "obsidian")
 	_label(Vector3(c.x - 22.5, GROUND + 3, c.z + 10.5), "Lava pit", 22)
+	# A shimmer pool (far north-west): things thrown in turn into others or
+	# come apart; jump in and you sink through the ground into the room under
+	# it, a rope back up beside.
+	var sa := c + SHIMMER_POOL
+	var sb := sa + Vector3i(5, 3, 4)
+	_box(Vector3i(sa.x - 1, GROUND, sa.z - 1), Vector3i(sb.x + 1, GROUND, sb.z + 1), "aetherium_brick")
+	_box(sa, sb, "")
+	_liquid_box(sa, Vector3i(sb.x, sb.y - 1, sb.z), 4)
+	var room := sa + Vector3i(0, -10, 0)
+	_box(room, room + Vector3i(5, 3, 4), "")
+	_b(room + Vector3i(0, 2, 0), "wall_torch")
+	for y in range(room.y, GROUND + 1):
+		_b(Vector3i(sb.x + 2, y, sa.z + 2), "rope")
+	_box(Vector3i(sb.x + 1, room.y, sa.z + 2), Vector3i(sb.x + 1, room.y + 2, sa.z + 2), "")
+	_label(Vector3(sa.x + 3, GROUND + 3, sa.z + 2.5), "Shimmer pool: throw items in (Q)", 22)
+
+
+## The shimmer pool's corner (bottom, north-west), far north-west of the plaza.
+const SHIMMER_POOL := Vector3i(-38, -4, -55)
 
 
 ## The fishing pond: big enough for full fishing power (Fishing: 300 tiles

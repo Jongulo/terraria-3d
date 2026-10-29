@@ -2000,8 +2000,16 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // structures fill in round it; here they keep out of it as of the
     // Pyramids.
     let temple = crate::temple::temple(w, &mut Rng::new(seed as u64 ^ 0x7e3b_1e5a), &l);
+    // Terraria's Shimmer pass (shimmer.rs: the Aether), on the Jungle's side;
+    // after its ocean caves like Terraria's, and here after the Pyramids and
+    // the Temple too, keeping out of them. Its own random numbers.
+    let aether = {
+        let jungle = regions.iter().find(|r| r.0 == BIOME_JUNGLE).map_or((sx / 2, sz / 2), |r| (r.1, r.2));
+        crate::shimmer::aether(w, &mut Rng::new(seed as u64 ^ 0x5419_3e72), &l, &coast, jungle)
+    };
     let clear_of_pyramids = |x: i32, z: i32, by: i32| pyramids.iter().all(|p| (p.x - x).abs().max((p.z - z).abs()) > crate::pyramids::REACH + by)
-        && temple.as_ref().map_or(true, |t| (t.x - x).abs().max((t.z - z).abs()) > t.reach + by);
+        && temple.as_ref().map_or(true, |t| (t.x - x).abs().max((t.z - z).abs()) > t.reach + by)
+        && aether.map_or(true, |a| (a.center.0 - x).abs().max((a.center.2 - z).abs()) > a.radius + by);
 
     // Pass 3-a: Terraria's Marble and Granite caves (marble.rs, granite.rs),
     // deep in the caverns away from the coast; their own random numbers.
@@ -2292,6 +2300,11 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     // (moss.rs).
     crate::gem_caves::loose_gems(w, &mut Rng::new(seed as u64 ^ 0x6e3_1005e), &l);
     crate::moss::long_moss(w);
+    // Terraria's ShimmerCleanUp (in its Final Cleanup): round the Aether, no
+    // other liquid, moss, webs or the evil; its pool full again.
+    if let Some(a) = &aether {
+        crate::shimmer::clean_up(w, &l, a);
+    }
     // The passes since the temple that don't keep out of it, undone in it.
     if let Some(t) = &temple {
         crate::temple::restore(w, t);
@@ -4180,6 +4193,69 @@ mod tests {
         }
     }
 
+    /// Terraria's Shimmer pass in a whole world: the Aether toward the
+    /// Jungle, a pool of shimmer in its stone under a dome, no other liquid
+    /// near it, tunnels out to the caves, gem trees round the pool.
+    #[test]
+    fn the_aether() {
+        for seed in [1, 2, 3] {
+            let w = gen_world_sized(seed, 0, (768, 384, 768));
+            let a = crate::shimmer::of(&w).expect("an Aether");
+            let (cx, cy, cz) = a.center;
+            let l = layers(w.sy);
+            let jungle = biome_regions(w.sx, w.sz, seed).into_iter().find(|r| r.0 == BIOME_JUNGLE).unwrap();
+            let (mid_x, mid_z) = (w.sx / 2, w.sz / 2);
+            let toward = ((cx - mid_x) * (jungle.1 - mid_x) + (cz - mid_z) * (jungle.2 - mid_z)) as f64;
+            assert!(toward > 0.0, "on the Jungle's side");
+            assert!(cy > l.underworld_top + 15 && cy < l.surface_base - 50, "deep: {cy}");
+            let r = a.radius;
+            let (mut shimmer, mut other, mut far, mut stone, mut open) = (0, 0, 0, 0, 0);
+            let id_stone = w.id_of("stone");
+            for x in cx - r - 20..=cx + r + 20 {
+                for z in cz - r - 20..=cz + r + 20 {
+                    for y in (cy - 60).max(1)..=(cy + 60).min(w.sy - 1) {
+                        let (t, amt) = w.liquid_at(x, y, z);
+                        let d2 = (x - cx).pow(2) + (z - cz).pow(2);
+                        if amt > 0 && t == crate::world::LIQ_SHIMMER {
+                            shimmer += 1;
+                            if d2 > (r * r) / 4 {
+                                far += 1;
+                            }
+                        } else if amt > 0 && d2 <= r * r && y < cy + 40 {
+                            other += 1;
+                        }
+                        if d2 <= (r / 2).pow(2) && (y - cy).abs() <= 20 {
+                            if w.get(x, y, z) == id_stone {
+                                stone += 1;
+                            } else if !w.is_solid(x, y, z) {
+                                open += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            let trees = w.decorations.iter().filter(|d| d.kind == "tree_top" && (d.pos.0 - cx).pow(2) + (d.pos.2 - cz).pow(2) <= r * r
+                && (d.pos.1 - cy).abs() < 25 && (GEM_CANOPY..GEM_CANOPY + 7).contains(&(d.style / 10))).count();
+            eprintln!("AETHER seed {seed}: at {:?} r {r}, shimmer {shimmer} cells ({far} far out), other liquid {other}, stone {stone}, open {open}, gem trees {trees}", a.center);
+            assert!(shimmer > 3000, "a pool of shimmer ({shimmer})");
+            assert_eq!(far, 0, "all of it in the bowl");
+            assert_eq!(other, 0, "no other liquid in it");
+            assert!(stone > open / 4 && open > 10_000, "stone round a big cavern ({stone} stone, {open} open)");
+            assert_eq!(w.liquid_at(cx, cy, cz), (crate::world::LIQ_SHIMMER, crate::world::LIQ_MAX / 2), "its top row half full");
+            assert!((5..=crate::shimmer::MAX_TREES).contains(&trees), "a few gem trees round the pool ({trees})");
+            assert!(!w.decorations.iter().any(|d| d.kind == "waterfall" && (d.pos.0 - cx).pow(2) + (d.pos.1 - cy).pow(2) + (d.pos.2 - cz).pow(2) < (r * 4 / 5).pow(2)),
+                "no waterfalls pour into it");
+            assert!(!w.structures.is_empty() && w.structures.iter().any(|&(lo, hi)| lo.0 <= cx && cx <= hi.0 && lo.2 <= cz && cz <= hi.2 && lo.1 <= cy && cy <= hi.1), "kept from later structures");
+            // The tunnels: from the floor at the ball's edge you can walk out.
+            let edge_open = (0..360).step_by(5).filter(|&deg| {
+                let ang = (deg as f64).to_radians();
+                let (x, z) = (cx + ((r + 4) as f64 * ang.cos()) as i32, cz + ((r + 4) as f64 * ang.sin()) as i32);
+                (cy + 2..cy + 5).all(|y| !w.is_solid(x, y, z))
+            }).count();
+            assert!(edge_open >= 2, "tunnels out ({edge_open})");
+        }
+    }
+
     /// Terraria's ocean caves and Water Chests in a whole world: a flooded
     /// sandy burrow from the sea floor in under the coast (not on the
     /// Dungeon's side), a Water Chest of its treasures, and Water Chests in
@@ -4220,7 +4296,7 @@ mod tests {
                 let (x, y, z) = d.pos;
                 assert_eq!(w.get(x, y, z), chest, "a Water Chest at {:?}", d.pos);
                 let wet = [(0, 1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1)].iter().any(|o| w.liquid_at(x + o.0, y + o.1, z + o.2).1 > 0);
-                assert!(w.is_solid(x, y - 1, z) && wet, "on a floor in water at {:?}", d.pos);
+                assert!(w.is_solid(x, y - 1, z) && wet, "on a floor in water at {:?} (seed {seed}, the Aether {:?})", d.pos, crate::shimmer::of(&w));
                 if d.style == crate::ocean_caves::OCEAN_CHEST_LOOT {
                     ocean_chests += 1;
                 } else {

@@ -56,6 +56,11 @@ const BIOME_THRESHOLD := 400
 ## The Meteorite biome's (Terraria's 75 Meteorite, some 15% of its craters'
 ## 400 to 600; of ours, about 800).
 const METEOR_THRESHOLD := 125
+## The Aether (Terraria's ZoneShimmer: 300 tiles of shimmer nearby, here as
+## the other biomes' counts go).
+const SHIMMER_THRESHOLD := 850
+## Whether you're in the Aether (its music).
+var in_aether := false
 const EVIL_SKY := {"corruption": Color(0.34, 0.26, 0.5), "crimson": Color(0.5, 0.15, 0.13)}
 var sky := SkySystem.new()
 ## The sun's and moon's real-time shadows (optional: Settings → Shaders).
@@ -434,6 +439,7 @@ func _update_playing(delta: float) -> void:
 	if _biome_timer <= 0.0:
 		_biome_timer = 0.5
 		biome = detect_biome(pos)
+		in_aether = world.count_liquid(Vector3i(pos.floor()), BIOME_RADIUS, Player.LIQ_SHIMMER) >= SHIMMER_THRESHOLD
 	sky.evil_amount = move_toward(sky.evil_amount, 1.0 if EVIL_SKY.has(biome) else 0.0, delta * 0.5)
 	if EVIL_SKY.has(biome):
 		sky.evil_color = EVIL_SKY[biome]
@@ -657,6 +663,9 @@ func _update_music(pos: Vector3) -> void:
 	elif sky.slime_rain and (sky.is_day or not sky.blood_moon) and pos.y > surface_level - 15.0:
 		# Slime Rain's music on the surface (not on a Blood Moon night).
 		Audio.set_music("SlimeRain")
+	elif in_aether:
+		# Main.UpdateAudio_DecideOnNewMusic: the Aether's before the biomes'.
+		Audio.set_music("Aether")
 	elif pos.y > space_level():
 		Audio.set_music("SpaceDay" if sky.is_day else "SpaceNight")
 	elif biome == "ocean":
@@ -982,12 +991,18 @@ func spawn_item(item: String, count: int, pos: Vector3, vel := Vector3.ZERO, del
 	if _collected_drops != null and prefix == 0:
 		_collected_drops[item] = _collected_drops.get(item, 0) + count
 		return
+	var d := spawn_item_drop(item, count, pos, vel, prefix)
+	d.age = -delay
+
+
+## An item lying in the world, made now (spawn_item without its extras).
+func spawn_item_drop(item: String, count: int, pos: Vector3, vel := Vector3.ZERO, prefix := 0) -> ItemDrop:
 	var d := ItemDrop.new()
 	d.setup(item, count, prefix)
 	entities.add_child(d)
 	d.global_position = pos
 	d.velocity = vel if vel != Vector3.ZERO else Vector3(randf_range(-2, 2), 4.0, randf_range(-2, 2))
-	d.age = -delay
+	return d
 
 
 ## Splits a copper value into gold/silver/copper coin drops.

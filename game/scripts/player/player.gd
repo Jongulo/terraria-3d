@@ -39,6 +39,12 @@ const FLOAT_SETTLE_MAX := 3.0 * 2.5
 const TICK := 1.0 / 60.0
 ## In honey: gravity 0.1, maxFallSpeed 3, a quarter as far.
 const HONEY_GRAVITY := 15.0
+## In shimmer (not shimmering): gravity 0.15 px a tick², a jump of 5.51 px a
+## tick for 23 ticks, moving 0.375 as far (Terraria's shimmerWet).
+const SHIMMER_GRAVITY := 22.5
+const SHIMMER_JUMP_SPEED := 5.51 * 2.5
+const SHIMMER_JUMP_TICKS := 23
+const SHIMMER_MOVE := 0.375
 const HONEY_MAX_FALL := 7.5
 const HONEY_MOVE := 0.25
 ## Touching honey makes you Honey (Terraria's buff 48) for 1800 ticks.
@@ -62,6 +68,7 @@ const MAX_MANA := 200
 const LIQ_WATER := 1
 const LIQ_LAVA := 2
 const LIQ_HONEY := 3
+const LIQ_SHIMMER := 4
 ## Seconds of air underwater (Terraria's 200 breath ticks at 7 ticks each ≈ 23 s).
 const BREATH_MAX := 23.0
 const DROWN_DPS := 20.0
@@ -164,7 +171,7 @@ const CARRIED_DEBUFFS := {"StoneBlock": ["Stoned", 30, 59], "Cobweb": ["Webbed",
 		"SnowBlock": ["Frostburn", 180, 359], "SlushBlock": ["Frostburn", 180, 359]}
 ## Terraria's debuffs among timed_buffs (Main.debuff: no right-clicking
 ## them off).
-const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn", "Bleeding", "Horrified", "TheTongue"]
+const DEBUFFS := ["Chilled", "Frozen", "Stoned", "Webbed", "Cursed", "Frostburn", "Bleeding", "Horrified", "TheTongue", "Shimmer"]
 ## Your minions (Minion), oldest first, and your pet and light pet (null:
 ## none). Minions go when you die; pets stay with you.
 var minions: Array = []
@@ -229,6 +236,8 @@ const BUFF_EFFECTS := {
 	# healing (bleed).
 	"Chilled": {"chilled": true},
 	"Frozen": {"cc": true},
+	# Shimmering (Terraria's buff 353: frozen; see _shimmering).
+	"Shimmer": {"cc": true},
 	"Stoned": {"cc": true},
 	"Webbed": {"cc": true},
 	"Cursed": {"cursed": true},
@@ -299,6 +308,12 @@ var angler_quests := 0
 ## Eaten an Artisan Loaf (Terraria's ateArtisanBread: crafting stations
 ## reach further; one is all you can eat).
 var ate_artisan_bread := false
+## Shimmer's permanent boosts used (item names: the Vital Crystal, Aegis
+## Fruit...; their "boost" in items.json counts as something you wear).
+var boosts: Array = []
+## Terraria's coinLuck: coins shimmered near you (copper coins' worth, at
+## most a million), fading 0.9999 a tick.
+var coin_luck := 0.0
 ## What the bobber's last bite check found (Terraria's displayedFishingInfo,
 ## shown by the Fisherman's Pocket Guide): "12 Fishing Power", "Not Enough Water!".
 var fishing_info := ""
@@ -527,6 +542,8 @@ func equipment() -> Array:
 	for b in timed_buffs:
 		if BUFF_EFFECTS.has(b):
 			out.append(BUFF_EFFECTS[b])
+	for b in boosts:
+		out.append(Data.item(b).get("boost", {}))
 	return out
 
 
@@ -878,6 +895,69 @@ func update_carried_light() -> void:
 	RenderingServer.global_shader_parameter_set("night_vision", 1.0 if has_effect("night_owl") else 0.0)
 
 
+## Terraria's Shimmering (buff 353): your head in shimmer (over the
+## Underworld), you can't act and sink slowly, through blocks and all
+## (gravity and top speed 0.9 of yours, moving 0.375 as far), no fall
+## hurting; till you're out of the shimmer and the blocks. Returns whether
+## you are.
+func _shimmering(delta: float, game) -> bool:
+	var w: VoxelWorld = game.world
+	if global_position.y < game.underworld_level:
+		timed_buffs.erase("Shimmer")
+		return false
+	var head: Vector2i = w.get_liquid(Vector3i((global_position + Vector3(0, half.y - 0.05, 0)).floor()))
+	if head.x == LIQ_SHIMMER and head.y > 0:
+		timed_buffs["Shimmer"] = 1.0
+	elif not timed_buffs.has("Shimmer"):
+		return false
+	elif in_liquid == LIQ_SHIMMER:
+		timed_buffs["Shimmer"] = 1.0
+	elif _in_blocks(w):
+		timed_buffs["Shimmer"] = maxf(timed_buffs["Shimmer"], 0.1)
+	else:
+		timed_buffs.erase("Shimmer")
+		return false
+	var flat := Vector2(velocity.x, velocity.z).move_toward(Vector2.ZERO, RUN_SLOWDOWN * delta)
+	velocity = Vector3(flat.x, maxf(velocity.y - GRAVITY * 0.9 * delta, -MAX_FALL * 0.9), flat.y)
+	global_position += velocity * SHIMMER_MOVE * delta
+	on_floor = false
+	_fall_start = global_position.y
+	return true
+
+
+## Whether any solid block overlaps you.
+func _in_blocks(w: VoxelWorld) -> bool:
+	var lo := Vector3i((global_position - Vector3(half.x, 0, half.z)).floor())
+	var hi := Vector3i((global_position + Vector3(half.x, half.y, half.z)).floor())
+	for x in range(lo.x, hi.x + 1):
+		for y in range(lo.y, hi.y + 1):
+			for z in range(lo.z, hi.z + 1):
+				if w.is_solid(Vector3i(x, y, z)):
+					return true
+	return false
+
+
+## Coins shimmered near you (Player.AddCoinLuck).
+func add_coin_luck(amount: int) -> void:
+	coin_luck = minf(COIN_LUCK_MAX, coin_luck + amount)
+
+
+const COIN_LUCK_MAX := 1000000.0
+
+
+## Terraria's luck from Shimmer: coin luck (CalculateCoinLuck: 0.025 to 0.2
+## by how much) and the Galaxy Pearl's 0.03. (Nothing here uses luck yet.)
+func luck() -> float:
+	var c := 0.0
+	if coin_luck > 0.0:
+		c = 0.025
+		for step in [[249000.0, 0.2], [24900.0, 0.175], [2490.0, 0.15], [249.0, 0.125], [24.9, 0.1], [2.49, 0.075], [0.249, 0.05]]:
+			if coin_luck > step[0]:
+				c = step[1]
+				break
+	return c + stat("luck")
+
+
 func _move(delta: float, game) -> void:
 	var input := Vector2.ZERO
 	if can_act():
@@ -896,6 +976,8 @@ func _move(delta: float, game) -> void:
 		return
 	if flying:
 		_fly(delta, game, dir)
+		return
+	if _shimmering(delta, game):
 		return
 	if _grapple(delta, game):
 		return
@@ -998,6 +1080,9 @@ func _move(delta: float, game) -> void:
 	if webbed:
 		jump_speed /= 5.0
 		jump_ticks /= 10
+	if in_liquid == LIQ_SHIMMER:
+		jump_speed = SHIMMER_JUMP_SPEED
+		jump_ticks = SHIMMER_JUMP_TICKS
 	# Like Terraria, you can't swim: in water and lava you sink, and you jump
 	# only off the bottom (or with a double jump you haven't used); the jump
 	# goes half as far, like all movement in liquid (JumpMovement starts a
@@ -1034,8 +1119,9 @@ func _move(delta: float, game) -> void:
 		# Water and lava: lighter gravity, a slow sinking speed, fast falls
 		# damped; honey more so.
 		var honey := in_liquid == LIQ_HONEY
-		velocity.y -= (HONEY_GRAVITY if honey else LIQUID_GRAVITY) * delta
-		var max_fall := HONEY_MAX_FALL if honey else LIQUID_MAX_FALL
+		var shimmer := in_liquid == LIQ_SHIMMER
+		velocity.y -= (HONEY_GRAVITY if honey else (SHIMMER_GRAVITY if shimmer else LIQUID_GRAVITY)) * delta
+		var max_fall := HONEY_MAX_FALL if honey else (MAX_FALL if shimmer else LIQUID_MAX_FALL)
 		if velocity.y < -max_fall:
 			velocity.y = move_toward(velocity.y, -max_fall, 80.0 * delta)
 		# Flippers and the Flipper Potion (accFlipper): jump swims you up.
@@ -1124,7 +1210,8 @@ func _move(delta: float, game) -> void:
 	var drop := input_enabled and Input.is_action_pressed("drop_down")
 	# The Flipper Potion (ignoreWater): not slowed by water or honey.
 	var slowed := in_liquid != 0 and not (has_effect("ignore_water") and in_liquid != LIQ_LAVA)
-	var step := velocity * delta * ((HONEY_MOVE if in_liquid == LIQ_HONEY else LIQUID_MOVE) if slowed else 1.0)
+	var liquid_move: float = {LIQ_HONEY: HONEY_MOVE, LIQ_SHIMMER: SHIMMER_MOVE}.get(in_liquid, LIQUID_MOVE)
+	var step := velocity * delta * (liquid_move if slowed else 1.0)
 	# The Water Walking Potion: water and honey bear you like a floor (not
 	# lava; hold Drop down to go in).
 	var walk_on := -INF
@@ -2053,7 +2140,7 @@ func _update_liquid(game) -> void:
 		var honey := LIQ_HONEY in [in_liquid, was]
 		Audio.play("Splash_1" if honey else "Splash_*", 0.5)
 		if in_liquid != 0 and velocity.y < -6.0:
-			var col: Color = {LIQ_WATER: Color(0.5, 0.65, 1.0), LIQ_HONEY: Color(1.0, 0.75, 0.15)}.get(in_liquid, Color(1.0, 0.5, 0.1))
+			var col: Color = {LIQ_WATER: Color(0.5, 0.65, 1.0), LIQ_HONEY: Color(1.0, 0.75, 0.15), LIQ_SHIMMER: Color8(190, 175, 255)}.get(in_liquid, Color(1.0, 0.5, 0.1))
 			game.spawn_dust(global_position, col, 20 if in_liquid == LIQ_HONEY else 14)
 
 
@@ -2089,7 +2176,8 @@ func _liquid_effects(delta: float) -> void:
 	# The Breathing Reed held (not swung: Player.hasBreathingReed): breath
 	# lasts twice as long, and none goes while its tip is out of the water.
 	var reed: bool = held().get("breathing_reed", false) and _use_timer <= 0.0
-	if head_liquid != 0 and not has_effect("gills") and not (reed and _reed_in_air()):
+	# (Shimmer doesn't drown you: Collision.DrownCollision.)
+	if head_liquid != 0 and head_liquid != LIQ_SHIMMER and not has_effect("gills") and not (reed and _reed_in_air()):
 		breath = maxf(0.0, breath - delta / diving / (2.0 if reed else 1.0))
 	else:
 		breath = minf(BREATH_MAX, breath + delta * 6.0)
@@ -2121,7 +2209,7 @@ func _liquid_effects(delta: float) -> void:
 		# Wooden Spikes make you bleed (Terraria's TouchDamageBleeding).
 		if hit and not _touch_debuff.is_empty():
 			debuff(_touch_debuff[0], float(_touch_debuff[1]))
-	elif in_liquid == LIQ_WATER or in_liquid == LIQ_HONEY:
+	elif in_liquid == LIQ_WATER or in_liquid == LIQ_HONEY or in_liquid == LIQ_SHIMMER:
 		on_fire = 0.0
 	if on_fire > 0.0:
 		on_fire = maxf(0.0, on_fire - delta)
@@ -2526,6 +2614,10 @@ func _inferno(delta: float, game) -> void:
 
 
 func _tick_buffs(delta: float) -> void:
+	# Coin luck fades (Player.UpdateCoinLuck: 0.9999 a tick, gone under 0.25).
+	coin_luck *= pow(0.9999, delta * 60.0)
+	if coin_luck < 0.25:
+		coin_luck = 0.0
 	for b in timed_buffs.keys():
 		timed_buffs[b] -= delta
 		if timed_buffs[b] <= 0.0:
@@ -2538,7 +2630,8 @@ func _regen(delta: float) -> void:
 	# a tick); the Crimson set twice as fast (+1), and heals half again as
 	# much (Terraria's crimsonRegen).
 	var crimson := has_effect("crimson_regen")
-	_since_hurt += delta * (1.0 + (2.0 if honey_time > 0.0 else 0.0) + (1.0 if crimson else 0.0))
+	# The Vital Crystal: +0.2 a tick (lifeRegenTime).
+	_since_hurt += delta * (1.0 + (2.0 if honey_time > 0.0 else 0.0) + (1.0 if crimson else 0.0) + stat("regen_time"))
 	# Terraria's natural regen ramps up the longer you avoid damage.
 	var rate := (0.5 if _since_hurt > 8.0 else 0.0) + (1.0 if _since_hurt > 20.0 else 0.0)
 	if crimson:
@@ -2563,7 +2656,9 @@ func _regen(delta: float) -> void:
 	if mana < mana_cap() and _use_timer <= 0.0:
 		# The Mana Regeneration Band's manaRegenBonus: half a mana a second each.
 		# The Mana Regeneration Potion: as fast as standing still, always (manaRegenBuff).
-		_mana_acc += delta * (4.0 + mana_cap() * 0.05 + stat("mana_regen_bonus") * 0.5) * (2.0 if has_effect("mana_regen_buff") else 1.0)
+		# The Arcane Crystal: manaRegen + a fiftieth of your mana (a hundredth a second).
+		var arcane := mana_cap() / 100.0 if has_effect("arcane_crystal") else 0.0
+		_mana_acc += delta * (4.0 + mana_cap() * 0.05 + stat("mana_regen_bonus") * 0.5 + arcane) * (2.0 if has_effect("mana_regen_buff") else 1.0)
 		if _mana_acc >= 1.0:
 			mana = mini(mana_cap(), mana + int(_mana_acc))
 			_mana_acc = fmod(_mana_acc, 1.0)
@@ -3544,6 +3639,11 @@ func _consume(def: Dictionary) -> bool:
 		if ate_artisan_bread:
 			return false
 		ate_artisan_bread = true
+	elif def.has("boost"):
+		# Shimmer's permanent boosts: each once (ItemCheck_UseShimmerPermanentItems).
+		if def.internal in boosts:
+			return false
+		boosts.append(def.internal)
 	elif def.get("recall", false):
 		home_teleport()
 	elif def.get("teleport_random", false):
@@ -3632,6 +3732,9 @@ func _use_bucket(def: Dictionary) -> bool:
 		var cell: Vector3i = hit.block
 		var t: int = w.get_liquid(cell).x
 		if sponge != 0 and t != sponge:
+			return false
+		# Shimmer can't be scooped up (ItemCheck_UseBuckets).
+		if t == LIQ_SHIMMER:
 			return false
 		# Like Terraria, gather a bucketful from the surrounding cells, not just one.
 		var cells: Array[Vector3i] = [cell]
@@ -4105,6 +4208,8 @@ func save_state() -> Dictionary:
 		"bed": [bed.x, bed.y, bed.z],
 		"angler_quests": angler_quests,
 		"ate_artisan_bread": ate_artisan_bread,
+		"boosts": boosts,
+		"coin_luck": coin_luck,
 		"buffs": timed_buffs.duplicate(),
 		"pets": [pet.item.internal if pet != null and is_instance_valid(pet) else "",
 				light_pet.item.internal if light_pet != null and is_instance_valid(light_pet) else ""],
@@ -4136,6 +4241,8 @@ func load_state(d: Dictionary) -> void:
 	bed = Vector3i(int(b[0]), int(b[1]), int(b[2])) if b.size() == 3 else NO_BED
 	angler_quests = int(d.get("angler_quests", 0))
 	ate_artisan_bread = bool(d.get("ate_artisan_bread", false))
+	boosts = d.get("boosts", []).duplicate()
+	coin_luck = float(d.get("coin_luck", 0.0))
 	# Your pets come back with you (Terraria keeps their buffs).
 	for m in [pet, light_pet]:
 		if m != null and is_instance_valid(m):

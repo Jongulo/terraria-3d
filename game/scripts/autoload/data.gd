@@ -97,6 +97,16 @@ var tile_dust := {}
 ## NPC name -> what it breaks into and bleeds (tools/terraria_gore.py):
 ## {gores: [[[Gore id, dx, dy, vx, vy, scale], ...] per roll], death_dust, hit_dust}.
 var npc_gore := {}
+## What Shimmer does to items (tools/terraria_shimmer.py, Terraria's
+## ItemID.Sets): {transform: {item: item}, counts_as, counts_as_decraft:
+## {item: item}, post_moonlord: [item...]}.
+var shimmer := {}
+## Item -> the recipe Shimmer takes it apart by (Terraria's
+## ItemID.Sets.IsCrafted: its last recipe that isn't notDecraftable; and
+## IsCraftedCrimson / IsCraftedCorruption: its last recipe of that evil):
+## {"any" / "crimson" / "corruption": {count, ingredients: [[item, n]...],
+## alchemy: made at a Placed Bottle, shimmer: Terraria's own results instead}}.
+var decrafts := {}
 
 
 func _ready() -> void:
@@ -1225,6 +1235,7 @@ func _load_items() -> void:
 	for a in data.get("armor_sets", []):
 		armor_sets.append(a)
 	_load_terraria_recipes()
+	shimmer = _read_json(Assets.ROOT + "shimmer.json") if FileAccess.file_exists(Assets.ROOT + "shimmer.json") else {}
 	_load_tile_dust()
 	_load_npc_gore()
 	# Stand-ins (items.json "recipes"): only for items none of whose Terraria
@@ -1290,6 +1301,24 @@ func _load_tile_dust() -> void:
 		tile_dust = d.get("blocks", {})
 
 
+## Records a Terraria recipe as its item's way apart in Shimmer
+## (Recipe.UpdateWhichItemsAreCrafted: the last one wins).
+func _add_decraft(t: Dictionary) -> void:
+	if not items.has(t.result):
+		return
+	var r := {"count": int(t.count), "ingredients": t.ingredients, "alchemy": t.tiles.size() > 0 and t.tiles[0] == "Bottles"}
+	if t.has("shimmer"):
+		r["shimmer"] = t.shimmer
+	var d: Dictionary = decrafts.get(t.result, {})
+	if not "notDecraftable" in t.flags:
+		d["any"] = r
+	for evil in ["crimson", "corruption"]:
+		if evil in t.flags:
+			d[evil] = r
+	if not d.is_empty():
+		decrafts[t.result] = d
+
+
 ## Terraria's own recipes (tools/terraria_recipes.py, from the user's
 ## Terraria.exe), for every item here, where everything they take (items,
 ## stations) is in this game too.
@@ -1302,6 +1331,7 @@ func _load_terraria_recipes() -> void:
 	if not list is Array:
 		return
 	for t in list:
+		_add_decraft(t)
 		if not items.has(t.result) or t.ingredients.is_empty() or t.flags.any(func(fl): return fl in UNMET_FLAGS):
 			continue
 		# (Terraria's coin exchanges: here coins join up by themselves.)

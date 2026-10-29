@@ -22,24 +22,48 @@ pub const RENDER_MODEL: u8 = 5;
 
 pub const CH_SUN: usize = 0;
 
-/// Liquids: one byte per cell, amount in the low 6 bits, type in the top 2.
+/// Liquids: one byte per cell, amount in the low 6 bits, type in the top 2
+/// (shimmer has the top bits 0: an amount with no type, unused before it).
 pub const LIQ_NONE: u8 = 0;
 pub const LIQ_WATER: u8 = 1;
 pub const LIQ_LAVA: u8 = 2;
 /// Honey (Terraria's): thick and slow, from bee hives.
 pub const LIQ_HONEY: u8 = 3;
+/// Shimmer (Terraria's): the Aether's liquid.
+pub const LIQ_SHIMMER: u8 = 4;
 pub const LIQ_MAX: u8 = 63;
 /// Lava glows orange like Terraria's.
 pub const LAVA_EMIT: [u8; 3] = [14, 7, 2];
+/// Shimmer glows violet (Terraria's TileLightScanner.ApplyLiquidLight: about
+/// 0.45, 0.25, 0.65 where lava is 0.7, 0.4, 0.15).
+pub const SHIMMER_EMIT: [u8; 3] = [9, 5, 13];
 
 #[inline]
 pub fn liq_pack(t: u8, amount: u8) -> u8 {
-    if amount == 0 { 0 } else { (t << 6) | amount.min(LIQ_MAX) }
+    match (amount, t) {
+        (0, _) | (_, LIQ_NONE) => 0,
+        (_, LIQ_SHIMMER) => amount.min(LIQ_MAX),
+        _ => (t << 6) | amount.min(LIQ_MAX),
+    }
 }
 
 #[inline]
 pub fn liq_unpack(v: u8) -> (u8, u8) {
-    if v & LIQ_MAX == 0 { (LIQ_NONE, 0) } else { (v >> 6, v & LIQ_MAX) }
+    match (v & LIQ_MAX, v >> 6) {
+        (0, _) => (LIQ_NONE, 0),
+        (a, 0) => (LIQ_SHIMMER, a),
+        (a, t) => (t, a),
+    }
+}
+
+/// Light a liquid gives off.
+#[inline]
+pub fn liquid_emit(t: u8) -> [u8; 3] {
+    match t {
+        LIQ_LAVA => LAVA_EMIT,
+        LIQ_SHIMMER => SHIMMER_EMIT,
+        _ => [0, 0, 0],
+    }
 }
 const SHIFT: [u16; 4] = [12, 8, 4, 0];
 
@@ -598,14 +622,11 @@ impl World {
         }
     }
 
-    /// Light a cell emits: its block's, or lava's if it holds lava.
+    /// Light a cell emits: its block's, or its liquid's (lava, shimmer).
     pub fn cell_emit(&self, i: usize) -> [u8; 3] {
         let e = self.defs.get(self.blocks[i] as usize).map_or([0, 0, 0], |d| d.emit);
-        if liq_unpack(self.liquid[i]).0 == LIQ_LAVA {
-            [e[0].max(LAVA_EMIT[0]), e[1].max(LAVA_EMIT[1]), e[2].max(LAVA_EMIT[2])]
-        } else {
-            e
-        }
+        let l = liquid_emit(liq_unpack(self.liquid[i]).0);
+        [e[0].max(l[0]), e[1].max(l[1]), e[2].max(l[2])]
     }
 
     /// Recomputes light around a cell whose opacity or emission changed.
@@ -673,10 +694,10 @@ impl World {
         if old == new {
             return true;
         }
-        let was_lava = liq_unpack(old).0 == LIQ_LAVA;
+        let glowed = liquid_emit(liq_unpack(old).0);
         self.liquid[i] = new;
         self.mark_dirty(x, y, z);
-        if was_lava != (liq_unpack(new).0 == LIQ_LAVA) {
+        if glowed != liquid_emit(liq_unpack(new).0) {
             self.relight_cell(x, y, z);
         }
         self.activate_liquid_around(x, y, z);

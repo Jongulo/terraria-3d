@@ -82,7 +82,7 @@ $ex = Join-Path $stage "extract"
 New-Item -ItemType Directory -Force "$ex\tools", "$ex\data", "$ex\licenses" | Out-Null
 Copy-Item installer/extract.ps1 $ex
 Copy-Item tools/xnb-extract/target/release/xnb-extract.exe $ex
-foreach ($t in "terraria_ids", "terraria_recipes", "terraria_dust", "terraria_gore") { Copy-Item "tools/$t.py" "$ex\tools" }
+foreach ($t in "terraria_ids", "terraria_recipes", "terraria_shimmer", "terraria_dust", "terraria_gore") { Copy-Item "tools/$t.py" "$ex\tools" }
 Copy-Item game/data/blocks.json, game/data/npcs.json "$ex\data"
 Copy-Item LICENSE (Join-Path $stage "LICENSE.txt")
 

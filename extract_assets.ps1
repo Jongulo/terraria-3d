@@ -31,6 +31,7 @@ cargo build --release --manifest-path tools/xnb-extract/Cargo.toml; Check
 tools/xnb-extract/target/release/xnb-extract.exe "$Terraria\Content" $out; Check
 & $py -I tools/terraria_ids.py $exe "$out/ids.json"; Check
 & $py -I tools/terraria_recipes.py $exe "$out/ids.json" "$out/recipes.json"; Check
+& $py -I tools/terraria_shimmer.py $exe "$out/ids.json" "$out/shimmer.json"; Check
 & $py -I tools/terraria_dust.py $exe game/data/blocks.json "$out/tile_dust.json"; Check
 & $py -I tools/terraria_gore.py $exe game/data/npcs.json "$out/ids.json" "$out/npc_gore.json"; Check
 # Godot loads these at runtime; keep the editor from importing ~16k files.
