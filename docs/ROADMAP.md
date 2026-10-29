@@ -59,7 +59,8 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Structures and biomes:** done: moss, with neon patches, lava moss and Long Moss; gem caves
   and loose gems, amber included; oases, with palms, sea oats and oasis plants; ocean caves and
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
-  Aether and its shimmer; Jungle Shrines; the Underground Desert's Antlion Eggs, Rolling
+  Aether and its shimmer; Jungle Shrines and the Ivy Chests' extras (the Bee Minecart, the Rat
+  mount, the Honey Dispenser and its honey furniture, Seaweed's Pet Turtle); the Underground Desert's Antlion Eggs, Rolling
   Cactus, piles and enemies (Antlion Chargers, Swarmers and their Giant kinds, Tomb Crawlers,
   Sand Slimes); Terraria's placement passes (cave statues and their traps, biome pots, piles,
   stalactites and stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed), the spider
@@ -74,8 +75,6 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Underground Desert extras (S):** the sleeping Digtoise in its caverns (and the Digtoise tool it
   gives); its Golfer, asleep in the sand; its Hardmode enemies (Ghouls, Sand Poachers, Lamias,
   Basilisks, Dune Splicers) come with Hardmode.
-- **Ivy Chest extras (S):** the Bee Minecart, the Rat mount (item 5525), the Honey Dispenser (with
-  the honey furniture it makes) and Seaweed (the Pet Turtle).
 - **Placement extras (S):** the strange plants: they grow only in Hardmode, from Terraria's random
   tile updates (which also regrow dye plants; there are none yet).
 

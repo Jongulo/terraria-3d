@@ -49,9 +49,11 @@
 		"either": [[[["IronskinPotion", 1, 2], ["ShinePotion", 1, 2], ["NightOwlPotion", 1, 2], ["SwiftnessPotion", 1, 2], ["MiningPotion", 1, 2], ["BuilderPotion", 1, 2]], 0.6667]]
 	},
 	"ivy_chest": {
-		"_doc": "Terraria's Ivy Chest (Living Mahogany trees, Jungle Shrines; GetNextJungleChestItem): one of Feral Claws, Anklet of the Wind, Staff of Regrowth, Boomstick; 1 in 15 a Fiberglass Fishing Pole instead, else 1 in 20 Flower Boots. Extras as any cavern chest. The Living Mahogany Wands come by the chest's MAHOGANY_WANDS bit (chests.gd). Not yet: AddBuriedChest's other jungle extras, 1 in 10 a Bee Minecart, 1 in 10 a Rat mount (item 5525), 1 in 4 a Honey Dispenser, 1 in 50 Seaweed.",
+		"_doc": "Terraria's Ivy Chest (Living Mahogany trees, Jungle Shrines; GetNextJungleChestItem): one of Feral Claws, Anklet of the Wind, Staff of Regrowth, Boomstick; 1 in 15 a Fiberglass Fishing Pole instead, else 1 in 20 Flower Boots. The Living Mahogany Wands come by the chest's MAHOGANY_WANDS bit (chests.gd), after it; then AddBuriedChest's jungle extras, 1 in 10 a Bee Minecart and 1 in 10 a Rat mount; extras as any cavern chest; last, 1 in 4 a Honey Dispenser and 1 in 50 Seaweed.",
 		"pick_one": [["FeralClaws", 1, 1], ["AnkletoftheWind", 1, 1], ["StaffofRegrowth", 1, 1], ["Boomstick", 1, 1]],
 		"instead": [["FiberglassFishingPole", 1, 1, 0.0667], ["FlowerBoots", 1, 1, 0.05]],
+		"with_main": [["BeeMinecart", 1, 1, 0.1], ["RatMountItem", 1, 1, 0.1]],
+		"last": [["HoneyDispenser", 1, 1, 0.25], ["Seaweed", 1, 1, 0.02]],
 		"extras": [["Rope", 50, 100, 0.33], ["MusketBall", 40, 99, 0.5], ["Torch", 10, 20, 0.6], ["LesserHealingPotion", 3, 5, 0.6], ["WoodenArrow", 25, 50, 0.4], ["IronBar", 5, 12, 0.3], ["SilverBar", 5, 12, 0.25], ["LifeCrystal", 1, 1, 0.1], ["ManaCrystal", 1, 1, 0.25], ["EmptyBucket", 1, 1, 0.2], ["SilverCoin", 1, 20, 0.7], ["Book", 2, 6, 0.35], ["Bomb", 3, 8, 0.25], ["WhiteString", 1, 1, 0.05], ["Dynamite", 1, 1, 0.05], ["MiningHelmet", 1, 1, 0.08], ["MiningShirt", 1, 1, 0.05], ["MiningPants", 1, 1, 0.05], ["RecallPotion", 2, 4, 0.5]],
 		"either": [[[["SpelunkerPotion", 1, 2], ["FeatherfallPotion", 1, 2], ["NightOwlPotion", 1, 2], ["WaterWalkingPotion", 1, 2], ["ArcheryPotion", 1, 2], ["GravitationPotion", 1, 2]], 0.6667], [[["ThornsPotion", 1, 2], ["InvisibilityPotion", 1, 2], ["HunterPotion", 1, 2], ["TrapsightPotion", 1, 2], ["TeleportationPotion", 1, 2], ["TitanPotion", 1, 2]], 0.3333]]
 	},

@@ -341,7 +341,8 @@ in this game.
   apart into what they were made of (Terraria's own tables), and sinks you through the ground; the
   Vital Crystal, Aegis Fruit, Arcane Crystal and other permanent boosts come from it.
 - **Building:** mining and chopping with Terraria's pickaxe and axe power, hammered blocks and
-  stairs, platforms, doors, furniture in every wood, lights, paintings, signs, beds, containers,
+  stairs, platforms, doors, furniture in every wood and the honey furniture of the Honey Dispenser,
+  lights, paintings, signs, beds, containers,
   falling sand and explosives; wires, actuators, switches, pressure plates and timers, and statues
   that spawn their creature (or a Heart, Star or Bomb) on a signal.
 - **Weapons:** swords, spears, yoyos, boomerangs, flails, bows, guns, magic and thrown weapons,
@@ -349,7 +350,7 @@ in this game.
 - **Gear:** armor sets and set bonuses, accessories (including the informational ones, which work
   anywhere in your inventory), grappling hooks, ropes and rope coils, wings, boots, climbing gear,
   the Tinkerer's Workshop combinations; pets, light pets and a few mounts (the Slimy Saddle, roller
-  skates, the Minecart on its tracks); buff potions, alchemy and herbs, and Well Fed foods.
+  skates, the Minecart and Bee Minecart on their tracks, the Rat, which makes you one); buff potions, alchemy and herbs, and Well Fed foods.
 - **Enemies and critters** of every biome above, with Terraria's spawn rules, knockback, gores and
   blood; the bug net and critters as bait.
 - **Bosses and events:** the Eye of Cthulhu, King Slime, the Eater of Worlds, the Brain of Cthulhu,

@@ -55,6 +55,12 @@ const KINDS := {
 		"walk": [0.2, 6.0], "contact": 12},
 	"BabyDino": {"ai": "ground", "size": [34, 34], "frames": 13, "buff": "BabyDinosaur", "near": 85,
 		"walk": [0.08, 6.5], "walk_frames": [2, 8], "fly_frames": [9, 12]},
+	# Seaweed's Pet Turtle (AI_026's own numbers for it): slow (0.04 px/tick²
+	# to 2), stops 50 px short, flies back past 200 px (not 500) and lands
+	# within 100 (not 200), flying at 9 px a tick, tipped with its flight.
+	"Turtle": {"ai": "ground", "size": [22, 22], "frames": 16, "buff": "PetTurtle", "near": 50, "walk": [0.04, 2.0],
+		"walk_frames": [0, 5], "fly_frames": [6, 15], "leash": 200.0, "land": 100.0, "fly_speed": 9.0, "air_frame": 0,
+		"walk_min": 0.1, "fly_tick": 3, "fly_tilt": true},
 	"BabyFaceMonster": {"ai": "ground", "size": [34, 34], "frames": 12, "buff": "BabyFaceMonster", "near": 85,
 		"walk": [0.08, 6.5], "walk_frames": [2, 7], "fly_frames": [8, 11]},
 	"BabyEater": {"ai": "eater", "size": [34, 34], "frames": 2, "buff": "BabyEater"},
@@ -404,7 +410,7 @@ func _ground_tick(game) -> void:
 	var fighting := not pet and local0 > 0.0
 	# Too far: fly back (Terraria's 500 px, a minion 40 more for each before
 	# it, 500 more while it's fighting and the Baby Slime 100 on top).
-	var leash := 500.0
+	var leash := float(cfg.get("leash", 500.0))
 	if not pet:
 		leash += 40.0 * index
 		if local0 > 0.0:
@@ -442,10 +448,10 @@ func _ground_fly(game, you: Vector3) -> void:
 			ai0 = 0
 	var d := (goal - center()) * PX
 	var dist := d.length()
-	if dist < 200.0 and player.on_floor and global_position.y >= player.global_position.y and not _in_solid(game):
+	if dist < float(cfg.get("land", 200.0)) and player.on_floor and global_position.y >= player.global_position.y and not _in_solid(game):
 		ai0 = 0
 		vel.y = minf(vel.y, 6.0)
-	var want := vel if dist < 60.0 else d * 10.0 / dist
+	var want := vel if dist < 60.0 else d * float(cfg.get("fly_speed", 10.0)) / dist
 	vel.x = _steer(vel.x, want.x, accel)
 	vel.y = _steer(vel.y, want.y, accel)
 	vel.z = _steer(vel.z, want.z, accel)
@@ -606,13 +612,16 @@ func _anim_walk() -> void:
 				frame = 0
 		return
 	var wf: Array = cfg.walk_frames
+	if cfg.get("fly_tilt", false):
+		# Righting itself after a flight (0.1 a tick).
+		spin = move_toward(spin, 0.0, 0.1)
 	if not on_floor and (vel.y > 0.0 or vel.y < -0.8):
-		frame = 1
+		frame = int(cfg.get("air_frame", 1))
 		frame_counter = 0
 	elif still:
 		frame = 0
 		frame_counter = 0
-	elif Vector2(vel.x, vel.z).length() > 0.8:
+	elif Vector2(vel.x, vel.z).length() > float(cfg.get("walk_min", 0.8)):
 		if frame < wf[0]:
 			frame = wf[0]
 		frame_counter += Vector2(vel.x, vel.z).length() + 1.0
@@ -637,10 +646,18 @@ func _anim_fly() -> void:
 			frame = 8
 		return
 	var ff: Array = cfg.fly_frames
-	frame_counter += 2 if vel.y > 0.0 else 1
-	if frame_counter >= 6:
-		frame += 1
-		frame_counter = 0
+	if cfg.get("fly_tilt", false):
+		spin = _screen_x(vel) * 0.1
+	if cfg.has("fly_tick"):
+		frame_counter += int(cfg.fly_tick)
+		if frame_counter > 6:
+			frame += 1
+			frame_counter = 0
+	else:
+		frame_counter += 2 if vel.y > 0.0 else 1
+		if frame_counter >= 6:
+			frame += 1
+			frame_counter = 0
 	if frame > ff[1] or frame < ff[0]:
 		frame = ff[0]
 
@@ -1216,6 +1233,8 @@ func _draw(game) -> void:
 			if vel.length() > 0.01:
 				sprite.set_rotation_angle(EntitySprite.facing_angle(player.view(), vel))
 		"skull", "orb", "walker":
+			sprite.set_rotation_angle(-spin)
+		"ground" when cfg.get("fly_tilt", false):
 			sprite.set_rotation_angle(-spin)
 		"bird":
 			sprite.set_rotation_angle(-sx * 0.1)

@@ -480,7 +480,7 @@ func _run() -> void:
 		if spec.is_empty() or b.get("default_method") != "claude" or vox.size() < 200:
 			made_ok = false
 			print("  no hand-made model: ", n, " voxels ", vox.size())
-	check(made_ok and count == 24, "all %d sinks and bathtubs have hand-made models" % count)
+	check(made_ok and count == 26, "all %d sinks and bathtubs have hand-made models" % count)
 
 	# Saved with the world.
 	check(game.save_world(), "saved")

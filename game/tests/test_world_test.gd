@@ -477,6 +477,7 @@ func _run() -> void:
 	await _track_checks(c)
 	await _desert_checks(c)
 	await _statue_checks(c)
+	await _ivy_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -9674,6 +9675,125 @@ func _statue_checks(c: Vector3i) -> void:
 	for e in game.entities.get_children():
 		if e is ItemDrop or e is Gore:
 			e.queue_free()
+	p.global_position = was_at
+	p.velocity = Vector3.ZERO
+	p._fall_start = was_at.y
+	p.god_mode = was_god
+
+
+## The Ivy Chest's extras (AddBuriedChest's jungle chests): a Bee Minecart and
+## a Rat mount 1 in 10 each right after its main item, a Honey Dispenser 1 in
+## 4 and Seaweed 1 in 50 last; the Honey Dispenser makes the honey furniture;
+## the Bee Minecart rides the tracks; the Rat makes you a rat, 14 px high,
+## getting off only where there's room and when you use an item; Seaweed's
+## Pet Turtle walks after you, slowly.
+func _ivy_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_god := p.god_mode
+	var was_at := p.global_position
+	var held := p.selected
+	p.god_mode = true
+	var got := {"BeeMinecart": 0, "RatMountItem": 0, "HoneyDispenser": 0, "Seaweed": 0}
+	var in_order := true
+	for i in 4000:
+		var names: Array = Game.roll_loot("ivy_chest").map(func(d): return d[0])
+		for k in got:
+			got[k] += int(names.has(k))
+		if names.has("BeeMinecart") and names.find("BeeMinecart") != 1:
+			in_order = false
+		if names.has("HoneyDispenser") and names.find("HoneyDispenser") < names.size() - 2:
+			in_order = false
+	var share := func(k: String) -> float: return got[k] / 4000.0
+	check(absf(share.call("BeeMinecart") - 0.1) < 0.02 and absf(share.call("RatMountItem") - 0.1) < 0.02
+			and absf(share.call("HoneyDispenser") - 0.25) < 0.03 and absf(share.call("Seaweed") - 0.02) < 0.008,
+			"an Ivy Chest: a Bee Minecart 1 in 10, a Rat 1 in 10, a Honey Dispenser 1 in 4, Seaweed 1 in 50 (%s)" % str(got))
+	check(in_order, "the Bee Minecart right after its main item, the Honey Dispenser last")
+	var honey := Data.recipes.filter(func(r): return "honey_dispenser" in r.get("stations", [r.get("station", "")]))
+	var chair := Data.recipes.filter(func(r): return r.result == "HoneyChair")
+	check(honey.size() >= 20 and not chair.is_empty() and chair[0].ingredients.get("HoneyBlock", 0) == 4 and chair[0].get("station") == "honey_dispenser"
+			and Data.item("HoneyDispenser").get("place") == "honey_dispenser",
+			"the Honey Dispenser makes the honey furniture (%d recipes; the Honey Chair of 4 Honey Blocks)" % honey.size())
+	# The Bee Minecart on the test track.
+	var cells := TestWorld.track_cells(c)
+	p.inventory.add("BeeMinecart", 1)
+	check(p.board_cart(cells[0], Data.item("BeeMinecart")) and p.mount == "bee_minecart" and p._cart_on
+			and p._mount_sprite != null and p._mount_sprite.visible, "the Bee Minecart rides a track, its own cart")
+	p.dismount()
+	p.inventory.remove("BeeMinecart", 1)
+	# The Rat: a room in the rock, its east end a crawlway one block high.
+	var stone := Data.block_id("stone")
+	var o := Vector3i(c.x - 60, TestWorld.GROUND - 31, c.z + 85)
+	for x in 14:
+		for y in 6:
+			for z in 5:
+				var open := x > 0 and x < 13 and z > 0 and z < 4 and y > 0 and (y < 5 if x < 8 else y < 2)
+				w.set_block(o + Vector3i(x, y, z), 0 if open else stone)
+	var stand_at := Vector3(o) + Vector3(3.5, 1.0, 2.5)
+	p.global_position = stand_at
+	p.velocity = Vector3.ZERO
+	p._fall_start = stand_at.y
+	await frames(2)
+	p.inventory.slots[9] = Inventory.stack("RatMountItem", 1)
+	p.select(9)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	check(p.mount == "rat" and absf(p.half.y - 0.6) < 0.01 and p.camera.position.y < 0.6 and p.buffs().any(func(b): return b[0] == 374),
+			"the Rat: you become a rat, 14 px high (%.2f blocks), eyes low" % p.half.y)
+	var crawl := Vector3(o) + Vector3(10.5, 1.0, 2.5)
+	p.global_position = crawl
+	p._fall_start = crawl.y
+	await frames(2)
+	check(not p.dismount() and p.mount == "rat", "in a crawlway a block high you can't get off")
+	p.global_position = stand_at
+	p._fall_start = stand_at.y
+	await frames(2)
+	p.inventory.slots[9] = Inventory.stack("Torch", 5)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	check(p.mount == "" and absf(p.half.y - 1.8) < 0.01, "using an item gets you off, back to your size")
+	p.inventory.slots[9] = null
+	for x in 14:
+		for y in 6:
+			for z in 5:
+				w.set_block(o + Vector3i(x, y, z), stone)
+	# Seaweed's Pet Turtle: it walks after you, 2 px a tick at most.
+	var arena := Vector3(c.x + 20.5, TestWorld.GROUND + 1, c.z + 0.5)
+	p.global_position = arena
+	p.velocity = Vector3.ZERO
+	p._fall_start = arena.y
+	p.look_at_yaw_pitch(0.0, 0.0)
+	await frames(2)
+	p.inventory.slots[9] = Inventory.stack("Seaweed", 1)
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(2)
+	check(p.pet != null and p.pet.kind == "Turtle" and p.buffs().any(func(b): return b[0] == 42), "Seaweed: a Pet Turtle (its buff)")
+	if p.pet != null:
+		var turtle: Minion = p.pet
+		turtle.global_position = arena + Vector3(5, 0, 0)
+		turtle.vel = Vector3.ZERO
+		turtle.ai0 = 0
+		var d0: float = turtle.global_position.distance_to(p.global_position)
+		var top := 0.0
+		for i in 120:
+			await frames(1)
+			if turtle.on_floor:
+				top = maxf(top, Vector2(turtle.vel.x, turtle.vel.z).length())
+		var d1: float = turtle.global_position.distance_to(p.global_position)
+		check(d1 < d0 - 1.0 and top > 1.0 and top <= 2.01, "it walks to you, 2 px a tick at most (%.2f; %.1f -> %.1f)" % [top, d0, d1])
+	p._use_timer = 0.0
+	p._use_released = true
+	p.use_item()
+	await frames(1)
+	check(p.pet == null, "used again, it goes")
+	p.inventory.slots[9] = null
+	p.select(held)
 	p.global_position = was_at
 	p.velocity = Vector3.ZERO
 	p._fall_start = was_at.y

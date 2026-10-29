@@ -198,6 +198,12 @@ var _target_marker: EntitySprite = null
 ## (usesHover: _hover) with flight and fatigue ticks (flightTimeMax,
 ## fatigueMax); no_extra_jumps (blockExtraJumps); no_water: gone under water
 ## (the Bee).
+## image: an Images/ sheet that isn't a Mount_ one (the Bee Minecart's
+## Extra_108). size [w, h] px: you become the mount (Terraria's PlayerSize
+## override: the Rat's 14 x 14), your box and eyes that much of Terraria's
+## 20 x 42 player; you can't get off where there's no room to stand
+## (Mount.CanDismount). dismount_on_use: using an item gets you off first
+## (dismountsOnItemUse, Mount.TryEarlyDismount).
 ## Roller skates (1.4.5's, Mount.SetAsRollerSkate): no height, their speeds
 ## added to yours (MovementStatsAreAdditive: run and dash +1 px/tick,
 ## acceleration +0.1, jump +1 px/tick for 2 ticks more); "skates": let go
@@ -216,10 +222,18 @@ const MOUNTS := {"slime": {"buff": "SlimeMount", "height": 20, "run": 4.0, "dash
 	"skates_party": {"buff": "RollerSkatesPinkMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
 		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31},
 	"minecart": {"buff": "MinecartLeft", "height": 10, "run": 13.0, "dash": 13.0, "accel": 0.04, "jump_speed": 5.15, "jump_ticks": 15,
-		"cart": true, "no_extra_jumps": true, "sprite": "Minecart", "frames": 3, "dust": 213}}
-## The minecart (Mount.SetAsMinecart: 13 px/tick at most, 0.04 px/tick a tick
-## faster pushed, jump 5.15 px/tick for 15 ticks, no double jumps; "cart"):
-## ridden along a track (_cart). Off its track it rolls on as it was.
+		"cart": true, "no_extra_jumps": true, "sprite": "Minecart", "frames": 3, "dust": 213},
+	"bee_minecart": {"buff": "BeeMinecart", "height": 10, "run": 13.0, "dash": 13.0, "accel": 0.04, "jump_speed": 5.15, "jump_ticks": 15,
+		"cart": true, "no_extra_jumps": true, "sprite": "Minecart", "image": "Extra_108", "frames": 3, "dust": 213},
+	"rat": {"buff": "RatMount", "height": 0, "size": [14, 14], "run": 4.5, "dash": 7.5, "accel": 0.15, "jump_speed": 6.01, "jump_ticks": 15,
+		"fall_damage": 0.1, "dismount_on_use": true, "sprite": "Rat", "image": "Extra_273", "frames": 16, "run_frames": [4, 10],
+		"air_frames": [12, 14], "dust": 31}}
+## The minecarts (Mount.SetAsMinecart: 13 px/tick at most, 0.04 px/tick a
+## tick faster pushed, jump 5.15 px/tick for 15 ticks, no double jumps;
+## "cart"): ridden along a track (_cart). Off its track it rolls on as it
+## was. The Bee Minecart is the same cart, its own look.
+## The Rat (mount 55): you become a rat, 14 x 14 px, running 4.5 px/tick (7.5
+## with boots), jumping 6.01 px/tick for 15 ticks, a tenth of a fall's damage.
 ## A hovering mount's flight left and fatigue (Terraria's _flyTime, _fatigue),
 ## in ticks.
 var _fly_time := 0.0
@@ -2398,8 +2412,7 @@ func _spawn_companion(proj: String, def: Dictionary, at: Vector3, is_pet: bool) 
 func _use_mount(def: Dictionary) -> bool:
 	if mount != "":
 		var same: bool = mount == def.mount
-		dismount()
-		if same:
+		if not dismount() or same:
 			return true
 	if MOUNTS[def.mount].get("cart", false):
 		var at := _track_at(Game.current.world, global_position)
@@ -2433,6 +2446,9 @@ func ride(def: Dictionary) -> bool:
 	_fatigue = 0.0
 	half.y += up
 	camera.position.y = EYE_HEIGHT + up
+	if m.has("size"):
+		half = Vector3(0.3 * float(m.size[0]) / 20.0, 1.8 * float(m.size[1]) / 42.0, 0.3 * float(m.size[0]) / 20.0)
+		camera.position.y = EYE_HEIGHT * float(m.size[1]) / 42.0
 	if not m.has("sprite"):
 		# (Roller skates: on your feet, out of sight.)
 		if _mount_sprite != null:
@@ -2444,7 +2460,7 @@ func ride(def: Dictionary) -> bool:
 		if _mount_sprite == null:
 			_mount_sprite = EntitySprite.new()
 			_mount_sprite.set_meta("mount", def.mount)
-			var tex := Assets.texture("Images/Mount_%s" % m.sprite)
+			var tex := Assets.texture("Images/" + str(m.get("image", "Mount_%s" % m.sprite)))
 			var frames := int(m.frames)
 			_mount_sprite.setup(tex, frames, Vector2(tex.get_width(), tex.get_height() / float(frames)) / 24.0, false, true)
 			add_child(_mount_sprite)
@@ -2454,13 +2470,21 @@ func ride(def: Dictionary) -> bool:
 	return true
 
 
-func dismount() -> void:
+## Off the mount (false if a mount you've become has no room for you to stand
+## up, unless `force`d: Mount.CanDismount).
+func dismount(force := false) -> bool:
 	if mount == "":
-		return
+		return true
+	var m: Dictionary = MOUNTS[mount]
+	if m.has("size") and not force and not _room_to_stand():
+		_mount_dust(int(m.get("dust", 56)))
+		return false
 	_cart_on = false
-	var up := float(MOUNTS[mount].height) / 24.0
-	var dust := int(MOUNTS[mount].get("dust", 56))
+	var up := float(m.height) / 24.0
+	var dust := int(m.get("dust", 56))
 	half.y -= up
+	if m.has("size"):
+		half = Vector3(0.3, 1.8, 0.3)
 	camera.position.y = EYE_HEIGHT
 	mount = ""
 	mount_item = {}
@@ -2468,6 +2492,20 @@ func dismount() -> void:
 		_mount_sprite.visible = false
 	_mount_dust(dust)
 	stats_changed.emit()
+	return true
+
+
+## Room for you at your full size where you stand.
+func _room_to_stand() -> bool:
+	var w := Game.current.world
+	var lo := (global_position - Vector3(0.3, -0.01, 0.3)).floor()
+	var hi := (global_position + Vector3(0.3, 1.8, 0.3) - Vector3.ONE * 0.001).floor()
+	for x in range(int(lo.x), int(hi.x) + 1):
+		for y in range(int(lo.y), int(hi.y) + 1):
+			for z in range(int(lo.z), int(hi.z) + 1):
+				if w.is_solid(Vector3i(x, y, z)):
+					return false
+	return true
 
 
 ## Terraria's spawnDust as you get on or off (the slime's 56, the Bee's
@@ -2666,8 +2704,8 @@ func board_cart(cell: Vector3i, def := {}) -> bool:
 				break
 	if def.is_empty():
 		return false
-	if mount != "":
-		dismount()
+	if mount != "" and not dismount():
+		return false
 	var w := Game.current.world
 	var sh := Tracks.shape(w, cell, Tracks.facing(Game.current.block_rotation(cell)))
 	var was := global_position
@@ -2911,6 +2949,9 @@ func use_item() -> void:
 	var slot = inventory.slots[selected]
 	var def := held()
 	var used := false
+	# The Rat gets off for anything you use (Mount.TryEarlyDismount).
+	if mount != "" and MOUNTS[mount].get("dismount_on_use", false) and def.get("mount", "") != mount:
+		dismount()
 	if slot == null:
 		used = _mine({})  # hands can still break plants and torches
 		if used:
@@ -4329,7 +4370,7 @@ func hurt(amount: int, from: Vector3, ignore_immunity := false, attacker = null,
 func _tongued(delta: float, game) -> void:
 	for h in hooks():
 		h.queue_free()
-	dismount()
+	dismount(true)
 	var to := tongue_to - center()
 	var step := WallOfFlesh.TONGUE_SPEED * delta
 	if to.length() <= step:
@@ -4363,7 +4404,7 @@ func _die() -> void:
 	on_rope = false
 	for h in hooks():
 		h.queue_free()
-	dismount()
+	dismount(true)
 	# Your minions go (their buffs end with you); pets wait for you.
 	for m in minions:
 		if is_instance_valid(m):

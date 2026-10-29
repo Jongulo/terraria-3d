@@ -1140,6 +1140,10 @@ static func roll_loot(table_name: String, lava := false) -> Array:
 		if e.size() > 3 and e[3] is Array:
 			for w in e[3]:
 				out.append([w[0], randi_range(int(w[1]), int(w[2]))])
+	# Right after it (the Ivy Chest's Bee Minecart and Rat mount).
+	for e in table.get("with_main", []):
+		if randf() < float(e[3]):
+			out.append([e[0], randi_range(int(e[1]), int(e[2]))])
 	for e in table.get("extras", []):
 		if randf() < float(e[3]):
 			out.append([e[0], randi_range(int(e[1]), int(e[2]))])
@@ -1153,6 +1157,10 @@ static func roll_loot(table_name: String, lava := false) -> Array:
 		if randf() < float(e[1]):
 			for item in e[0]:
 				out.append([item, 1])
+	# After all the rest (the Ivy Chest's Honey Dispenser and Seaweed).
+	for e in table.get("last", []):
+		if randf() < float(e[3]):
+			out.append([e[0], randi_range(int(e[1]), int(e[2]))])
 	# Items not in this game (the Gravitation Potion) roll but come to nothing.
 	return out.filter(func(d): return Data.items.has(d[0]))
 
