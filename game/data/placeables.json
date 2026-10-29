@@ -1,6 +1,14 @@
 {
 	"canopies_split": true,
 	"claude": {
+		"aetherium_bathtub": {
+			"noise": "speckle",
+			"strength": 0.55
+		},
+		"aetherium_sink": {
+			"noise": "speckle",
+			"strength": 1.0
+		},
 		"alchemy_table": {
 			"noise": "speckle",
 			"one_color": true
@@ -155,6 +163,10 @@
 		}
 	},
 	"extruded": {
+		"aetherium_platform": {
+			"noise": "grain",
+			"strength": 1.0
+		},
 		"alchemy_table": {
 			"depth": 16.0
 		},
@@ -7579,6 +7591,20 @@
 			"one_color": true,
 			"strength": 1.0
 		},
+		"shimmer_campfire": {
+			"bevel": "chamfer",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 13,
+			"noise": "speckle",
+			"one_color": true
+		},
 		"shiverthorn": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -10968,6 +10994,15 @@
 		}
 	},
 	"hull": {
+		"aetherium_lamp": {
+			"one_color": true
+		},
+		"aetherium_platform": {
+			"noise": "grain"
+		},
+		"aetherium_sink": {
+			"noise": "speckle"
+		},
 		"amethyst_pile": {
 			"noise": "speckle",
 			"one_color": true,
@@ -12725,6 +12760,9 @@
 		"shimmer_torch": {
 			"one_color": true
 		},
+		"shimmerfly_in_a_bottle": {
+			"one_color": true
+		},
 		"silk_rope": {
 			"no_outline": false,
 			"one_color": true
@@ -13351,6 +13389,7 @@
 	},
 	"lathe": {},
 	"methods": {
+		"aetherium_lamp": "hull",
 		"amethyst_pile": "rendered",
 		"antlion_eggs": "extruded",
 		"antlion_eggs_2": "extruded",
@@ -13399,6 +13438,7 @@
 		"brown_pressure_plate": "hull",
 		"cactus": "extruded",
 		"cactus_lamp": "hull",
+		"campfire": "rendered",
 		"cattail": "rendered",
 		"cattail_2": "rendered",
 		"cattail_3": "rendered",
@@ -13978,7 +14018,9 @@
 		"seaweed_9": "rendered",
 		"shadewood_lamp": "hull",
 		"shadow_orb": "extruded",
+		"shimmer_campfire": "rendered",
 		"shimmer_torch": "hull",
+		"shimmerfly_in_a_bottle": "hull",
 		"shiverthorn": "rendered",
 		"silk_rope": "hull",
 		"silver_chandelier": "billboard",
@@ -16100,6 +16142,9 @@
 			"outline": true
 		},
 		"shadow_orb": {
+			"model": "extruded"
+		},
+		"shimmer_campfire": {
 			"model": "extruded"
 		},
 		"shiverthorn": {
