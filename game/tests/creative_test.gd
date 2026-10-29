@@ -187,7 +187,8 @@ func _run() -> void:
 	hud._creative_search.text = "pickaxe"
 	hud._fill_palette()
 	var names: Array = hud.palette.slots.map(func(s): return s.item)
-	check(names.size() >= 4 and names.all(func(n): return n.ends_with("Pickaxe")), "search finds the pickaxes (%s)" % [names])
+	# (The Pickaxe Statue too: its name has the word.)
+	check(names.size() >= 4 and names.all(func(n): return n.contains("Pickaxe")) and names.has("CopperPickaxe"), "search finds the pickaxes (%s)" % [names])
 	hud._creative_search.text = ""
 	hud._creative_tab = "Blocks"
 	hud._fill_palette()

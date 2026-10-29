@@ -809,7 +809,9 @@ func info_text() -> String:
 ## its scan round you (SceneMetrics' zone, a screen and its padding: 130 x 78
 ## tiles, here 43 blocks across each way and 26 up or down), by Terraria's
 ## tileOreFinderPriority, by its map name. Looked for every half second.
-const METAL_PRIORITY := {"pot": 100, "pot_2": 100, "pot_3": 100, "copper_ore": 200, "tin_ore": 210, "iron_ore": 220,
+## Its pots (tile 28, every style): 100.
+const METAL_POT := 100
+const METAL_PRIORITY := {"copper_ore": 200, "tin_ore": 210, "iron_ore": 220,
 		"lead_ore": 230, "silver_ore": 240, "tungsten_ore": 250, "gold_ore": 260, "platinum_ore": 270, "demonite_ore": 300,
 		"crimtane_ore": 310, "life_crystal": 550}
 ## Its chests (Terraria's tiles 21 and 467, all "Chest" to it): 500.
@@ -830,7 +832,7 @@ func metal_text() -> String:
 	if _metal_ids.is_empty():
 		for i in Data.blocks.size():
 			var n: String = Data.block(i).get("name", "")
-			var rank := int(METAL_PRIORITY.get(n, METAL_CHEST if Data.block(i).get("interact", "") == "chest" else 0))
+			var rank := int(METAL_PRIORITY.get(n, METAL_CHEST if Data.block(i).get("interact", "") == "chest" else METAL_POT if Data.block(i).get("on_break", "") == "pot" else 0))
 			if rank > 0:
 				_metal_ids.append(i)
 				_metal_rank[i] = rank
@@ -857,7 +859,7 @@ func metal_text() -> String:
 static func metal_name(block: String) -> String:
 	if block == "life_crystal":
 		return "Life Crystal"
-	if block.begins_with("pot"):
+	if Data.block(Data.block_id(block)).get("on_break", "") == "pot":
 		return "Pot"
 	if block.ends_with("_ore"):
 		return block.trim_suffix("_ore").capitalize()

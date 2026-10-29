@@ -238,17 +238,26 @@ fn dart(w: &mut World, rng: &mut Rng, ids: &TrapIds, p: P) -> bool {
     true
 }
 
-fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> bool {
+fn boulder(w: &mut World, rng: &mut Rng, _l: &Layers, ids: &TrapIds, p: P) -> bool {
     let (bx, bz) = (p.0 + rng.range(-1, 2), p.2);
-    // Up from the plate to where the rock all round is solid (Terraria's 6 x
-    // 4 tiles: here 3 x 3 across and 3 tall).
+    let Some(top) = boulder_pocket(w, ids, (bx, bz), p.1) else { return false };
+    set(w, p, ids.plates[2]);
+    build_boulder(w, rng, ids, (bx, bz), p.1, top, p);
+    true
+}
+
+/// Where a boulder's pocket goes over column (bx, bz), from `y`: up 8 tiles
+/// and more to where the rock round it is solid (Terraria's 6 x 4 tiles:
+/// here 3 x 3 across and 3 tall), 5-40 tiles up, under the surface, no
+/// Dungeon brick, chest or boulder near.
+fn boulder_pocket(w: &World, ids: &TrapIds, (bx, bz): (i32, i32), y: i32) -> Option<i32> {
     let mut k = blocks(8);
     let top = loop {
-        let y0 = p.1 + k;
+        let y0 = y + k;
         // Under the ground (Terraria's worldSurface): the pocket well below
         // the surface here.
         if y0 + 3 >= (w.surface_y(bx, bz) - 4).min(w.sy - 2) {
-            return false;
+            return None;
         }
         let mut all = true;
         for dx in -1..=1 {
@@ -257,7 +266,7 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
                     let c = (bx + dx, y0 + dy, bz + dz);
                     let b = w.get(c.0, c.1, c.2);
                     if ids.dungeon.contains(&b) || ids.boulders.contains(&b) || b == ids.plug {
-                        return false;
+                        return None;
                     }
                     if !solid(w, c) {
                         all = false;
@@ -270,17 +279,20 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
         }
         k += 1;
         if k >= blocks(40) {
-            return false;
+            return None;
         }
     };
-    if k <= blocks(5) {
-        return false;
+    if k <= blocks(5) || near(w, (bx, top + 1, bz), blocks(4), &ids.avoid_near) || near(w, (bx, top + 1, bz), blocks(10), &ids.boulders) {
+        return None;
     }
-    if near(w, (bx, top + 1, bz), blocks(4), &ids.avoid_near) || near(w, (bx, top + 1, bz), blocks(10), &ids.boulders) {
-        return false;
-    }
-    // The shaft from the pocket down to the plate; stone round the pocket.
-    for y in p.1..top + 3 {
+    Some(top)
+}
+
+/// The shaft from the pocket at `top` down to `y`, stone round the pocket,
+/// and in it a boulder resting on two blocks of stone with actuators, wired
+/// to `trigger`: set off, they actuate and the boulder drops.
+fn build_boulder(w: &mut World, rng: &mut Rng, ids: &TrapIds, (bx, bz): (i32, i32), y: i32, top: i32, trigger: P) {
+    for y in y..top + 3 {
         set(w, (bx, y, bz), 0);
     }
     for dx in -1..=1 {
@@ -293,16 +305,90 @@ fn boulder(w: &mut World, rng: &mut Rng, l: &Layers, ids: &TrapIds, p: P) -> boo
             }
         }
     }
-    set(w, p, ids.plates[2]);
     let kind = boulder_kind(w, rng, ids, (bx, top + 2, bz));
     set(w, (bx, top + 2, bz), kind);
-    // The boulder rests on two blocks of stone with actuators, wired to the
-    // plate: stepping on it actuates them and the boulder drops.
     set(w, (bx, top + 1, bz), ids.stone);
     set(w, (bx, top, bz), ids.stone);
     crate::wires::actuator(w, (bx, top + 1, bz));
     crate::wires::actuator(w, (bx, top, bz));
-    wire(w, p, (bx, top + 1, bz));
+    wire(w, trigger, (bx, top + 1, bz));
+}
+
+/// Terraria's Dead Man's Chest traps (DeadMansChestBiome), round a gold chest
+/// at `chest` and wired to it (opening it sets them off), if there's room for
+/// a Dart Trap and a boulder or Explosives:
+/// - 3-5 Dart Traps, one a cell up from the last, each in the first wall
+///   5-20 tiles off along a line across (here x or z), turn about each side;
+/// - 3-5 boulders 2-3 tiles apart along that line, in the rock over the cave
+///   from 6 tiles over the chest;
+/// - Explosives 3 tiles under the floor: under the chest, and 2-5 tiles past
+///   4 on each side.
+pub fn dead_mans_traps(w: &mut World, rng: &mut Rng, ids: &TrapIds, chest: P) -> bool {
+    let axis = if rng.range(0, 2) == 0 { (1, 0) } else { (0, 1) };
+    let on = |c: P, d: i32| (c.0 + axis.0 * d, c.1, c.2 + axis.1 * d);
+    let wall_ok = |w: &World, c: P| solid(w, c) && !ids.no_ground.contains(&w.get(c.0, c.1, c.2)) && w.def(w.get(c.0, c.1, c.2)).render == crate::world::RENDER_CUBE;
+    // Dart Traps.
+    let mut darts = Vec::new();
+    let mut s = if rng.range(0, 2) == 0 { 1 } else { -1 };
+    for k in 0..rng.range(3, 6) {
+        s = -s;
+        let h = (chest.0, chest.1 + k, chest.2);
+        for d in 1..blocks(20) {
+            let c = on(h, d * s);
+            if !w.in_bounds(c.0, c.1, c.2) || ids.avoid_near.contains(&w.get(c.0, c.1, c.2)) {
+                break;
+            }
+            if solid(w, c) {
+                if d >= blocks(5) && wall_ok(w, c) {
+                    darts.push((c, s));
+                }
+                break;
+            }
+        }
+    }
+    // Boulders.
+    let mut boulders = Vec::new();
+    let (n, step) = (rng.range(2, 4) + 1, blocks(rng.range(2, 4) as i32).max(1));
+    for k in 0..n {
+        let c = on(chest, (k - n / 2) * step);
+        let mut y = chest.1 + blocks(6);
+        while y < chest.1 + blocks(50) && w.in_bounds(c.0, y, c.2) && !solid(w, (c.0, y, c.2)) {
+            y += 1;
+        }
+        if !solid(w, (c.0, y, c.2)) || boulders.iter().any(|&(b, _): &(P, i32)| (b.0 - c.0).abs() + (b.2 - c.2).abs() < 2) {
+            continue;
+        }
+        if let Some(top) = boulder_pocket(w, ids, (c.0, c.2), y - blocks(8)) {
+            boulders.push(((c.0, y, c.2), top));
+        }
+    }
+    // Explosives.
+    let floor = chest.1 - 1 - blocks(3);
+    let good = |w: &World, c: P| wall_ok(w, c) && solid(w, (c.0, c.1 + 1, c.2));
+    let mut explosives = Vec::new();
+    for (lo, len) in [(0, 2), (blocks(4) + rng.range(1, 4), 3), (-blocks(4) - rng.range(1, 4) - 2, 3)] {
+        let spots: Vec<P> = (lo..lo + len).map(|d| on((chest.0, floor, chest.2), d)).filter(|&c| good(w, c)).collect();
+        if !spots.is_empty() {
+            explosives.push(spots[rng.range(0, spots.len() as i32) as usize]);
+        }
+    }
+    if darts.is_empty() || (boulders.is_empty() && explosives.is_empty()) {
+        return false;
+    }
+    for (c, s) in darts {
+        set(w, c, ids.dart);
+        let back = (-axis.0 * s, -axis.1 * s);
+        let facing = crate::worldgen::FACING.iter().position(|&f| f == back).unwrap_or(0) as i32;
+        w.decorations.push(Decoration { kind: "rotation".into(), pos: c, style: facing });
+        wire(w, chest, c);
+    }
+    for (c, top) in boulders {
+        build_boulder(w, rng, ids, (c.0, c.2), c.1, top, chest);
+    }
+    for c in explosives {
+        set(w, c, ids.explosives);
+        wire(w, chest, c);
+    }
     true
 }
 

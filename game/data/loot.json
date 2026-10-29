@@ -170,6 +170,15 @@
 		"_doc": "See copper_coin_stash.",
 		"extras": [["GoldCoin", 1, 5, 1], ["GoldCoin", 2, 5, 0.5], ["GoldCoin", 3, 5, 0.3333]]
 	},
+	"copper_rock_pile": {"_doc": "Terraria's large piles of rocks with coins (LargePiles 186, styles 16-21; WorldGen.Check3x2): copper coins in up to 18 handfuls, silver in up to 5, gold in up to 5 of 1-6.", "extras": [["CopperCoin", 20, 99, 1], ["CopperCoin", 30, 99, 1], ["CopperCoin", 40, 99, 1], ["CopperCoin", 20, 99, 0.6667], ["CopperCoin", 30, 99, 0.6667], ["CopperCoin", 40, 99, 0.6667], ["CopperCoin", 20, 99, 0.5], ["CopperCoin", 30, 99, 0.5], ["CopperCoin", 40, 99, 0.5], ["CopperCoin", 20, 99, 0.3333], ["CopperCoin", 30, 99, 0.3333], ["CopperCoin", 40, 99, 0.3333], ["CopperCoin", 20, 99, 0.25], ["CopperCoin", 30, 99, 0.25], ["CopperCoin", 40, 99, 0.25], ["CopperCoin", 20, 99, 0.2], ["CopperCoin", 30, 99, 0.2], ["CopperCoin", 40, 99, 0.2]]},
+	"silver_rock_pile": {"_doc": "See copper_rock_pile.", "extras": [["SilverCoin", 10, 99, 1], ["SilverCoin", 20, 99, 0.5], ["SilverCoin", 30, 99, 0.3333], ["SilverCoin", 40, 99, 0.25], ["SilverCoin", 50, 99, 0.2]]},
+	"gold_rock_pile": {"_doc": "See copper_rock_pile.", "extras": [["GoldCoin", 1, 6, 1], ["GoldCoin", 2, 6, 0.5], ["GoldCoin", 3, 6, 0.3333], ["GoldCoin", 4, 6, 0.25], ["GoldCoin", 5, 6, 0.2]]},
+	"amethyst_pile": {"_doc": "Terraria's gem piles (small piles 185, 2 x 1, styles 19-24; WorldGen.Check2x1): 1-3 of the gem.", "extras": [["Amethyst", 1, 3, 1]]},
+	"topaz_pile": {"_doc": "See amethyst_pile.", "extras": [["Topaz", 1, 3, 1]]},
+	"sapphire_pile": {"_doc": "See amethyst_pile.", "extras": [["Sapphire", 1, 3, 1]]},
+	"emerald_pile": {"_doc": "See amethyst_pile.", "extras": [["Emerald", 1, 3, 1]]},
+	"ruby_pile": {"_doc": "See amethyst_pile.", "extras": [["Ruby", 1, 3, 1]]},
+	"diamond_pile": {"_doc": "See amethyst_pile.", "extras": [["Diamond", 1, 3, 1]]},
 	"lihzahrd_chest": {
 		"_doc": "Terraria's Lihzahrd Chests in the Jungle Temple (templePart2: AddBuriedChest with the Lihzahrd Power Cell, style 16): the Power Cell, then a cavern chest's loot (its Solar Tablet Fragment is Hardmode's).",
 		"pick_one": [["LihzahrdPowerCell", 1, 1]],

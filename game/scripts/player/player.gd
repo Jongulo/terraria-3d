@@ -769,6 +769,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_update_liquid(game)
 	_crack_bricks(game, delta)
+	_break_thin_ice(game, delta)
 	_move(delta, game)
 	if mount != "":
 		_ride(delta, game)
@@ -3965,6 +3966,26 @@ func _crack_bricks(game, delta: float) -> void:
 			for y in range(hi.y, lo.y - 1, -1):
 				var q := Vector3i(x, y, z)
 				if cracked.call(q) and not w.is_solid(q + Vector3i.UP):
+					game.break_block(q)
+
+
+## Terraria's Player.CheckIceBreak: falling faster than 7 px a tick, the Thin
+## Ice under you (two cells down, nothing solid on it) shatters - not with
+## Ice Skates on.
+const THIN_ICE_SPEED := 7.0 * 2.5
+
+
+func _break_thin_ice(game, delta: float) -> void:
+	if -velocity.y <= THIN_ICE_SPEED or has_effect("ice_skates"):
+		return
+	var w: VoxelWorld = game.world
+	var feet := global_position + velocity * delta
+	var below := int(floor(feet.y - 0.05))
+	for x in range(floori(feet.x - half.x), floori(feet.x + half.x) + 1):
+		for z in range(floori(feet.z - half.z), floori(feet.z + half.z) + 1):
+			for y in [below, below - 1]:
+				var q := Vector3i(x, y, z)
+				if Data.block(w.get_block(q)).get("thin_ice", false) and not w.is_solid(q + Vector3i.UP):
 					game.break_block(q)
 
 

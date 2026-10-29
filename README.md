@@ -329,8 +329,10 @@ in this game.
   trees, giant living trees and Living Mahogany trees, underground cabins, Granite and Marble caves,
   spider caves, moss (plain, lava and neon, with Long Moss), gem caves and loose gems,
   Water Chests, Enchanted Sword Shrines, meteorites,
-  traps, pots, life crystals and loot chests,
-  Shadow Chests, and forest plants and debris.
+  traps, pots in each biome's style, life crystals and loot chests,
+  Shadow Chests, cave statues, piles of rocks, bones, coins and gems, stalactites and stalagmites,
+  dye plants, sea shells, seaweed and shell piles on the coast; campsites, thin ice in the snow,
+  Dead Man's Chests, mining explosives and lava traps; and forest plants and debris.
 - **Liquids:** water, lava, honey and shimmer that fall, level out and settle; waterfalls and
   lavafalls, and springs you open with a hammer. Shimmer turns items into others or takes them
   apart into what they were made of (Terraria's own tables), and sinks you through the ground; the

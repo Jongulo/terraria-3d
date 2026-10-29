@@ -11,9 +11,11 @@ const SURFACE_DEPTH := 25.0 * 2.0 / 3.0
 var _chests := {}  # "x,y,z" -> Inventory
 var _worldgen := {}  # keys of unopened worldgen chests -> true
 ## Every worldgen chest's loot table by its key (from the world's chest
-## decorations, saved with it), and those that hold a Shadow Key too.
+## decorations, saved with it), and those that hold a Shadow Key or a Dead
+## Man's Sweater too.
 var _tables := {}
 var _shadow_keys := {}
+var _sweaters := {}
 ## Which ore of each pair the world has (worldgen.rs: the "ores" decoration,
 ## bit k for the second of pair k): its chests' bars are the world's, as
 ## Terraria's are (GenVars.goldBar...).
@@ -40,6 +42,9 @@ const LOOT := ["chest", "sky_chest", "ivy_chest", "chest", "frozen_chest", "sand
 		"biome_jungle", "biome_corruption", "biome_crimson", "biome_hallowed", "biome_frozen", "biome_desert", "living_chest", "web_chest", "pyramid", "lihzahrd_chest",
 		"water_chest", "water_chest_ocean"]
 const SHADOW_KEY := 64
+## A worldgen chest's style bit: a Dead Man's Sweater in its second slot
+## (worldgen's Dead Man's Chests, 1 in 3: TurnGoldChestIntoDeadMansChest).
+const DEAD_MANS_SWEATER := 128
 ## The second ore of each pair's things, by the first's: what a world with it
 ## puts in its chests instead.
 const WORLD_ORE := {"CopperBar": [0, "TinBar"], "IronBar": [1, "LeadBar"], "SilverBar": [2, "TungstenBar"],
@@ -57,6 +62,8 @@ func setup(world: VoxelWorld) -> void:
 			_tables[k] = LOOT[clampi(int(d.style) & (SHADOW_KEY - 1), 0, LOOT.size() - 1)]
 			if int(d.style) & SHADOW_KEY:
 				_shadow_keys[k] = true
+			if int(d.style) & DEAD_MANS_SWEATER:
+				_sweaters[k] = true
 			if not _chests.has(k):
 				_worldgen[k] = true
 		elif d.kind == "ores":
@@ -94,6 +101,11 @@ func get_inventory(p: Vector3i) -> Inventory:
 			for drop in drops:
 				var item := world_item(drop[0])
 				inv.add(item, drop[1], Prefixes.roll(Data.item(item)))
+			if _sweaters.has(k):
+				# In the second slot, the rest one along.
+				for i in range(inv.slots.size() - 1, 1, -1):
+					inv.slots[i] = inv.slots[i - 1]
+				inv.slots[1] = Inventory.stack("DeadMansSweater", 1)
 		_chests[k] = inv
 	return _chests[k]
 

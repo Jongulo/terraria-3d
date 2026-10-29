@@ -1589,7 +1589,6 @@ struct Ids {
     silt: u16,
     ores: [(u16, i32, i32, f32); 4],
     trunk: u16,
-    pot: u16,
     life_crystal: u16,
     chest: u16,
 }
@@ -1669,7 +1668,6 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
             (pick(&mut rng, "gold_ore", "platinum_ore"), l.underworld_top + 5, l.cavern_top - 10, 0.70),
         ],
         trunk: w.id_of("tree_trunk"),
-        pot: w.id_of("pot"),
         life_crystal: w.id_of("life_crystal"),
         chest: w.id_of("chest"),
     };
@@ -2123,7 +2121,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     };
     set_progress(0.73);
 
-    // Pass 4: cave floor treasures.
+    // Pass 4: cave floor treasures (the pots come late, as Terraria's).
     let place_on_floor = |w: &mut World, rng: &mut Rng, id: u16, count: usize, y_lo: i32, y_hi: i32, deco: Option<&str>| {
         if id == 0 {
             return;
@@ -2157,7 +2155,6 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
         }
     };
     let surface_low = l.surface_base - 8;
-    place_on_floor(w, &mut rng, ids.pot, (area / 180.0) as usize, l.underworld_top + 2, surface_low, None);
     life_crystals(w, seed, &l, ids.life_crystal);
     place_on_floor(w, &mut rng, ids.chest, (area / 2500.0) as usize, l.underworld_top + 2, surface_low - 10, Some("chest"));
     // Altars of the world's evil scattered through the caverns, as in Terraria.
@@ -2295,11 +2292,30 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     }
     // Terraria's Herbs pass: herb sprouts on their soils; their own random numbers.
     crate::alchemy::herbs_pass(w, &mut Rng::new(seed as u64 ^ 0x4e2b_5a17), &l);
+    // Terraria's Statues, Pots, Piles and Dye Plants passes (placement.rs),
+    // each with its own random numbers.
+    crate::placement::statues(w, &mut Rng::new(seed as u64 ^ 0x57a7_0e55), &l, &coast);
+    crate::placement::pots(w, &mut Rng::new(seed as u64 ^ 0x9075_0b75), &l, &coast, (area / 180.0) as usize);
+    crate::placement::piles(w, &mut Rng::new(seed as u64 ^ 0xb11e_5000), &l, &coast);
+    crate::placement::dye_plants(w, &mut Rng::new(seed as u64 ^ 0xd7e_91a7), &l, &coast);
+    // Terraria's FragileIceOverIceBiomeWater, then its Micro Biomes pass
+    // (microbiomes.rs; the sword shrines came before), each with its own
+    // random numbers.
+    crate::microbiomes::fragile_ice(w, &l);
+    crate::microbiomes::dead_mans_chests(w, &mut Rng::new(seed as u64 ^ 0xdead_c4e5), &l, dungeon.map(|(x, _, z, _)| (x, z)));
+    crate::microbiomes::thin_ice(w, &mut Rng::new(seed as u64 ^ 0x7e1c_e000), &l, &coast);
+    crate::microbiomes::campsites(w, &mut Rng::new(seed as u64 ^ 0xca39_5175), &l, &coast);
+    crate::microbiomes::mining_explosives(w, &mut Rng::new(seed as u64 ^ 0xb1a5_7000), &l, &coast);
+    crate::microbiomes::lava_traps(w, &mut Rng::new(seed as u64 ^ 0x1a7a_7ea9), &l);
     // Terraria's Gems In Ice Biome and Random Gems passes: loose gems
     // (gem_caves.rs); then its Moss Grass pass: Long Moss on the moss
     // (moss.rs).
     crate::gem_caves::loose_gems(w, &mut Rng::new(seed as u64 ^ 0x6e3_1005e), &l);
     crate::moss::long_moss(w);
+    // Terraria's ShellPiles, sea shells and Seaweed, then its Speleothems
+    // (placement.rs).
+    crate::placement::beach(w, &mut Rng::new(seed as u64 ^ 0x5ea_5e11), &l, &coast);
+    crate::placement::speleothems(w, &mut Rng::new(seed as u64 ^ 0x57a1_ac71), &l);
     // Terraria's ShimmerCleanUp (in its Final Cleanup): round the Aether, no
     // other liquid, moss, webs or the evil; its pool full again.
     if let Some(a) = &aether {
@@ -3941,6 +3957,7 @@ mod tests {
         crate::spiders::tests::add_spider_defs(&mut w);
         crate::moss::tests::add_moss_defs(&mut w);
         crate::gem_caves::tests::add_gem_defs(&mut w);
+        crate::placement::tests::add_placement_defs(&mut w);
         let id = w.defs.len() as u16;
         w.set_def(id, BlockDef { name: "water_chest".into(), render: crate::world::RENDER_CUTOUT, solid: true, opaque: false, variants: 1, ..Default::default() });
         let id = w.defs.len() as u16;
@@ -4256,6 +4273,114 @@ mod tests {
         }
     }
 
+    /// Terraria's placement passes in a whole world (placement.rs): statues
+    /// and pots on cave floors, pots in their ground's style, piles of many
+    /// kinds, stalactites and stalagmites, dye plants far apart, sea shells,
+    /// sea oats, shell piles and seaweed by the sea.
+    #[test]
+    fn placement_passes() {
+        let w = gen_world_sized(2, 0, (768, 384, 768));
+        let l = layers(w.sy);
+        let mut count: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut wrong_pots = Vec::new();
+        let names = |list: &[&str]| list.iter().map(|n| w.id_of(n)).collect::<Vec<u16>>();
+        let pots = names(&["pot", "ice_pot", "jungle_pot", "dungeon_pot", "underworld_pot", "corruption_pot", "crimson_pot", "lihzahrd_pot", "marble_pot", "desert_pot"]);
+        let snow = names(&["snow_block", "ice_block", "thin_ice"]);
+        let dyes = names(&["teal_mushroom", "green_mushroom", "sky_blue_flower", "yellow_marigold", "blue_berries", "lime_kelp", "pink_prickly_pear", "orange_bloodroot"]);
+        let mut dye_at = Vec::new();
+        for z in 0..w.sz {
+            for x in 0..w.sx {
+                for y in 1..w.sy - 1 {
+                    let b = w.get(x, y, z);
+                    if b == 0 {
+                        continue;
+                    }
+                    *count.entry(w.def(b).name.clone()).or_default() += 1;
+                    if pots.contains(&b) {
+                        let under = w.get(x, y - 1, z);
+                        if b == pots[1] && !snow.contains(&under) || snow.contains(&under) && y >= l.underworld_top && b != pots[1] {
+                            wrong_pots.push(((x, y, z), w.def(b).name.clone(), w.def(under).name.clone()));
+                        }
+                        if y < l.underworld_top && b != pots[4] {
+                            wrong_pots.push(((x, y, z), w.def(b).name.clone(), "the Underworld".into()));
+                        }
+                    }
+                    if dyes.contains(&b) {
+                        dye_at.push((x, y, z));
+                    }
+                }
+            }
+        }
+        let n = |k: &str| *count.get(k).unwrap_or(&0);
+        let sum = |ks: &[&str]| ks.iter().map(|k| n(k)).sum::<usize>();
+        let statues = crate::placement::tests::STATUE_NAMES.iter().map(|k| n(k)).sum::<usize>();
+        let all_pots = sum(&["pot", "ice_pot", "jungle_pot", "dungeon_pot", "underworld_pot", "corruption_pot", "crimson_pot", "lihzahrd_pot", "marble_pot", "desert_pot"]);
+        let big = sum(&["bone_pile", "large_rocks", "large_relic_rocks", "copper_rock_pile", "silver_rock_pile", "gold_rock_pile", "ice_pile", "mushroom_pile", "jungle_pile", "ash_pile", "grassy_rocks", "lihzahrd_pile", "cave_ruins", "desert_pile", "granite_pile", "marble_pile", "sand_pile"]);
+        let small = sum(&["small_rocks", "dirt_clods", "small_bones", "bloody_bones", "small_debris", "small_ice_rocks", "small_granite_rocks", "small_marble_rocks", "small_desert_rocks", "rock_pile", "bone_heap", "bloody_bone_heap", "amethyst_pile", "topaz_pile", "sapphire_pile", "emerald_pile", "ruby_pile", "diamond_pile", "ice_rock_pile", "grassy_rock_pile", "granite_rock_pile", "marble_rock_pile", "desert_rock_pile"]);
+        let tites = sum(&["stone_stalactite", "small_stone_stalactite"]);
+        let mites = sum(&["stone_stalagmite", "small_stone_stalagmite"]);
+        let icicles = sum(&["icicle", "small_icicle"]);
+        let shells = sum(&["seashell", "starfish", "lightning_whelk_shell", "tulip_shell", "junonia_shell"]);
+        eprintln!("PLACEMENT statues {statues}, pots {all_pots} (ice {}, jungle {}, dungeon {}, underworld {}, desert {}, marble {}), big piles {big} (bones {}, ice {}, jungle {}, ash {}, desert {}), small {small}, stalactites {tites}, stalagmites {mites}, icicles {icicles}, honey {}, dye plants {}, shells {shells}, oats {}, shell pile {}, seaweed {}",
+            n("ice_pot"), n("jungle_pot"), n("dungeon_pot"), n("underworld_pot"), n("desert_pot"), n("marble_pot"), n("bone_pile"), n("ice_pile"), n("jungle_pile"), n("ash_pile"), n("desert_pile"),
+            sum(&["honey_stalactite", "honey_stalagmite"]), dye_at.len(), sum(&["sea_oats", "sea_oats_grown", "sea_oats_tall"]), n("shell_pile"), n("seaweed"));
+        assert!(wrong_pots.is_empty(), "pots in their ground's style: {:?}", &wrong_pots[..wrong_pots.len().min(5)]);
+        let worlds = (768.0 * 768.0) / (640.0 * 640.0);
+        assert!(statues as f64 > 146.0 * worlds * 0.8, "statues ({statues})");
+        assert!(n("ice_pot") > 20 && n("underworld_pot") > 20 && n("jungle_pot") > 10, "pots of the biomes");
+        assert!(big > 3000 && small > 30_000 && n("bone_pile") > 200 && n("ice_pile") > 50, "piles ({big} big, {small} small)");
+        assert!(tites > 10_000 && mites > 10_000 && icicles > 500, "speleothems");
+        assert!(dye_at.len() > 20, "dye plants ({})", dye_at.len());
+        let apart = (90.0 * 2.0 / 3.0f64).round() as i32;
+        for (i, a) in dye_at.iter().enumerate() {
+            for b in &dye_at[i + 1..] {
+                assert!((a.0 - b.0).abs() >= apart || (a.1 - b.1).abs() >= apart || (a.2 - b.2).abs() >= apart, "dye plants 90 tiles apart: {a:?} {b:?}");
+            }
+        }
+        assert!(shells > 30 && n("shell_pile") > 10 && n("seaweed") > 300, "by the sea");
+    }
+
+    /// Terraria's micro biomes in a whole world (microbiomes.rs): Dead Man's
+    /// Chests wired to their traps, thin ice under the snow and over its
+    /// water, campsites, Detonators wired to Explosives in a vein of metal,
+    /// lava traps.
+    #[test]
+    fn micro_biomes() {
+        let w = gen_world_sized(2, 0, (768, 384, 768));
+        let id = |n: &str| w.id_of(n);
+        let mut at: std::collections::HashMap<u16, Vec<(i32, i32, i32)>> = std::collections::HashMap::new();
+        let want = [id("dead_mans_chest"), id("thin_ice"), id("campfire_off"), id("gold_coin_pile"), id("detonator"), id("explosives"), id("dart_trap")];
+        for z in 0..w.sz {
+            for x in 0..w.sx {
+                for y in 1..w.sy - 1 {
+                    let b = w.get(x, y, z);
+                    if want.contains(&b) {
+                        at.entry(b).or_default().push((x, y, z));
+                    }
+                }
+            }
+        }
+        let n = |b: u16| at.get(&b).map_or(0, |v| v.len());
+        let camps = w.decorations.iter().filter(|d| d.kind == "campsite").count();
+        let wire = crate::wires::cells(&w);
+        let lava_plates = w.decorations.iter().filter(|d| d.kind == "actuator").count();
+        eprintln!("MICRO dead man's chests {}, thin ice {}, campsites {camps} (fires {}, coins {}), detonators {}, explosives {}, actuators {lava_plates}",
+            n(id("dead_mans_chest")), n(id("thin_ice")), n(id("campfire_off")), n(id("gold_coin_pile")), n(id("detonator")), n(id("explosives")));
+        assert!(n(id("dead_mans_chest")) >= 3, "Dead Man's Chests");
+        for &c in at.get(&id("dead_mans_chest")).unwrap() {
+            assert!(wire.contains_key(&c), "a Dead Man's Chest is wired ({c:?})");
+            let darts = at.get(&id("dart_trap")).unwrap().iter().filter(|d| (d.0 - c.0).abs() < 15 && (d.2 - c.2).abs() < 15 && crate::wires::joined(&w, c, **d, crate::wires::RED)).count();
+            assert!(darts >= 1, "darts wired to the chest at {c:?}");
+        }
+        assert!(n(id("thin_ice")) > 100, "thin ice");
+        assert!(camps >= 3 && n(id("campfire_off")) >= 2, "campsites");
+        assert!(n(id("detonator")) >= 10, "detonators");
+        for &d in at.get(&id("detonator")).unwrap() {
+            let e = at.get(&id("explosives")).unwrap().iter().any(|e| crate::wires::joined(&w, d, *e, crate::wires::RED));
+            assert!(e, "a Detonator wired to Explosives ({d:?})");
+        }
+    }
+
     /// Terraria's ocean caves and Water Chests in a whole world: a flooded
     /// sandy burrow from the sea floor in under the coast (not on the
     /// Dungeon's side), a Water Chest of its treasures, and Water Chests in
@@ -4340,7 +4465,8 @@ mod tests {
     fn worlds_get_underground_cabins() {
         let w = gen_world(7);
         let l = layers(w.sy);
-        let kinds: Vec<u16> = ["gold_chest", "frozen_chest", "sandstone_chest", "rich_mahogany_chest"].iter().map(|n| w.id_of(n)).collect();
+        // (A gold chest may have become a Dead Man's Chest: microbiomes.rs.)
+        let kinds: Vec<u16> = ["gold_chest", "frozen_chest", "sandstone_chest", "rich_mahogany_chest", "dead_mans_chest"].iter().map(|n| w.id_of(n)).collect();
         let cabins: Vec<_> = w.decorations.iter().filter(|d| d.kind == "chest" && (3..=6).contains(&d.style)).collect();
         // 35-40 per 640 x 640: 6 in this 256 x 256 world, if the caves have room.
         assert!(cabins.len() >= 3, "{} cabins", cabins.len());
@@ -4571,7 +4697,10 @@ mod tests {
         assert!(biome.iter().filter(|&&n| n == 1).count() == 5 && (biome[1] == 0) != (biome[2] == 0), "five locked biome chests, one evil's ({biome:?})");
         let cracked = ["cracked_blue_brick", "cracked_green_brick", "cracked_pink_brick"].map(|n| count(id(n)));
         assert!(cracked.iter().filter(|&&n| n > 0).count() == 1 && cracked.iter().sum::<usize>() > 1000, "some halls of the colour's cracked brick ({cracked:?})");
-        let (lo, hi) = *w.structures.last().expect("the Dungeon is a protected structure");
+        // Its box: the biggest structure round its keep (the micro biomes'
+        // come after it).
+        let (lo, hi) = *w.structures.iter().filter(|(lo, hi)| lo.0 <= x0 && x0 <= hi.0 && lo.2 <= z0 && z0 <= hi.2)
+            .max_by_key(|(lo, hi)| (hi.0 - lo.0) as i64 * (hi.2 - lo.2) as i64).expect("the Dungeon is a protected structure");
         // Traps: some in the Dungeon, more in the caves (Terraria's Traps pass).
         let wires: Vec<_> = w.decorations.iter().filter(|d| d.kind == "wire" && w.def(w.get(d.pos.0, d.pos.1, d.pos.2)).name.ends_with("pressure_plate")).map(|d| d.pos).collect();
         let inside = wires.iter().filter(|p| p.0 >= lo.0 && p.0 <= hi.0 && p.1 >= lo.1 && p.1 <= hi.1 && p.2 >= lo.2 && p.2 <= hi.2).count();

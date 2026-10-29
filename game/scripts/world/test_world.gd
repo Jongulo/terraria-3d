@@ -683,24 +683,25 @@ func in_ocean(pos: Vector3) -> bool:
 
 
 ## The block gallery: rows of GALLERY_ROW blocks, 2 apart, from GALLERY_Z
-## south of the centre (south of the tower), 3 between rows; starting
-## GALLERY_WEST of it (clear of the critter pen to the west) and running
-## east, so the rows stay inside the world (33 rows to its south edge: room
-## for 1056 blocks).
+## south of the centre (south of the tower), GALLERY_STEP between rows;
+## starting GALLERY_WEST of it (clear of the critter pen to the west) and
+## running east (clear of the town), so the rows stay inside the world (48
+## rows to its south edge: room for 1536 blocks).
 const GALLERY_Z := 31
 const GALLERY_ROW := 32
+const GALLERY_STEP := 2
 const GALLERY_WEST := -18
 
 
 static func gallery_pos(c: Vector3i, i: int) -> Vector3i:
-	return Vector3i(c.x + GALLERY_WEST + (i % GALLERY_ROW) * 2, GROUND + 1, c.z + GALLERY_Z + (i / GALLERY_ROW) * 3)
+	return Vector3i(c.x + GALLERY_WEST + (i % GALLERY_ROW) * 2, GROUND + 1, c.z + GALLERY_Z + (i / GALLERY_ROW) * GALLERY_STEP)
 
 
 ## Whether `pos` is in the gallery (its herbs stay as shown: Herbs).
 static func in_gallery(c: Vector3i, pos: Vector3i) -> bool:
 	var rows := ceili(gallery_blocks().size() / float(GALLERY_ROW))
 	return pos.x >= c.x + GALLERY_WEST - 2 and pos.x <= c.x + GALLERY_WEST + GALLERY_ROW * 2 and pos.z >= c.z + GALLERY_Z - 1 \
-			and pos.z <= c.z + GALLERY_Z + rows * 3 - 1 and pos.y >= GROUND and pos.y <= GROUND + 4
+			and pos.z <= c.z + GALLERY_Z + rows * GALLERY_STEP - 1 and pos.y >= GROUND and pos.y <= GROUND + 4
 
 
 static func gallery_blocks() -> Array:
@@ -715,7 +716,7 @@ static func gallery_blocks() -> Array:
 func _build_gallery(c: Vector3i) -> void:
 	var names := gallery_blocks()
 	var rows := ceili(names.size() / float(GALLERY_ROW))
-	_box(Vector3i(c.x + GALLERY_WEST - 2, GROUND, c.z + GALLERY_Z - 1), Vector3i(c.x + GALLERY_WEST + GALLERY_ROW * 2, GROUND, c.z + GALLERY_Z + rows * 3 - 1), "gray_brick")
+	_box(Vector3i(c.x + GALLERY_WEST - 2, GROUND, c.z + GALLERY_Z - 1), Vector3i(c.x + GALLERY_WEST + GALLERY_ROW * 2, GROUND, c.z + GALLERY_Z + rows * GALLERY_STEP - 1), "gray_brick")
 	_label(Vector3(c.x + GALLERY_WEST + GALLERY_ROW + 0.5, GROUND + 3.5, c.z + GALLERY_Z - 1.5), "One of every block", 24)
 	for i in names.size():
 		var pos := gallery_pos(c, i)

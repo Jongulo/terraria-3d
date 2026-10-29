@@ -1640,9 +1640,13 @@ func block_rotation(p: Vector3i) -> int:
 	return int(block_rotations.get(Chests.key(p), 0))
 
 
+## Opens a chest; a Dead Man's Chest ("trips") sends a signal down its wire
+## too, setting off its traps (Terraria's Wiring.HitSwitch on opening one).
 func open_chest(p: Vector3i) -> void:
 	Audio.play("Menu_Open")
 	hud.open_chest(chests.get_inventory(p), p)
+	if Data.block(world.get_block(p)).get("trips", false):
+		wiring.trip(self, p)
 
 
 ## A locked chest (the Dungeon's Locked Gold Chests, the Underworld's Locked

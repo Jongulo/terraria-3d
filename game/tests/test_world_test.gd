@@ -473,6 +473,7 @@ func _run() -> void:
 	await _cave_enemy_checks(c)
 	await _merchant_checks(c)
 	await _shimmer_checks(c)
+	await _micro_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -4562,7 +4563,8 @@ func _armor_checks(c: Vector3i) -> void:
 				func(e): return e[0] == n or (e.size() > 3 and e[3] is Array and e[3].any(func(x): return x[0] == n))))
 		# (The Angler's armor: his rewards for the 10th, 15th and 20th quests.)
 		var sold: bool = Data.npcs.values().any(func(e): return e.get("town", {}).get("shop", []).any(func(x): return (x if x is String else x[0]) == n))
-		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set \
+		# (The Dead Man's Sweater: in 1 in 3 Dead Man's Chests, chests.gd.)
+		var sources: bool = Data.recipes.any(func(r): return r.result == n) or Data.loot.chest.extras.any(func(e): return e[0] == n) or dropped or in_set or n == "DeadMansSweater" \
 				or sold or n in AnglerQuests.MILESTONES.values() or n in TravelShop.all_items()
 		if not d.get("slot") in Data.ARMOR_SLOTS or (Assets.armor_texture(d.slot, n) == null and not d.get("own_look", false)) or d.id == 0 or not sources:
 			bad.append(n)
@@ -4973,8 +4975,9 @@ func _explosive_checks(c: Vector3i) -> void:
 	check(is_instance_valid(pr) and pr.global_position.y < Vector3(o).y + 1.6 and pr.velocity.length() < 1.0, "it lands and rolls to a stop")
 	await frames(60)
 	check(not is_instance_valid(pr), "and goes off when its fuse burns down")
-	# A sticky bomb sticks to a wall.
+	# A sticky bomb sticks to a wall (two high: it drops a little on the way).
 	w.set_block(o + Vector3i(0, 3, -3), Data.block_id("stone"))
+	w.set_block(o + Vector3i(0, 2, -3), Data.block_id("stone"))
 	var sticky := game.spawn_projectile("StickyBomb", Vector3(o) + Vector3(0.5, 3.5, 0.5), Vector3(0, 0, -8), 70, 8.0, 0.0, 10.0, 0.45)
 	sticky.explosive = Data.item("StickyBomb").explosive
 	sticky.life = 10.0
@@ -9049,6 +9052,100 @@ func _shimmer_checks(c: Vector3i) -> void:
 	p.boosts = boosts_before
 	p.flying = was_flying
 	p.god_mode = was_god
+
+
+## Micro biome pieces, up in the air north-west: Thin Ice holds a gentle
+## landing and shatters under a hard one (not with Ice Skates on); a Detonator
+## sets off the Explosives wired to it; a Dead Man's Chest fires its Dart
+## Trap when opened, and its Sweater is in its second slot; every style of pot
+## is a pot to the Metal Detector.
+func _micro_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_flying := p.flying
+	var was_god := p.god_mode
+	p.flying = false
+	p.god_mode = true
+	var o := c + Vector3i(-60, 30, -85)
+	var thin := Data.block_id("thin_ice")
+	var floor_of := func(id: int) -> void:
+		for x in range(-2, 3):
+			for z in range(-2, 3):
+				w.set_block(o + Vector3i(x, -1, z), id)
+	var drop_on := func(speed: float) -> void:
+		p.global_position = Vector3(o) + Vector3(0.5, 0.0 if speed < 10.0 else 1.5, 0.5)
+		p.velocity = Vector3(0, -speed, 0)
+		p._fall_start = p.global_position.y
+	floor_of.call(thin)
+	drop_on.call(3.0)
+	await frames(10)
+	check(w.get_block(o + Vector3i(0, -1, 0)) == thin and p.on_floor, "Thin Ice holds a gentle landing")
+	p.accessories.slots[0] = Inventory.stack("IceSkates", 1)
+	drop_on.call(25.0)
+	await frames(6)
+	check(w.get_block(o + Vector3i(0, -1, 0)) == thin, "with Ice Skates it holds a hard one")
+	p.accessories.slots[0] = null
+	var drops_before := game.entities.get_children().filter(func(e): return e is ItemDrop).size()
+	drop_on.call(25.0)
+	await frames(4)
+	check(w.get_block(o + Vector3i(0, -1, 0)) == 0, "a hard landing (over 7 px a tick) shatters Thin Ice")
+	check(game.entities.get_children().filter(func(e): return e is ItemDrop).size() == drops_before, "and it drops nothing")
+	floor_of.call(0)
+	# A Detonator wired to Explosives 6 away.
+	var det := o + Vector3i(0, 0, 8)
+	var bomb := det + Vector3i(6, 0, 0)
+	w.set_block(det + Vector3i.DOWN, Data.block_id("stone"))
+	w.set_block(det, Data.block_id("detonator"))
+	w.set_block(bomb, Data.block_id("explosives"))
+	game.wiring.lay(det, bomb, Wiring.RED)
+	p.global_position = Vector3(det) + Vector3(-6.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	game.hit_switch(det)
+	await frames(3)
+	check(w.get_block(bomb) == 0 and Data.kind_of(w.get_block(det)) in ["detonator", "detonator_on"], "a Detonator sets off the Explosives wired to it")
+	for q in [det, det + Vector3i.DOWN]:
+		w.set_block(q, 0)
+	for x in 7:
+		game.wiring.remove(det + Vector3i(x, 0, 0), Wiring.RED)
+	# A Dead Man's Chest and a Dart Trap 6 along, facing it (-x).
+	var chest := o + Vector3i(0, 0, 16)
+	var dart := chest + Vector3i(6, 0, 0)
+	w.set_block(chest + Vector3i.DOWN, Data.block_id("stone"))
+	w.set_block(chest, Data.block_id("dead_mans_chest"))
+	w.set_block(dart, Data.block_id("dart_trap"))
+	game.block_rotations[Chests.key(dart)] = 3
+	game.wiring.lay(chest, dart, Wiring.RED)
+	for e in game.entities.get_children():
+		if e is Projectile:
+			e.queue_free()
+	await frames(1)
+	game.chests.register_new(chest)
+	game.open_chest(chest)
+	await frames(2)
+	var darts := game.entities.get_children().filter(func(e): return e is Projectile and e.kind == "PoisonDart")
+	check(darts.size() == 1 and darts[0].velocity.x < 0.0, "opening a Dead Man's Chest fires the Dart Trap wired to it (%d)" % darts.size())
+	game.hud.close_inventory()
+	for e in darts:
+		e.queue_free()
+	for q in [chest, dart, chest + Vector3i.DOWN]:
+		w.set_block(q, 0)
+	for x in 7:
+		game.wiring.remove(chest + Vector3i(x, 0, 0), Wiring.RED)
+	# Its Sweater: a worldgen chest with the Dead Man's Sweater bit.
+	var key := Chests.key(chest)
+	game.chests._worldgen[key] = true
+	game.chests._tables[key] = "chest"
+	game.chests._sweaters[key] = true
+	game.chests._chests.erase(key)
+	var got: Inventory = game.chests.get_inventory(chest)
+	check(got.slots[1] != null and got.slots[1].item == "DeadMansSweater", "a Dead Man's Chest's Sweater in its second slot")
+	game.chests._chests.erase(key)
+	check(Hud.metal_name("ice_pot") == "Pot" and Hud.metal_name("underworld_pot") == "Pot", "every pot style is a pot to the Metal Detector")
+	p.flying = was_flying
+	p.god_mode = was_god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
 
 
 func _merchant_checks(c: Vector3i) -> void:

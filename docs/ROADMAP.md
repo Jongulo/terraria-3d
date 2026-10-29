@@ -48,8 +48,9 @@ more.
   - Hooks: the Dual Hook and the Skeletron Hook.
   - Info combinations: the Fish Finder, the PDA and the Cell Phone.
 - **Missing enemies (M):** the Devourer, Blood Crawler, Tomb Crawler, Dune Splicer and Doctor Bones.
-- **Mounts and minecarts (M):** the Fuzzy Carrot, minecarts and minecart tracks. The tracks also
-  need worldgen (see 7.2).
+- **Mounts and minecarts (M):** the Fuzzy Carrot, minecarts and minecart tracks, with Terraria's
+  track worldgen (its TrackGenerator: 1-2 long tracks and 4-7 standard ones in a small world,
+  tunnelling through the rock).
 - **Cages and terrariums (S):** critters in cages, which the Bug Net already supports.
 
 ### 7.2 Worldgen gaps
@@ -59,7 +60,10 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
 - **Structures and biomes:** done: moss, with neon patches, lava moss and Long Moss; gem caves
   and loose gems, amber included; oases, with palms, sea oats and oasis plants; ocean caves and
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
-  Aether and its shimmer.
+  Aether and its shimmer; Terraria's placement passes (cave statues, biome pots, piles,
+  stalactites and stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed) and its
+  micro biomes but the tracks (campsites, thin ice and frozen pools, Dead Man's Chests, mining
+  explosives, lava traps).
 - **Shimmer extras (M):** Faelings and the Shimmer Slime; enemies and town NPCs in shimmer
   (Terraria's shimmered look); critters and projectiles in it (critters become Faelings, some
   projectiles bounce up); the Aether's music and backdrop; the Shimmer Arrow, Flare, Campfire,
@@ -67,13 +71,8 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
   feed (nothing uses luck yet).
 - **Underground Desert extras (S):** Antlion Eggs and Rolling Cactus in its caverns, its piles,
   and its enemies (Tomb Crawlers, Ghouls, Sand Poachers, Antlion Swarmers and Chargers).
-- **Micro biomes (M):** minecart tracks, campsites, thin ice in the snow, Dead Man's Chests.
-- **Placement passes (M):**
-  - Cave statues and biome pots (snow, jungle, Dungeon, evil, desert, Underworld, marble,
-    granite).
-  - Cave piles: skeletons, coin stashes and rocks.
-  - Stone and ice stalactites.
-  - Beach shells and seaweed, sea oats on the beaches, dye plants.
+- **Placement extras (S):** the statues' traps (they need statues that spawn on a signal, see
+  7.4); the strange plants, which grow later on; the piles of the spider caves and living trees.
 
 ### 7.3 Town and events
 

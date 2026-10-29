@@ -150,6 +150,115 @@
 		"alchemy_table": {
 			"depth": 16.0
 		},
+		"amethyst_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"angel_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"anvil_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"armor_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ash_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ash_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ash_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"ash_wood_bathtub": {
 			"noise": "grain",
 			"strength": 0.95
@@ -161,6 +270,21 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.6
+		},
+		"axe_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"barrel": {
 			"bevel": "chamfer",
@@ -188,6 +312,21 @@
 			"depth": 14.0,
 			"noise": "speckle",
 			"one_color": true
+		},
+		"bat_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"bed": {
 			"bevel": "chamfer",
@@ -221,6 +360,21 @@
 			"noise": "grain",
 			"strength": 0.4
 		},
+		"bird_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"blinkroot": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -247,6 +401,213 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"blood_zombie_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_7": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_8": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"blue_brick_platform": {
 			"noise": "speckle",
 			"one_color": true,
@@ -264,10 +625,247 @@
 			"bevel_size": 1.0,
 			"noise": "grain"
 		},
+		"bomb_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_7": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"bone_platform": {
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.95
+		},
+		"bone_skeleton_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"book": {
 			"one_color": true
@@ -277,6 +875,36 @@
 			"noise": "grain",
 			"one_color": false,
 			"strength": 0.6
+		},
+		"boomerang_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"boot_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"boreal_wood_platform": {
 			"bevel": "none",
@@ -295,6 +923,21 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"bow_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"brass_shelf": {
 			"bevel": "none",
 			"bevel_size": 1.0,
@@ -302,6 +945,51 @@
 			"noise": "grain",
 			"one_color": false,
 			"strength": 0.6
+		},
+		"buggy_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bunny_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"butterfly_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"cactus": {
 			"bevel": "chamfer",
@@ -425,6 +1113,85 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"cave_ruins": {
+			"bevel": "round",
+			"bevel_sides": [
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"cavern_fountain": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -450,6 +1217,21 @@
 			"one_color": true,
 			"strength": 1.0
 		},
+		"chest_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"cloud_platform": {
 			"noise": "speckle",
 			"one_color": true
@@ -471,6 +1253,38 @@
 			"bevel_size": 3.0,
 			"depth": 7.0,
 			"one_color": true
+		},
+		"copper_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"copper_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"coral": {
 			"bevel": "chamfer",
@@ -802,6 +1616,21 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"corrupt_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"corrupt_water_fountain": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -814,6 +1643,21 @@
 			"bevel_size": 6.0,
 			"depth": 13.0,
 			"one_color": true
+		},
+		"crab_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"crimson_altar": {
 			"bevel": "chamfer",
@@ -1094,6 +1938,27 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"crimson_pot": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"crimson_pot_2": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"crimson_pot_3": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"crimson_water_fountain": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1106,6 +1971,21 @@
 			"bevel_size": 6.0,
 			"depth": 13.0,
 			"one_color": true
+		},
+		"cross_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"daybloom": {
 			"bevel": "chamfer",
@@ -1145,6 +2025,171 @@
 			"depth": 7.0,
 			"one_color": true
 		},
+		"desert_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pot": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pot_2": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pot_3": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_rock_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"desert_water_fountain": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1158,6 +2203,141 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"detonator": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 12,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"diamond_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dragonfly_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"dresser": {
 			"bevel": "chamfer",
 			"bevel_size": 1.0,
@@ -1165,6 +2345,57 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.75
+		},
+		"drippler_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"duck_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dungeon_pot": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dungeon_pot_2": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dungeon_pot_3": {
+			"bevel": "chamfer",
+			"bevel_size": 6,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"dungeon_shelf": {
 			"bevel": "none",
@@ -1194,6 +2425,22 @@
 			"one_color": true,
 			"strength": 0.6
 		},
+		"emerald_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"extractinator": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1206,6 +2453,21 @@
 			"bevel_size": 1.0,
 			"depth": 10.0,
 			"noise": "grain"
+		},
+		"eyeball_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"fallen_log": {
 			"bevel": "round",
@@ -1235,10 +2497,40 @@
 			"depth": 3.0,
 			"one_color": true
 		},
+		"firefly_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"fireplace": {
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.9
+		},
+		"fish_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"flowers": {
 			"bevel": "chamfer",
@@ -1732,6 +3024,21 @@
 			"depth": 3.0,
 			"one_color": true
 		},
+		"frog_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"frozen_platform": {
 			"noise": "grain",
 			"one_color": true,
@@ -1744,6 +3051,21 @@
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 0.85
+		},
+		"gargoyle_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"geyser": {
 			"bevel": "chamfer",
@@ -1782,6 +3104,21 @@
 			"one_color": true,
 			"strength": 0.3
 		},
+		"gloom_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"glowing_mushroom_3": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1798,6 +3135,21 @@
 		},
 		"glowing_mushroom_5": {
 			"one_color": false
+		},
+		"goblin_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"gold_chandelier": {
 			"bevel": "chamfer",
@@ -1820,6 +3172,38 @@
 			"depth": 7.0,
 			"one_color": true
 		},
+		"gold_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"gold_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"gothic_bathtub": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1839,6 +3223,324 @@
 			"depth": 10.0,
 			"noise": "grain",
 			"strength": 0.55
+		},
+		"granite_golem_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grasshopper_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rock_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rocks": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rocks_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rocks_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"green_brick_platform": {
 			"noise": "speckle",
@@ -1870,6 +3572,273 @@
 			"bevel_size": 6.0,
 			"depth": 13.0,
 			"one_color": true
+		},
+		"hammer_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"harpy_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"heart_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"hoplite_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"hornet_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"icicle": {
 			"one_color": false
@@ -1905,6 +3874,21 @@
 			"no_outline": false,
 			"one_color": true
 		},
+		"imp_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"iron_anvil": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -1922,6 +3906,117 @@
 		},
 		"ivy_chest": {
 			"one_color": true
+		},
+		"jellyfish_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"jungle_plants_10": {
 			"bevel": "chamfer",
@@ -2489,6 +4584,27 @@
 			"depth": 13.0,
 			"one_color": true
 		},
+		"junonia_shell": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"junonia_shell_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"junonia_shell_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
 		"keg": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -2500,6 +4616,69 @@
 			"bevel_size": 3.0,
 			"depth": 8.0,
 			"one_color": true
+		},
+		"king_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"large_relic_rocks": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"large_relic_rocks_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"large_relic_rocks_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"large_rocks": {
 			"bevel": "chamfer",
@@ -2640,6 +4819,27 @@
 			"seed": 7.0,
 			"strength": 1.0
 		},
+		"lightning_whelk_shell": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"lightning_whelk_shell_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"lightning_whelk_shell_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
 		"lihzahrd_chair": {
 			"noise": "grain"
 		},
@@ -2655,6 +4855,58 @@
 			"bevel_size": 6.0,
 			"depth": 13.0,
 			"one_color": true
+		},
+		"lihzahrd_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 16,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"lihzahrd_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"lihzahrd_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"lihzahrd_pile_5": {
+			"noise": "speckle",
+			"strength": 1.0
 		},
 		"lihzahrd_statue": {
 			"bevel": "chamfer",
@@ -3663,6 +5915,213 @@
 			"one_color": true,
 			"strength": 1.0
 		},
+		"marble_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"medusa_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"metal_shelf": {
 			"bevel": "none",
 			"bevel_size": 1.0,
@@ -3684,6 +6143,21 @@
 			"depth": 3.0,
 			"one_color": true
 		},
+		"mouse_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"mug": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -3695,6 +6169,54 @@
 			"bevel_size": 3.0,
 			"one_color": true
 		},
+		"mushroom_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"mushroom_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"mushroom_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"mushroom_platform": {
 			"bevel": "none",
 			"bevel_size": 1.0,
@@ -3702,6 +6224,21 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.6
+		},
+		"mushroom_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"mushroom_vines_10": {
 			"bevel": "chamfer",
@@ -4018,64 +6555,64 @@
 		},
 		"oasis_plant": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_2": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_3": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_4": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_5": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_6": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_7": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_8": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"oasis_plant_9": {
 			"bevel": "chamfer",
-			"bevel_size": 5,
-			"depth": 12,
+			"bevel_size": 5.0,
+			"depth": 12.0,
 			"no_outline": false,
 			"one_color": true
 		},
@@ -4102,6 +6639,28 @@
 		"oil_rag_sconse": {
 			"depth": 9.0
 		},
+		"orange_bloodroot": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": false,
+			"one_color": true
+		},
+		"owl_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"palm_wood_bathtub": {
 			"bevel": "chamfer",
 			"bevel_sides": [
@@ -4121,6 +6680,36 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.6
+		},
+		"penguin_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"pickaxe_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"picnic_table": {
 			"depth": 16.0,
@@ -4144,6 +6733,36 @@
 			"depth": 7.0,
 			"one_color": true
 		},
+		"pigron_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"pillar_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"pink_brick_platform": {
 			"noise": "speckle",
 			"one_color": true,
@@ -4160,6 +6779,21 @@
 			],
 			"bevel_size": 1.0,
 			"noise": "grain"
+		},
+		"piranha_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"pot": {
 			"bevel": "chamfer",
@@ -4181,6 +6815,36 @@
 			"depth": 9.0,
 			"noise": "grain",
 			"one_color": false
+		},
+		"pot_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"potion_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"projectile_pressure_pad": {
 			"one_color": false
@@ -4237,6 +6901,36 @@
 			"depth": 7.0,
 			"one_color": true
 		},
+		"queen_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"reaper_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"red_pressure_plate": {
 			"no_outline": false,
 			"one_color": false
@@ -4249,9 +6943,185 @@
 			"one_color": true,
 			"strength": 0.6
 		},
+		"rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ruby_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sand_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sand_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sand_pile_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"sandstone_platform": {
 			"noise": "grain",
 			"one_color": true
+		},
+		"sapphire_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"sawmill": {
 			"bevel": "round",
@@ -4263,109 +7133,235 @@
 			"bevel_size": 6.0,
 			"depth": 16.0
 		},
+		"scorpion_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"sea_oats": {
 			"bevel": "chamfer",
-			"bevel_size": 2,
-			"depth": 3,
+			"bevel_size": 2.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_2": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_3": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_4": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_5": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_grown": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_grown_2": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_grown_3": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_grown_4": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_grown_5": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_tall": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_tall_2": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_tall_3": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_tall_4": {
 			"bevel": "chamfer",
-			"bevel_size": 1,
-			"depth": 3,
+			"bevel_size": 1.0,
+			"depth": 3.0,
 			"no_outline": false,
 			"one_color": true
 		},
 		"sea_oats_tall_5": {
 			"bevel": "chamfer",
+			"bevel_size": 1.0,
+			"depth": 3.0,
+			"no_outline": false,
+			"one_color": true
+		},
+		"seagull_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"seashell": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seashell_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seashell_3": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed": {
+			"bevel": "chamfer",
 			"bevel_size": 1,
 			"depth": 3,
-			"no_outline": false,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_10": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_11": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_12": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_4": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_5": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_6": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_7": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_8": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_9": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
 			"one_color": true
 		},
 		"shadewood_platform": {
@@ -4377,6 +7373,36 @@
 			"bevel": "round",
 			"bevel_size": 6.0,
 			"depth": 16.0,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"shark_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"shield_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 1.0
@@ -4424,6 +7450,53 @@
 			"depth": 7.0,
 			"one_color": true
 		},
+		"silver_rock_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"silver_rock_pile_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"skeleton_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"skull_lantern": {
 			"bevel": "chamfer",
 			"bevel_size": 4.0,
@@ -4443,6 +7516,741 @@
 			"noise": "grain",
 			"one_color": true,
 			"strength": 0.65
+		},
+		"slime_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_7": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_8": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_7": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_8": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_10": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_11": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_12": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_7": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_8": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_9": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_2": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_3": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_4": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_5": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_6": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"small_rocks": {
 			"bevel": "chamfer",
@@ -4519,6 +8327,21 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"snail_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"snow_platform": {
 			"noise": "speckle",
 			"one_color": true,
@@ -4536,8 +8359,74 @@
 			"depth": 12.0,
 			"one_color": true
 		},
+		"spear_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"spider_stalactite_3": {
 			"one_color": false
+		},
+		"squirrel_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"star_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"starfish": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"starfish_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"starfish_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
 		},
 		"stone_platform": {
 			"noise": "speckle",
@@ -4572,6 +8461,21 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"sunflower_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"switch": {
 			"depth": 3.0,
 			"one_color": true
@@ -4587,6 +8491,21 @@
 			],
 			"bevel_size": 6.0,
 			"depth": 14.0
+		},
+		"sword_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"tall_flowers": {
 			"bevel": "chamfer",
@@ -5161,6 +9080,22 @@
 			],
 			"bevel_size": 2.0,
 			"noise": "grain"
+		},
+		"topaz_pile": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"torch": {
 			"bevel": "round",
@@ -5753,6 +9688,21 @@
 			"one_color": false,
 			"strength": 0.55
 		},
+		"tree_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"tree_trunk": {
 			"bevel": "round",
 			"bevel_sides": [
@@ -5764,6 +9714,27 @@
 			"bevel_size": 4.0,
 			"depth": 8.0,
 			"noise": "speckle"
+		},
+		"tulip_shell": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"tulip_shell_2": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
+		},
+		"tulip_shell_3": {
+			"bevel": "chamfer",
+			"bevel_size": 1,
+			"depth": 3,
+			"no_outline": true,
+			"one_color": true
 		},
 		"twigs": {
 			"bevel": "chamfer",
@@ -5804,8 +9775,51 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"undead_viking_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"unicorn_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"vile_mushroom": {
-			"one_color": true
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"no_outline": true,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"vine_flowers": {
 			"bevel": "chamfer",
@@ -6417,6 +10431,21 @@
 			"depth": 5.0,
 			"one_color": true
 		},
+		"wall_creeper_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"wall_torch": {
 			"bevel": "chamfer",
 			"depth": 5.0
@@ -6436,6 +10465,21 @@
 			"bevel_size": 1.0,
 			"depth": 3.0,
 			"one_color": true
+		},
+		"woman_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"wood_platform": {
 			"bevel": "none",
@@ -6464,9 +10508,89 @@
 		},
 		"world_banner": {
 			"depth": 16.0
+		},
+		"worm_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"wraith_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"zombie_arm_statue": {
+			"bevel": "round",
+			"bevel_sides": [
+				"top",
+				"left",
+				"right",
+				"front",
+				"back"
+			],
+			"bevel_size": 6,
+			"depth": 9,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		}
 	},
 	"hull": {
+		"amethyst_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"angel_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"anvil_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"armor_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ash_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ash_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ash_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"ash_wood_lamp": {
 			"one_color": true
 		},
@@ -6478,10 +10602,93 @@
 		"ash_wood_sink": {
 			"one_color": false
 		},
+		"axe_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"barrel": {
 			"noise": "speckle"
 		},
+		"bat_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bird_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"blood_water_fountain": {
+			"one_color": true
+		},
+		"blood_zombie_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bone_heap_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_7": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bloody_bones_8": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"blue_berries": {
 			"one_color": true
 		},
 		"blue_dungeon_bathtub": {
@@ -6496,9 +10703,84 @@
 		"blue_torch": {
 			"one_color": true
 		},
+		"bomb_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_heap_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bone_pile_7": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"bone_platform": {
 			"noise": "speckle",
 			"one_color": true
+		},
+		"bone_skeleton_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"bone_torch": {
 			"one_color": true
@@ -6518,6 +10800,16 @@
 		"book_5": {
 			"one_color": false
 		},
+		"boomerang_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"boot_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"boreal_wood_platform": {
 			"noise": "speckle",
 			"one_color": true,
@@ -6528,6 +10820,11 @@
 		},
 		"boulder": {
 			"no_outline": false,
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bow_statue": {
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 1.0
@@ -6544,11 +10841,51 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"buggy_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"bunny_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"butterfly_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"cactus_bathtub": {
 			"noise": "grain"
 		},
 		"cactus_lamp": {
 			"one_color": true
+		},
+		"cave_ruins": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"cave_ruins_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"cavern_fountain": {
 			"one_color": true
@@ -6558,6 +10895,11 @@
 		},
 		"chain_lantern": {
 			"one_color": true
+		},
+		"chest_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"chimney": {
 			"noise": "grain",
@@ -6579,20 +10921,197 @@
 			"noise": "speckle",
 			"one_color": true
 		},
+		"copper_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"copper_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"corrupt_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"corrupt_water_fountain": {
 			"one_color": true
+		},
+		"corruption_pot": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"corruption_pot_2": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"corruption_pot_3": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"crab_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"crimson_pot": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"crimson_pot_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"crimson_pot_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"crimson_water_fountain": {
 			"one_color": true
 		},
+		"cross_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"demon_torch": {
 			"one_color": true
+		},
+		"desert_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pot": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pot_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_pot_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"desert_rock_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"desert_water_fountain": {
 			"one_color": true
 		},
+		"diamond_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dirt_clods_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dragonfly_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"dresser": {
 			"noise": "grain"
+		},
+		"drippler_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"duck_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dungeon_pot": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dungeon_pot_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"dungeon_pot_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"dungeon_shelf": {
 			"noise": "speckle",
@@ -6607,17 +11126,47 @@
 			"one_color": true,
 			"strength": 0.5
 		},
+		"emerald_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"eyeball_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"fallen_log": {
 			"strength": 0.55
 		},
 		"fancy_dishes": {
 			"one_color": true
 		},
+		"firefly_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"fireplace": {
 			"noise": "speckle"
 		},
+		"fish_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"frog_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"furnace": {
 			"one_color": false
+		},
+		"gargoyle_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"geyser": {
 			"one_color": true
@@ -6636,6 +11185,11 @@
 			"noise": "grain",
 			"one_color": true
 		},
+		"gloom_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"glowing_mushroom_2": {
 			"one_color": true
 		},
@@ -6648,8 +11202,23 @@
 		"glowing_mushroom_5": {
 			"one_color": true
 		},
+		"goblin_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"gold_chest": {
 			"one_color": true
+		},
+		"gold_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"gold_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"gothic_bathtub": {
 			"noise": "grain"
@@ -6659,6 +11228,71 @@
 		},
 		"grandfather_clock": {
 			"one_color": true
+		},
+		"granite_golem_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"granite_rock_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"granite_stalactite": {
 			"one_color": true
@@ -6678,6 +11312,41 @@
 		"granite_stalagmite_3": {
 			"one_color": true
 		},
+		"grasshopper_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rock_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rocks": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rocks_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"grassy_rocks_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"gray_pressure_plate": {
 			"noise": "speckle",
 			"one_color": true
@@ -6691,11 +11360,132 @@
 		"green_dungeon_vase": {
 			"one_color": true
 		},
+		"green_mushroom": {
+			"one_color": true
+		},
 		"green_torch": {
 			"one_color": true
 		},
 		"hallowed_water_fountain": {
 			"one_color": true
+		},
+		"hammer_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"harpy_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"heart_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"honey_stalactite": {
+			"no_outline": true
+		},
+		"honey_stalactite_2": {
+			"no_outline": true
+		},
+		"honey_stalactite_3": {
+			"no_outline": true
+		},
+		"honey_stalagmite": {
+			"no_outline": true
+		},
+		"honey_stalagmite_2": {
+			"no_outline": true
+		},
+		"honey_stalagmite_3": {
+			"no_outline": true
+		},
+		"hoplite_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"hornet_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pot": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pot_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_pot_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"ice_rock_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"ice_torch": {
 			"one_color": true
@@ -6715,8 +11505,63 @@
 		"imbuing_station": {
 			"one_color": true
 		},
+		"imp_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jellyfish_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"junction_box": {
 			"one_color": true
+		},
+		"jungle_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pot": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pot_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"jungle_pot_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"jungle_vines": {
 			"one_color": true
@@ -6724,8 +11569,40 @@
 		"jungle_water_fountain": {
 			"one_color": true
 		},
+		"junonia_shell": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"junonia_shell_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"junonia_shell_3": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"king_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"lamp_post": {
 			"one_color": true
+		},
+		"large_relic_rocks": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"large_relic_rocks_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"large_relic_rocks_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"lesser_healing_potion_bottle": {
 			"one_color": true
@@ -6737,10 +11614,46 @@
 			"no_outline": false,
 			"one_color": true
 		},
+		"lightning_whelk_shell": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"lightning_whelk_shell_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"lightning_whelk_shell_3": {
+			"no_outline": true,
+			"one_color": true
+		},
 		"lihzahrd_altar": {
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 0.8
+		},
+		"lihzahrd_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"lihzahrd_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"lihzahrd_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"lihzahrd_pot": {
+			"one_color": true
+		},
+		"lihzahrd_pot_2": {
+			"one_color": true
+		},
+		"lihzahrd_pot_3": {
+			"one_color": true
 		},
 		"lihzahrd_pressure_plate": {
 			"one_color": true
@@ -6756,6 +11669,9 @@
 			"one_color": true
 		},
 		"lily_pad_3": {
+			"one_color": true
+		},
+		"lime_kelp": {
 			"one_color": true
 		},
 		"loose_amber": {
@@ -6884,6 +11800,75 @@
 		"loose_topaz_hanging_3": {
 			"one_color": true
 		},
+		"marble_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_pot": {
+			"one_color": true
+		},
+		"marble_pot_2": {
+			"one_color": true
+		},
+		"marble_pot_3": {
+			"one_color": true
+		},
+		"marble_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"marble_rock_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"marble_stalactite": {
 			"one_color": true
 		},
@@ -6902,18 +11887,48 @@
 		"marble_stalagmite_3": {
 			"one_color": true
 		},
+		"medusa_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"metal_shelf": {
 			"noise": "speckle",
 			"one_color": false,
 			"strength": 0.5
 		},
+		"mouse_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"mushroom": {
 			"one_color": true
+		},
+		"mushroom_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"mushroom_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"mushroom_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"mushroom_platform": {
 			"noise": "speckle",
 			"one_color": true,
 			"strength": 0.5
+		},
+		"mushroom_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"oasis_fountain": {
 			"one_color": true
@@ -6936,12 +11951,20 @@
 			"no_outline": false,
 			"one_color": true
 		},
+		"orange_bloodroot": {
+			"one_color": true
+		},
 		"orange_pressure_plate": {
 			"noise": "speckle",
 			"one_color": true
 		},
 		"orange_torch": {
 			"one_color": true
+		},
+		"owl_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"palm_wood_lamp": {
 			"one_color": true
@@ -6951,11 +11974,31 @@
 			"one_color": true,
 			"strength": 0.5
 		},
+		"penguin_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"pickaxe_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"picnic_table": {
 			"one_color": true
 		},
 		"picnic_table_with_cloth": {
 			"one_color": true
+		},
+		"pigron_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"pillar_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"pink_dungeon_bathtub": {
 			"noise": "grain"
@@ -6966,8 +12009,16 @@
 		"pink_dungeon_vase": {
 			"one_color": true
 		},
+		"pink_prickly_pear": {
+			"one_color": true
+		},
 		"pink_vase": {
 			"one_color": true
+		},
+		"piranha_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"pot": {
 			"noise": "speckle",
@@ -6984,6 +12035,19 @@
 			"one_color": true,
 			"strength": 0.3
 		},
+		"pot_4": {
+			"one_color": true
+		},
+		"pot_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"potion_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"projectile_pressure_pad": {
 			"no_outline": false,
 			"one_color": true
@@ -6994,9 +12058,19 @@
 		"purple_torch": {
 			"one_color": true
 		},
+		"queen_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"rainbow_boulder": {
 			"no_outline": false,
 			"one_color": false
+		},
+		"reaper_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"red_torch": {
 			"one_color": true
@@ -7009,9 +12083,59 @@
 			"one_color": true,
 			"strength": 0.5
 		},
+		"rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"rock_pile_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"rope": {
 			"no_outline": false,
 			"one_color": true
+		},
+		"ruby_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sand_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sand_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sand_pile_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"sandstone_stalactite": {
 			"one_color": true
@@ -7022,15 +12146,360 @@
 		"sandstone_stalactite_3": {
 			"one_color": true
 		},
+		"sandstone_stalagmite": {
+			"one_color": true
+		},
+		"sandstone_stalagmite_2": {
+			"one_color": true
+		},
+		"sandstone_stalagmite_3": {
+			"one_color": true
+		},
+		"sapphire_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"scorpion_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"seagull_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"seashell": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seashell_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seashell_3": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_10": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_11": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_12": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_3": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_4": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_5": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_6": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_7": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_8": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"seaweed_9": {
+			"no_outline": true,
+			"one_color": true
+		},
 		"shadewood_lamp": {
+			"one_color": true
+		},
+		"shark_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"shield_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"shimmer_torch": {
 			"one_color": true
 		},
 		"silk_rope": {
 			"no_outline": false,
 			"one_color": true
 		},
+		"silver_rock_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"silver_rock_pile_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"skeleton_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sky_blue_flower": {
+			"one_color": true
+		},
 		"skyware_lantern": {
 			"one_color": true
+		},
+		"slime_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_7": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_bones_8": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_7": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_debris_8": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_desert_rocks_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_granite_rocks_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_10": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_11": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_12": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_7": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_8": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_ice_rocks_9": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_2": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_3": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_4": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_5": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"small_marble_rocks_6": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"small_rocks": {
 			"one_color": false
@@ -7039,10 +12508,23 @@
 			"no_outline": false,
 			"one_color": false
 		},
+		"snail_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"spear_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"spider_pot": {
 			"one_color": true
 		},
 		"spider_pot_2": {
+			"one_color": true
+		},
+		"spider_pot_3": {
 			"one_color": true
 		},
 		"spider_stalactite": {
@@ -7054,8 +12536,61 @@
 		"spider_stalactite_3": {
 			"one_color": true
 		},
+		"squirrel_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"star_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"starfish": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"starfish_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"starfish_3": {
+			"no_outline": true,
+			"one_color": true
+		},
 		"steampunk_cup": {
 			"no_outline": false,
+			"one_color": true
+		},
+		"stone_stalactite": {
+			"no_outline": true
+		},
+		"stone_stalactite_2": {
+			"no_outline": true
+		},
+		"stone_stalactite_3": {
+			"no_outline": true
+		},
+		"stone_stalagmite": {
+			"no_outline": true
+		},
+		"stone_stalagmite_2": {
+			"no_outline": true
+		},
+		"stone_stalagmite_3": {
+			"no_outline": true
+		},
+		"sunflower_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"sword_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"teal_mushroom": {
 			"one_color": true
 		},
 		"team_block_blue_platform": {
@@ -7110,22 +12645,73 @@
 		"timer_quarter": {
 			"no_outline": false
 		},
+		"topaz_pile": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"trash_can": {
+			"one_color": true
+		},
+		"tree_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"tulip_shell": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"tulip_shell_2": {
+			"no_outline": true,
+			"one_color": true
+		},
+		"tulip_shell_3": {
+			"no_outline": true,
 			"one_color": true
 		},
 		"ultrabright_torch": {
 			"no_outline": false,
 			"one_color": true
 		},
+		"undead_viking_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"underworld_pot": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"underworld_pot_2": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"underworld_pot_3": {
+			"no_outline": false,
+			"one_color": true
+		},
+		"unicorn_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
 		"vicious_mushroom": {
 			"one_color": true
 		},
 		"vile_mushroom": {
-			"one_color": true
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"vine_rope": {
 			"no_outline": false,
 			"one_color": true
+		},
+		"wall_creeper_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"water_bolt_book": {
 			"one_color": true
@@ -7145,6 +12731,11 @@
 		},
 		"wire_bulb": {
 			"one_color": true
+		},
+		"woman_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		},
 		"wood_platform": {
 			"noise": "speckle",
@@ -7173,12 +12764,30 @@
 			"seed": 3.0,
 			"strength": 0.35
 		},
+		"worm_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"wraith_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
+		},
+		"yellow_marigold": {
+			"one_color": true
+		},
 		"yellow_pressure_plate": {
 			"no_outline": false,
 			"one_color": true
 		},
 		"yellow_torch": {
 			"one_color": true
+		},
+		"zombie_arm_statue": {
+			"noise": "speckle",
+			"one_color": true,
+			"strength": 1.0
 		}
 	},
 	"hull_top": {
@@ -7188,13 +12797,43 @@
 	},
 	"lathe": {},
 	"methods": {
+		"amethyst_pile": "rendered",
+		"ash_pile": "rendered",
+		"ash_pile_2": "rendered",
+		"ash_pile_3": "rendered",
 		"ash_wood_lamp": "hull",
 		"barrel": "extruded",
 		"blinkroot": "rendered",
+		"bloody_bone_heap": "rendered",
+		"bloody_bone_heap_2": "rendered",
+		"bloody_bone_heap_3": "rendered",
+		"bloody_bone_heap_4": "rendered",
+		"bloody_bones": "rendered",
+		"bloody_bones_2": "rendered",
+		"bloody_bones_3": "rendered",
+		"bloody_bones_4": "rendered",
+		"bloody_bones_5": "rendered",
+		"bloody_bones_6": "rendered",
+		"bloody_bones_7": "rendered",
+		"bloody_bones_8": "rendered",
+		"blue_berries": "rendered",
 		"blue_dungeon_lamp": "hull",
 		"blue_dungeon_sink": "rendered",
 		"blue_dungeon_vase": "hull",
 		"blue_torch": "hull",
+		"bone_heap": "rendered",
+		"bone_heap_2": "rendered",
+		"bone_heap_3": "rendered",
+		"bone_heap_4": "rendered",
+		"bone_heap_5": "rendered",
+		"bone_heap_6": "rendered",
+		"bone_pile": "rendered",
+		"bone_pile_2": "rendered",
+		"bone_pile_3": "rendered",
+		"bone_pile_4": "rendered",
+		"bone_pile_5": "rendered",
+		"bone_pile_6": "rendered",
+		"bone_pile_7": "rendered",
 		"bone_torch": "hull",
 		"bottle": "hull",
 		"boulder": "hull",
@@ -7207,6 +12846,12 @@
 		"cattail_3": "rendered",
 		"cattail_4": "rendered",
 		"cattail_5": "rendered",
+		"cave_ruins": "rendered",
+		"cave_ruins_2": "rendered",
+		"cave_ruins_3": "rendered",
+		"cave_ruins_4": "rendered",
+		"cave_ruins_5": "rendered",
+		"cave_ruins_6": "rendered",
 		"chain": "hull",
 		"chain_lantern": "hull",
 		"chest": "extruded",
@@ -7215,6 +12860,8 @@
 		"cooking_pot": "hull",
 		"copper_chandelier": "billboard",
 		"copper_coin_stash": "extruded",
+		"copper_rock_pile": "rendered",
+		"copper_rock_pile_2": "rendered",
 		"coral": "rendered",
 		"coral_2": "rendered",
 		"coral_3": "rendered",
@@ -7243,6 +12890,9 @@
 		"corrupt_plants_7": "rendered",
 		"corrupt_plants_8": "rendered",
 		"corrupt_plants_9": "rendered",
+		"corruption_pot": "hull",
+		"corruption_pot_2": "hull",
+		"corruption_pot_3": "hull",
 		"crimson_altar": "extruded",
 		"crimson_heart": "extruded",
 		"crimson_plants": "rendered",
@@ -7267,11 +12917,37 @@
 		"crimson_plants_7": "rendered",
 		"crimson_plants_8": "rendered",
 		"crimson_plants_9": "rendered",
+		"crimson_pot": "extruded",
+		"crimson_pot_2": "extruded",
+		"crimson_pot_3": "extruded",
 		"daybloom": "rendered",
 		"deathweed": "rendered",
 		"demon_altar": "extruded",
 		"demon_torch": "hull",
+		"desert_pile": "rendered",
+		"desert_pile_2": "rendered",
+		"desert_pile_3": "rendered",
+		"desert_pile_4": "rendered",
+		"desert_pile_5": "rendered",
+		"desert_pile_6": "rendered",
+		"desert_pot": "extruded",
+		"desert_pot_2": "extruded",
+		"desert_pot_3": "extruded",
+		"desert_rock_pile": "rendered",
+		"desert_rock_pile_2": "rendered",
+		"desert_rock_pile_3": "rendered",
+		"diamond_pile": "rendered",
+		"dirt_clods": "rendered",
+		"dirt_clods_2": "rendered",
+		"dirt_clods_3": "rendered",
+		"dirt_clods_4": "rendered",
+		"dirt_clods_5": "rendered",
+		"dirt_clods_6": "rendered",
+		"dungeon_pot": "extruded",
+		"dungeon_pot_2": "extruded",
+		"dungeon_pot_3": "extruded",
 		"ebonwood_lamp": "hull",
+		"emerald_pile": "rendered",
 		"extractinator": "extruded",
 		"fallen_log": "rendered",
 		"fancy_dishes": "hull",
@@ -7325,18 +13001,60 @@
 		"gold_chandelier": "billboard",
 		"gold_chest": "extruded",
 		"gold_coin_stash": "extruded",
+		"gold_rock_pile": "rendered",
+		"gold_rock_pile_2": "rendered",
 		"gothic_lamp": "hull",
 		"grandfather_clock": "hull",
+		"granite_pile": "rendered",
+		"granite_pile_2": "rendered",
+		"granite_pile_3": "rendered",
+		"granite_pile_4": "rendered",
+		"granite_pile_5": "rendered",
+		"granite_pile_6": "rendered",
+		"granite_rock_pile": "rendered",
+		"granite_rock_pile_2": "rendered",
+		"granite_rock_pile_3": "rendered",
+		"granite_rock_pile_4": "rendered",
+		"granite_rock_pile_5": "rendered",
+		"granite_rock_pile_6": "rendered",
 		"granite_stalactite": "rendered",
 		"granite_stalactite_2": "rendered",
 		"granite_stalactite_3": "rendered",
 		"granite_stalagmite": "rendered",
 		"granite_stalagmite_2": "rendered",
 		"granite_stalagmite_3": "rendered",
+		"grassy_rock_pile": "rendered",
+		"grassy_rock_pile_2": "rendered",
+		"grassy_rock_pile_3": "rendered",
+		"grassy_rocks": "rendered",
+		"grassy_rocks_2": "rendered",
+		"grassy_rocks_3": "rendered",
 		"gray_pressure_plate": "hull",
 		"green_dungeon_lamp": "hull",
 		"green_dungeon_vase": "hull",
+		"green_mushroom": "rendered",
 		"green_torch": "hull",
+		"honey_stalactite": "rendered",
+		"honey_stalactite_2": "rendered",
+		"honey_stalactite_3": "rendered",
+		"honey_stalagmite": "rendered",
+		"honey_stalagmite_2": "rendered",
+		"honey_stalagmite_3": "rendered",
+		"ice_pile": "rendered",
+		"ice_pile_2": "rendered",
+		"ice_pile_3": "rendered",
+		"ice_pile_4": "rendered",
+		"ice_pile_5": "rendered",
+		"ice_pile_6": "rendered",
+		"ice_pot": "hull",
+		"ice_pot_2": "hull",
+		"ice_pot_3": "hull",
+		"ice_rock_pile": "rendered",
+		"ice_rock_pile_2": "rendered",
+		"ice_rock_pile_3": "rendered",
+		"ice_rock_pile_4": "rendered",
+		"ice_rock_pile_5": "rendered",
+		"ice_rock_pile_6": "rendered",
 		"ice_torch": "hull",
 		"icicle": "rendered",
 		"icicle_2": "rendered",
@@ -7344,6 +13062,12 @@
 		"iron_anvil": "extruded",
 		"ivy_chest": "rendered",
 		"junction_box": "hull",
+		"jungle_pile": "rendered",
+		"jungle_pile_2": "rendered",
+		"jungle_pile_3": "rendered",
+		"jungle_pile_4": "rendered",
+		"jungle_pile_5": "rendered",
+		"jungle_pile_6": "rendered",
 		"jungle_plants": "rendered",
 		"jungle_plants_10": "rendered",
 		"jungle_plants_11": "rendered",
@@ -7365,6 +13089,9 @@
 		"jungle_plants_7": "rendered",
 		"jungle_plants_8": "rendered",
 		"jungle_plants_9": "rendered",
+		"jungle_pot": "hull",
+		"jungle_pot_2": "hull",
+		"jungle_pot_3": "hull",
 		"jungle_spores": "rendered",
 		"jungle_vines": "rendered",
 		"jungle_vines_10": "rendered",
@@ -7392,8 +13119,14 @@
 		"jungle_vines_7": "rendered",
 		"jungle_vines_8": "rendered",
 		"jungle_vines_9": "rendered",
+		"junonia_shell": "rendered",
+		"junonia_shell_2": "rendered",
+		"junonia_shell_3": "rendered",
 		"keg": "extruded",
 		"lamp_post": "hull",
+		"large_relic_rocks": "rendered",
+		"large_relic_rocks_2": "rendered",
+		"large_relic_rocks_3": "rendered",
 		"large_rocks": "rendered",
 		"large_rocks_2": "rendered",
 		"large_rocks_3": "rendered",
@@ -7404,7 +13137,18 @@
 		"lead_anvil": "extruded",
 		"lever": "hull",
 		"life_crystal": "extruded",
+		"lightning_whelk_shell": "rendered",
+		"lightning_whelk_shell_2": "rendered",
+		"lightning_whelk_shell_3": "rendered",
 		"lihzahrd_altar": "hull",
+		"lihzahrd_pile": "rendered",
+		"lihzahrd_pile_2": "rendered",
+		"lihzahrd_pile_3": "rendered",
+		"lihzahrd_pile_4": "rendered",
+		"lihzahrd_pile_5": "rendered",
+		"lihzahrd_pot": "hull",
+		"lihzahrd_pot_2": "hull",
+		"lihzahrd_pot_3": "hull",
 		"lihzahrd_pressure_plate": "hull",
 		"lily_pad": "rendered",
 		"lily_pad_10": "rendered",
@@ -7424,6 +13168,7 @@
 		"lily_pad_7": "rendered",
 		"lily_pad_8": "rendered",
 		"lily_pad_9": "rendered",
+		"lime_kelp": "rendered",
 		"long_moss_argon": "rendered",
 		"long_moss_argon_2": "rendered",
 		"long_moss_argon_3": "rendered",
@@ -7526,6 +13271,21 @@
 		"loose_topaz_hanging": "rendered",
 		"loose_topaz_hanging_2": "rendered",
 		"loose_topaz_hanging_3": "rendered",
+		"marble_pile": "rendered",
+		"marble_pile_2": "rendered",
+		"marble_pile_3": "rendered",
+		"marble_pile_4": "rendered",
+		"marble_pile_5": "rendered",
+		"marble_pile_6": "rendered",
+		"marble_pot": "hull",
+		"marble_pot_2": "hull",
+		"marble_pot_3": "hull",
+		"marble_rock_pile": "rendered",
+		"marble_rock_pile_2": "rendered",
+		"marble_rock_pile_3": "rendered",
+		"marble_rock_pile_4": "rendered",
+		"marble_rock_pile_5": "rendered",
+		"marble_rock_pile_6": "rendered",
 		"marble_stalactite": "rendered",
 		"marble_stalactite_2": "rendered",
 		"marble_stalactite_3": "rendered",
@@ -7535,6 +13295,9 @@
 		"moonglow": "rendered",
 		"mug": "extruded",
 		"mushroom": "rendered",
+		"mushroom_pile": "rendered",
+		"mushroom_pile_2": "rendered",
+		"mushroom_pile_3": "rendered",
 		"mushroom_vines_10": "rendered",
 		"mushroom_vines_11": "rendered",
 		"mushroom_vines_12": "rendered",
@@ -7572,6 +13335,7 @@
 		"obsidian_lamp": "hull",
 		"obsidian_vase": "hull",
 		"oil_rag_sconse": "billboard",
+		"orange_bloodroot": "rendered",
 		"orange_pressure_plate": "hull",
 		"orange_torch": "hull",
 		"palm_wood_lamp": "hull",
@@ -7580,12 +13344,14 @@
 		"piggy_bank": "extruded",
 		"pink_dungeon_lamp": "hull",
 		"pink_dungeon_vase": "hull",
+		"pink_prickly_pear": "rendered",
 		"pink_vase": "hull",
 		"pixel_box": "hull_top",
 		"platinum_chandelier": "billboard",
 		"pot": "hull",
 		"pot_2": "hull",
 		"pot_3": "hull",
+		"pot_4": "hull",
 		"purple_torch": "hull",
 		"pyramid_pot": "extruded",
 		"pyramid_pot_2": "extruded",
@@ -7594,11 +13360,25 @@
 		"red_torch": "hull",
 		"rich_mahogany_chest": "extruded",
 		"rich_mahogany_lamp": "hull",
+		"rock_pile": "rendered",
+		"rock_pile_2": "rendered",
+		"rock_pile_3": "rendered",
+		"rock_pile_4": "rendered",
+		"rock_pile_5": "rendered",
+		"rock_pile_6": "rendered",
 		"rope": "hull",
+		"ruby_pile": "rendered",
+		"sand_pile": "rendered",
+		"sand_pile_2": "rendered",
+		"sand_pile_3": "rendered",
 		"sandstone_chest": "extruded",
 		"sandstone_stalactite": "rendered",
 		"sandstone_stalactite_2": "rendered",
 		"sandstone_stalactite_3": "rendered",
+		"sandstone_stalagmite": "rendered",
+		"sandstone_stalagmite_2": "rendered",
+		"sandstone_stalagmite_3": "rendered",
+		"sapphire_pile": "rendered",
 		"sea_oats": "rendered",
 		"sea_oats_2": "rendered",
 		"sea_oats_3": "rendered",
@@ -7614,15 +13394,79 @@
 		"sea_oats_tall_3": "rendered",
 		"sea_oats_tall_4": "rendered",
 		"sea_oats_tall_5": "rendered",
+		"seashell": "rendered",
+		"seashell_2": "rendered",
+		"seashell_3": "rendered",
+		"seaweed": "rendered",
+		"seaweed_10": "rendered",
+		"seaweed_11": "rendered",
+		"seaweed_12": "rendered",
+		"seaweed_2": "rendered",
+		"seaweed_3": "rendered",
+		"seaweed_4": "rendered",
+		"seaweed_5": "rendered",
+		"seaweed_6": "rendered",
+		"seaweed_7": "rendered",
+		"seaweed_8": "rendered",
+		"seaweed_9": "rendered",
 		"shadewood_lamp": "hull",
 		"shadow_orb": "extruded",
+		"shimmer_torch": "hull",
 		"shiverthorn": "rendered",
 		"silk_rope": "hull",
 		"silver_chandelier": "billboard",
 		"silver_coin_stash": "extruded",
+		"silver_rock_pile": "rendered",
+		"silver_rock_pile_2": "rendered",
 		"skull_lantern": "billboard",
+		"sky_blue_flower": "rendered",
 		"skyware_chest": "rendered",
 		"skyware_lantern": "hull",
+		"small_bones": "rendered",
+		"small_bones_2": "rendered",
+		"small_bones_3": "rendered",
+		"small_bones_4": "rendered",
+		"small_bones_5": "rendered",
+		"small_bones_6": "rendered",
+		"small_bones_7": "rendered",
+		"small_bones_8": "rendered",
+		"small_debris": "rendered",
+		"small_debris_2": "rendered",
+		"small_debris_3": "rendered",
+		"small_debris_4": "rendered",
+		"small_debris_5": "rendered",
+		"small_debris_6": "rendered",
+		"small_debris_7": "rendered",
+		"small_debris_8": "rendered",
+		"small_desert_rocks": "rendered",
+		"small_desert_rocks_2": "rendered",
+		"small_desert_rocks_3": "rendered",
+		"small_desert_rocks_4": "rendered",
+		"small_desert_rocks_5": "rendered",
+		"small_granite_rocks": "rendered",
+		"small_granite_rocks_2": "rendered",
+		"small_granite_rocks_3": "rendered",
+		"small_granite_rocks_4": "rendered",
+		"small_granite_rocks_5": "rendered",
+		"small_granite_rocks_6": "rendered",
+		"small_ice_rocks": "rendered",
+		"small_ice_rocks_10": "rendered",
+		"small_ice_rocks_11": "rendered",
+		"small_ice_rocks_12": "rendered",
+		"small_ice_rocks_2": "rendered",
+		"small_ice_rocks_3": "rendered",
+		"small_ice_rocks_4": "rendered",
+		"small_ice_rocks_5": "rendered",
+		"small_ice_rocks_6": "rendered",
+		"small_ice_rocks_7": "rendered",
+		"small_ice_rocks_8": "rendered",
+		"small_ice_rocks_9": "rendered",
+		"small_marble_rocks": "rendered",
+		"small_marble_rocks_2": "rendered",
+		"small_marble_rocks_3": "rendered",
+		"small_marble_rocks_4": "rendered",
+		"small_marble_rocks_5": "rendered",
+		"small_marble_rocks_6": "rendered",
 		"small_rocks": "rendered",
 		"small_rocks_2": "rendered",
 		"small_rocks_3": "rendered",
@@ -7632,10 +13476,20 @@
 		"solidifier": "extruded",
 		"spider_pot": "hull",
 		"spider_pot_2": "hull",
+		"spider_pot_3": "hull",
 		"spider_stalactite": "rendered",
 		"spider_stalactite_2": "rendered",
 		"spider_stalactite_3": "rendered",
+		"starfish": "rendered",
+		"starfish_2": "rendered",
+		"starfish_3": "rendered",
 		"steampunk_cup": "hull",
+		"stone_stalactite": "rendered",
+		"stone_stalactite_2": "rendered",
+		"stone_stalactite_3": "rendered",
+		"stone_stalagmite": "rendered",
+		"stone_stalagmite_2": "rendered",
+		"stone_stalagmite_3": "rendered",
 		"sunflower": "rendered",
 		"sunflower_2": "rendered",
 		"sunflower_3": "rendered",
@@ -7690,9 +13544,11 @@
 		"taller_grass_4": "rendered",
 		"taller_grass_5": "rendered",
 		"taller_grass_6": "rendered",
+		"teal_mushroom": "rendered",
 		"tiki_torch": "hull",
 		"tin_chandelier": "billboard",
 		"tinkerers_workshop": "tuned",
+		"topaz_pile": "rendered",
 		"torch": "hull",
 		"trash_can": "extruded",
 		"tree_canopy": "billboard",
@@ -7780,11 +13636,17 @@
 		"tree_canopy@91": "billboard",
 		"tree_canopy@92": "billboard",
 		"tree_trunk": "billboard",
+		"tulip_shell": "rendered",
+		"tulip_shell_2": "rendered",
+		"tulip_shell_3": "rendered",
 		"tungsten_chandelier": "billboard",
 		"twigs": "rendered",
 		"twigs_2": "rendered",
 		"twigs_3": "rendered",
 		"ultrabright_torch": "hull",
+		"underworld_pot": "hull",
+		"underworld_pot_2": "hull",
+		"underworld_pot_3": "hull",
 		"vicious_mushroom": "rendered",
 		"vile_mushroom": "rendered",
 		"vine_flowers": "rendered",
@@ -7848,9 +13710,26 @@
 		"wine_glass": "hull",
 		"wire_bulb": "hull",
 		"work_bench": "hull",
+		"yellow_marigold": "rendered",
 		"yellow_torch": "hull"
 	},
 	"rendered": {
+		"amethyst_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ash_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ash_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ash_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
 		"barrel": {
 			"model": "extruded"
 		},
@@ -7864,6 +13743,108 @@
 			"model": "extruded"
 		},
 		"blinkroot": {
+			"model": "extruded"
+		},
+		"bloody_bone_heap": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bone_heap_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bone_heap_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bone_heap_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_7": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bloody_bones_8": {
+			"model": "extruded",
+			"outline": true
+		},
+		"blue_berries": {
+			"model": "hull"
+		},
+		"bone_heap": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_heap_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_heap_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_heap_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_heap_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_heap_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"bone_pile_7": {
 			"model": "extruded"
 		},
 		"campfire": {
@@ -7890,11 +13871,42 @@
 		"cattail_5": {
 			"model": "extruded"
 		},
+		"cave_ruins": {
+			"model": "extruded",
+			"outline": true
+		},
+		"cave_ruins_2": {
+			"model": "hull"
+		},
+		"cave_ruins_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"cave_ruins_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"cave_ruins_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"cave_ruins_6": {
+			"model": "extruded",
+			"outline": true
+		},
 		"chest": {
 			"model": "extruded"
 		},
 		"copper_chandelier": {
 			"model": "extruded"
+		},
+		"copper_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"copper_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
 		},
 		"coral": {
 			"model": "extruded"
@@ -8061,8 +14073,76 @@
 		"demon_altar": {
 			"model": "extruded"
 		},
+		"desert_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"desert_rock_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"diamond_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"dirt_clods": {
+			"model": "extruded",
+			"outline": true
+		},
+		"dirt_clods_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"dirt_clods_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"dirt_clods_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"dirt_clods_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"dirt_clods_6": {
+			"model": "extruded",
+			"outline": true
+		},
 		"dresser": {
 			"model": "extruded"
+		},
+		"emerald_pile": {
+			"model": "extruded",
+			"outline": true
 		},
 		"extractinator": {
 			"model": "extruded"
@@ -8214,8 +14294,64 @@
 		"gold_chandelier": {
 			"model": "extruded"
 		},
+		"gold_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"gold_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
 		"grandfather_clock": {
 			"model": "auto"
+		},
+		"granite_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_rock_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_rock_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_rock_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"granite_rock_pile_6": {
+			"model": "extruded",
+			"outline": true
 		},
 		"granite_stalactite": {
 			"model": "hull"
@@ -8235,6 +14371,105 @@
 		"granite_stalagmite_3": {
 			"model": "hull"
 		},
+		"grassy_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"grassy_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"grassy_rock_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"grassy_rocks": {
+			"model": "extruded",
+			"outline": true
+		},
+		"grassy_rocks_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"grassy_rocks_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"green_mushroom": {
+			"model": "hull"
+		},
+		"honey_stalactite": {
+			"model": "hull",
+			"outline": true
+		},
+		"honey_stalactite_2": {
+			"model": "hull",
+			"outline": true
+		},
+		"honey_stalactite_3": {
+			"model": "hull",
+			"outline": true
+		},
+		"honey_stalagmite": {
+			"model": "hull",
+			"outline": true
+		},
+		"honey_stalagmite_2": {
+			"model": "hull",
+			"outline": true
+		},
+		"honey_stalagmite_3": {
+			"model": "hull",
+			"outline": true
+		},
+		"ice_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_rock_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_rock_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_rock_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ice_rock_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
 		"icicle": {
 			"model": "hull"
 		},
@@ -8249,6 +14484,30 @@
 		},
 		"ivy_chest": {
 			"model": "extruded"
+		},
+		"jungle_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"jungle_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"jungle_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"jungle_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"jungle_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"jungle_pile_6": {
+			"model": "extruded",
+			"outline": true
 		},
 		"jungle_plants": {
 			"model": "hull"
@@ -8394,8 +14653,32 @@
 		"jungle_vines_9": {
 			"model": "extruded"
 		},
+		"junonia_shell": {
+			"model": "extruded",
+			"outline": true
+		},
+		"junonia_shell_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"junonia_shell_3": {
+			"model": "extruded",
+			"outline": true
+		},
 		"keg": {
 			"model": "extruded"
+		},
+		"large_relic_rocks": {
+			"model": "extruded",
+			"outline": true
+		},
+		"large_relic_rocks_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"large_relic_rocks_3": {
+			"model": "extruded",
+			"outline": true
 		},
 		"large_rocks": {
 			"model": "extruded"
@@ -8423,6 +14706,36 @@
 		},
 		"life_crystal": {
 			"model": "extruded"
+		},
+		"lightning_whelk_shell": {
+			"model": "extruded",
+			"outline": true
+		},
+		"lightning_whelk_shell_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"lightning_whelk_shell_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"lihzahrd_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"lihzahrd_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"lihzahrd_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"lihzahrd_pile_4": {
+			"model": "hull"
+		},
+		"lihzahrd_pile_5": {
+			"model": "hull"
 		},
 		"lily_pad": {
 			"model": "extruded"
@@ -8477,6 +14790,9 @@
 		},
 		"lily_pad_9": {
 			"model": "extruded"
+		},
+		"lime_kelp": {
+			"model": "hull"
 		},
 		"long_moss_argon": {
 			"model": "extruded"
@@ -8787,6 +15103,54 @@
 		"loose_topaz_hanging_3": {
 			"model": "hull"
 		},
+		"marble_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_rock_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_rock_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_rock_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"marble_rock_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
 		"marble_stalactite": {
 			"model": "hull"
 		},
@@ -8813,6 +15177,18 @@
 		},
 		"mushroom": {
 			"model": "hull"
+		},
+		"mushroom_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"mushroom_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"mushroom_pile_3": {
+			"model": "extruded",
+			"outline": true
 		},
 		"mushroom_vines_10": {
 			"model": "extruded"
@@ -8925,8 +15301,54 @@
 			"model": "extruded",
 			"outline": false
 		},
+		"orange_bloodroot": {
+			"model": "extruded"
+		},
+		"pink_prickly_pear": {
+			"model": "hull"
+		},
 		"platinum_chandelier": {
 			"model": "auto"
+		},
+		"rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"rock_pile_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"rock_pile_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"rock_pile_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"rock_pile_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"ruby_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"sand_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"sand_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"sand_pile_3": {
+			"model": "extruded",
+			"outline": true
 		},
 		"sandstone_stalactite": {
 			"model": "hull"
@@ -8936,6 +15358,19 @@
 		},
 		"sandstone_stalactite_3": {
 			"model": "hull"
+		},
+		"sandstone_stalagmite": {
+			"model": "hull"
+		},
+		"sandstone_stalagmite_2": {
+			"model": "hull"
+		},
+		"sandstone_stalagmite_3": {
+			"model": "hull"
+		},
+		"sapphire_pile": {
+			"model": "extruded",
+			"outline": true
 		},
 		"sea_oats": {
 			"model": "extruded"
@@ -8982,6 +15417,66 @@
 		"sea_oats_tall_5": {
 			"model": "extruded"
 		},
+		"seashell": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seashell_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seashell_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_10": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_11": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_12": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_7": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_8": {
+			"model": "extruded",
+			"outline": true
+		},
+		"seaweed_9": {
+			"model": "extruded",
+			"outline": true
+		},
 		"shadow_orb": {
 			"model": "extruded"
 		},
@@ -8994,8 +15489,199 @@
 		"silver_chandelier": {
 			"model": "extruded"
 		},
+		"silver_rock_pile": {
+			"model": "extruded",
+			"outline": true
+		},
+		"silver_rock_pile_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"sky_blue_flower": {
+			"model": "hull"
+		},
 		"skyware_chest": {
 			"model": "extruded"
+		},
+		"small_bones": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_7": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_bones_8": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris": {
+			"model": "hull",
+			"outline": true
+		},
+		"small_debris_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris_7": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_debris_8": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_desert_rocks": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_desert_rocks_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_desert_rocks_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_desert_rocks_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_desert_rocks_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_granite_rocks": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_granite_rocks_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_granite_rocks_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_granite_rocks_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_granite_rocks_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_granite_rocks_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_10": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_11": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_12": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_6": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_7": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_8": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_ice_rocks_9": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_marble_rocks": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_marble_rocks_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_marble_rocks_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_marble_rocks_4": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_marble_rocks_5": {
+			"model": "extruded",
+			"outline": true
+		},
+		"small_marble_rocks_6": {
+			"model": "extruded",
+			"outline": true
 		},
 		"small_rocks": {
 			"model": "extruded"
@@ -9026,6 +15712,42 @@
 		},
 		"spider_stalactite_3": {
 			"model": "hull"
+		},
+		"starfish": {
+			"model": "extruded",
+			"outline": true
+		},
+		"starfish_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"starfish_3": {
+			"model": "extruded",
+			"outline": true
+		},
+		"stone_stalactite": {
+			"model": "hull",
+			"outline": true
+		},
+		"stone_stalactite_2": {
+			"model": "hull",
+			"outline": true
+		},
+		"stone_stalactite_3": {
+			"model": "hull",
+			"outline": true
+		},
+		"stone_stalagmite": {
+			"model": "hull",
+			"outline": true
+		},
+		"stone_stalagmite_2": {
+			"model": "hull",
+			"outline": true
+		},
+		"stone_stalagmite_3": {
+			"model": "hull",
+			"outline": true
 		},
 		"sunflower": {
 			"model": "extruded"
@@ -9192,6 +15914,13 @@
 		"taller_grass_6": {
 			"model": "extruded"
 		},
+		"teal_mushroom": {
+			"model": "hull"
+		},
+		"topaz_pile": {
+			"model": "extruded",
+			"outline": true
+		},
 		"trash_can": {
 			"model": "auto"
 		},
@@ -9219,6 +15948,18 @@
 		"tree_trunk": {
 			"model": "extruded"
 		},
+		"tulip_shell": {
+			"model": "extruded",
+			"outline": true
+		},
+		"tulip_shell_2": {
+			"model": "extruded",
+			"outline": true
+		},
+		"tulip_shell_3": {
+			"model": "extruded",
+			"outline": true
+		},
 		"twigs": {
 			"model": "extruded"
 		},
@@ -9232,7 +15973,8 @@
 			"model": "hull"
 		},
 		"vile_mushroom": {
-			"model": "hull"
+			"model": "extruded",
+			"outline": true
 		},
 		"vine_flowers": {
 			"model": "extruded"
@@ -9395,6 +16137,9 @@
 		},
 		"wooden_chair": {
 			"model": "extruded"
+		},
+		"yellow_marigold": {
+			"model": "hull"
 		}
 	},
 	"transform": {
