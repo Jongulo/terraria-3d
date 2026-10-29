@@ -48,9 +48,8 @@ more.
   - Hooks: the Dual Hook and the Skeletron Hook.
   - Info combinations: the Fish Finder, the PDA and the Cell Phone.
 - **Missing enemies (M):** the Devourer, Blood Crawler, Tomb Crawler, Dune Splicer and Doctor Bones.
-- **Mounts and minecarts (M):** the Fuzzy Carrot, minecarts and minecart tracks, with Terraria's
-  track worldgen (its TrackGenerator: 1-2 long tracks and 4-7 standard ones in a small world,
-  tunnelling through the rock).
+- **Mounts and minecart extras (M):** the Fuzzy Carrot; the Mechanical Cart and the other carts;
+  booster and pressure-plate tracks, track switches and bumpers.
 - **Cages and terrariums (S):** critters in cages, which the Bug Net already supports.
 
 ### 7.2 Worldgen gaps
@@ -62,8 +61,8 @@ Taken from a pass-by-pass comparison with Terraria's world generation.
   Water Chests; the Underground Desert's caverns, Desert Fossil and its four entrances; the
   Aether and its shimmer; Terraria's placement passes (cave statues, biome pots, piles,
   stalactites and stalagmites, dye plants, sea shells, sea oats, shell piles, seaweed) and its
-  micro biomes but the tracks (campsites, thin ice and frozen pools, Dead Man's Chests, mining
-  explosives, lava traps).
+  micro biomes (campsites, thin ice and frozen pools, Dead Man's Chests, mining explosives, lava
+  traps, minecart tracks).
 - **Shimmer extras (M):** Faelings and the Shimmer Slime; enemies and town NPCs in shimmer
   (Terraria's shimmered look); critters and projectiles in it (critters become Faelings, some
   projectiles bounce up); the Aether's music and backdrop; the Shimmer Arrow, Flare, Campfire,

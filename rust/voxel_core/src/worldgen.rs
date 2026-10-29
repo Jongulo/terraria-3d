@@ -2306,6 +2306,7 @@ pub fn generate(w: &mut World, seed: i32, progress: &AtomicU32) {
     crate::microbiomes::thin_ice(w, &mut Rng::new(seed as u64 ^ 0x7e1c_e000), &l, &coast);
     crate::microbiomes::campsites(w, &mut Rng::new(seed as u64 ^ 0xca39_5175), &l, &coast);
     crate::microbiomes::mining_explosives(w, &mut Rng::new(seed as u64 ^ 0xb1a5_7000), &l, &coast);
+    crate::tracks::tracks(w, &mut Rng::new(seed as u64 ^ 0x7ac4_5000), &l, &coast);
     crate::microbiomes::lava_traps(w, &mut Rng::new(seed as u64 ^ 0x1a7a_7ea9), &l);
     // Terraria's Gems In Ice Biome and Random Gems passes: loose gems
     // (gem_caves.rs); then its Moss Grass pass: Long Moss on the moss
@@ -4378,6 +4379,66 @@ mod tests {
         for &d in at.get(&id("detonator")).unwrap() {
             let e = at.get(&id("explosives")).unwrap().iter().any(|e| crate::wires::joined(&w, d, *e, crate::wires::RED));
             assert!(e, "a Detonator wired to Explosives ({d:?})");
+        }
+    }
+
+    /// Terraria's minecart tracks in a whole world (tracks.rs): runs along x
+    /// or z from 100 to 667 cells, each cell joined to the next level or a
+    /// cell up or down, room to ride over them, none in a structure.
+    #[test]
+    fn minecart_tracks() {
+        let w = gen_world_sized(2, 0, (768, 384, 768));
+        let track = w.id_of("minecart_track");
+        let mut cells = std::collections::HashSet::new();
+        for z in 0..w.sz {
+            for x in 0..w.sx {
+                for y in 0..w.sy {
+                    if w.get(x, y, z) == track {
+                        cells.insert((x, y, z));
+                    }
+                }
+            }
+        }
+        let mut seen = std::collections::HashSet::new();
+        let mut runs = Vec::new();
+        for &c in &cells {
+            if seen.contains(&c) {
+                continue;
+            }
+            let mut stack = vec![c];
+            let mut n = 0;
+            seen.insert(c);
+            while let Some(p) = stack.pop() {
+                n += 1;
+                for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    for dy in -1..=1 {
+                        let q = (p.0 + dx, p.1 + dy, p.2 + dz);
+                        if cells.contains(&q) && seen.insert(q) {
+                            stack.push(q);
+                        }
+                    }
+                }
+            }
+            runs.push(n);
+        }
+        runs.sort();
+        eprintln!("TRACKS {} cells in {} runs: {:?}", cells.len(), runs.len(), runs);
+        assert!(runs.len() >= 3, "tracks laid ({})", runs.len());
+        assert!(runs.iter().all(|&n| (100..=700).contains(&n)), "each 150-1000 tiles long: {runs:?}");
+        let low_room = cells.iter().filter(|&&(x, y, z)| w.is_solid(x, y + 1, z) || w.is_solid(x, y + 2, z)).count();
+        assert!(low_room * 50 < cells.len(), "room to ride over them ({low_room} cramped)");
+        // The cut's 3 wide: room beside the track too, along most of it.
+        let narrow = cells
+            .iter()
+            .filter(|&&(x, y, z)| {
+                let along_x = cells.contains(&(x + 1, y, z)) || cells.contains(&(x - 1, y, z)) || cells.contains(&(x + 1, y + 1, z)) || cells.contains(&(x - 1, y + 1, z));
+                let (ax, az) = if along_x { (0, 1) } else { (1, 0) };
+                [-1, 1].iter().any(|&s| w.is_solid(x + ax * s, y + 1, z + az * s) || w.is_solid(x + ax * s, y + 2, z + az * s))
+            })
+            .count();
+        assert!(narrow * 10 < cells.len(), "a wide tunnel ({narrow} of {} cells narrow)", cells.len());
+        for &(x, y, z) in &cells {
+            assert!(!w.structures.iter().any(|&(lo, hi)| x >= lo.0 && x <= hi.0 && y >= lo.1 && y <= hi.1 && z >= lo.2 && z <= hi.2), "no track in a structure ({x},{y},{z})");
         }
     }
 

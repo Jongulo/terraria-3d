@@ -214,7 +214,12 @@ const MOUNTS := {"slime": {"buff": "SlimeMount", "height": 20, "run": 4.0, "dash
 	"skates_classic": {"buff": "RollerSkatesWhiteMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
 		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31},
 	"skates_party": {"buff": "RollerSkatesPinkMount", "height": 0, "additive": true, "skates": true, "run": 1.0, "dash": 1.0, "accel": 0.1,
-		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31}}
+		"jump_speed": 1.0, "jump_ticks": 2, "dust": 31},
+	"minecart": {"buff": "MinecartLeft", "height": 10, "run": 13.0, "dash": 13.0, "accel": 0.04, "jump_speed": 5.15, "jump_ticks": 15,
+		"cart": true, "no_extra_jumps": true, "sprite": "Minecart", "frames": 3, "dust": 213}}
+## The minecart (Mount.SetAsMinecart: 13 px/tick at most, 0.04 px/tick a tick
+## faster pushed, jump 5.15 px/tick for 15 ticks, no double jumps; "cart"):
+## ridden along a track (_cart). Off its track it rolls on as it was.
 ## A hovering mount's flight left and fatigue (Terraria's _flyTime, _fatigue),
 ## in ticks.
 var _fly_time := 0.0
@@ -986,6 +991,10 @@ func _move(delta: float, game) -> void:
 		return
 	if _rope_climb(delta, game, dir):
 		return
+	if mount != "" and MOUNTS[mount].get("cart", false):
+		if _cart(delta, game, dir):
+			return
+		dir = Vector3.ZERO
 	var ground := Data.block(game.world.get_block(Vector3i((global_position + Vector3(0, -0.1, 0)).floor()))) if on_floor else {}
 	# Terraria's run: its speed, the boots' speed, acceleration and slowdown,
 	# changed by what you wear and stand in.
@@ -1052,6 +1061,12 @@ func _move(delta: float, game) -> void:
 		max_run *= 0.25
 		accel *= 0.25
 		slowdown *= 2.0
+	if mount != "" and MOUNTS[mount].get("cart", false):
+		# A cart off its track isn't pushed; in the air it keeps its speed, on
+		# the ground it slows to a stop (Terraria's onWrongGround).
+		accel = 0.0
+		if not on_floor:
+			slowdown = 0.0
 	_run(delta, dir, max_run, acc_run, accel, slowdown)
 	if webbed:
 		var flat := Vector2(velocity.x, velocity.z).limit_length(max_run)
@@ -2374,13 +2389,20 @@ func _spawn_companion(proj: String, def: Dictionary, at: Vector3, is_pet: bool) 
 	return m
 
 
-## A mount's item: on (if there's room over you for it) or off.
+## A mount's item: on (if there's room over you for it) or off. A minecart
+## goes on only onto a track at your feet.
 func _use_mount(def: Dictionary) -> bool:
 	if mount != "":
 		var same: bool = mount == def.mount
 		dismount()
 		if same:
 			return true
+	if MOUNTS[def.mount].get("cart", false):
+		var at := _track_at(Game.current.world, global_position)
+		if at.is_empty():
+			Game.current.message("A minecart needs a track", Color(0.9, 0.8, 0.7))
+			return false
+		return board_cart(at.cell, def)
 	return ride(def)
 
 
@@ -2431,6 +2453,7 @@ func ride(def: Dictionary) -> bool:
 func dismount() -> void:
 	if mount == "":
 		return
+	_cart_on = false
 	var up := float(MOUNTS[mount].height) / 24.0
 	var dust := int(MOUNTS[mount].get("dust", 56))
 	half.y -= up
@@ -2449,6 +2472,209 @@ func _mount_dust(dust: int) -> void:
 	for i in 15:
 		Game.current.dust.spawn(dust, global_position + Vector3(randf_range(-0.5, 0.5), randf_range(0.0, 0.8), randf_range(-0.5, 0.5)),
 				Vector3(randf_range(-1, 1), randf_range(0, 1.5), randf_range(-1, 1)), 1.2)
+
+
+## Minecart riding (Terraria's Minecart.TrackCollision, in 3D): on a track
+## the cart runs along its path (Tracks: level, 45 degree ramps, corners),
+## from cell to joined cell. Pushing along it (forward or back, as you look)
+## speeds it 0.04 px/tick a tick up to the cart's 13 px/tick; it coasts
+## without slowing; slopes speed it down them and slow it up them, and it
+## rolls back if it stops on one. Off the track's end it flies on, still in
+## the cart; falling onto a track it rides it again. A wall or roof across
+## the track stops it. Jump to leap off it. Going faster than 4 px/tick it
+## runs enemies over: 25 + 55 x its share of top speed (Player.
+## GetMinecartDamage), knockback 10 + 40 x that, each one once in 30 ticks.
+const CART_HIT_SPEED := 4.0 * 2.5
+var _cart_on := false
+var _cart_cell := Vector3i.ZERO
+## The side of `_cart_cell` it came in by (Tracks.DIRS), how far along its
+## path it is (0-1), and its speed along it.
+var _cart_from := 0
+var _cart_s := 0.0
+var _cart_speed := 0.0
+var _cart_hit := {}
+
+
+## Rides the cart along the track (true), or not on one (false).
+func _cart(delta: float, game, dir: Vector3) -> bool:
+	var w: VoxelWorld = game.world
+	for n in _cart_hit.keys():
+		_cart_hit[n] -= delta
+		if _cart_hit[n] <= 0.0 or not is_instance_valid(n):
+			_cart_hit.erase(n)
+	if not _cart_on:
+		if velocity.y > 0.0:
+			return false
+		var at := _track_at(w, global_position)
+		if at.is_empty():
+			return false
+		_cart_attach(w, at.cell, at.s, Vector3(velocity.x, 0.0, velocity.z))
+	if not Tracks.is_track(w, _cart_cell):
+		_cart_on = false
+		return false
+	var mt: Dictionary = MOUNTS[mount]
+	var top := float(mt.run) * 2.5
+	var sh := _cart_shape(w)
+	var t := Tracks.tangent(sh, _cart_s)
+	if dir != Vector3.ZERO:
+		var push := Vector3(t.x, 0.0, t.z).normalized().dot(dir)
+		if absf(push) > 0.2:
+			_cart_speed += signf(push) * float(mt.accel) * 150.0 * delta
+	_cart_speed = clampf(_cart_speed - GRAVITY * t.y * delta, -top, top)
+	if _cart_speed < 0.0:
+		_cart_from = Tracks.exit(sh)
+		sh = Tracks.from_side(sh, _cart_from)
+		_cart_s = 1.0 - _cart_s
+		_cart_speed = -_cart_speed
+	var left := _cart_speed * delta
+	var cell := _cart_cell
+	var from := _cart_from
+	var s := _cart_s
+	while left > 0.0:
+		var len := Tracks.length(sh)
+		var room := (1.0 - s) * len
+		if left < room:
+			s += left / len
+			break
+		left -= room
+		var nx := Tracks.next(w, cell, sh)
+		if nx.is_empty():
+			# Off the end: it flies on.
+			_cart_on = false
+			global_position = _cart_point(cell, sh, 1.0)
+			velocity = Tracks.tangent(sh, 1.0) * _cart_speed
+			_fall_start = global_position.y
+			return true
+		cell = nx[0]
+		from = nx[1]
+		s = 0.0
+		sh = Tracks.from_side(Tracks.shape(w, cell, Tracks.facing(game.block_rotation(cell))), from)
+	var at := _cart_point(cell, sh, s)
+	if _box_solid(w, at):
+		_cart_speed = 0.0  # into a wall
+		sh = _cart_shape(w)
+	else:
+		global_position = at
+		_cart_cell = cell
+		_cart_from = from
+		_cart_s = s
+	velocity = Tracks.tangent(sh, _cart_s) * _cart_speed
+	on_floor = true
+	_fall_start = global_position.y
+	_cart_run_over(game, top)
+	if _cart_speed > top * 0.33 and randf() < delta * 20.0:
+		game.dust.spawn(213, global_position + Vector3(randf_range(-0.3, 0.3), 0.05, randf_range(-0.3, 0.3)), Vector3(0, 1, 0), 0.8)
+	if can_act() and Input.is_action_pressed("jump") and not _jump_held:
+		# Off it with a jump (_move's own, from the ground it's on).
+		_cart_on = false
+		return false
+	_jump_held = can_act() and Input.is_action_pressed("jump")
+	return true
+
+
+## The cart's shape at its cell, from the side it came in by.
+func _cart_shape(w: VoxelWorld) -> int:
+	return Tracks.from_side(Tracks.shape(w, _cart_cell, Tracks.facing(Game.current.block_rotation(_cart_cell))), _cart_from)
+
+
+## Where you are at `s` along track cell `cell` (shape `sh`): on its rails.
+static func _cart_point(cell: Vector3i, sh: int, s: float) -> Vector3:
+	return Vector3(cell) + Vector3(0.5, 0.0, 0.5) + Tracks.point(sh, s) + Vector3(0, Tracks.RAIL_TOP, 0)
+
+
+## A track under `pos` to ride: {cell, s} (the nearest point of its path, its
+## rails within 0.4 of your feet), or {}.
+func _track_at(w: VoxelWorld, pos: Vector3) -> Dictionary:
+	var base := Vector3i(pos.floor())
+	for c in [base, base + Vector3i.DOWN]:
+		if not Tracks.is_track(w, c):
+			continue
+		var sh := Tracks.shape(w, c, Tracks.facing(Game.current.block_rotation(c)))
+		var best := 0.0
+		var best_d := INF
+		for i in 17:
+			var s := i / 16.0
+			var p := _cart_point(c, sh, s)
+			var d := Vector2(p.x - pos.x, p.z - pos.z).length()
+			if d < best_d:
+				best_d = d
+				best = s
+		if absf(pos.y - _cart_point(c, sh, best).y) <= 0.4:
+			return {"cell": c, "s": best}
+	return {}
+
+
+## On the track at `cell`, `s` along it, heading the way `vel` goes (its speed
+## along the track kept).
+func _cart_attach(w: VoxelWorld, cell: Vector3i, s: float, vel: Vector3) -> void:
+	var sh := Tracks.shape(w, cell, Tracks.facing(Game.current.block_rotation(cell)))
+	var t := Tracks.tangent(sh, s)
+	var along := Vector3(t.x, 0.0, t.z).normalized().dot(vel)
+	_cart_cell = cell
+	_cart_on = true
+	if along >= 0.0:
+		_cart_from = Tracks.entry(sh)
+		_cart_s = s
+	else:
+		_cart_from = Tracks.exit(sh)
+		_cart_s = 1.0 - s
+	_cart_speed = absf(along)
+
+
+## Whether your box at `at` is in a solid block, from 0.6 over your feet (the
+## cart's wheels pass the rock beside a ramp, as on Terraria's slopes).
+func _box_solid(w: VoxelWorld, at: Vector3) -> bool:
+	var lo := (at - Vector3(half.x, -0.6, half.z)).floor()
+	var hi := (at + Vector3(half.x, half.y * 2.0 - 0.05, half.z)).floor()
+	for x in range(int(lo.x), int(hi.x) + 1):
+		for y in range(int(lo.y), int(hi.y) + 1):
+			for z in range(int(lo.z), int(hi.z) + 1):
+				if w.is_solid(Vector3i(x, y, z)):
+					return true
+	return false
+
+
+## The cart running enemies over (Player.Update's minecart hits).
+func _cart_run_over(game, top: float) -> void:
+	if _cart_speed <= CART_HIT_SPEED:
+		return
+	var share := _cart_speed / top
+	var ahead := Vector3(velocity.x, 0.0, velocity.z).normalized()
+	# Its crit: the best of your melee, ranged and magic crit.
+	var crit := 4.0 + stat("crit") + maxf(stat("melee_crit"), maxf(stat("ranged_crit"), stat("magic_crit")))
+	for npc in game.npcs():
+		if _cart_hit.has(npc) or npc.def.ai == "town" or npc.untouchable or npc.dont_take_damage:
+			continue
+		# Your box, its front reaching ahead (from its bottom, its height).
+		if not npc.overlaps_box(global_position + ahead * 0.5, Vector3(half.x + 0.6, half.y * 2.0, half.z + 0.6)):
+			continue
+		npc.hit(int(25.0 + 55.0 * share), 10.0 + 40.0 * share, ahead, crit / 100.0)
+		_cart_hit[npc] = 30.0 / 60.0
+
+
+## Gets in the cart `def` (the first minecart in your inventory, if none's
+## given) on the track at `cell`.
+func board_cart(cell: Vector3i, def := {}) -> bool:
+	if def.is_empty():
+		for slot in inventory.slots:
+			if slot != null and MOUNTS.get(Data.item(slot.item).get("mount", ""), {}).get("cart", false):
+				def = Data.item(slot.item)
+				break
+	if def.is_empty():
+		return false
+	if mount != "":
+		dismount()
+	var w := Game.current.world
+	var sh := Tracks.shape(w, cell, Tracks.facing(Game.current.block_rotation(cell)))
+	var was := global_position
+	global_position = _cart_point(cell, sh, 0.5)
+	if not ride(def):
+		global_position = was
+		return false
+	_cart_attach(w, cell, 0.5, -transform.basis.z)
+	_cart_speed = 0.0
+	velocity = Vector3.ZERO
+	return true
 
 
 ## Riding: the slime's stomp, falling onto enemies; its frames.
@@ -3468,7 +3694,8 @@ func _place(def: Dictionary) -> bool:
 		var box_min := Vector3(pos)
 		if _box_overlap(global_position, half, box_min) or game.any_npc_in_block(pos):
 			return false
-	elif wall_dir < 0 and not _has_support(pos, bdef.get("hangs", false), bdef.get("platform", false)):
+	# (Minecart track needs nothing under it, as Terraria's.)
+	elif wall_dir < 0 and not bdef.get("track", false) and not _has_support(pos, bdef.get("hangs", false), bdef.get("platform", false)):
 		return false
 	if not game.world.set_block(pos, id):
 		return false
@@ -3869,6 +4096,8 @@ func _interact() -> void:
 		Game.current.hud.open_chest(piggy_bank if bdef.get("bank") == "piggy" else safe, target.block)
 	elif bdef.get("interact") == "locked_chest":
 		Game.current.unlock_chest(target.block)
+	elif bdef.get("interact") == "track":
+		board_cart(target.block)
 	elif bdef.get("interact") == "switch":
 		Game.current.hit_switch(target.block)
 	elif bdef.get("interact") == "timer":

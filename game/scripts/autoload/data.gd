@@ -273,6 +273,11 @@ func _load_blocks() -> void:
 		if is_placeable(d):
 			d["method"] = placeable_methods.get(d.get("settings", d.name), default_method(d))
 			d["render_id"] = render_for(d)
+		if d.get("track", false):
+			# Minecart track: a block model shaped by the track beside it
+			# (BlockModels, Tracks).
+			d["method"] = "track"
+			d["render_id"] = 5
 		block_ids[d.name] = blocks.size()
 		blocks.append(d)
 

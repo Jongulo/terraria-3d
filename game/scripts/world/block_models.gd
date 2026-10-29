@@ -209,7 +209,7 @@ func _build(c: Vector3i, streamed: bool, sliced: bool) -> void:
 			kinds[id] = {"trunk": bd.get("trunk", false) and not bd.get("palm", false), "palm": bd.get("palm", false),
 					"cactus": bd.get("cactus", false), "door": Doors.is_part(bd), "method": bd.get("method", "panels"),
 					"wall": bd.get("wall", false), "variants": bd.get("variants", 1), "scatter": float(bd.get("scatter", 0.0)),
-					"vary": bd.get("vary", false), "merge": merges(bd), "platform": bd.get("platform", false),
+					"vary": bd.get("vary", false), "merge": merges(bd), "platform": bd.get("platform", false), "track": bd.get("track", false),
 					"stair_drop": float(bd.get("stair_drop", 0.0)), "frame": Data.anim_frame_now(bd)}
 		var k: Dictionary = kinds[id]
 		if k.trunk:
@@ -239,6 +239,16 @@ func _build(c: Vector3i, streamed: bool, sliced: bool) -> void:
 				nodes.append(door)
 				if Doors.is_open(Data.block(id)):
 					door_keys.append([Chests.key(pos), pos])
+			continue
+		if k.track:
+			# Minecart track: its shape from the track beside it (Tracks).
+			# (A lone piece runs the way it was placed looking: Tracks.facing.)
+			var sh := Tracks.shape(world, pos, Tracks.facing(game.block_rotation(pos)))
+			var tkey := "%d:track:%d" % [id, sh]
+			if not batches.has(tkey):
+				batches[tkey] = {"id": id, "mesh": Tracks.mesh(sh), "textured": false, "items": [], "method": "track", "rotation": 0, "frame": 0,
+						"material": batched_material(id, false)}
+			batches[tkey].items.append([Transform3D(Basis(), Vector3(pos) + Vector3(0.5, 0.0, 0.5)), pos])
 			continue
 		var method: String = k.method
 		if method == "rendered" and not k.wall:

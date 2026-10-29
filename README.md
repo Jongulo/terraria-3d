@@ -332,7 +332,7 @@ in this game.
   traps, pots in each biome's style, life crystals and loot chests,
   Shadow Chests, cave statues, piles of rocks, bones, coins and gems, stalactites and stalagmites,
   dye plants, sea shells, seaweed and shell piles on the coast; campsites, thin ice in the snow,
-  Dead Man's Chests, mining explosives and lava traps; and forest plants and debris.
+  Dead Man's Chests, mining explosives, lava traps and minecart tracks; and forest plants and debris.
 - **Liquids:** water, lava, honey and shimmer that fall, level out and settle; waterfalls and
   lavafalls, and springs you open with a hammer. Shimmer turns items into others or takes them
   apart into what they were made of (Terraria's own tables), and sinks you through the ground; the
@@ -345,7 +345,7 @@ in this game.
 - **Gear:** armor sets and set bonuses, accessories (including the informational ones, which work
   anywhere in your inventory), grappling hooks, ropes and rope coils, wings, boots, climbing gear,
   the Tinkerer's Workshop combinations; pets, light pets and a few mounts (the Slimy Saddle, roller
-  skates); buff potions, alchemy and herbs, and Well Fed foods.
+  skates, the Minecart on its tracks); buff potions, alchemy and herbs, and Well Fed foods.
 - **Enemies and critters** of every biome above, with Terraria's spawn rules, knockback, gores and
   blood; the bug net and critters as bait.
 - **Bosses and events:** the Eye of Cthulhu, King Slime, the Eater of Worlds, the Brain of Cthulhu,
@@ -358,8 +358,8 @@ in this game.
 - **Day and night:** the sky, clouds, wind and falling leaves, Fallen Stars, context music and
   sound effects; saving with autosave.
 
-**Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; minecarts and
-most mounts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
+**Not yet:** Hardmode itself (beating the Wall of Flesh only sets a flag); Deerclops; most mounts
+and the fancier minecarts; a map; paint and dyes; the Bestiary; the Painter, Party Girl, Stylist and other town
 NPCs, and NPC happiness; Parties, Lantern Night, Sandstorms and the Torch God; Devourers, Blood
 Crawlers and Tomb Crawlers; Faelings and shimmered enemies; luck's effects; cages and terrariums;
 Expert mode. See

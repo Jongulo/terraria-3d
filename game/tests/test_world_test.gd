@@ -474,6 +474,7 @@ func _run() -> void:
 	await _merchant_checks(c)
 	await _shimmer_checks(c)
 	await _micro_checks(c)
+	await _track_checks(c)
 	# A natural spring on a tree trunk (worlds from before the fix) is dropped
 	# when the waterfalls load; ones from the ground stay.
 	var trunk_fall := Vector3i(c.x - 7, TestWorld.GROUND + 6, c.z - 20)
@@ -9142,6 +9143,76 @@ func _micro_checks(c: Vector3i) -> void:
 	game.chests._chests.erase(key)
 	check(Hud.metal_name("ice_pot") == "Pot" and Hud.metal_name("underworld_pot") == "Pot", "every pot style is a pot to the Metal Detector")
 	p.flying = was_flying
+	p.god_mode = was_god
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	p._fall_start = p.global_position.y
+
+
+## Minecart tracks and the minecart: each track cell shaped by the track
+## beside it (a ramp up, a corner); in the cart you ride it up the ramp,
+## round the corner and off its end; a cart stopped on a slope rolls back
+## down; going fast it runs a zombie over; off a track the Minecart won't go
+## on; it and the track are made at an anvil.
+func _track_checks(c: Vector3i) -> void:
+	var p := game.player
+	var w := game.world
+	var was_god := p.god_mode
+	p.god_mode = true
+	var cells := TestWorld.track_cells(c)
+	var sh := func(i: int) -> int: return Tracks.shape(w, cells[i], Tracks.facing(game.block_rotation(cells[i])))
+	check(not Tracks.is_corner(sh.call(0)) and Tracks.height(Tracks.from_side(sh.call(0), 2), 1.0) == 0.0, "a track's end runs straight on")
+	var ramp: int = Tracks.from_side(sh.call(11), 2)
+	check(Tracks.height(ramp, 0.0) == 0.0 and Tracks.height(ramp, 1.0) == 1.0, "a track rises to meet the track a cell up")
+	check(Tracks.is_corner(sh.call(19)), "two tracks at right angles make a corner")
+	check(Data.recipes.any(func(r): return r.result == "Minecart") and Data.recipes.any(func(r): return r.result == "MinecartTrack"),
+			"the Minecart and Minecart Track are made at an anvil")
+	# Off a track the Minecart won't go on.
+	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
+	p.velocity = Vector3.ZERO
+	await frames(2)
+	check(not p._use_mount(Data.item("Minecart")) and p.mount == "", "off a track the Minecart won't go on")
+	# In the cart at the start, pushed toward the ramp: up it, round the
+	# corner, along to the end and off it.
+	p.inventory.add("Minecart", 1)
+	p.look_at_yaw_pitch(-PI / 2.0, 0.0)
+	check(p.board_cart(cells[0]) and p.mount == "minecart" and p._cart_on, "right-clicking a track with a Minecart: in it, on the track")
+	p._cart_speed = 25.0
+	var top_y := -INF
+	var went_z := false
+	var off := false
+	for i in 120:
+		await get_tree().physics_frame
+		top_y = maxf(top_y, p.global_position.y)
+		went_z = went_z or p.global_position.z > float(cells[19].z) + 3.0
+		if not p._cart_on:
+			off = true
+			break
+	check(top_y > float(cells[0].y) + 2.9, "it climbs the ramp (%.1f up)" % (top_y - cells[0].y))
+	check(went_z, "goes round the corner")
+	check(off and p.mount == "minecart" and p.global_position.z > float(cells[-1].z), "and flies off the track's end, still in the cart")
+	await frames(30)
+	# Stopped on the ramp it rolls back down.
+	check(p.board_cart(cells[13]), "in the cart on the ramp")
+	p._cart_speed = 0.0
+	var start_x := p.global_position.x
+	await frames(30)
+	check(p.global_position.x < start_x - 0.5, "stopped on a slope it rolls back down (%.1f)" % (start_x - p.global_position.x))
+	# Fast, it runs a zombie over.
+	p.board_cart(cells[2])
+	var zombie := game.spawn_npc("Zombie", Vector3(cells[8]) + Vector3(0.5, 0.2, 0.5))
+	zombie.process_mode = Node.PROCESS_MODE_DISABLED
+	var zl := zombie.life
+	p._cart_from = 2
+	p._cart_speed = 30.0
+	for i in 30:
+		await get_tree().physics_frame
+	var left := zombie.life if is_instance_valid(zombie) else 0
+	check(left < zl, "a fast cart runs a zombie over (%d -> %d)" % [zl, left])
+	if is_instance_valid(zombie):
+		zombie.queue_free()
+	p.dismount()
+	p.inventory.remove("Minecart", 1)
 	p.god_mode = was_god
 	p.global_position = Vector3(c) + Vector3(0.5, 0, 0.5)
 	p.velocity = Vector3.ZERO

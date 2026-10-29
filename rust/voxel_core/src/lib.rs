@@ -32,6 +32,7 @@ pub mod alchemy;
 pub mod paintings;
 pub mod placement;
 pub mod terrain;
+pub mod tracks;
 pub mod traps;
 pub mod wires;
 pub mod world;

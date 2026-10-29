@@ -429,6 +429,8 @@
 		"Detonator": {"value": 10000, "rare": 1, "type": "block", "place": "detonator", "mech": true, "max_stack": 9999},
 		"DeadMansChest": {"value": 500, "type": "block", "place": "dead_mans_chest", "max_stack": 99},
 		"DeadMansSweater": {"value": 10000, "rare": 2, "type": "armor", "slot": "body", "defense": 4},
+		"MinecartTrack": {"type": "block", "place": "minecart_track", "tile_boost": 5},
+		"Minecart": {"value": 1000, "rare": 1, "type": "mount", "mount": "minecart"},
 		"Cactus": {"type": "material"},
 		"BorealWood": {"type": "block", "place": "boreal_wood"},
 		"PalmWood": {"type": "block", "place": "palm_wood"},

@@ -44,7 +44,7 @@ const HELP := [
 	["npc", "West of the gallery: the critter pen (a spawner for each critter; catch them with a Bug Net)"],
 	["npc biome", "Far west: the Dungeon (the Old Man by its door)"],
 	["building", "West: water, waterfalls, hammer springs, lava   South: blocks, ores, tower (rope and chain)"],
-	["building", "Far north-west: a shimmer pool (throw items in; jump in to sink through the ground)"],
+	["building", "Far north-west: a shimmer pool (throw items in; jump in to sink through the ground), past it a minecart track"],
 	["building", "North of the trees: forest plants, a pond and vines; east of them a furnished house and hammered blocks"],
 	["building", "South-west: platforms   Hammer: reshapes blocks (half, ramp, upside-down ramp)"],
 	["biome", "North-west of the plaza: the fishing pond (deep enough for full fishing power) with a dock"],
@@ -508,6 +508,33 @@ func _build_liquids(c: Vector3i) -> void:
 		_b(Vector3i(sb.x + 2, y, sa.z + 2), "rope")
 	_box(Vector3i(sb.x + 1, room.y, sa.z + 2), Vector3i(sb.x + 1, room.y + 2, sa.z + 2), "")
 	_label(Vector3(sa.x + 3, GROUND + 3, sa.z + 2.5), "Shimmer pool: throw items in (Q)", 22)
+	# A minecart track (far north-west, past the shimmer pool): a run along
+	# x, a ramp up 3, a corner and a run along z to its end, on stone.
+	for cell in track_cells(c):
+		for y in range(GROUND + 1, cell.y):
+			_b(Vector3i(cell.x, y, cell.z), "stone")
+		_b(cell, "minecart_track")
+	var t0 := c + TRACK
+	_label(Vector3(t0.x + 6, GROUND + 3, t0.z + 0.5), "Minecart track: right-click it with a Minecart", 20)
+
+
+## The minecart track's start, far north-west of the plaza, and its cells in
+## order: 12 along x, a ramp 3 up, 4 along, a corner, 8 along z.
+const TRACK := Vector3i(-100, 0, -100)
+
+
+static func track_cells(c: Vector3i) -> Array[Vector3i]:
+	var t := c + TRACK
+	var out: Array[Vector3i] = []
+	for x in 12:
+		out.append(t + Vector3i(x, 0, 0))
+	for k in 3:
+		out.append(t + Vector3i(12 + k, 1 + k, 0))
+	for x in range(15, 20):
+		out.append(t + Vector3i(x, 3, 0))
+	for z in range(1, 9):
+		out.append(t + Vector3i(19, 3, z))
+	return out
 
 
 ## The shimmer pool's corner (bottom, north-west), far north-west of the plaza.

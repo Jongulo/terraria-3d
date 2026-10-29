@@ -948,7 +948,7 @@ pub mod tests {
                 w.set_def(id, BlockDef { name: name.into(), render: RENDER_CUBE, solid: true, opaque: true, variants: 1, ..Default::default() });
             }
         }
-        for name in ["detonator", "dead_mans_chest", "campfire_off"] {
+        for name in ["detonator", "dead_mans_chest", "campfire_off", "minecart_track"] {
             if w.id_of(name) == 0 {
                 let id = w.defs.len() as u16;
                 w.set_def(id, BlockDef { name: name.into(), render: crate::world::RENDER_CUTOUT, solid: false, opaque: false, variants: 1, ..Default::default() });
